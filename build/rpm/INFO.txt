@@ -1,5 +1,0 @@
-Git Version : 
-Build System: Linux-4.13.0-37-generic
-CMake       : /usr/bin/cmake
-Builder     : 
-Time        : 20180324174215
