@@ -7,8 +7,14 @@
 #include <cstdlib>
 #include <stdio.h>
 // Index for Sources...
-const short SOURCE_CTP = 1;
-const short SOURCE_XTP = 15;
+enum exchange_source_index : short
+{
+    SOURCE_CTP = 1,
+    SOURCE_XTP = 15,
+    SOURCE_BINANCE = 16,
+    SOURCE_INDODAX = 17,
+    SOURCE_OKEX = 18
+};
 
 // Exchange names
 #define EXCHANGE_SSE "SSE" //上海证券交易所
@@ -60,6 +66,28 @@ const short MSG_TYPE_LF_RSP_POS_XTP   = 15202; // XTPQueryStkPositionRsp from xt
 const short MSG_TYPE_LF_ORDER_XTP     = 15204; // XTPOrderInsertInfo from xtp/xoms_api_struct.h
 const short MSG_TYPE_LF_RTN_ORDER_XTP = 15205; // XTPOrderInfo from xtp/xoms_api_struct.h
 const short MSG_TYPE_LF_RTN_TRADE_XTP = 15206; // XTPTradeReport from xtp/xoms_api_struct.h
+
+//binance, idx=16
+const short MSG_TYPE_LF_MD_BINANCE        = 16101; 
+const short MSG_TYPE_LF_ORDER_BINANCE    = 16204; 
+const short MSG_TYPE_LF_RTN_ORDER_BINANCE = 16205; 
+const short MSG_TYPE_LF_RTN_TRADE_BINANCE = 16206; 
+const short MSG_TYPE_LF_ORDER_ACTION_BINANCE = 16207; 
+
+//indodax, idx=17
+const short MSG_TYPE_LF_MD_INDODAX        = 17101; 
+const short MSG_TYPE_LF_ORDER_INDODAX    = 17204; 
+const short MSG_TYPE_LF_RTN_ORDER_INDODAX = 17205; 
+const short MSG_TYPE_LF_RTN_TRADE_INDODAX = 17206; 
+const short MSG_TYPE_LF_ORDER_ACTION_INDODAX = 17207; 
+
+//okex, idx=18
+const short MSG_TYPE_LF_MD_OKEX        = 18101; 
+const short MSG_TYPE_LF_ORDER_OKEX    = 18204; 
+const short MSG_TYPE_LF_RTN_ORDER_OKEX = 18205; 
+const short MSG_TYPE_LF_RTN_TRADE_OKEX = 18206; 
+const short MSG_TYPE_LF_ORDER_ACTION_OKEX = 18207; 
+
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
