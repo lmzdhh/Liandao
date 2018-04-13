@@ -18,3 +18,9 @@ std::string hmac_sha256( const char *key, const char *data) {
     digest = HMAC(EVP_sha256(), key, strlen(key), (unsigned char*)(data), strlen(data), NULL, NULL);
     return b2a_hex((char *)digest, 32);
 }
+
+std::string hmac_sha512( const char *key, const char *data) {
+    unsigned char* digest;
+    digest = HMAC(EVP_sha256(), key, strlen(key), (unsigned char*)(data), strlen(data), NULL, NULL);
+    return b2a_hex((char *)digest, 64);
+}
