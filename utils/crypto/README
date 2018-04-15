@@ -1,3 +1,0 @@
-compile with
-g++ openssl_util_test.cpp openssl_util.h openssl_util.cpp -lcrypto
-
