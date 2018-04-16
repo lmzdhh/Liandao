@@ -1,9 +1,9 @@
 // JSON simple example
 // This example does not handle errors.
 
-#include "../utils/rapidjson/document.h"
-#include "../utils/rapidjson/writer.h"
-#include "../utils/rapidjson/stringbuffer.h"
+#include <document.h>
+#include <writer.h>
+#include <stringbuffer.h>
 #include <iostream>
 
 using namespace rapidjson;
