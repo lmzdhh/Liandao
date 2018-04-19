@@ -1,2 +1,0 @@
-Build with
-g++ generate_signature.cpp ../utils/crypto/openssl_util.h ../utils/crypto/openssl_util.cpp -lcrypto
