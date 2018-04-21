@@ -4,8 +4,8 @@
 #include <sstream>
 #include <stdio.h>
 
-#include "LFDataStruct.h"
-#include "LFConstants.h"
+#include "../../longfist/longfist/LFDataStruct.h"
+#include "../../longfist/longfist/LFConstants.h"
 #include "binance_order_translation_utils.h"
 
 using rapidjson::Document;

@@ -1,5 +1,5 @@
-#include "LFDataStruct.h"
-#include "LFConstants.h"
+#include "../../longfist/longfist/LFDataStruct.h"
+#include "../../longfist/longfist/LFConstants.h"
 
 #include <string>
 #include <iostream>
