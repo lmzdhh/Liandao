@@ -69,6 +69,7 @@ void JournalFinder::loadJournalInfo(short source) {
 JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_CTP);
     loadJournalInfo(SOURCE_XTP);
+    loadJournalInfo(SOURCE_BINANCE);
 
     loadJournalInfo(0, getSystemJournalPair);
 

@@ -9,8 +9,8 @@
 
 USING_WC_NAMESPACE
 
-#define SOURCE_INDEX SOURCE_CTP
-#define M_TICKER "rb1801"
+#define SOURCE_INDEX SOURCE_BINANCE
+#define M_TICKER "BTCUSTD"
 #define M_EXCHANGE EXCHANGE_SHFE
 #define TRADED_VOLUME_LIMIT 500
 
@@ -38,7 +38,7 @@ protected:
     Signal signal;
 public:
     virtual void init();
-    virtual void on_market_data(const LFMarketDataField* data, short source, long rcv_time);
+    //virtual void on_market_data(const LFMarketDataField* data, short source, long rcv_time);
     virtual void on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time);
     virtual void on_rtn_trade(const LFRtnTradeField* data, int request_id, short source, long rcv_time);
     virtual void on_rsp_order(const LFInputOrderField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
@@ -55,7 +55,7 @@ Strategy::Strategy(const string& name): IWCStrategy(name)
 void Strategy::init()
 {
     data->add_market_data(SOURCE_INDEX);
-    data->add_register_td(SOURCE_INDEX);
+    //data->add_register_td(SOURCE_INDEX);
     vector<string> tickers;
     tickers.push_back(M_TICKER);
     util->subscribeMarketData(tickers, SOURCE_INDEX);
@@ -93,6 +93,7 @@ void Strategy::on_rsp_position(const PosHandlerPtr posMap, int request_id, short
     }
 }
 
+/*
 void Strategy::on_market_data(const LFMarketDataField* md, short source, long rcv_time)
 {
     if (strcmp(M_TICKER, md->InstrumentID) == 0 && td_connected)
@@ -156,6 +157,7 @@ void Strategy::on_market_data(const LFMarketDataField* md, short source, long rc
         }
     }
 }
+*/
 
 void Strategy::on_rtn_trade(const LFRtnTradeField* rtn_trade, int request_id, short source, long rcv_time)
 {

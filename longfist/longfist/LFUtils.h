@@ -53,6 +53,8 @@ inline JournalPair getMdJournalPair(short source)
 			return {"/shared/kungfu/journal/MD/CTP/", "MD_CTP"};
 		case 15:
 			return {"/shared/kungfu/journal/MD/XTP/", "MD_XTP"};
+                case 16:
+			return {"/shared/kungfu/journal/MD/BINANCE/", "MD_BINANCE"};
 		default:
 			return {"", ""};
 	}

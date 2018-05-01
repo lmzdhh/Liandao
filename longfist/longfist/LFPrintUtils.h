@@ -37,7 +37,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "PreDelta:" << std::setw(6) << "(d)" << " " << ptr->PreDelta << std::endl \
 	 << std::setw(20) << "CurrDelta:" << std::setw(6) << "(d)" << " " << ptr->CurrDelta << std::endl \
 	 << std::setw(20) << "UpdateTime:" << std::setw(6) << "(c13)" << " " << ptr->UpdateTime << std::endl \
-	 << std::setw(20) << "UpdateMillisec:" << std::setw(6) << "(i)" << " " << (int)ptr->UpdateMillisec << std::endl \
+	 << std::setw(20) << "UpdateMillisec:" << std::setw(6) << "(i)" << " " << ptr->UpdateMillisec << std::endl \
 	 << std::setw(20) << "BidPrice1:" << std::setw(6) << "(d)" << " " << ptr->BidPrice1 << std::endl \
 	 << std::setw(20) << "BidVolume1:" << std::setw(6) << "(i)" << " " << (int)ptr->BidVolume1 << std::endl \
 	 << std::setw(20) << "AskPrice1:" << std::setw(6) << "(d)" << " " << ptr->AskPrice1 << std::endl \

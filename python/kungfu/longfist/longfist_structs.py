@@ -31,27 +31,27 @@ class LFMarketDataField(Structure):
         ("PreDelta", c_double),	# 昨虚实度 
         ("CurrDelta", c_double),	# 今虚实度 
         ("UpdateTime", c_char * 13),	# 最后修改时间 
-        ("UpdateMillisec", c_int),	# 最后修改毫秒 
-        ("BidPrice1", c_double),	# 申买价一 
-        ("BidVolume1", c_int),	# 申买量一 
-        ("AskPrice1", c_double),	# 申卖价一 
-        ("AskVolume1", c_int),	# 申卖量一 
-        ("BidPrice2", c_double),	# 申买价二 
-        ("BidVolume2", c_int),	# 申买量二 
-        ("AskPrice2", c_double),	# 申卖价二 
-        ("AskVolume2", c_int),	# 申卖量二 
-        ("BidPrice3", c_double),	# 申买价三 
-        ("BidVolume3", c_int),	# 申买量三 
-        ("AskPrice3", c_double),	# 申卖价三 
-        ("AskVolume3", c_int),	# 申卖量三 
-        ("BidPrice4", c_double),	# 申买价四 
-        ("BidVolume4", c_int),	# 申买量四 
-        ("AskPrice4", c_double),	# 申卖价四 
-        ("AskVolume4", c_int),	# 申卖量四 
-        ("BidPrice5", c_double),	# 申买价五 
-        ("BidVolume5", c_int),	# 申买量五 
-        ("AskPrice5", c_double),	# 申卖价五 
-        ("AskVolume5", c_int),	# 申卖量五 
+        ("UpdateMillisec", c_uint64),	# 最后修改毫秒 
+        ("BidPrice1", c_int64),	# 申买价一 
+        ("BidVolume1", c_uint64),	# 申买量一 
+        ("AskPrice1", c_int64),	# 申卖价一 
+        ("AskVolume1", c_uint64),	# 申卖量一 
+        ("BidPrice2", c_int64),	# 申买价二 
+        ("BidVolume2", c_uint64),	# 申买量二 
+        ("AskPrice2", c_int64),	# 申卖价二 
+        ("AskVolume2", c_uint64),	# 申卖量二 
+        ("BidPrice3", c_int64),	# 申买价三 
+        ("BidVolume3", c_uint64),	# 申买量三 
+        ("AskPrice3", c_int64),	# 申卖价三 
+        ("AskVolume3", c_uint64),	# 申卖量三 
+        ("BidPrice4", c_int64),	# 申买价四 
+        ("BidVolume4", c_uint64),	# 申买量四 
+        ("AskPrice4", c_int64),	# 申卖价四 
+        ("AskVolume4", c_uint64),	# 申卖量四 
+        ("BidPrice5", c_int64),	# 申买价五 
+        ("BidVolume5", c_uint64),	# 申买量五 
+        ("AskPrice5", c_int64),	# 申卖价五 
+        ("AskVolume5", c_uint64),	# 申卖量五 
         ]
 
 class LFL2MarketDataField(Structure):
@@ -204,8 +204,8 @@ class LFL2TradeField(Structure):
         ("TradeTime", c_char * 9),	# 成交时间（秒） 
         ("ExchangeID", c_char * 9),	# 交易所代码 
         ("InstrumentID", c_char * 31),	# 合约代码 
-        ("Price", c_double),	# 成交价格 
-        ("Volume", c_double),	# 成交数量 
+        ("Price", c_int64),	# 成交价格 
+        ("Volume", c_uint64),	# 成交数量 
         ("OrderKind", c_char * 2),	# 报单类型 
         ("OrderBSFlag", c_char * 2),	# 内外盘标志 
         ]

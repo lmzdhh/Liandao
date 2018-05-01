@@ -40,27 +40,27 @@ struct LFMarketDataField
 	double   	PreDelta;              //昨虚实度
 	double   	CurrDelta;             //今虚实度
 	char_13  	UpdateTime;            //最后修改时间
-	int      	UpdateMillisec;        //最后修改毫秒
-	double   	BidPrice1;             //申买价一
-	int      	BidVolume1;            //申买量一
-	double   	AskPrice1;             //申卖价一
-	int      	AskVolume1;            //申卖量一
-	double   	BidPrice2;             //申买价二
-	int      	BidVolume2;            //申买量二
-	double   	AskPrice2;             //申卖价二
-	int      	AskVolume2;            //申卖量二
-	double   	BidPrice3;             //申买价三
-	int      	BidVolume3;            //申买量三
-	double   	AskPrice3;             //申卖价三
-	int      	AskVolume3;            //申卖量三
-	double   	BidPrice4;             //申买价四
-	int      	BidVolume4;            //申买量四
-	double   	AskPrice4;             //申卖价四
-	int      	AskVolume4;            //申卖量四
-	double   	BidPrice5;             //申买价五
-	int      	BidVolume5;            //申买量五
-	double   	AskPrice5;             //申卖价五
-	int      	AskVolume5;            //申卖量五
+	uint64_t      	UpdateMillisec;        //最后修改毫秒
+	int64_t   	BidPrice1;             //申买价一
+	uint64_t      	BidVolume1;            //申买量一
+	int64_t   	AskPrice1;             //申卖价一
+	uint64_t      	AskVolume1;            //申卖量一
+	int64_t   	BidPrice2;             //申买价二
+	uint64_t      	BidVolume2;            //申买量二
+	int64_t   	AskPrice2;             //申卖价二
+	uint64_t      	AskVolume2;            //申卖量二
+	int64_t   	BidPrice3;             //申买价三
+	uint64_t      	BidVolume3;            //申买量三
+	int64_t   	AskPrice3;             //申卖价三
+	uint64_t      	AskVolume3;            //申卖量三
+	int64_t   	BidPrice4;             //申买价四
+	uint64_t      	BidVolume4;            //申买量四
+	int64_t   	AskPrice4;             //申卖价四
+	uint64_t      	AskVolume4;            //申卖量四
+	int64_t   	BidPrice5;             //申买价五
+	uint64_t      	BidVolume5;            //申买量五
+	int64_t   	AskPrice5;             //申卖价五
+	uint64_t      	AskVolume5;            //申卖量五
 };
 
 struct LFL2MarketDataField
@@ -213,8 +213,8 @@ struct LFL2TradeField
 	char_9   	TradeTime;             //成交时间（秒）
 	char_9   	ExchangeID;            //交易所代码
 	char_31  	InstrumentID;          //合约代码
-	double   	Price;                 //成交价格
-	double   	Volume;                //成交数量
+	int64_t   	Price;                 //成交价格
+	uint64_t   	Volume;                //成交数量
 	char_2   	OrderKind;             //报单类型
 	char_2   	OrderBSFlag;           //内外盘标志
 };

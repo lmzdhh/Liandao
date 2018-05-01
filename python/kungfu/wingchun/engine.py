@@ -32,8 +32,9 @@ class Engine(object):
         lib = None
         try:
             lib = __import__(lib_name)
-        except:
+        except Exception as e:
             print 'Unexpected lib is imported', lib_name
+	    print e
             exit(1)
 
         globals()[lib_name] = lib

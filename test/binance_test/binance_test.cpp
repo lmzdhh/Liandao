@@ -5,19 +5,20 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string>
-/*#include <cpr/cpr.h>*/
+#include <cpr/cpr.h>
 
 #include "../../utils/crypto/openssl_util.h"
 #include "../../longfist/longfist/LFDataStruct.h"
 #include "../../longfist/longfist/LFConstants.h"
 #include "../../longfist/longfist/LFPrintUtils.h"
 
-/*
- * using cpr::Get;
- * using cpr::Url;
- * using cpr::Parameters;
- * using cpr::Post;
- *  */
+
+using cpr::Get;
+using cpr::Url;
+using cpr::Parameters;
+using cpr::Payload;
+using cpr::Post;
+
 using rapidjson::Document;
 using rapidjson::SizeType;
 using rapidjson::Value;
@@ -28,13 +29,22 @@ using std::stoi;
 using utils::crypto::hmac_sha256;
 
 namespace {
-  /*
-   * std::string GetResponse(const std::string& symbol, int limit) {
-   *   const auto static url = "https://api.binance.com/api/v1/depth";
-   *     const auto response = Get(Url{url}, Parameters{{"symbol", symbol},
-   *                                                      {"limit",  to_string(limit)}});
-   *                                                        return response.text;
-   *                                                        }*/
+  
+  std::string GetResponse(const std::string& symbol, int limit) 
+  {
+    const auto static url = "https://api.binance.com/api/v1/depth";
+    const auto response = Get(Url{url}, Parameters{{"symbol", symbol},
+                                                        {"limit",  to_string(limit)}});
+    return response.text;
+  }
+  
+  std::string GetTradeResponse(const std::string& symbol, int limit) 
+  {
+    const auto static url = "https://api.binance.com/api/v1/trades";
+    const auto response = Get(Url{url}, Parameters{{"symbol", symbol},
+                                                        {"limit",  to_string(limit)}});
+    return response.text;
+  }
 
   void ParseResponse(const std::string& response) {
     Document d;
@@ -72,14 +82,51 @@ void TestMarketData(const std::string& symbol, int limit) {
   std::cout << "Test get order book, endpoint: api/v1/depth, symbol: " << symbol
     << ", limit: " << limit << std::endl;
 
-  /* TODO: re-enable after cpr lib is in. */
-  /*  const auto response = GetResponse(symbol, limit); */
+  const auto response = GetResponse(symbol, limit); 
+  /*
   const auto response = "{\"lastUpdateId\":67625893,\"bids\":[[\"0.01700000\",\"1.96000000\",[]],[\"0.01697200\",\"9.61000000\",[]],[\"0.01697100\",\"193.73000000\",[]],[\"0.01697000\",\"40.79000000\",[]],[\"0.01696700\",\"2.93000000\",[]]],\"asks\":[[\"0.01700100\",\"2.00000000\",[]],[\"0.01700400\",\"0.80000000\",[]],[\"0.01700500\",\"0.30000000\",[]],[\"0.01700900\",\"2.61000000\",[]],[\"0.01701100\",\"2.06000000\",[]]]}";
+  */
 
   std::cout << "raw response: " << response << std::endl;
 
   ParseResponse(response);
 }
+
+void TestTrade(const std::string& symbol, int limit) {
+  std::cout << "---------------------------------------------------\n";
+  std::cout << "Test get order book, endpoint: api/v1/trades, symbol: " << symbol
+    << ", limit: " << limit << std::endl;
+
+  const auto response = GetTradeResponse(symbol, limit); 
+  Document d;
+  d.Parse(response.c_str());
+  
+  if(d.IsArray())
+  {
+    for(int i = 0; i < d.Size(); ++i)
+    {
+    	const auto& ele = d[i];
+	if(ele.HasMember("id") && ele.HasMember("price") && ele.HasMember("qty"))
+        {
+	    std::cout << "found a trade: ";
+	    if(ele["id"].IsInt64())
+            {
+                std::cout << ele["id"].GetInt64();
+            }
+ 	    
+	    if(ele["price"].IsString())
+		std::cout << " " << ele["price"].GetString();
+		
+	    if(ele["qty"].IsString())
+		std::cout << " " << ele["qty"].GetString(); 
+
+            std::cout << std::endl;
+        }
+    }
+  }
+  std::cout << "raw trade response: " << response << std::endl;
+}
+
 
 namespace {
 
@@ -127,12 +174,13 @@ namespace {
     return ss.str();
   }
 
-  /*
-   * void PostOrder(const std::string& order_data) {
-   *   const auto static url = "https://api.binance.com/api/v3/order";
-   *     const auto response = Post(url, Payload{});
-   *       return response.text;
-   *       }*/
+ 
+  void PostOrder(const std::string& order_data) 
+  {
+    const auto static url = "https://api.binance.com/api/v3/order";
+    const auto response = Post(url, Payload{});
+    /*return response.text;*/
+  }
 
 } /* TestNewOrder */
 
@@ -184,11 +232,13 @@ void TranslateOrderExec(const std::string& order_exec,
 }
 
 int main() {
-  const std::string symbol = "LTCBTC";
+  const std::string symbol = "BTCUSDT";
   const int limit = 5;
 
   /* test market data */
   TestMarketData(symbol, limit);
+
+  TestTrade(symbol, limit);
 
   /* test sample new order */
   LFInputOrderField* sample_new = new LFInputOrderField();

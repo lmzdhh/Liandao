@@ -202,11 +202,23 @@ void IMDEngine::on_market_data(const LFMarketDataField* data)
     if (isRunning)
     {
         writer->write_frame(data, sizeof(LFMarketDataField), source_id, MSG_TYPE_LF_MD, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "%-10s[%7.1f, %4d | %7.1f, %4d]",
+        KF_LOG_DEBUG_FMT(logger, "%-10s[%ll, %lu | %ll, %lu]",
                          data->InstrumentID,
                          data->BidPrice1,
                          data->BidVolume1,
                          data->AskPrice1,
                          data->AskVolume1);
+    }
+}
+
+void IMDEngine::on_trade(const LFL2TradeField* trade)
+{
+    if (isRunning)
+    {
+        writer->write_frame(trade, sizeof(LFL2TradeField), source_id, MSG_TYPE_LF_L2_TRADE, 1/*islast*/, -1/*invalidRid*/);
+        KF_LOG_DEBUG_FMT(logger, "%-10s[%ll, %lu]",
+                         trade->InstrumentID,
+                         trade->Price,
+                         trade->Volume);
     }
 }

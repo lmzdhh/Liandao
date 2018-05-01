@@ -15,12 +15,21 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.7)
 PROJECT(wingchunmd)
 
-SET(CTP_SOURCE_FILES MDEngineCTP.cpp MDEngineCTP.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h)
-ADD_LIBRARY(ctpmd SHARED ${CTP_SOURCE_FILES})
-TARGET_LINK_LIBRARIES(ctpmd journal kflog thostmduserapi ${Boost_LIBRARIES})
-INSTALL(TARGETS ctpmd DESTINATION "lib/wingchun")
+#SET(CTP_SOURCE_FILES MDEngineCTP.cpp MDEngineCTP.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h)
+#ADD_LIBRARY(ctpmd SHARED ${CTP_SOURCE_FILES})
+#TARGET_LINK_LIBRARIES(ctpmd journal kflog thostmduserapi ${Boost_LIBRARIES})
+#INSTALL(TARGETS ctpmd DESTINATION "lib/wingchun")
 
-SET(XTP_SOURCE_FILES MDEngineXTP.cpp MDEngineXTP.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h)
-ADD_LIBRARY(xtpmd SHARED ${XTP_SOURCE_FILES})
-TARGET_LINK_LIBRARIES(xtpmd journal kflog xtpquoteapi ${Boost_LIBRARIES})
-INSTALL(TARGETS xtpmd DESTINATION "lib/wingchun")
+#SET(XTP_SOURCE_FILES MDEngineXTP.cpp MDEngineXTP.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h)
+#ADD_LIBRARY(xtpmd SHARED ${XTP_SOURCE_FILES})
+#TARGET_LINK_LIBRARIES(xtpmd journal kflog xtpquoteapi ${Boost_LIBRARIES})
+#INSTALL(TARGETS xtpmd DESTINATION "lib/wingchun")
+
+include_directories(${CMAKE_SOURCE_DIR}/utils/cpr/include ${CMAKE_SOURCE_DIR}/utils/rapidjson/include/)
+SET(BINANCE_SOURCE_FILES MDEngineBinance.cpp MDEngineBinance.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h)
+ADD_LIBRARY(binancemd SHARED ${BINANCE_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(binancemd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
+INSTALL(TARGETS binancemd DESTINATION "lib/wingchun")
+
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/utils/cpr/lib/ DESTINATION "lib/wingchun")
+
