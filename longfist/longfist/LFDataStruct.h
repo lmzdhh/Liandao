@@ -266,9 +266,9 @@ struct LFInputOrderField
 	char_9                     	ExchangeID;            //交易所代码
 	char_31                    	InstrumentID;          //合约代码
 	char_21                    	OrderRef;              //报单引用
-	double                     	LimitPrice;            //价格
-	int                        	Volume;                //数量
-	int                        	MinVolume;             //最小成交量
+	int64_t                     	LimitPrice;            //价格
+	uint64_t                        Volume;                //数量
+	uint64_t                        MinVolume;             //最小成交量
 	LfTimeConditionType        	TimeCondition;         //有效期类型
 	LfVolumeConditionType      	VolumeCondition;       //成交量类型
 	LfOrderPriceTypeType       	OrderPriceType;        //报单价格条件
@@ -292,10 +292,10 @@ struct LFRtnOrderField
 	char_31                	InstrumentID;          //合约代码
 	char_21                	OrderRef;              //报单引用
 	char_11                	ExchangeID;            //交易所代码
-	double                 	LimitPrice;            //价格
-	int                    	VolumeTraded;          //今成交数量
-	int                    	VolumeTotal;           //剩余数量
-	int                    	VolumeTotalOriginal;   //数量
+	int64_t                 LimitPrice;            //价格
+	uint64_t                VolumeTraded;          //今成交数量
+	uint64_t                VolumeTotal;           //剩余数量
+	uint64_t                VolumeTotalOriginal;   //数量
 	LfTimeConditionType    	TimeCondition;         //有效期类型
 	LfVolumeConditionType  	VolumeCondition;       //成交量类型
 	LfOrderPriceTypeType   	OrderPriceType;        //报单价格条件
@@ -319,8 +319,8 @@ struct LFRtnTradeField
 	char_31           	OrderSysID;            //报单编号
 	char_11           	ParticipantID;         //会员代码
 	char_21           	ClientID;              //客户代码
-	double            	Price;                 //价格
-	int               	Volume;                //数量
+	int64_t            	Price;                 //价格
+	uint64_t               	Volume;                //数量
 	char_13           	TradingDay;            //交易日
 	char_13           	TradeTime;             //成交时间
 	LfDirectionType   	Direction;             //买卖方向
@@ -339,8 +339,8 @@ struct LFOrderActionField
 	char_31  	OrderSysID;            //报单编号
 	int      	RequestID;             //请求编号
 	char     	ActionFlag;            //报单操作标志
-	double   	LimitPrice;            //价格
-	int      	VolumeChange;          //数量变化
+	int64_t   	LimitPrice;            //价格
+	uint64_t      	VolumeChange;          //数量变化
 	int      	KfOrderID;             //Kf系统内订单ID
 };
 

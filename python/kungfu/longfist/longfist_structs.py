@@ -257,9 +257,9 @@ class LFInputOrderField(Structure):
         ("ExchangeID", c_char * 9),	# 交易所代码 
         ("InstrumentID", c_char * 31),	# 合约代码 
         ("OrderRef", c_char * 21),	# 报单引用 
-        ("LimitPrice", c_double),	# 价格 
-        ("Volume", c_int),	# 数量 
-        ("MinVolume", c_int),	# 最小成交量 
+        ("LimitPrice", c_int64),	# 价格 
+        ("Volume", c_uint64),	# 数量 
+        ("MinVolume", c_uint64),	# 最小成交量 
         ("TimeCondition", c_char),	# 有效期类型 LfTimeConditionType
         ("VolumeCondition", c_char),	# 成交量类型 LfVolumeConditionType
         ("OrderPriceType", c_char),	# 报单价格条件 LfOrderPriceTypeType
@@ -283,10 +283,10 @@ class LFRtnOrderField(Structure):
         ("InstrumentID", c_char * 31),	# 合约代码 
         ("OrderRef", c_char * 21),	# 报单引用 
         ("ExchangeID", c_char * 11),	# 交易所代码 
-        ("LimitPrice", c_double),	# 价格 
-        ("VolumeTraded", c_int),	# 今成交数量 
-        ("VolumeTotal", c_int),	# 剩余数量 
-        ("VolumeTotalOriginal", c_int),	# 数量 
+        ("LimitPrice", c_int64),	# 价格 
+        ("VolumeTraded", c_uint64),	# 今成交数量 
+        ("VolumeTotal", c_uint64),	# 剩余数量 
+        ("VolumeTotalOriginal", c_uint64),	# 数量 
         ("TimeCondition", c_char),	# 有效期类型 LfTimeConditionType
         ("VolumeCondition", c_char),	# 成交量类型 LfVolumeConditionType
         ("OrderPriceType", c_char),	# 报单价格条件 LfOrderPriceTypeType
@@ -310,8 +310,8 @@ class LFRtnTradeField(Structure):
         ("OrderSysID", c_char * 31),	# 报单编号 
         ("ParticipantID", c_char * 11),	# 会员代码 
         ("ClientID", c_char * 21),	# 客户代码 
-        ("Price", c_double),	# 价格 
-        ("Volume", c_int),	# 数量 
+        ("Price", c_int64),	# 价格 
+        ("Volume", c_uint64),	# 数量 
         ("TradingDay", c_char * 13),	# 交易日 
         ("TradeTime", c_char * 13),	# 成交时间 
         ("Direction", c_char),	# 买卖方向 LfDirectionType
@@ -330,8 +330,8 @@ class LFOrderActionField(Structure):
         ("OrderSysID", c_char * 31),	# 报单编号 
         ("RequestID", c_int),	# 请求编号 
         ("ActionFlag", c_char),	# 报单操作标志 char
-        ("LimitPrice", c_double),	# 价格 
-        ("VolumeChange", c_int),	# 数量变化 
+        ("LimitPrice", c_int64),	# 价格 
+        ("VolumeChange", c_uint64),	# 数量变化 
         ("KfOrderID", c_int),	# Kf系统内订单ID 
         ]
 
