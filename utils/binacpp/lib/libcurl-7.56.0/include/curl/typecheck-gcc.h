@@ -1,5 +1,7 @@
 #ifndef __CURL_TYPECHECK_GCC_H
 #define __CURL_TYPECHECK_GCC_H
+#include <stdlib.h>
+
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |

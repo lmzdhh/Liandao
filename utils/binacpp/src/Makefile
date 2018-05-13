@@ -21,7 +21,7 @@ build_include=../lib/libbinacpp/include
 
 
 $(build_dir)/libbinacpp.so: $(objects)
-	g++ -I$(libcurl_include) -I$(jsoncpp_include) -I$(libwebsockets_include)  \
+	g++ -std=c++11 -I$(libcurl_include) -I$(jsoncpp_include) -I$(libwebsockets_include)  \
 	-L$(libcurl_lib) \
 	-L$(libwebsockets_lib) \
 	$(objects) \
@@ -35,24 +35,24 @@ $(build_dir)/libbinacpp.so: $(objects)
 
 
 $(build_dir)/binacpp.o: binacpp.cpp binacpp.h 
-	g++ -I$(libcurl_include) -I$(jsoncpp_include) -c binacpp.cpp  -fPIC   -o $(build_dir)/binacpp.o 
+	g++ -std=c++11 -I$(libcurl_include) -I$(jsoncpp_include) -c binacpp.cpp  -fPIC   -o $(build_dir)/binacpp.o 
 
 
 $(build_dir)/binacpp_websocket.o: binacpp_websocket.cpp binacpp_websocket.h 
-	g++ -I$(libwebsockets_include) -I$(jsoncpp_include) -c binacpp_websocket.cpp  -fPIC   -o $(build_dir)/binacpp_websocket.o
+	g++ -std=c++11 -I$(libwebsockets_include) -I$(jsoncpp_include) -c binacpp_websocket.cpp  -fPIC   -o $(build_dir)/binacpp_websocket.o
 
 
 $(build_dir)/binacpp_logger.o: binacpp_logger.cpp binacpp_logger.h 
-	g++ -c binacpp_logger.cpp  -fPIC   -o $(build_dir)/binacpp_logger.o 
+	g++ -std=c++11 -c binacpp_logger.cpp  -fPIC   -o $(build_dir)/binacpp_logger.o 
 
 
 
 $(build_dir)/binacpp_utils.o: binacpp_utils.cpp binacpp_utils.h 
-	g++ -c binacpp_utils.cpp -fPIC   -o $(build_dir)/binacpp_utils.o 
+	g++ -std=c++11 -c binacpp_utils.cpp -fPIC   -o $(build_dir)/binacpp_utils.o 
 
 
 $(build_dir)/jsoncpp.o: $(jsoncpp_src)/jsoncpp.cpp
-	g++ -I$(jsoncpp_include) -c $(jsoncpp_src)/jsoncpp.cpp -fPIC  -o  $(build_dir)/jsoncpp.o
+	g++ -std=c++11 -I$(jsoncpp_include) -c $(jsoncpp_src)/jsoncpp.cpp -fPIC  -o  $(build_dir)/jsoncpp.o
 
 clean:
 	rm $(build_dir)/*.o

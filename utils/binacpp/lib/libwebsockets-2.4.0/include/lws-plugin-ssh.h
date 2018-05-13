@@ -18,7 +18,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  *  MA  02110-1301  USA
  */
-
+#include <stdlib.h>
+#include <stdint.h>
 #if !defined(__LWS_PLUGIN_SSH_H__)
 #define __LWS_PLUGIN_SSH_H__
 
