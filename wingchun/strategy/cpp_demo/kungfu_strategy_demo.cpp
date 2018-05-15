@@ -54,8 +54,8 @@ Strategy::Strategy(const string& name): IWCStrategy(name)
 
 void Strategy::init()
 {
-    data->add_market_data(SOURCE_INDEX);
-    //data->add_register_td(SOURCE_INDEX);
+    //data->add_market_data(SOURCE_INDEX);
+    data->add_register_td(SOURCE_INDEX);
     vector<string> tickers;
     tickers.push_back(M_TICKER);
     util->subscribeMarketData(tickers, SOURCE_INDEX);

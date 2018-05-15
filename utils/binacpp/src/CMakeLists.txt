@@ -20,7 +20,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3 -Wall")
 include_directories(${CMAKE_SOURCE_DIR}/lib/jsoncpp-1.8.3/include ${CMAKE_SOURCE_DIR}/lib/libcurl-7.56.0/include ${CMAKE_SOURCE_DIR}/lib/libwebsockets-2.4.0/include)
 SET(LIB_SOURCE_FILES binacpp.h binacpp.cpp binacpp_logger.cpp binacpp_logger.h binacpp_utils.cpp binacpp_utils.h binacpp_websocket.cpp binacpp_websocket.h ${CMAKE_SOURCE_DIR}/lib/jsoncpp-1.8.3/src/jsoncpp.cpp)
 
-LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/lib/libcurl-7.56.0/lib ${CMAKE_SOURCE_DIR}/lib/libwebsockets-2.4.0/lib)
+LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/../cpr/lib ${CMAKE_SOURCE_DIR}/lib/libwebsockets-2.4.0/lib)
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${LIB_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} -lcurl -lwebsockets)
