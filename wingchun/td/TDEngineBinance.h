@@ -71,6 +71,9 @@ private:
     void OnRtnOrder(CThostFtdcOrderField *pOrder);
     void OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo,
                                      int nRequestID, bool bIsLast);
+
+    void OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction,
+                                  CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 public:
     
     
