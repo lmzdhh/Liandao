@@ -5,8 +5,9 @@
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
 #include "ThostFtdcTraderApi.h"
-
+#include <vector>
 #include <sstream>
+#include <map>
 #include "binacpp.h"
 #include "binacpp_websocket.h"
 #include <json/json.h>
@@ -56,14 +57,17 @@ public:
     TDEngineBinance();
 
 private:
-    static constexpr int scale_offset = 1e8;
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
     vector<AccountUnitBinance> account_units;
 
     std::string GetSide(const LfDirectionType& input);
+    LfDirectionType GetDirection(std::string input);
     std::string GetType(const LfOrderPriceTypeType& input);
+    LfOrderPriceTypeType GetPriceType(std::string input);
     std::string GetTimeInForce(const LfTimeConditionType& input);
+    LfTimeConditionType GetTimeCondition(std::string input);
+    LfOrderStatusType GetOrderStatus(std::string input);
     std::string GetInputOrderData(const LFInputOrderField* order, int recvWindow);
     // rsp functions
     void OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo,
@@ -74,7 +78,17 @@ private:
 
     void OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction,
                                   CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
-public:
+
+    void loop();
+    std::vector<std::string> split(std::string str, std::string token);
+    void GetAndHandleOrderResponse();
+
+    static constexpr int scale_offset = 1e8;
+    std::map<std::string, std::vector<std::string>*> symbols_pending_orderref;
+    ThreadPtr rest_thread;
+    uint64_t last_rest_get_ts = 0;
+    int rest_get_interval_ms = 500;
+    
     
     
 };

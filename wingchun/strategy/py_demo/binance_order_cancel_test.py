@@ -22,7 +22,7 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 
 def initialize(context):
     context.add_md(source=SOURCE.BINANCE)
-    context.ticker = 'BTCUSDT'
+    context.ticker = 'TRXBTC'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
@@ -55,15 +55,15 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
 def on_tick(context, market_data, source, rcv_time):
     print('market_data', market_data)
     if market_data.InstrumentID == context.ticker:
-        context.buy_price = 0 #market_data.LowerLimitPrice
+        context.buy_price = 489 #market_data.LowerLimitPrice
         context.sell_price = 99999999 #market_data.UpperLimitPrice
         if context.order_rid < 0:
-            print("context.insert_limit_order 1.")
+            print("context.insert_limit_order 512.")
             context.order_rid = context.insert_limit_order(source=SOURCE.BINANCE,
                                                          ticker=context.ticker,
                                                          price=context.buy_price,
                                                          exchange_id=context.exchange_id,
-                                                         volume=1,
+                                                         volume=51200000000,
                                                          direction=DIRECTION.Buy,
                                                          offset=OFFSET.Open)
             print("context.order_rid:", context.order_rid)
