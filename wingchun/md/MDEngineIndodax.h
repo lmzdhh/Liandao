@@ -4,7 +4,9 @@
 #include "IMDEngine.h"
 #include "longfist/LFConstants.h"
 #include "ThostFtdcMdApi.h"
-
+#include "libIndodax.h"
+#include "rapidjson/document.h"
+#include <vector>
 WC_NAMESPACE_START
 
 class MDEngineIndodax: public IMDEngine, public CThostFtdcMdSpi
@@ -22,11 +24,11 @@ public:
     virtual string name() const { return "MDEngineCTP"; };
 
 public:
-    MDEngineCTP();
+    MDEngineIndodax();
 
 private:
     /** ctp api */
-    CThostFtdcMdApi* api;
+    libIndodax* api;
     /** internal information */
     string broker_id;
     string user_id;
@@ -37,6 +39,8 @@ private:
     bool logged_in;
     int  reqId;
 
+    //
+    vector<string> symbols;
 public:
     // SPI
     ///当客户端与交易后台建立起通信连接时（还未登录前），该方法被调用。
@@ -64,7 +68,7 @@ public:
     virtual void OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData);
 };
 
-DECLARE_PTR(MDEngineCTP);
+DECLARE_PTR(MDEngineIndodax);
 
 WC_NAMESPACE_END
 
