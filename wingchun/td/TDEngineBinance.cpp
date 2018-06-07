@@ -356,11 +356,14 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
             strncpy(pOrder.UserID, unit.api_key.c_str(), 16);
             strncpy(pOrder.InstrumentID, result["symbol"].asString().c_str(), 31);
             pOrder.Direction = data->Direction;
+            pOrder.TimeCondition = data->TimeCondition;
+            pOrder.OrderPriceType = data->OrderPriceType;
             strncpy(pOrder.OrderRef, result["clientOrderId"].asString().c_str(), 13);
             pOrder.VolumeTraded = atof(result["executedQty"].asString().c_str()) * scale_offset;
             pOrder.VolumeTotalOriginal = atof(result["origQty"].asString().c_str()) * scale_offset;
             pOrder.LimitPrice = atof(result["price"].asString().c_str()) * scale_offset;
             pOrder.RequestID = requestId;
+            pOrder.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
             OnRtnOrder(&pOrder);
         } else {
             CThostFtdcOrderField pOrder;
@@ -368,9 +371,12 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
             strncpy(pOrder.UserID, unit.api_key.c_str(), 16);
             strncpy(pOrder.InstrumentID,result["symbol"].asString().c_str(), 31);
             pOrder.Direction = data->Direction;
+            pOrder.TimeCondition = data->TimeCondition;
+            pOrder.OrderPriceType = data->OrderPriceType;
             strncpy(pOrder.OrderRef, result["clientOrderId"].asString().c_str(), 13);
             pOrder.VolumeTotalOriginal = atof(result["origQty"].asString().c_str()) * scale_offset;
             pOrder.RequestID = requestId;
+            pOrder.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
             int fills_size = result["fills"].size();
             KF_LOG_INFO(logger, "[req_order_insert]" << " result[fills] exist. (result)" << result);
             for(int i = 0; i < fills_size; ++i)
@@ -517,6 +523,14 @@ void TDEngineBinance::OnRtnOrder(CThostFtdcOrderField *pOrder)
                             1/*islast*/, (pOrder->RequestID > 0) ? pOrder->RequestID: -1);
 }
 
+void TDEngineBinance::OnRtnTrade(CThostFtdcTradeField *pTrade)
+{
+    auto rtn_trade = parseFrom(*pTrade);
+    on_rtn_trade(&rtn_trade);
+    raw_writer->write_frame(pTrade, sizeof(CThostFtdcTradeField),
+                            source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
+}
+
 void TDEngineBinance::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo,
                                      int nRequestID, bool bIsLast)
 {
@@ -582,10 +596,21 @@ void TDEngineBinance::GetAndHandleOrderResponse()
                     pOrder.LimitPrice = atof(result["price"].asString().c_str()) * scale_offset;
                     pOrder.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
                     OnRtnOrder(&pOrder);
-
                     //when order status is finish, dont get its status anymore
                     if (pOrder.OrderStatus == LF_CHAR_AllTraded || pOrder.OrderStatus == LF_CHAR_Canceled  || pOrder.OrderStatus == LF_CHAR_Error )
                     {
+                        if (pOrder.OrderStatus == LF_CHAR_AllTraded)
+                        {   
+                            CThostFtdcTradeField pTrade;
+                            strcpy(pTrade.ExchangeID, "binance");
+                            strncpy(pTrade.UserID, unit.api_key.c_str(), 16);
+                            strncpy(pTrade.InstrumentID, result["symbol"].asString().c_str(), 31);
+                            strncpy(pTrade.OrderRef, result["clientOrderId"].asString().c_str(), 13);
+                            pTrade.Direction = GetDirection(result["side"].asString());
+                            //pTrade.TradeTime = 
+                            pTrade.Volume = atof(result["executedQty"].asString().c_str()) * scale_offset;
+                            OnRtnTrade(&pTrade);
+                        }
                         pendingOrderIds->erase(pendingOrderIds->begin() + i);
                         i--;
                     }

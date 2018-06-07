@@ -73,6 +73,7 @@ private:
     void OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo,
                                     int nRequestID, bool bIsLast);
     void OnRtnOrder(CThostFtdcOrderField *pOrder);
+    void OnRtnTrade(CThostFtdcTradeField *pTrade);
     void OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo,
                                      int nRequestID, bool bIsLast);
 
