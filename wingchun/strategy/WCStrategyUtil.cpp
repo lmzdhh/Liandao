@@ -109,7 +109,7 @@ string WCStrategyUtil::parse_nano(long nano)
 int WCStrategyUtil::insert_market_order(short source,
                                         string instrument_id,
                                         string exchange_id,
-                                        int volume,
+                                        uint64_t volume,
                                         LfDirectionType direction,
                                         LfOffsetFlagType offset)
 {
@@ -135,7 +135,7 @@ int WCStrategyUtil::insert_market_order(short source,
     return rid;
 }
 
-int WCStrategyUtil::insert_limit_order(short source, string instrument_id, string exchange_id, double price, int volume, LfDirectionType direction, LfOffsetFlagType offset)
+int WCStrategyUtil::insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
 {
     int rid = get_rid();
     LFInputOrderField order = {};
@@ -159,7 +159,7 @@ int WCStrategyUtil::insert_limit_order(short source, string instrument_id, strin
     return rid;
 }
 
-int WCStrategyUtil::insert_fok_order(short source, string instrument_id, string exchange_id, double price, int volume, LfDirectionType direction, LfOffsetFlagType offset)
+int WCStrategyUtil::insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
 {
     int rid = get_rid();
     LFInputOrderField order = {};
@@ -183,7 +183,7 @@ int WCStrategyUtil::insert_fok_order(short source, string instrument_id, string 
     return rid;
 }
 
-int WCStrategyUtil::insert_fak_order(short source, string instrument_id, string exchange_id, double price, int volume, LfDirectionType direction, LfOffsetFlagType offset)
+int WCStrategyUtil::insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
 {
     int rid = get_rid();
     LFInputOrderField order = {};

@@ -26,3 +26,21 @@ SET(TD_SOURCE_FILES  ITDEngine.cpp ITDEngine.h ../base/IEngine.cpp ../base/IEngi
 #ADD_LIBRARY(xtptd SHARED ${XTP_SOURCE_FILES})
 #TARGET_LINK_LIBRARIES(xtptd journal kflog xtptraderapi ${Boost_LIBRARIES})
 #INSTALL(TARGETS xtptd DESTINATION "lib/wingchun")
+
+include_directories(${CMAKE_SOURCE_DIR}/utils/binacpp/lib/libbinacpp/include ${CMAKE_SOURCE_DIR}/utils/binacpp/lib/jsoncpp-1.8.3/include ${CMAKE_SOURCE_DIR}/utils/binacpp/lib/libcurl-7.56.0/include ${CMAKE_SOURCE_DIR}/utils/binacpp/lib/libwebsockets-2.4.0/include)
+
+LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/utils/binacpp/lib/libbinacpp/lib ${CMAKE_SOURCE_DIR}/utils/cpr/lib ${CMAKE_SOURCE_DIR}/utils/binacpp/lib/libwebsockets-2.4.0/lib)
+
+SET(BINANCE_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBinance.cpp TDEngineBinance.h)
+
+ADD_LIBRARY(binancetd SHARED ${BINANCE_SOURCE_FILES} ${CTP_SOURCE_FILES})
+
+TARGET_LINK_LIBRARIES(binancetd journal kflog thosttraderapi -lcurl -lwebsockets -lbinacpp ${Boost_LIBRARIES})
+
+INSTALL(TARGETS binancetd DESTINATION "lib/wingchun")
+
+
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/utils/binacpp/lib/libbinacpp/lib/libbinacpp.so DESTINATION "lib/wingchun")
+
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/utils/binacpp/lib/libwebsockets-2.4.0/lib/libwebsockets.so.13 DESTINATION "lib/wingchun")
+

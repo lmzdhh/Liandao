@@ -81,6 +81,8 @@ inline JournalPair getTdJournalPair(short source)
 			return {"/shared/kungfu/journal/TD/CTP/", "TD_CTP"};
 		case 15:
 			return {"/shared/kungfu/journal/TD/XTP/", "TD_XTP"};
+		case 16:
+			return {"/shared/kungfu/journal/TD/BINANCE/", "TD_BINANCE"};
 		default:
 			return {"", ""};
 	}
@@ -94,6 +96,8 @@ inline JournalPair getTdSendJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_SEND/CTP/", "TD_SEND_CTP"};
 		case 15:
 			return {"/shared/kungfu/journal/TD_SEND/XTP/", "TD_SEND_XTP"};
+                case 16:
+                        return {"/shared/kungfu/journal/TD_SEND/BINANCE/", "TD_SEND_BINANCE"};
 		default:
 			return {"", ""};
 	}
@@ -107,6 +111,8 @@ inline JournalPair getTdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_RAW/CTP/", "TD_RAW_CTP"};
 		case 15:
 			return {"/shared/kungfu/journal/TD_RAW/XTP/", "TD_RAW_XTP"};
+		case 16:
+			return {"/shared/kungfu/journal/TD_RAW/BINANCE/", "TD_RAW_BINANCE"};
 		default:
 			return {"", ""};
 	}
@@ -120,6 +126,8 @@ inline JournalPair getTdQJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_Q/CTP/", "TD_Q_CTP"};
 		case 15:
 			return {"/shared/kungfu/journal/TD_Q/XTP/", "TD_Q_XTP"};
+		case 16:
+			return {"/shared/kungfu/journal/TD_Q/BINANCE/", "TD_Q_BINANCE"};
 		default:
 			return {"", ""};
 	}

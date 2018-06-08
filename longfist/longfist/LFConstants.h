@@ -69,7 +69,9 @@ const short MSG_TYPE_LF_RTN_TRADE_XTP = 15206; // XTPTradeReport from xtp/xoms_a
 
 //binance, idx=16
 const short MSG_TYPE_LF_MD_BINANCE        = 16101; 
-const short MSG_TYPE_LF_ORDER_BINANCE    = 16204; 
+const short MSG_TYPE_LF_RSP_POS_BINANCE   = 16202;
+const short MSG_TYPE_LF_QRY_POS_BINANCE   = 16203;
+const short MSG_TYPE_LF_ORDER_BINANCE     = 16204; 
 const short MSG_TYPE_LF_RTN_ORDER_BINANCE = 16205; 
 const short MSG_TYPE_LF_RTN_TRADE_BINANCE = 16206; 
 const short MSG_TYPE_LF_ORDER_ACTION_BINANCE = 16207; 

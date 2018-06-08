@@ -15,7 +15,7 @@
       "UserId": "YOUR_USER_ID",
       "Password": "YOUR_PASSWORD",
       "ClientId": 1
-    }
+    },
     "binance":
     {
       "symbol": "BTCUSDT",
@@ -26,6 +26,41 @@
   },
   "td":
   {
+    "binance":
+    {
+      "accounts":
+        [
+          {
+            "info":
+            {
+              "APIKey": "your-api-key",
+              "SecretKey": "your-secret-key"
+            },
+            "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
+            "is_default": true
+          }
+        ],
+        "FeeSetup":
+        {
+          "stock":
+          {
+            "type": "amount",
+            "fee_multi": 0.0003,
+            "ctr_multi": 1,
+            "min_fee": 0
+          },
+          "future":
+          {
+            "type": "amount",
+            "fee_multi": [0.000023, 0.00069, 0.000023],
+            "ctr_multi": 200,
+            "min_fee": 0
+          },
+          "future_exotic": null
+        }
+    
+    },
+
     "ctp":
     {
       "FrontUri": "tcp://180.168.146.187:10000",
