@@ -337,8 +337,12 @@ int main() {
 	
 	//-------------------------------------------------------------
 	// Example: Placing a LIMIT order
-	//BinaCPP::send_order( "BNBETH", "BUY", "LIMIT", "GTC", 20 , 0.00380000, "",0,0, recvWindow, result );
-	//cout << result << endl;
+	BinaCPP::send_order( "BNBETH", "BUY", "LIMIT", "GTC", 20 , 0.00380000, "",0,0, recvWindow, result );
+	cout << result << endl;
+
+BinaCPP::send_order( "BNBETH", "BUY", "LIMIT", "GTC", 20 , 0.00000123, "",0,0, recvWindow, result );
+        cout << result << endl;
+
 	//*/
 
 

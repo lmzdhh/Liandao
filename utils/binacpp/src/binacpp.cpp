@@ -16,7 +16,8 @@
 #include "binacpp_utils.h"
 
 
-
+#include<iostream>
+#include <iomanip>
 
 string BinaCPP::api_key = "";
 string BinaCPP::secret_key = "";
@@ -918,7 +919,12 @@ BinaCPP::send_order(
 	post_data.append( to_string( quantity) );
 
 	post_data.append("&price=");
-	post_data.append( to_string( price) );
+        std::string priceStr;
+        std::stringstream convertStream;
+        convertStream <<std::fixed << std::setprecision(8) << price;
+        convertStream >> priceStr;
+
+	post_data.append( priceStr );
 
 	if ( strlen( newClientOrderId ) > 0 ) {
 		post_data.append("&newClientOrderId=");
