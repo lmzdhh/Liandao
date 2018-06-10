@@ -44,4 +44,4 @@ LINK_DIRECTORIES(/opt/kungfu/master/lib/wingchun)
 ############################################################
 SET(STRATEGY_SOURCE_FILE manual_strategy.cpp)
 ADD_EXECUTABLE(${PROJECT_NAME} ${STRATEGY_SOURCE_FILE})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} wingchunstrategy python journal kflog log4cplus ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} wingchunstrategy python journal kflog log4cplus readline ${Boost_LIBRARIES})
