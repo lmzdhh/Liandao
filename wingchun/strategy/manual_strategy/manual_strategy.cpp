@@ -54,7 +54,7 @@ ManualStrategy::ManualStrategy(const string& name, exchange_source_index _exch_s
 
 void ManualStrategy::init()
 {
-    //data->add_market_data(exch_src_index);
+    data->add_market_data(exch_src_index);
     data->add_register_td(exch_src_index);
     vector<string> tickers;
     tickers.push_back(symbol);
