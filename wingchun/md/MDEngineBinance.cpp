@@ -161,10 +161,12 @@ void MDEngineBinance::GetAndHandleTradeResponse(const std::string& symbol, int l
 		    }
 		    
 		    last_trade_id = trade_id;
-		    if(ele.HasMember("price") && ele.HasMember("qty"))
+		    if(ele.HasMember("price") && ele.HasMember("qty") && ele.HasMember("isBuyerMaker") && ele.HasMember("isBestMatch"))
 		    {
 			    trade.Price = std::stod(ele["price"].GetString()) * scale_offset;
 			    trade.Volume = std::stod(ele["qty"].GetString()) * scale_offset;
+			    trade.OrderKind[0] = ele["isBestMatch"].GetBool() ? 'B' : 'N';
+			    trade.OrderBSFlag[0] = ele["isBuyerMaker"].GetBool() ? 'B' : 'S';
 			    on_trade(&trade);
 		    }
 	    }
