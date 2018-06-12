@@ -233,54 +233,27 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
 	BinaCPP::get_allOrders( "BNBETH", 0,0, recvWindow, result ) 
 	cout << result << endl;
 	*/
-    
-    struct CThostFtdcQryInvestorPositionField req = parseTo(*data);
-    KF_LOG_DEBUG(logger, "[req_investor_position] (Mock EmptyData)" << " (Bid)" << req.BrokerID
-                                     << " (Iid)" << req.InvestorID
-                                     << " (Tid)" << req.InstrumentID);
-    send_writer->write_frame(&req, sizeof(CThostFtdcQryInvestorPositionField), source_id, MSG_TYPE_LF_QRY_POS_BINANCE, 1, requestId);
-    
-    CThostFtdcInvestorPositionField pInvestorPosition;
-    strncpy(pInvestorPosition.InstrumentID, data->InstrumentID, 31);
 
-    CThostFtdcRspInfoField pRspInfo;
-    pRspInfo.ErrorID = 0;
+    KF_LOG_DEBUG(logger, "[req_investor_position] (Mock EmptyData)" << " (Bid)" << data->BrokerID
+                                     << " (Iid)" << data->InvestorID
+                                     << " (Tid)" << data->InstrumentID);
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BINANCE, 1, requestId);
     std::string msg = "";
-    strncpy(pRspInfo.ErrorMsg, msg.c_str(), 1);
-    OnRspQryInvestorPosition(&pInvestorPosition, &pRspInfo,
-                                     requestId, 1/*ISLAST*/);
+    LFRspPositionField pos;
+    strncpy(pos.BrokerID, data->BrokerID, 11);
+    strncpy(pos.InvestorID, data->InvestorID, 19);
+    strncpy(pos.InstrumentID, data->InstrumentID, 31);
+    on_rsp_position(&pos, 1, requestId, 0, msg.c_str());
 }
 
 void TDEngineBinance::req_qry_account(const LFQryAccountField *data, int account_index, int requestId)
 {
     KF_LOG_INFO(logger, "[req_qry_account]");
-/*
-	// -------------------------------------------------------------
-	// Example: Get Account 
-	BinaCPP::get_account( recvWindow , result );
-	cout << result << endl;
-	//
-    */
-   /*
-    struct CThostFtdcQryTradingAccountField req = parseTo(*data);
-    KF_LOG_DEBUG(logger, "[req_account]" << " (Bid)" << req.BrokerID
-                                         << " (Iid)" << req.InvestorID);
-
-    if (account_units[account_index].api->ReqQryTradingAccount(&req, requestId))
-    {
-        KF_LOG_ERROR(logger, "[request] account info failed!" << " (rid)" << requestId
-                                                              << " (idx)" << account_index);
-    }
-    send_writer->write_frame(&req, sizeof(CThostFtdcQryTradingAccountField), source_id, MSG_TYPE_LF_QRY_ACCOUNT_CTP, 1, requestId);
-    */
 }
 
 void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     AccountUnitBinance& unit = account_units[account_index];
-    BinaCPP::init( unit.api_key, unit.secret_key );
-    Json::Value result;
-
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Tid)" << data->InstrumentID
@@ -288,41 +261,30 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     long recvWindow = 10000;
     double stopPrice = 0;
     double icebergQty = 0;
-    
-    KF_LOG_INFO(logger, "[req_order_insert]" << " (Volume)" << data->Volume);
-    KF_LOG_INFO(logger, "[req_order_insert]" << " (data->Volume*1.0/scale_offset)" << data->Volume*1.0/scale_offset);
-    KF_LOG_INFO(logger, "[req_order_insert]" << " (LimitPrice)" << data->LimitPrice);
-    KF_LOG_INFO(logger, "[req_order_insert]" << " (LimitPrice*1.0/scale_offset)" << data->LimitPrice*1.0/scale_offset);
+    Json::Value result;
+    //KF_LOG_INFO(logger, "[req_order_insert]" << " (Volume)" << data->Volume);
+    //KF_LOG_INFO(logger, "[req_order_insert]" << " (data->Volume*1.0/scale_offset)" << data->Volume*1.0/scale_offset);
+    //KF_LOG_INFO(logger, "[req_order_insert]" << " (LimitPrice)" << data->LimitPrice);
+    //KF_LOG_INFO(logger, "[req_order_insert]" << " (LimitPrice*1.0/scale_offset)" << data->LimitPrice*1.0/scale_offset);
     //BinaCPP::send_order( "BNBETH", "BUY", "LIMIT", "GTC", 20 , 0.00380000, "",0,0, recvWindow, result );
     //BinaCPP::send_order( "BNBETH", "BUY", "MARKET", "GTC", 20 , 0,   "",0,0, recvWindow, result );
-    BinaCPP::send_order( data->InstrumentID, GetSide(data->Direction).c_str(), GetType(data->OrderPriceType).c_str(), 
+    BinaCPP::init( unit.api_key, unit.secret_key );
+    BinaCPP::send_order( data->InstrumentID, GetSide(data->Direction).c_str(), GetType(data->OrderPriceType).c_str(),
         GetTimeInForce(data->TimeCondition).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset, data->OrderRef, 
         stopPrice, icebergQty, recvWindow, result);
-    //record 
-    struct CThostFtdcInputOrderField req = parseTo(*data);
-    //strncpy(req.UserID, unit.api_key.c_str(), 16);
-    
-    strcpy(req.ExchangeID, "binance");
-    req.RequestID = requestId;
-    send_writer->write_frame(&req, sizeof(CThostFtdcInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1/*ISLAST*/, requestId);
 
-    //sent, parse the response result
+    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1/*ISLAST*/, requestId);
     KF_LOG_INFO(logger, "[req_order_insert]" << " (result)" << result);
-    
-    CThostFtdcRspInfoField pRspInfo;
+
+    int errorId = 0;
+    std::string errorMsg = "";
     if(result["code"] != Json::nullValue)
     {
-        KF_LOG_ERROR(logger, "[req_order_insert] order insert failed!" << " (rid)" << requestId << " (code)" << result["code"].asString());
-        int errorId = result["code"].asInt();
-        pRspInfo.ErrorID = errorId;
-        std::string errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
-        strncpy(pRspInfo.ErrorMsg, errorMsg.c_str(), 80);
-    } else {
-        pRspInfo.ErrorID = 0;
-        std::string msg = "";
-        strncpy(pRspInfo.ErrorMsg, msg.c_str(), 1);
+        errorId = result["code"].asInt();
+        KF_LOG_ERROR(logger, "[req_order_insert] order insert failed!" << " (rid)" << requestId << " (code)" << errorId);
+        errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
     }
-    OnRspOrderInsert(&req, &pRspInfo, requestId, 1);
+    on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
 
     //paser the trade info in the response result
     if(result["code"] == Json::nullValue)
@@ -351,40 +313,48 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
                 "clientOrderId": "6gCrw2kRUAF9CvJDGP16IP",
                 "transactTime": 1507725176595
             }*/
-            CThostFtdcOrderField pOrder;
-            strcpy(pOrder.ExchangeID, "binance");
-            strncpy(pOrder.UserID, unit.api_key.c_str(), 16);
-            strncpy(pOrder.InstrumentID, result["symbol"].asString().c_str(), 31);
-            pOrder.Direction = data->Direction;
-            pOrder.TimeCondition = data->TimeCondition;
-            pOrder.OrderPriceType = data->OrderPriceType;
-            strncpy(pOrder.OrderRef, result["clientOrderId"].asString().c_str(), 13);
-            pOrder.VolumeTraded = atof(result["executedQty"].asString().c_str()) * scale_offset;
-            pOrder.VolumeTotalOriginal = atof(result["origQty"].asString().c_str()) * scale_offset;
-            pOrder.LimitPrice = atof(result["price"].asString().c_str()) * scale_offset;
-            pOrder.RequestID = requestId;
-            pOrder.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
-            OnRtnOrder(&pOrder);
+            LFRtnOrderField rtn_order;
+            strcpy(rtn_order.ExchangeID, "binance");
+            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_order.InstrumentID, result["symbol"].asString().c_str(), 31);
+            rtn_order.Direction = data->Direction;
+            rtn_order.TimeCondition = data->TimeCondition;
+            rtn_order.OrderPriceType = data->OrderPriceType;
+            strncpy(rtn_order.OrderRef, result["clientOrderId"].asString().c_str(), 13);
+            rtn_order.VolumeTraded = stod(result["executedQty"].asString().c_str()) * scale_offset;
+            rtn_order.VolumeTotalOriginal = stod(result["origQty"].asString().c_str()) * scale_offset;
+            rtn_order.LimitPrice = stod(result["price"].asString().c_str()) * scale_offset;
+            rtn_order.RequestID = requestId;
+            rtn_order.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
+
+            on_rtn_order(&rtn_order);
+            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                    source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
+                                    1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
         } else {
-            CThostFtdcOrderField pOrder;
-            strcpy(pOrder.ExchangeID, "binance");
-            strncpy(pOrder.UserID, unit.api_key.c_str(), 16);
-            strncpy(pOrder.InstrumentID,result["symbol"].asString().c_str(), 31);
-            pOrder.Direction = data->Direction;
-            pOrder.TimeCondition = data->TimeCondition;
-            pOrder.OrderPriceType = data->OrderPriceType;
-            strncpy(pOrder.OrderRef, result["clientOrderId"].asString().c_str(), 13);
-            pOrder.VolumeTotalOriginal = atof(result["origQty"].asString().c_str()) * scale_offset;
-            pOrder.RequestID = requestId;
-            pOrder.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
+            LFRtnOrderField rtn_order;
+            strcpy(rtn_order.ExchangeID, "binance");
+            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_order.InstrumentID, result["symbol"].asString().c_str(), 31);
+            rtn_order.Direction = data->Direction;
+            rtn_order.TimeCondition = data->TimeCondition;
+            rtn_order.OrderPriceType = data->OrderPriceType;
+            strncpy(rtn_order.OrderRef, result["clientOrderId"].asString().c_str(), 13);
+            rtn_order.VolumeTotalOriginal = stod(result["origQty"].asString().c_str()) * scale_offset;
+            rtn_order.RequestID = requestId;
+            rtn_order.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
+
             int fills_size = result["fills"].size();
             KF_LOG_INFO(logger, "[req_order_insert]" << " result[fills] exist. (result)" << result);
             for(int i = 0; i < fills_size; ++i)
             {
-                pOrder.VolumeTraded = atof(result["fills"][i]["qty"].asString().c_str()) * scale_offset;
-                pOrder.LimitPrice = atof(result["fills"][i]["price"].asString().c_str()) * scale_offset;
-                KF_LOG_INFO(logger, "[req_order_insert]" << " result[fills] exist. (OnRtnOrder_i)" << i);
-                OnRtnOrder(&pOrder);
+                rtn_order.VolumeTraded = stod(result["fills"][i]["qty"].asString().c_str()) * scale_offset;
+                rtn_order.LimitPrice = stod(result["fills"][i]["price"].asString().c_str()) * scale_offset;
+
+                on_rtn_order(&rtn_order);
+                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                        source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
+                                        1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
             }
             /*
             //type3
@@ -448,102 +418,33 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
 
 void TDEngineBinance::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
 {
-    struct CThostFtdcInputOrderActionField req = parseTo(*data);
-    strcpy(req.ExchangeID, "binance");
-    req.OrderActionRef = local_id ++;
-    req.RequestID = requestId;
-    KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
-                                              << " (Iid)" << req.InvestorID
-                                              << " (OrderRef)" << req.OrderRef
-                                              << " (OrderActionRef)" << req.OrderActionRef);
-
-
     AccountUnitBinance& unit = account_units[account_index];
-    BinaCPP::init( unit.api_key, unit.secret_key );
+    KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
+                                              << " (APIKey)" << unit.api_key
+                                              << " (Iid)" << data->InvestorID
+                                              << " (OrderRef)" << data->OrderRef);
+
     Json::Value result;
     long recvWindow = 10000;
-    strncpy(req.UserID, unit.api_key.c_str(), 16);
-	BinaCPP::cancel_order(data->InstrumentID, 0, req.OrderRef,"", recvWindow, result);
-    KF_LOG_INFO(logger, "[req_order_action]" << " (result)" << result);
-    send_writer->write_frame(&req, sizeof(CThostFtdcInputOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId);
 
-    CThostFtdcRspInfoField pRspInfo;
+    //strcpy(data->ExchangeID, "binance");
+    //strncpy(data->UserID, unit.api_key.c_str(), 16);
+    BinaCPP::init( unit.api_key, unit.secret_key );
+	BinaCPP::cancel_order(data->InstrumentID, 0, data->OrderRef,"", recvWindow, result);
+    KF_LOG_INFO(logger, "[req_order_action]" << " (result)" << result);
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId);
+
+    int errorId = 0;
+    std::string errorMsg = "";
     if(result["code"] != Json::nullValue)
     {
-        KF_LOG_ERROR(logger, "[req_order_action] order action failed!" << " (rid)" << requestId);
-        int errorId = result["code"].asInt();
-        pRspInfo.ErrorID = errorId;
-        std::string errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
-        strncpy(pRspInfo.ErrorMsg, errorMsg.c_str(), 80);
-    } else {
-        KF_LOG_INFO(logger, "[req_order_action] order action success!" << " (rid)" << requestId);
-        pRspInfo.ErrorID = 0;
-        std::string msg = "";
-        strncpy(pRspInfo.ErrorMsg, msg.c_str(), 1);
+        errorId = result["code"].asInt();
+        KF_LOG_ERROR(logger, "[req_order_action] order action failed!" << " (rid)" << requestId << " (code)" << errorId);
+        errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
     }
-    CThostFtdcInputOrderActionField pInputOrderAction;
-    strcpy(pInputOrderAction.ExchangeID, "binance");
-    strncpy(pInputOrderAction.UserID, unit.api_key.c_str(), 16);
-    strncpy(pInputOrderAction.InstrumentID, data->InstrumentID, 31);
-    strncpy(pInputOrderAction.OrderRef, data->OrderRef, 21);
-    pInputOrderAction.OrderActionRef = req.OrderActionRef;
-    pInputOrderAction.RequestID = data->RequestID;
-    pInputOrderAction.LimitPrice = data->LimitPrice;
-    pInputOrderAction.VolumeChange = data->VolumeChange;
-    OnRspOrderAction(&pInputOrderAction, &pRspInfo, requestId, 1);
+    on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 }
-
-void TDEngineBinance::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo,
-                                    int nRequestID, bool bIsLast)
-{
-    int errorId = (pRspInfo == nullptr) ? 0 : pRspInfo->ErrorID;
-    const char* errorMsg = (pRspInfo == nullptr) ? nullptr : EngineUtil::gbkErrorMsg2utf8(pRspInfo->ErrorMsg);
-    auto data = parseFrom(*pInputOrder);
-    on_rsp_order_insert(&data, nRequestID, errorId, errorMsg);
-    raw_writer->write_error_frame(pInputOrder, sizeof(CThostFtdcInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, bIsLast, nRequestID, errorId, errorMsg);
-}
-
-void TDEngineBinance::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction,
-                                   CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-    int errorId = (pRspInfo == nullptr) ? 0 : pRspInfo->ErrorID;
-    const char* errorMsg = (pRspInfo == nullptr) ? nullptr : EngineUtil::gbkErrorMsg2utf8(pRspInfo->ErrorMsg);
-    auto data = parseFrom(*pInputOrderAction);
-    on_rsp_order_action(&data, nRequestID, errorId, errorMsg);
-    raw_writer->write_error_frame(pInputOrderAction, sizeof(CThostFtdcInputOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, bIsLast, nRequestID, errorId, errorMsg);
-}
-
-void TDEngineBinance::OnRtnOrder(CThostFtdcOrderField *pOrder)
-{
-    KF_LOG_INFO(logger, "[OnRtnOrder]" << " (pOrder)" << pOrder);
-    auto rtn_order = parseFrom(*pOrder);
-    on_rtn_order(&rtn_order);
-    raw_writer->write_frame(pOrder, sizeof(CThostFtdcOrderField),
-                            source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
-                            1/*islast*/, (pOrder->RequestID > 0) ? pOrder->RequestID: -1);
-}
-
-void TDEngineBinance::OnRtnTrade(CThostFtdcTradeField *pTrade)
-{
-    auto rtn_trade = parseFrom(*pTrade);
-    on_rtn_trade(&rtn_trade);
-    raw_writer->write_frame(pTrade, sizeof(CThostFtdcTradeField),
-                            source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
-}
-
-void TDEngineBinance::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo,
-                                     int nRequestID, bool bIsLast)
-{
-    int errorId = (pRspInfo == nullptr) ? 0 : pRspInfo->ErrorID;
-    const char* errorMsg = (pRspInfo == nullptr) ? nullptr : EngineUtil::gbkErrorMsg2utf8(pRspInfo->ErrorMsg);
-    CThostFtdcInvestorPositionField emptyCtp = {};
-    if (pInvestorPosition == nullptr)
-        pInvestorPosition = &emptyCtp;
-    auto pos = parseFrom(*pInvestorPosition);
-    on_rsp_position(&pos, bIsLast, nRequestID, errorId, errorMsg);
-    raw_writer->write_error_frame(pInvestorPosition, sizeof(CThostFtdcInvestorPositionField), source_id, MSG_TYPE_LF_RSP_POS_BINANCE, bIsLast, nRequestID, errorId, errorMsg);
-}
-
 
 void TDEngineBinance::GetAndHandleOrderResponse()
 {
@@ -583,33 +484,40 @@ void TDEngineBinance::GetAndHandleOrderResponse()
                 //parse order status
                 if(result["code"] == Json::nullValue)
                 { // no error
-                    CThostFtdcOrderField pOrder;
-                    strcpy(pOrder.ExchangeID, "binance");
-                    strncpy(pOrder.UserID, unit.api_key.c_str(), 16);
-                    strncpy(pOrder.InstrumentID, result["symbol"].asString().c_str(), 31);
-                    strncpy(pOrder.OrderRef, result["clientOrderId"].asString().c_str(), 13);
-                    pOrder.Direction = GetDirection(result["side"].asString());
-                    pOrder.TimeCondition = GetTimeCondition(result["timeInForce"].asString());
-                    pOrder.OrderPriceType = GetPriceType(result["type"].asString());
-                    pOrder.VolumeTraded = atof(result["executedQty"].asString().c_str()) * scale_offset;
-                    pOrder.VolumeTotalOriginal = atof(result["origQty"].asString().c_str()) * scale_offset;
-                    pOrder.LimitPrice = atof(result["price"].asString().c_str()) * scale_offset;
-                    pOrder.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
-                    OnRtnOrder(&pOrder);
+                    LFRtnOrderField rtn_order;
+                    strcpy(rtn_order.ExchangeID, "binance");
+                    strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+                    strncpy(rtn_order.InstrumentID, result["symbol"].asString().c_str(), 31);
+                    rtn_order.Direction = GetDirection(result["side"].asString());
+                    rtn_order.TimeCondition = GetTimeCondition(result["timeInForce"].asString());
+                    rtn_order.OrderPriceType = GetPriceType(result["type"].asString());
+                    strncpy(rtn_order.OrderRef, result["clientOrderId"].asString().c_str(), 13);
+                    rtn_order.VolumeTraded = stod(result["executedQty"].asString().c_str()) * scale_offset;
+                    rtn_order.VolumeTotalOriginal = stod(result["origQty"].asString().c_str()) * scale_offset;
+                    rtn_order.LimitPrice = stod(result["price"].asString().c_str()) * scale_offset;
+                    rtn_order.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
+
+                    on_rtn_order(&rtn_order);
+                    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                            source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
+                                            1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
                     //when order status is finish, dont get its status anymore
-                    if (pOrder.OrderStatus == LF_CHAR_AllTraded || pOrder.OrderStatus == LF_CHAR_Canceled  || pOrder.OrderStatus == LF_CHAR_Error )
+                    if (rtn_order.OrderStatus == LF_CHAR_AllTraded || rtn_order.OrderStatus == LF_CHAR_Canceled  || rtn_order.OrderStatus == LF_CHAR_Error )
                     {
-                        if (pOrder.OrderStatus == LF_CHAR_AllTraded)
-                        {   
-                            CThostFtdcTradeField pTrade;
-                            strcpy(pTrade.ExchangeID, "binance");
-                            strncpy(pTrade.UserID, unit.api_key.c_str(), 16);
-                            strncpy(pTrade.InstrumentID, result["symbol"].asString().c_str(), 31);
-                            strncpy(pTrade.OrderRef, result["clientOrderId"].asString().c_str(), 13);
-                            pTrade.Direction = GetDirection(result["side"].asString());
-                            //pTrade.TradeTime = 
-                            pTrade.Volume = atof(result["executedQty"].asString().c_str()) * scale_offset;
-                            OnRtnTrade(&pTrade);
+                        if (rtn_order.OrderStatus == LF_CHAR_AllTraded)
+                        {
+                            LFRtnTradeField rtn_trade;
+                            strcpy(rtn_trade.ExchangeID, "binance");
+                            strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+                            strncpy(rtn_trade.InstrumentID, result["symbol"].asString().c_str(), 31);
+                            strncpy(rtn_trade.OrderRef, result["clientOrderId"].asString().c_str(), 13);
+                            rtn_trade.Direction = GetDirection(result["side"].asString());
+                            rtn_trade.Volume = stod(result["executedQty"].asString().c_str()) * scale_offset;
+                            on_rtn_trade(&rtn_trade);
+                            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                                    source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
+
                         }
                         pendingOrderIds->erase(pendingOrderIds->begin() + i);
                         i--;

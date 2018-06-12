@@ -4,7 +4,6 @@
 
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
-#include "ThostFtdcTraderApi.h"
 #include <vector>
 #include <sstream>
 #include <map>
@@ -69,16 +68,6 @@ private:
     LfTimeConditionType GetTimeCondition(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
     std::string GetInputOrderData(const LFInputOrderField* order, int recvWindow);
-    // rsp functions
-    void OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo,
-                                    int nRequestID, bool bIsLast);
-    void OnRtnOrder(CThostFtdcOrderField *pOrder);
-    void OnRtnTrade(CThostFtdcTradeField *pTrade);
-    void OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo,
-                                     int nRequestID, bool bIsLast);
-
-    void OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction,
-                                  CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
