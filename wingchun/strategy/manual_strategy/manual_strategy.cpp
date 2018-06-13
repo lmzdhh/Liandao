@@ -4,6 +4,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <stdio.h>
+#include <unordered_map>
+#include <vector>
 
 USING_WC_NAMESPACE
 
@@ -151,6 +153,40 @@ struct event_factory
 		delete e;
 	}
 };
+
+struct manual_strategy_controller_context
+{
+	struct market_data_info
+	{
+		int64_t best_bid_px;
+		int64_t best_ask_px;
+		uint64_t best_bid_qty;
+		uint64_t best_ask_qty;
+		int64_t last_px;
+  		uint64_t last_volume;
+	};
+
+	std::unordered_map<std::string, market_data_info> ticker_market_data;
+	
+	struct pos_info
+	{
+		uint64_t long_pos;
+		uint64_t short_pos;	
+	}	
+	
+	std::unordered_map<std::string, pos_info> ticker_pos_info;
+	
+	struct order_info
+	{
+		uint64_t total_buy_qty;
+		uint64_t total_sell_qty;	
+	}
+
+	std::unordered_map<std::string, order_info> ticker_order_info;
+
+	WCStrategyUtilPtr strategy_util;
+};
+
 
 class manual_strategy_controller
 {
