@@ -25,6 +25,7 @@ struct event_base
 
 	virtual bool parse_line(const char* line_str) = 0;
 	
+	virtual const char* to_str() const = 0;	
 	event_type type = unknown;	
 };
 
@@ -38,6 +39,11 @@ struct status_update_event : event_base
 	{
 		return true;
 	}
+
+	const char* to_str() const override
+	{
+		return "status update";
+	}
 };
 
 struct insert_order_event : event_base
@@ -50,6 +56,19 @@ struct insert_order_event : event_base
 	{
 		return true;
 	}
+	
+	const char* to_str() const override
+	{
+		return "insert order";
+	}
+
+	std::string exchange;
+	std::string ticker;
+	int64_t price = 0;
+	uint64_t qty = 0;
+	char side = 0;
+	char type = 0;
+	char tif = 0;
 };
 
 struct cancel_order_event : event_base
@@ -62,6 +81,13 @@ struct cancel_order_event : event_base
 	{
 		return true;
 	}
+
+	const char* to_str() const override
+	{
+		return "cancel order";
+	}
+
+	int order_id = -1;
 };
 
 struct market_data_event : event_base
@@ -74,6 +100,11 @@ struct market_data_event : event_base
 	{
 		return true;
 	}
+	
+	const char* to_str() const override
+	{
+		return "market data";
+	}
 };
 
 struct help_event : event_base
@@ -85,6 +116,11 @@ struct help_event : event_base
 	bool parse_line(const char* line_str) override
 	{
 		return true;
+	}
+	
+	const char* to_str() const override
+	{
+		return "help";
 	}
 };
 
@@ -157,13 +193,14 @@ public:
 		}
 		
 		auto event_ptr = event_factory::create_event(event);
-		if(event_ptr)
+		if(event_ptr && event_ptr->parse_line(event_line))
 		{
 		    event_queue.push(event_ptr);
 		}
 		else
 		{
 		    //failed to create an event	
+		    fprintf(stderr, "invalid event type %d\n", v);
 		}
 	}
 
@@ -209,12 +246,14 @@ public:
 public:
     ManualStrategy(const string& name, exchange_source_index _exch_src_idx, const string& _exch_name, const string& _symbol);
 
+    void on_command_line(const char*);
+
 private:
     exchange_source_index exch_src_index = SOURCE_UNKNOWN;
     string exch_name;
     string symbol;
 	
-	manual_strategy_controller msc;
+    manual_strategy_controller msc;
 };
 
 ManualStrategy::ManualStrategy(const string& name, exchange_source_index _exch_src_idx, 
@@ -223,6 +262,23 @@ ManualStrategy::ManualStrategy(const string& name, exchange_source_index _exch_s
 {
     rid = -1;
 }
+
+void ManualStrategy::on_command_line(const char* line)
+{
+    int et = 0;
+    sscanf(line, "%d", &et);
+
+    msc.add_event(et, line);
+    
+    event_base* e = nullptr;
+    while(e = msc.get_next_event())
+    {
+	fprintf(stdout, "%s\n", e->to_str());
+
+	msc.remove_next_event();	
+    }
+}
+
 
 void ManualStrategy::init()
 {
@@ -236,6 +292,8 @@ void ManualStrategy::init()
     trade_completed = true;
     md_num = 0;
     traded_volume = 0;
+
+    fprintf(stdout, msc.help_msg());
 }
 
 void ManualStrategy::on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time)
@@ -294,29 +352,29 @@ int main(int argc, const char* argv[])
     fprintf(stderr, "going to initialize strategy with exchange name [%s],  exchange source id [%d], symbol [%s]\n", 
 						exchange_name.c_str(), static_cast<int>(exch_src_idx), symbol_str.c_str());
 
+    ManualStrategy str(string("manual_strategy"), exch_src_idx, exchange_name, symbol_str);
+    str.init();
+    str.start();
 
+    fprintf(stderr, "going to interactive session, print <quit> to end the session\n");
+	
     while(true)
     { 
 	char *line = readline (">> ");
 	if(line)
 	{
+		if(strcmp(line, "quit") == 0)
+		{
+			str.stop();
+			break;
+		}
 	    add_history(line);
-	    int et = 0;
-	    sscanf(line, "%d", &et);
-	    fprintf(stdout, "%d\n", et);
-	    int first_arg, second_arg;
-            sscanf(line, "%d%d%d", &et, &first_arg, &second_arg);
-	    fprintf(stdout, "%d %d %d\n", et, first_arg, second_arg);
-	    
+	   	
+		str.on_command_line(line);	
+		 
 	    free(line);
 	}
     }
 
-    /*
-    ManualStrategy str(string("manual_strategy"), exch_src_idx, exchange_name, symbol_str);
-    str.init();
-    str.start();
     str.block();
-    */
-    return 0;
 }
