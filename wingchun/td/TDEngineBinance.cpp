@@ -514,6 +514,7 @@ void TDEngineBinance::GetAndHandleOrderResponse()
                             strncpy(rtn_trade.OrderRef, result["clientOrderId"].asString().c_str(), 13);
                             rtn_trade.Direction = GetDirection(result["side"].asString());
                             rtn_trade.Volume = stod(result["executedQty"].asString().c_str()) * scale_offset;
+                            rtn_trade.Price = stod(result["price"].asString().c_str()) * scale_offset;
                             on_rtn_trade(&rtn_trade);
                             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                                     source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
