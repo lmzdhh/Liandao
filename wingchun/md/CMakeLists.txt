@@ -26,10 +26,16 @@ PROJECT(wingchunmd)
 #INSTALL(TARGETS xtpmd DESTINATION "lib/wingchun")
 
 include_directories(${CMAKE_SOURCE_DIR}/utils/cpr/include ${CMAKE_SOURCE_DIR}/utils/rapidjson/include/)
+
 SET(BINANCE_SOURCE_FILES MDEngineBinance.cpp MDEngineBinance.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h)
 ADD_LIBRARY(binancemd SHARED ${BINANCE_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(binancemd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
 INSTALL(TARGETS binancemd DESTINATION "lib/wingchun")
+
+SET(COINMEX_SOURCE_FILES MDEngineCoinmex.cpp MDEngineCoinmex.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h)
+ADD_LIBRARY(coinmexmd SHARED ${COINMEX_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(coinmexmd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
+INSTALL(TARGETS coinmexmd DESTINATION "lib/wingchun")
 
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/utils/cpr/lib/ DESTINATION "lib/wingchun")
 

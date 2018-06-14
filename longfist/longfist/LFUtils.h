@@ -53,8 +53,10 @@ inline JournalPair getMdJournalPair(short source)
 			return {"/shared/kungfu/journal/MD/CTP/", "MD_CTP"};
 		case 15:
 			return {"/shared/kungfu/journal/MD/XTP/", "MD_XTP"};
-                case 16:
+		case 16:
 			return {"/shared/kungfu/journal/MD/BINANCE/", "MD_BINANCE"};
+		case 19:
+			return {"/shared/kungfu/journal/MD/COINMEX/", "MD_COINMEX"};
 		default:
 			return {"", ""};
 	}
@@ -68,6 +70,8 @@ inline JournalPair getMdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/MD_RAW/CTP/", "MDRAW_CTP"};
 		case 15:
 			return {"/shared/kungfu/journal/MD_RAW/XTP/", "MDRAW_XTP"};
+		case 19:
+			return {"/shared/kungfu/journal/MD_RAW/COINMEX/", "MDRAW_COINMEX"};
 		default:
 			return {"", ""};
 	}
@@ -83,6 +87,8 @@ inline JournalPair getTdJournalPair(short source)
 			return {"/shared/kungfu/journal/TD/XTP/", "TD_XTP"};
 		case 16:
 			return {"/shared/kungfu/journal/TD/BINANCE/", "TD_BINANCE"};
+		case 19:
+			return {"/shared/kungfu/journal/TD/COINMEX/", "TD_COINMEX"};
 		default:
 			return {"", ""};
 	}
@@ -96,8 +102,10 @@ inline JournalPair getTdSendJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_SEND/CTP/", "TD_SEND_CTP"};
 		case 15:
 			return {"/shared/kungfu/journal/TD_SEND/XTP/", "TD_SEND_XTP"};
-                case 16:
-                        return {"/shared/kungfu/journal/TD_SEND/BINANCE/", "TD_SEND_BINANCE"};
+		case 16:
+            return {"/shared/kungfu/journal/TD_SEND/BINANCE/", "TD_SEND_BINANCE"};
+		case 19:
+			return {"/shared/kungfu/journal/TD_SEND/COINMEX/", "TD_SEND_COINMEX"};
 		default:
 			return {"", ""};
 	}
@@ -113,6 +121,8 @@ inline JournalPair getTdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_RAW/XTP/", "TD_RAW_XTP"};
 		case 16:
 			return {"/shared/kungfu/journal/TD_RAW/BINANCE/", "TD_RAW_BINANCE"};
+		case 19:
+			return {"/shared/kungfu/journal/TD_RAW/COINMEX/", "TD_RAW_COINMEX"};
 		default:
 			return {"", ""};
 	}
@@ -128,6 +138,8 @@ inline JournalPair getTdQJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_Q/XTP/", "TD_Q_XTP"};
 		case 16:
 			return {"/shared/kungfu/journal/TD_Q/BINANCE/", "TD_Q_BINANCE"};
+		case 19:
+			return {"/shared/kungfu/journal/TD_Q/COINMEX/", "TD_Q_COINMEX"};
 		default:
 			return {"", ""};
 	}
