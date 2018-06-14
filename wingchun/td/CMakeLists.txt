@@ -44,3 +44,9 @@ INSTALL(FILES ${CMAKE_SOURCE_DIR}/utils/binacpp/lib/libbinacpp/lib/libbinacpp.so
 
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/utils/binacpp/lib/libwebsockets-2.4.0/lib/libwebsockets.so.13 DESTINATION "lib/wingchun")
 
+
+include_directories(${CMAKE_SOURCE_DIR}/utils/cpr/include ${CMAKE_SOURCE_DIR}/utils/rapidjson/include/)
+SET(COINMEX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineCoinmex.cpp TDEngineCoinmex.h)
+ADD_LIBRARY(coinmextd SHARED ${COINMEX_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(coinmextd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
+INSTALL(TARGETS coinmextd DESTINATION "lib/wingchun")
