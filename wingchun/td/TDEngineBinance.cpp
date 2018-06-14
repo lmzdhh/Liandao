@@ -8,7 +8,7 @@ USING_WC_NAMESPACE
 
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
 {
-    logger = yijinjing::KfLog::getLogger("TradeEngine.BINANCE");
+    logger = yijinjing::KfLog::getLogger("TradeEngine.Binance");
     KF_LOG_INFO(logger, "[ATTENTION] default to confirm settlement and no authentication!");
 }
 
