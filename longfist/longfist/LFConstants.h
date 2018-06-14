@@ -13,7 +13,8 @@ enum exchange_source_index : short
     SOURCE_XTP = 15,
     SOURCE_BINANCE = 16,
     SOURCE_INDODAX = 17,
-    SOURCE_OKEX = 18
+    SOURCE_OKEX = 18,
+    SOURCE_COINMEX = 19
 };
 
 // Exchange names
@@ -88,8 +89,16 @@ const short MSG_TYPE_LF_MD_OKEX        = 18101;
 const short MSG_TYPE_LF_ORDER_OKEX    = 18204; 
 const short MSG_TYPE_LF_RTN_ORDER_OKEX = 18205; 
 const short MSG_TYPE_LF_RTN_TRADE_OKEX = 18206; 
-const short MSG_TYPE_LF_ORDER_ACTION_OKEX = 18207; 
+const short MSG_TYPE_LF_ORDER_ACTION_OKEX = 18207;
 
+//coinmex, idx=19
+const short MSG_TYPE_LF_MD_COINMEX        = 19101;
+const short MSG_TYPE_LF_RSP_POS_COINMEX   = 19202;
+const short MSG_TYPE_LF_QRY_POS_COINMEX   = 19203;
+const short MSG_TYPE_LF_ORDER_COINMEX     = 19204;
+const short MSG_TYPE_LF_RTN_ORDER_COINMEX = 19205;
+const short MSG_TYPE_LF_RTN_TRADE_COINMEX = 19206;
+const short MSG_TYPE_LF_ORDER_ACTION_COINMEX = 19207;
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志

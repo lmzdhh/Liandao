@@ -320,7 +320,8 @@ class_details = [
 
 wingchun_constants = [
     ('SOURCE', 'int', [('CTP', 1, ''),
-                       ('BINANCE', 16, '')
+                       ('BINANCE', 16, ''),
+                       ('COINMEX', 19, '')
                        ],
      'source index'),
     ('DIRECTION', 'char', [('Buy', '0', '买'),
