@@ -172,7 +172,7 @@ struct manual_strategy_controller_context
 	{
 		uint64_t long_pos;
 		uint64_t short_pos;	
-	}	
+	};
 	
 	std::unordered_map<std::string, pos_info> ticker_pos_info;
 	
@@ -180,7 +180,7 @@ struct manual_strategy_controller_context
 	{
 		uint64_t total_buy_qty;
 		uint64_t total_sell_qty;	
-	}
+	};
 
 	std::unordered_map<std::string, order_info> ticker_order_info;
 
@@ -275,9 +275,10 @@ public:
     virtual void init();
     virtual void on_market_data(const LFMarketDataField* data, short source, long rcv_time);
     virtual void on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time);
+    virtual void on_rtn_order(const LFRtnOrderField* data, int request_id, short source, long rcv_time);
     virtual void on_rtn_trade(const LFRtnTradeField* data, int request_id, short source, long rcv_time);
-    virtual void on_rsp_order(const LFInputOrderField* data, int request_id, 
-			short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
+    virtual void on_rsp_order(const LFInputOrderField* data, int request_id, short source, long rcv_time, short errorId, const char* errorMsg);
+    virtual void on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId, const char* errorMsg);
 
 public:
     ManualStrategy(const string& name, exchange_source_index _exch_src_idx, const string& _exch_name, const string& _symbol);
@@ -353,6 +354,15 @@ void ManualStrategy::on_market_data(const LFMarketDataField* md, short source, l
 {
     KF_LOG_DEBUG(logger, "[BOOK]" << " (t)" << md->InstrumentID << " (bid px)" << md->BidPrice1
                                    << " (bid qty)" << md->BidVolume1 << " (ask px):" << md->AskPrice1 << " (ask qty)" << md->AskVolume1);
+}
+
+void ManualStrategy::on_rtn_order(const LFRtnOrderField* data, int request_id, short source, long rcv_time)
+{
+
+}
+
+void ManualStrategy::on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId, const char* errorMsg)
+{
 }
 
 void ManualStrategy::on_rtn_trade(const LFRtnTradeField* rtn_trade, int request_id, short source, long rcv_time)
