@@ -239,7 +239,7 @@ struct market_data_event : event_base
 			if(iter != strategy_context->ticker_market_data.end())
 			{
 				auto& md = iter->second;
-				fprintf(stdout, "%lu @ %ld X %lu @ %ld, %lu @ %ld\n", 
+				fprintf(stdout, "%lu %ld X %lu %ld, %lu @ %ld\n", 
 					md.best_bid_qty, md.best_bid_px, md.best_ask_px, md.best_ask_qty, md.last_volume, md.last_px);
 			}
 			else
@@ -511,9 +511,6 @@ void ManualStrategy::on_rsp_position(const PosHandlerPtr posMap, int request_id,
 
 void ManualStrategy::on_market_data(const LFMarketDataField* md, short source, long rcv_time)
 {
-    KF_LOG_DEBUG(logger, "[BOOK]" << " (t)" << md->InstrumentID << " (bid px)" << md->BidPrice1
-                                   << " (bid qty)" << md->BidVolume1 << " (ask px):" << md->AskPrice1 << " (ask qty)" << md->AskVolume1);
-	
 	msc.on_market_data(md, source, rcv_time);
 }
 
@@ -557,18 +554,19 @@ int main(int argc, const char* argv[])
     if(exch_src_idx == SOURCE_UNKNOWN)
     {
 	fprintf(stderr, "invalid exchange name [%s]", argv[1]);
+	exit(1);
     }
 
     const std::string symbol_str = argv[2];
 
-    fprintf(stderr, "going to initialize strategy with exchange name [%s],  exchange source id [%d], symbol [%s]\n", 
+    fprintf(stdout, "going to initialize strategy with exchange name [%s],  exchange source id [%d], symbol [%s]\n", 
 						exchange_name.c_str(), static_cast<int>(exch_src_idx), symbol_str.c_str());
 
     ManualStrategy str(string("manual_strategy"), exch_src_idx, exchange_name, symbol_str);
     str.init();
     str.start();
 
-    fprintf(stderr, "going to interactive session, print <quit> to end the session\n");
+    fprintf(stdout, "going to interactive session, print <quit> to end the session\n");
 	
     while(true && IWCDataProcessor::signal_received < 0)
     { 
