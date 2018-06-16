@@ -239,11 +239,11 @@ class LFQryPositionField(Structure):
 class LFRspPositionField(Structure):
     _fields_ = [
         ("InstrumentID", c_char * 31),	# 合约代码 
-        ("YdPosition", c_int),	# 上日持仓 
-        ("Position", c_int),	# 总持仓 
+        ("YdPosition", c_uint64),	# 上日持仓
+        ("Position", c_uint64),	# 总持仓
         ("BrokerID", c_char * 11),	# 经纪公司代码 
         ("InvestorID", c_char * 19),	# 投资者代码 
-        ("PositionCost", c_double),	# 持仓成本 
+        ("PositionCost", c_int64),	# 持仓成本
         ("HedgeFlag", c_char),	# 投机套保标志 LfHedgeFlagType
         ("PosiDirection", c_char),	# 持仓多空方向 LfPosiDirectionType
         ]
