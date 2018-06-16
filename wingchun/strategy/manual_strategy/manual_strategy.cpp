@@ -21,6 +21,28 @@ enum event_type
 	unknown
 };	
 
+struct order_info
+{
+	int order_id;
+	
+	LfOrderStatusType state = LF_CHAR_Unknown;	
+	LfDirectionType side = LF_CHAR_Buy;
+	LfTimeConditionType tif = LF_CHAR_IOC;
+	LfOrderPriceTypeType type;
+	
+	int64_t price = 0;	
+	uint64_t total_qty = 0;
+	uint64_t trade_qty = 0;
+};
+
+struct trade_info
+{
+	order_info* order;
+	
+	int64_t price;
+	uint64_t volume;
+};
+
 struct manual_strategy_controller_context
 {
 	manual_strategy_controller_context(WCStrategyUtilPtr util) : strategy_util(util)
@@ -47,14 +69,19 @@ struct manual_strategy_controller_context
 	
 	std::unordered_map<std::string, pos_info> ticker_pos_info;
 	
-	struct order_info
+	struct pending_order_info
 	{
 		uint64_t total_buy_qty;
 		uint64_t total_sell_qty;	
 	};
 
-	std::unordered_map<std::string, order_info> ticker_order_info;
-
+	std::unordered_map<std::string, pending_order_info> ticker_pending_order_info;
+	
+	
+	std::unordered_map<std::string, order_info*> all_order_map;
+	
+	std::unordered_map<int, order_info*> request_order_map;
+	
 	WCStrategyUtilPtr strategy_util;
 };
 
@@ -76,6 +103,10 @@ struct event_base
 	}
 
 	event_type type = unknown;	
+	
+	exchange_source_index exch_source = SOURCE_UNKNOWN;
+ 	
+	const char* exch_name = "";
 	
 	manual_strategy_controller_context* strategy_context = nullptr;
 };
@@ -124,10 +155,30 @@ struct insert_order_event : event_base
 
 	void process() const override
 	{
-		char buf[128] = {};
-		to_str(buf, 128);
-		fprintf(stdout, "%s\n", buf);
+		if(strategy_context && strategy_context->strategy_util)
+		{	
+			char buf[128] = {};
+			to_str(buf, 128);
+			fprintf(stdout, "%s\n", buf);
+			
+			int request_id = 0;	
+			if(type == LF_CHAR_LimitPrice)
+			{
+				request_id = strategy_context->strategy_util->insert_limit_order(
+						exch_source, std::string(ticker), std::string(exch_name), price, qty, side, LF_CHAR_Open);
+			}
+			else if (type == LF_CHAR_AnyPrice)
+			{
+				request_id = strategy_context->strategy_util->insert_market_order(
+						exch_source, std::string(ticker), std::string(exch_name),  qty, side, LF_CHAR_Open);
+			}
 
+			//track request and order
+		}
+		else
+		{
+			fprintf(stdout, "no strategy context, failed to insert order\n");
+		}
 	}
 
 	void to_str(char* buf, size_t size) const override
@@ -139,9 +190,9 @@ struct insert_order_event : event_base
 	char ticker[16] = {};
 	int64_t price = 0;
 	uint64_t qty = 0;
-	char side = 0;
-	char type = 0;
-	char tif = 0;
+	LfDirectionType side = 0;
+	LfOrderPriceTypeType type = 0;
+	LfTimeConditionType tif = 0;
 };
 
 struct cancel_order_event : event_base
@@ -164,9 +215,18 @@ struct cancel_order_event : event_base
 	
 	void process() const override
 	{
-		char buf[128] = {};
-		to_str(buf, 128);
-		fprintf(stdout, "%s\n", buf);
+		if(strategy_context && strategy_context->strategy_util)
+		{
+			char buf[128] = {};
+			to_str(buf, 128);
+			fprintf(stdout, "%s\n", buf);
+
+			int request_id = strategy_context->strategy_util->cancel_order(exch_source, order_id);
+		}
+		else
+		{
+			fprintf(stdout, "no strategy context, failed to cancel order\n");
+		}
 	}
 
 	void to_str(char* buf, size_t size) const override
@@ -320,7 +380,8 @@ class manual_strategy_controller
 {
 public:
 	
-	manual_strategy_controller(WCStrategyUtilPtr util) : mscc(util)
+	manual_strategy_controller(WCStrategyUtilPtr util, exchange_source_index exch_source, std::string ex_name) 
+																: mscc(util), exch_src(exch_source), exch_name(ex_name)
 	{
 	}
 
@@ -368,6 +429,8 @@ public:
 		if(event_ptr && event_ptr->parse_line(event_line))
 		{
 		    event_ptr->set_strategy_context(mscc);
+			event_ptr->exch_source = exch_src;
+			event_ptr->exch_name = exch_name.c_str();
 		    event_queue.push(event_ptr);
 		}
 		else
@@ -420,6 +483,10 @@ private:
 	std::queue<event_base*> event_queue;
 
 	manual_strategy_controller_context mscc;
+	
+	exchange_source_index exch_src;
+	
+	std::string exch_name;
 };
 
 class ManualStrategy: public IWCStrategy
@@ -455,7 +522,7 @@ private:
 
 ManualStrategy::ManualStrategy(const string& name, exchange_source_index _exch_src_idx, 
 			const string& _exch_name, const string& _symbol): IWCStrategy(name), 
-						exch_src_index(_exch_src_idx), exch_name(_exch_name), symbol(_symbol), msc(util)
+						exch_src_index(_exch_src_idx), exch_name(_exch_name), symbol(_symbol), msc(util, exch_src_index, exch_name)
 {
     rid = -1;
 }
