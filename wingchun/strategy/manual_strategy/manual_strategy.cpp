@@ -35,6 +35,13 @@ struct order_info
 	uint64_t trade_qty = 0;
 };
 
+enum req_state
+{
+	new_order,
+	cancel_order
+};
+using request_info = std::pair<order_info*, req_state>;
+
 struct trade_info
 {
 	order_info* order;
@@ -78,9 +85,9 @@ struct manual_strategy_controller_context
 	std::unordered_map<std::string, pending_order_info> ticker_pending_order_info;
 	
 	
-	std::unordered_map<std::string, order_info*> all_order_map;
+	std::unordered_map<int, order_info*> all_order_map;
 	
-	std::unordered_map<int, order_info*> request_order_map;
+	std::unordered_map<int, request_info> all_request_map;
 	
 	WCStrategyUtilPtr strategy_util;
 };
@@ -588,23 +595,31 @@ void ManualStrategy::on_l2_trade(const LFL2TradeField* data, short source, long 
 
 void ManualStrategy::on_rtn_order(const LFRtnOrderField* data, int request_id, short source, long rcv_time)
 {
+    KF_LOG_DEBUG(logger, "[ORDER]" << " (t)" << data->InstrumentID << " (px)" << data->LimitPrice
+                                   << " (volume)" << data->VolumeTotal << " (pos)" << data->get_pos(source)->to_string());
 
 }
 
 void ManualStrategy::on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId, const char* errorMsg)
 {
+    if (errorId != 0)
+	{
+        KF_LOG_ERROR(logger, " (err_id)" << errorId << " (err_msg)" << errorMsg << "(order_id)" << request_id << " (source)" << source);
+	}
 }
 
 void ManualStrategy::on_rtn_trade(const LFRtnTradeField* rtn_trade, int request_id, short source, long rcv_time)
 {
-    KF_LOG_DEBUG(logger, "[TRADE]" << " (t)" << rtn_trade->InstrumentID << " (p)" << rtn_trade->Price
-                                   << " (v)" << rtn_trade->Volume << " POS:" << data->get_pos(source)->to_string());
+    KF_LOG_DEBUG(logger, "[TRADE]" << " (ticker)" << rtn_trade->InstrumentID << " (px)" << rtn_trade->Price
+                                   << " (volume)" << rtn_trade->Volume << " (pos)" << data->get_pos(source)->to_string());
 }
 
 void ManualStrategy::on_rsp_order(const LFInputOrderField* order, int request_id, short source, long rcv_time, short errorId, const char* errorMsg)
 {
     if (errorId != 0)
+	{
         KF_LOG_ERROR(logger, " (err_id)" << errorId << " (err_msg)" << errorMsg << "(order_id)" << request_id << " (source)" << source);
+	}
 }
 
 int main(int argc, const char* argv[])
