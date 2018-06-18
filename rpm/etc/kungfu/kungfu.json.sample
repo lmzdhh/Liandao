@@ -18,7 +18,7 @@
     },
     "binance":
     {
-      "symbol": "BTCUSDT",
+      "symbols": ["BTCUSDT"],
       "book_depth_count": 5,
       "trade_count": 10,
       "rest_get_interval_ms": 500
