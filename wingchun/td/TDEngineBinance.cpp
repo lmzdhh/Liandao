@@ -542,12 +542,12 @@ void TDEngineBinance::GetAndHandleOrderTradeResponse()
     for (int idx = 0; idx < account_units.size(); idx ++)
     {
         AccountUnitBinance& unit = account_units[idx];
-        //KF_LOG_INFO(logger, "[GetAndHandleOrderResponse] connect (api_key)" << unit.api_key);
+        KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
             continue;
         }
-        BinaCPP::init( unit.api_key , unit.secret_key );
+        //BinaCPP::init( unit.api_key , unit.secret_key );
         retrieveOrderStatus(unit);
         retrieveTradeStatus(unit);
     }//end every account
@@ -555,9 +555,21 @@ void TDEngineBinance::GetAndHandleOrderTradeResponse()
 
 void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 {
-    //std::lock_guard<std::mutex> guard_order(unit.mutex_order);
-
+    //std::lock_guard<std::mutex> guard_order(mutex_order);
+    
+    KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
     std::vector<PendingBinanceOrderStatus>::iterator orderStatusIterator;
+    int indexNum = 0;    
+    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
+    {
+        indexNum++;
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    account.api_key:"<< unit.api_key
+                                                                          << "  account.pendingOrderStatus.InstrumentID: "<< orderStatusIterator->InstrumentID
+                                                                          <<"  account.pendingOrderStatus.OrderRef: " << orderStatusIterator->OrderRef
+                                                                          <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
+        );
+    }
+
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
     {
         KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "account.api_key:"<< unit.api_key
@@ -568,6 +580,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 
         Json::Value orderResult;
         long recvWindow = 10000;
+        BinaCPP::init( unit.api_key , unit.secret_key );
         BinaCPP::get_order( orderStatusIterator->InstrumentID, 0, orderStatusIterator->OrderRef, recvWindow, orderResult );
         KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
                                                                           << " (orderId)" << orderStatusIterator->OrderRef
@@ -630,23 +643,27 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
         //remove order when finish
         if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
            || orderStatusIterator->OrderStatus == LF_CHAR_Error)
-        {
+        {   
+            KF_LOG_ERROR(logger, "[retrieveOrderStatus] remove a pendingOrderStatus."); 
             orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
         } else {
             ++orderStatusIterator;
         }
+        KF_LOG_ERROR(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
     }
 }
 
 void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 {
+    //std::lock_guard<std::mutex> guard_trade(mutex_trade);
+    
+    KF_LOG_INFO(logger, "[retrieveTradeStatus] ");
     Json::Value resultTrade;
     long recvWindow = 10000;
-    //std::lock_guard<std::mutex> guard_trade(unit.mutex_trade);
-
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
     for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
     {
+        BinaCPP::init( unit.api_key , unit.secret_key );
         BinaCPP::get_myTrades( tradeStatusIterator->InstrumentID, 500, tradeStatusIterator->last_trade_id, recvWindow , resultTrade );
         /*
          [
@@ -664,7 +681,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
           }
         ]
         */
-        KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] get_myTrades " << " (result)"<< resultTrade);
+        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id << " (result)"<< resultTrade);
         for(int i = 0 ; i < resultTrade.size(); i++)
         {
             LFRtnTradeField rtn_trade;
@@ -682,15 +699,11 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                                     source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
 
             uint64_t newtradeId = resultTrade[i]["id"].asInt64();
+            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (newtradeId)" << newtradeId);
             if(newtradeId > tradeStatusIterator->last_trade_id) {
                 tradeStatusIterator->last_trade_id = newtradeId;
             }
-
-        }
-        if(resultTrade["code"] != Json::nullValue)
-        {
-            KF_LOG_ERROR(logger, "[GetAndHandleOrderTradeResponse] get_myTrades fail." << " (symbol)" << tradeStatusIterator->InstrumentID
-                                                                                       << " (last_trade_id)" << tradeStatusIterator->last_trade_id);
+            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id);
         }
     }
 }
@@ -700,7 +713,7 @@ void TDEngineBinance::addPendingQueryOrdersAndTrades(AccountUnitBinance& unit, c
                                                      const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
-    //std::lock_guard<std::mutex> guard_order(unit.mutex_order);
+    //std::lock_guard<std::mutex> guard_order(mutex_order);
 
     PendingBinanceOrderStatus status;
     memset(&status, 0, sizeof(PendingBinanceOrderStatus));
@@ -711,7 +724,7 @@ void TDEngineBinance::addPendingQueryOrdersAndTrades(AccountUnitBinance& unit, c
     unit.pendingOrderStatus.push_back(status);
 
     //add new symbol for GetAndHandleOrderTradeResponse if had no this symbol before
-    //std::lock_guard<std::mutex> guard_trade(unit.mutex_trade);
+    //std::lock_guard<std::mutex> guard_trade(mutex_trade);
 
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
     bool existSymbol = false;
