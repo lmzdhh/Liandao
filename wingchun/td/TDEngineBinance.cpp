@@ -529,10 +529,10 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 
-    //add pendingOrderStatus for GetAndHandleOrderTradeResponse
-    char noneStatus = '\0';//none
-    addPendingQueryOrdersAndTrades(unit, data->InstrumentID,
-                                   data->OrderRef, noneStatus, 0);
+    //dont add it. cancel order use the insert_Order's orderRef, add it will cause double orderid in queryOrder list.
+    //char noneStatus = '\0';//none
+    //addPendingQueryOrdersAndTrades(unit, data->InstrumentID,
+    //                               data->OrderRef, noneStatus, 0);
 
 }
 
@@ -658,6 +658,8 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
     //std::lock_guard<std::mutex> guard_trade(mutex_trade);
     
     KF_LOG_INFO(logger, "[retrieveTradeStatus] ");
+    //if 'ours' order is finished, dont get trade info anymore.
+    if(unit.pendingOrderStatus.size() == 0) return;
     Json::Value resultTrade;
     long recvWindow = 10000;
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
