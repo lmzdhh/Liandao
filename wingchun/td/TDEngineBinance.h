@@ -106,8 +106,8 @@ private:
     uint64_t last_rest_get_ts = 0;
     int rest_get_interval_ms = 500;
 
-//    std::mutex mutex_order;
-//    std::mutex mutex_trade;
+    std::mutex* mutex_order;
+    std::mutex* mutex_trade;
 
 };
 

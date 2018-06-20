@@ -10,6 +10,9 @@ TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.Binance");
     KF_LOG_INFO(logger, "[ATTENTION] default to confirm settlement and no authentication!");
+
+    mutex_order = new std::mutex();
+    mutex_trade = new std::mutex();
 }
 
 void TDEngineBinance::init()
@@ -555,7 +558,7 @@ void TDEngineBinance::GetAndHandleOrderTradeResponse()
 
 void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 {
-    //std::lock_guard<std::mutex> guard_order(mutex_order);
+    std::lock_guard<std::mutex> guard_order(*mutex_order);
     
     KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
     std::vector<PendingBinanceOrderStatus>::iterator orderStatusIterator;
@@ -655,7 +658,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 
 void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 {
-    //std::lock_guard<std::mutex> guard_trade(mutex_trade);
+    std::lock_guard<std::mutex> guard_trade(*mutex_trade);
     
     KF_LOG_INFO(logger, "[retrieveTradeStatus] ");
     //if 'ours' order is finished, dont get trade info anymore.
@@ -715,7 +718,7 @@ void TDEngineBinance::addPendingQueryOrdersAndTrades(AccountUnitBinance& unit, c
                                                      const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
-    //std::lock_guard<std::mutex> guard_order(mutex_order);
+    std::lock_guard<std::mutex> guard_order(*mutex_order);
 
     PendingBinanceOrderStatus status;
     memset(&status, 0, sizeof(PendingBinanceOrderStatus));
@@ -726,7 +729,7 @@ void TDEngineBinance::addPendingQueryOrdersAndTrades(AccountUnitBinance& unit, c
     unit.pendingOrderStatus.push_back(status);
 
     //add new symbol for GetAndHandleOrderTradeResponse if had no this symbol before
-    //std::lock_guard<std::mutex> guard_trade(mutex_trade);
+    std::lock_guard<std::mutex> guard_trade(*mutex_trade);
 
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
     bool existSymbol = false;
