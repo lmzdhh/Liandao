@@ -158,7 +158,7 @@ LfOrderPriceTypeType TDEngineBinance::GetPriceType(std::string input) {
 
 std::string TDEngineBinance::GetTimeInForce(const LfTimeConditionType& input) {
     if (LF_CHAR_IOC == input) {
-      return "IOC";
+      return "";
     } else if (LF_CHAR_GFD == input) {
       return "GTC";
     } else if (LF_CHAR_FOK == input) {
