@@ -11,8 +11,12 @@ TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
     logger = yijinjing::KfLog::getLogger("TradeEngine.Binance");
     KF_LOG_INFO(logger, "[ATTENTION] default to confirm settlement and no authentication!");
 
-    mutex_order = new std::mutex();
-    mutex_trade = new std::mutex();
+    mutex_order_and_trade = new std::mutex();
+}
+
+TDEngineBinance::~TDEngineBinance()
+{
+    if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
 }
 
 void TDEngineBinance::init()
@@ -356,7 +360,7 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
 
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     char noneStatus = '\0';//none
-    addPendingQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, '\0', 0);
+    addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, '\0', 0);
 }
 
 
@@ -401,7 +405,7 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
-        addPendingQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
+        addNewQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
                                        rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded);
     }
 }
@@ -500,7 +504,7 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
-        addPendingQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
+        addNewQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
                                        rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded);
     }
 }
@@ -531,12 +535,6 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     }
     on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
-
-    //dont add it. cancel order use the insert_Order's orderRef, add it will cause double orderid in queryOrder list.
-    //char noneStatus = '\0';//none
-    //addPendingQueryOrdersAndTrades(unit, data->InstrumentID,
-    //                               data->OrderRef, noneStatus, 0);
-
 }
 
 void TDEngineBinance::GetAndHandleOrderTradeResponse()
@@ -551,15 +549,33 @@ void TDEngineBinance::GetAndHandleOrderTradeResponse()
             continue;
         }
         //BinaCPP::init( unit.api_key , unit.secret_key );
+        moveNewtoPending(unit);
         retrieveOrderStatus(unit);
         retrieveTradeStatus(unit);
     }//end every account
 }
 
+
+void TDEngineBinance::moveNewtoPending(AccountUnitBinance& unit)
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+
+    std::vector<PendingBinanceOrderStatus>::iterator newOrderStatusIterator;
+    for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
+    {
+        unit.pendingOrderStatus.push_back(*newOrderStatusIterator);
+        newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
+    }
+
+    std::vector<PendingBinanceTradeStatus>::iterator newTradeStatusIterator;
+    for(newTradeStatusIterator = unit.newTradeStatus.begin(); newTradeStatusIterator != unit.newTradeStatus.end();) {
+        unit.pendingTradeStatus.push_back(*newTradeStatusIterator);
+        newTradeStatusIterator = unit.newTradeStatus.erase(newTradeStatusIterator);
+    }
+}
+
 void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 {
-    std::lock_guard<std::mutex> guard_order(*mutex_order);
-    
     KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
     std::vector<PendingBinanceOrderStatus>::iterator orderStatusIterator;
     int indexNum = 0;    
@@ -658,8 +674,6 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 
 void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 {
-    std::lock_guard<std::mutex> guard_trade(*mutex_trade);
-    
     KF_LOG_INFO(logger, "[retrieveTradeStatus] ");
     //if 'ours' order is finished, dont get trade info anymore.
     if(unit.pendingOrderStatus.size() == 0) return;
@@ -714,11 +728,11 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 }
 
 
-void TDEngineBinance::addPendingQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
+void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
                                                      const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
-    std::lock_guard<std::mutex> guard_order(*mutex_order);
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
     PendingBinanceOrderStatus status;
     memset(&status, 0, sizeof(PendingBinanceOrderStatus));
@@ -726,11 +740,9 @@ void TDEngineBinance::addPendingQueryOrdersAndTrades(AccountUnitBinance& unit, c
     strncpy(status.OrderRef, OrderRef, 21);
     status.OrderStatus = OrderStatus;
     status.VolumeTraded = VolumeTraded;
-    unit.pendingOrderStatus.push_back(status);
+    unit.newOrderStatus.push_back(status);
 
     //add new symbol for GetAndHandleOrderTradeResponse if had no this symbol before
-    std::lock_guard<std::mutex> guard_trade(*mutex_trade);
-
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
     bool existSymbol = false;
     for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
@@ -747,7 +759,7 @@ void TDEngineBinance::addPendingQueryOrdersAndTrades(AccountUnitBinance& unit, c
         memset(&tradeStatus, 0, sizeof(PendingBinanceTradeStatus));
         strncpy(tradeStatus.InstrumentID, InstrumentID, 31);
         tradeStatus.last_trade_id = 0;
-        unit.pendingTradeStatus.push_back(tradeStatus);
+        unit.newTradeStatus.push_back(tradeStatus);
     }
 }
 

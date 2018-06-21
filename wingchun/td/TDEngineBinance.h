@@ -39,9 +39,9 @@ struct AccountUnitBinance
     std::string secret_key;
     // internal flags
     bool    logged_in;
-    //std::mutex mutex_order;
+    std::vector<PendingBinanceOrderStatus> newOrderStatus;
     std::vector<PendingBinanceOrderStatus> pendingOrderStatus;
-    //std::mutex mutex_trade;
+    std::vector<PendingBinanceTradeStatus> newTradeStatus;
     std::vector<PendingBinanceTradeStatus> pendingTradeStatus;
 };
 
@@ -74,7 +74,7 @@ public:
 
 public:
     TDEngineBinance();
-
+    ~TDEngineBinance();
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
@@ -91,7 +91,7 @@ private:
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
-    void addPendingQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
+    void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
                                         const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded);
 
     inline void onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
@@ -100,14 +100,14 @@ private:
 
     void retrieveOrderStatus(AccountUnitBinance& unit);
     void retrieveTradeStatus(AccountUnitBinance& unit);
+    void moveNewtoPending(AccountUnitBinance& unit);
     static constexpr int scale_offset = 1e8;
 
     ThreadPtr rest_thread;
     uint64_t last_rest_get_ts = 0;
     int rest_get_interval_ms = 500;
 
-    std::mutex* mutex_order;
-    std::mutex* mutex_trade;
+    std::mutex* mutex_order_and_trade = nullptr;
 
 };
 
