@@ -63,6 +63,25 @@ struct LFMarketDataField
 	uint64_t      	AskVolume5;            //申卖量五
 };
 
+struct LFPriceLevel
+{
+	int64_t price;
+	uint64_t volume;
+};
+
+template<int level_count>
+struct LFPriceBookFieldTmpl
+{
+	char_31  	InstrumentID;          
+	char_9   	ExchangeID;           
+	uint64_t      	UpdateMicroSecond;    
+	int		ValidLevelCount;	
+	LFPriceLevel 	BidLevels[level_count];
+	LFPriceLevel	AskLevels[level_count];
+};
+
+using LFPriceBook20Field = LFPriceBookFieldTmpl<20>;
+
 struct LFL2MarketDataField
 {
 	char_9   	TradingDay;            //交易日
