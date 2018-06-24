@@ -301,9 +301,11 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (code)" << errorId);
         errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
     }
-
-    on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1, requestId, errorId, errorMsg.c_str());
+    if(errorId != 0)
+    {
+        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1, requestId, errorId, errorMsg.c_str());
+    }
 
     //paser the order/trade info in the response result
     if(result["code"] == Json::nullValue)
@@ -360,7 +362,7 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
 
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     char noneStatus = '\0';//none
-    addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, '\0', 0);
+    addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
 }
 
 
@@ -533,8 +535,11 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
         KF_LOG_ERROR(logger, "[req_order_action] failed!" << " (rid)" << requestId << " (code)" << errorId);
         errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
     }
-    on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
+    if(errorId != 0)
+    {
+        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
+    }
 }
 
 void TDEngineBinance::GetAndHandleOrderTradeResponse()
