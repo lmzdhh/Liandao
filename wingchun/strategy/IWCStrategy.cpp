@@ -136,6 +136,14 @@ void IWCStrategy::on_rsp_order(const LFInputOrderField* data, int request_id, sh
         KF_LOG_ERROR(logger, "[rsp_order] (source)" << source << " (rid)" << request_id << " (ticker)" << data->InstrumentID << " (p)" << data->LimitPrice << " (v)" << data->Volume << " (errId)" << errorId << " (errMsg)" << errorMsg);
 }
 
+void IWCStrategy::on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId, const char* errorMsg)
+{
+    if (errorId == 0)
+        KF_LOG_DEBUG(logger, "[rsp_order] (source)" << source << " (rid)" << request_id << " (ticker)" << data->InstrumentID << " (p)" << data->LimitPrice << " (v)" << data->VolumeChange);
+    else
+        KF_LOG_ERROR(logger, "[rsp_order] (source)" << source << " (rid)" << request_id << " (ticker)" << data->InstrumentID << " (p)" << data->LimitPrice << " (v)" << data->VolumeChange << " (errId)" << errorId << " (errMsg)" << errorMsg);
+}
+
 void IWCStrategy::on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[rsp_position] (source)" << source << " (rid)" << request_id);

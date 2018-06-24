@@ -94,9 +94,9 @@ KfLogStrategy::KfLogStrategy(string name, string log_file_name)
     fileAppender->setLayout(std::auto_ptr<Layout>(new PatternLayout(pattern)));
     Logger::getRoot().addAppender(fileAppender);
     // console appender
-    SharedAppenderPtr consoleAppender(new ConsoleAppender());
-    consoleAppender->setLayout(std::auto_ptr<Layout>(new PatternLayout(pattern)));
-    Logger::getRoot().addAppender(consoleAppender);
+    //SharedAppenderPtr consoleAppender(new ConsoleAppender());
+    //consoleAppender->setLayout(std::auto_ptr<Layout>(new PatternLayout(pattern)));
+    // Logger::getRoot().addAppender(consoleAppender);
     // final
     logger = Logger::getInstance(name);
     logger.setLogLevel(DEBUG_LOG_LEVEL);
