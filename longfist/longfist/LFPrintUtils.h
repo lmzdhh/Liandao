@@ -39,25 +39,25 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "UpdateTime:" << std::setw(6) << "(c13)" << " " << ptr->UpdateTime << std::endl \
 	 << std::setw(20) << "UpdateMillisec:" << std::setw(6) << "(i)" << " " << ptr->UpdateMillisec << std::endl \
 	 << std::setw(20) << "BidPrice1:" << std::setw(6) << "(d)" << " " << ptr->BidPrice1 << std::endl \
-	 << std::setw(20) << "BidVolume1:" << std::setw(6) << "(i)" << " " << (int)ptr->BidVolume1 << std::endl \
+	 << std::setw(20) << "BidVolume1:" << std::setw(6) << "(i)" << " " << ptr->BidVolume1 << std::endl \
 	 << std::setw(20) << "AskPrice1:" << std::setw(6) << "(d)" << " " << ptr->AskPrice1 << std::endl \
-	 << std::setw(20) << "AskVolume1:" << std::setw(6) << "(i)" << " " << (int)ptr->AskVolume1 << std::endl \
+	 << std::setw(20) << "AskVolume1:" << std::setw(6) << "(i)" << " " << ptr->AskVolume1 << std::endl \
 	 << std::setw(20) << "BidPrice2:" << std::setw(6) << "(d)" << " " << ptr->BidPrice2 << std::endl \
-	 << std::setw(20) << "BidVolume2:" << std::setw(6) << "(i)" << " " << (int)ptr->BidVolume2 << std::endl \
+	 << std::setw(20) << "BidVolume2:" << std::setw(6) << "(i)" << " " << ptr->BidVolume2 << std::endl \
 	 << std::setw(20) << "AskPrice2:" << std::setw(6) << "(d)" << " " << ptr->AskPrice2 << std::endl \
-	 << std::setw(20) << "AskVolume2:" << std::setw(6) << "(i)" << " " << (int)ptr->AskVolume2 << std::endl \
+	 << std::setw(20) << "AskVolume2:" << std::setw(6) << "(i)" << " " << ptr->AskVolume2 << std::endl \
 	 << std::setw(20) << "BidPrice3:" << std::setw(6) << "(d)" << " " << ptr->BidPrice3 << std::endl \
-	 << std::setw(20) << "BidVolume3:" << std::setw(6) << "(i)" << " " << (int)ptr->BidVolume3 << std::endl \
+	 << std::setw(20) << "BidVolume3:" << std::setw(6) << "(i)" << " " << ptr->BidVolume3 << std::endl \
 	 << std::setw(20) << "AskPrice3:" << std::setw(6) << "(d)" << " " << ptr->AskPrice3 << std::endl \
-	 << std::setw(20) << "AskVolume3:" << std::setw(6) << "(i)" << " " << (int)ptr->AskVolume3 << std::endl \
+	 << std::setw(20) << "AskVolume3:" << std::setw(6) << "(i)" << " " << ptr->AskVolume3 << std::endl \
 	 << std::setw(20) << "BidPrice4:" << std::setw(6) << "(d)" << " " << ptr->BidPrice4 << std::endl \
-	 << std::setw(20) << "BidVolume4:" << std::setw(6) << "(i)" << " " << (int)ptr->BidVolume4 << std::endl \
+	 << std::setw(20) << "BidVolume4:" << std::setw(6) << "(i)" << " " << ptr->BidVolume4 << std::endl \
 	 << std::setw(20) << "AskPrice4:" << std::setw(6) << "(d)" << " " << ptr->AskPrice4 << std::endl \
-	 << std::setw(20) << "AskVolume4:" << std::setw(6) << "(i)" << " " << (int)ptr->AskVolume4 << std::endl \
+	 << std::setw(20) << "AskVolume4:" << std::setw(6) << "(i)" << " " << ptr->AskVolume4 << std::endl \
 	 << std::setw(20) << "BidPrice5:" << std::setw(6) << "(d)" << " " << ptr->BidPrice5 << std::endl \
-	 << std::setw(20) << "BidVolume5:" << std::setw(6) << "(i)" << " " << (int)ptr->BidVolume5 << std::endl \
+	 << std::setw(20) << "BidVolume5:" << std::setw(6) << "(i)" << " " << ptr->BidVolume5 << std::endl \
 	 << std::setw(20) << "AskPrice5:" << std::setw(6) << "(d)" << " " << ptr->AskPrice5 << std::endl \
-	 << std::setw(20) << "AskVolume5:" << std::setw(6) << "(i)" << " " << (int)ptr->AskVolume5 << std::endl \
+	 << std::setw(20) << "AskVolume5:" << std::setw(6) << "(i)" << " " << ptr->AskVolume5 << std::endl \
 	
 #define PRINT_L2_MD(ptr) ""\
 	 << std::setw(20) << "TradingDay:" << std::setw(6) << "(c9)" << " " << ptr->TradingDay << std::endl \
