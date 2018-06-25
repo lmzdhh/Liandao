@@ -59,6 +59,12 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "AskPrice5:" << std::setw(6) << "(d)" << " " << ptr->AskPrice5 << std::endl \
 	 << std::setw(20) << "AskVolume5:" << std::setw(6) << "(i)" << " " << ptr->AskVolume5 << std::endl \
 	
+#define PRINT_PRICE_BOOK_20(ptr) ""\
+	 << std::setw(20) << "ExchangeID:" << std::setw(6) << "(c9)" << " " << ptr->ExchangeID << std::endl \
+	 << std::setw(20) << "InstrumentID:" << std::setw(6) << "(c9)" << " " << ptr->InstrumentID << std::endl \
+	 << std::setw(20) << "UpdateMicroSecond:" << std::setw(6) << "(i)" << " " << ptr->UpdateMicroSecond << std::endl \
+	 << std::setw(20) << "ValidLevelCount:" << std::setw(6) << "(i)" << " " << ptr->ValidLevelCount << std::endl \
+
 #define PRINT_L2_MD(ptr) ""\
 	 << std::setw(20) << "TradingDay:" << std::setw(6) << "(c9)" << " " << ptr->TradingDay << std::endl \
 	 << std::setw(20) << "TimeStamp:" << std::setw(6) << "(c9)" << " " << ptr->TimeStamp << std::endl \
@@ -547,6 +553,23 @@ inline void printData(const void* data, short msg_type)
 		{
 			LFL2MarketDataField* ptr = (LFL2MarketDataField*)data;
 			std::cout << PRINT_L2_MD(ptr);
+			break;
+		}
+		case MSG_TYPE_LF_PRICE_BOOK_20:
+		{
+			LFPriceBook20Field* ptr = (LFPriceBook20Field*)data;
+			std::cout << PRINT_PRICE_BOOK_20(ptr);
+			for(int i = 1; i <= ptr->ValidLevelCount; ++i)
+	 		{ 
+	 			std::cout << std::setw(20) << "BidLevel[" << i << "]:" << std::setw(6) 
+					<< "(i)" << " " << ptr->BidLevels[i].volume << "@" << ptr->BidLevels[i].price << std::endl;
+	 		}
+
+	 		for(int i = 1; i <= ptr->ValidLevelCount; ++i)
+	 		{
+	 			std::cout << std::setw(20) << "AskLevel[" << i << "]:" << std::setw(6) 
+					<< "(i)" << " " << ptr->AskLevels[i].volume << "@" << ptr->AskLevels[i].price << std::endl;
+	 		}
 			break;
 		}
 		case MSG_TYPE_LF_L2_INDEX:

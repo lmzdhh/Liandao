@@ -54,6 +54,20 @@ class LFMarketDataField(Structure):
         ("AskVolume5", c_uint64),	# 申卖量五 
         ]
 
+class LFPriceLevelField(Structure):
+   _fields_ = [("price", c_int64_t), ("volume", c_uint64_t)]
+
+class LFPriceBook20Field(Structure):
+   _fields_ = [
+        ("InstrumentID", c_char * 31),	 
+        ("ExchangeID", c_char * 9),	 
+        ("UpdateMicroSecond", c_uint64),
+        ("ValidLevelCount", c_int),
+        ("BidLevels", LFPriceLevelField * 20),	
+        ("AskLevels", LFPriceLevelField * 20),	
+        ]
+ 
+
 class LFL2MarketDataField(Structure):
     _fields_ = [
         ("TradingDay", c_char * 9),	# 交易日 
@@ -720,6 +734,7 @@ DataFieldMap = {
 MsgType2LFStruct = {
     lf.MsgTypes.MD: LFMarketDataField,
     lf.MsgTypes.L2_MD: LFL2MarketDataField,
+    lf.MsgTypes.PRICE_BOOK_20: LFPriceBook20Field,
     lf.MsgTypes.L2_INDEX: LFL2IndexField,
     lf.MsgTypes.L2_ORDER: LFL2OrderField,
     lf.MsgTypes.L2_TRADE: LFL2TradeField,
@@ -738,6 +753,7 @@ MsgType2LFStruct.update(SnifferMsgType2Struct)
 
 LFStruct2MsgType = {
     LFMarketDataField: lf.MsgTypes.MD,
+    LFPriceBook20Field: lf.MsgTypes.PRICE_BOOK_20,
     LFL2MarketDataField: lf.MsgTypes.L2_MD,
     LFL2IndexField: lf.MsgTypes.L2_INDEX,
     LFL2OrderField: lf.MsgTypes.L2_ORDER,
