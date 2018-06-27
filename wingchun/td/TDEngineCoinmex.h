@@ -7,10 +7,8 @@
 #include <vector>
 #include <sstream>
 #include <map>
-#include <document.h>
-#include "Timer.h"
 
-using rapidjson::Document;
+#include "Timer.h"
 
 WC_NAMESPACE_START
 
@@ -21,9 +19,6 @@ struct AccountUnitCoinmex
 {
     string api_key;
 	string secret_key;
-	string passphrase;
-    //coinmex and bitmore use the same api, use this parameter for them
-	string baseUrl;
     // internal flags
     bool    logged_in;
 };
@@ -84,20 +79,7 @@ private:
     
     //for CMake to load JSON
     void GetAndHandleTradeResponse(const std::string& symbol, int limit);
-
-private:
-    Document get_exchange_time(AccountUnitCoinmex& unit);
-    Document get_account(AccountUnitCoinmex& unit);
-    Document send_order(AccountUnitCoinmex& unit);
-
-    Document cancel_all_orders(AccountUnitCoinmex& unit, std::string code);
-    Document cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId);
-    Document query_orders(AccountUnitCoinmex& unit, std::string code, std::string status);
-    Document query_order(AccountUnitCoinmex& unit, std::string code, long orderId);
-
-    inline std::string getTimestampString();
-
-
+    
 };
 
 WC_NAMESPACE_END

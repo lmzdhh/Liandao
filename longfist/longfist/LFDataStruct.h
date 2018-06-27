@@ -63,6 +63,25 @@ struct LFMarketDataField
 	uint64_t      	AskVolume5;            //申卖量五
 };
 
+struct LFPriceLevel
+{
+	int64_t price;
+	uint64_t volume;
+};
+
+template<int level_count>
+struct LFPriceBookFieldTmpl
+{
+	char_31  	InstrumentID;          
+	char_9   	ExchangeID;           
+	uint64_t      	UpdateMicroSecond;    
+	int		ValidLevelCount;	
+	LFPriceLevel 	BidLevels[level_count];
+	LFPriceLevel	AskLevels[level_count];
+};
+
+using LFPriceBook20Field = LFPriceBookFieldTmpl<20>;
+
 struct LFL2MarketDataField
 {
 	char_9   	TradingDay;            //交易日
@@ -248,11 +267,11 @@ struct LFQryPositionField
 struct LFRspPositionField
 {
 	char_31              	InstrumentID;          //合约代码
-	int                  	YdPosition;            //上日持仓
-	int                  	Position;              //总持仓
+    uint64_t                  	YdPosition;            //上日持仓
+	uint64_t                  	Position;              //总持仓
 	char_11              	BrokerID;              //经纪公司代码
 	char_19              	InvestorID;            //投资者代码
-	double               	PositionCost;          //持仓成本
+	int64_t               	PositionCost;          //持仓成本
 	LfHedgeFlagType      	HedgeFlag;             //投机套保标志
 	LfPosiDirectionType  	PosiDirection;         //持仓多空方向
 };

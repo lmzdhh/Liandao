@@ -78,6 +78,8 @@ public:
     }
     /** on market data, engine (on_data) */
     void on_market_data(const LFMarketDataField* data);
+	
+    void on_price_book_update(const LFPriceBook20Field* data);
 
     void on_trade(const LFL2TradeField* trade);
 };

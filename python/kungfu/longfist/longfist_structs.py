@@ -54,6 +54,20 @@ class LFMarketDataField(Structure):
         ("AskVolume5", c_uint64),	# 申卖量五 
         ]
 
+class LFPriceLevelField(Structure):
+   _fields_ = [("price", c_int64_t), ("volume", c_uint64_t)]
+
+class LFPriceBook20Field(Structure):
+   _fields_ = [
+        ("InstrumentID", c_char * 31),	 
+        ("ExchangeID", c_char * 9),	 
+        ("UpdateMicroSecond", c_uint64),
+        ("ValidLevelCount", c_int),
+        ("BidLevels", LFPriceLevelField * 20),	
+        ("AskLevels", LFPriceLevelField * 20),	
+        ]
+ 
+
 class LFL2MarketDataField(Structure):
     _fields_ = [
         ("TradingDay", c_char * 9),	# 交易日 
@@ -239,11 +253,11 @@ class LFQryPositionField(Structure):
 class LFRspPositionField(Structure):
     _fields_ = [
         ("InstrumentID", c_char * 31),	# 合约代码 
-        ("YdPosition", c_int),	# 上日持仓 
-        ("Position", c_int),	# 总持仓 
+        ("YdPosition", c_uint64),	# 上日持仓
+        ("Position", c_uint64),	# 总持仓
         ("BrokerID", c_char * 11),	# 经纪公司代码 
         ("InvestorID", c_char * 19),	# 投资者代码 
-        ("PositionCost", c_double),	# 持仓成本 
+        ("PositionCost", c_int64),	# 持仓成本
         ("HedgeFlag", c_char),	# 投机套保标志 LfHedgeFlagType
         ("PosiDirection", c_char),	# 持仓多空方向 LfPosiDirectionType
         ]
@@ -720,6 +734,7 @@ DataFieldMap = {
 MsgType2LFStruct = {
     lf.MsgTypes.MD: LFMarketDataField,
     lf.MsgTypes.L2_MD: LFL2MarketDataField,
+    lf.MsgTypes.PRICE_BOOK_20: LFPriceBook20Field,
     lf.MsgTypes.L2_INDEX: LFL2IndexField,
     lf.MsgTypes.L2_ORDER: LFL2OrderField,
     lf.MsgTypes.L2_TRADE: LFL2TradeField,
@@ -738,6 +753,7 @@ MsgType2LFStruct.update(SnifferMsgType2Struct)
 
 LFStruct2MsgType = {
     LFMarketDataField: lf.MsgTypes.MD,
+    LFPriceBook20Field: lf.MsgTypes.PRICE_BOOK_20,
     LFL2MarketDataField: lf.MsgTypes.L2_MD,
     LFL2IndexField: lf.MsgTypes.L2_INDEX,
     LFL2OrderField: lf.MsgTypes.L2_ORDER,

@@ -909,22 +909,26 @@ BinaCPP::send_order(
 
 	post_data.append("&type=");
 	post_data.append( type );
-
-	post_data.append("&timeInForce=");
-	post_data.append( timeInForce );
-
-
+        //if MARKET,not send price or timeInForce
+        if(strcmp("MARKET", type) != 0)
+        {
+	    post_data.append("&timeInForce=");
+	    post_data.append( timeInForce );
+        }
 
 	post_data.append("&quantity=");
 	post_data.append( to_string( quantity) );
 
-	post_data.append("&price=");
-        std::string priceStr;
-        std::stringstream convertStream;
-        convertStream <<std::fixed << std::setprecision(8) << price;
-        convertStream >> priceStr;
+        if(strcmp("MARKET", type) != 0)
+        {
+	    post_data.append("&price=");
+            std::string priceStr;
+            std::stringstream convertStream;
+            convertStream <<std::fixed << std::setprecision(8) << price;
+            convertStream >> priceStr;
 
-	post_data.append( priceStr );
+	    post_data.append( priceStr );
+        }
 
 	if ( strlen( newClientOrderId ) > 0 ) {
 		post_data.append("&newClientOrderId=");

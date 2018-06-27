@@ -6,6 +6,8 @@
 #include <memory.h>
 #include <cstdlib>
 #include <stdio.h>
+#include <string>
+
 // Index for Sources...
 enum exchange_source_index : short
 {
@@ -14,8 +16,37 @@ enum exchange_source_index : short
     SOURCE_BINANCE = 16,
     SOURCE_INDODAX = 17,
     SOURCE_OKEX = 18,
-    SOURCE_COINMEX = 19
+    SOURCE_COINMEX = 19,
+    SOURCE_UNKNOWN
 };
+
+inline exchange_source_index get_source_index_from_str(const std::string& exch_str)
+{
+    if(exch_str == "ctp")
+    {
+         return SOURCE_CTP;
+    }
+    else if(exch_str == "xtp")
+    {
+	return SOURCE_XTP;
+    }
+    else if(exch_str == "binance")
+    {
+	return SOURCE_BINANCE;
+    }
+    else if(exch_str == "indodax")
+    {
+	return SOURCE_INDODAX;
+    }
+    else if(exch_str == "okex")
+    {
+	return SOURCE_OKEX;
+    }
+    else
+    {
+	return SOURCE_UNKNOWN;
+    }
+}
 
 // Exchange names
 #define EXCHANGE_SSE "SSE" //上海证券交易所
@@ -24,6 +55,7 @@ enum exchange_source_index : short
 #define EXCHANGE_SHFE "SHFE" //上海期货交易所
 #define EXCHANGE_DCE "DCE" //大连商品交易所
 #define EXCHANGE_CZCE "CZCE" //郑州商品交易所
+#define EXCHANGE_BINANCE "BINANCE"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -39,6 +71,7 @@ const short MSG_TYPE_LF_L2_MD         = 102;
 const short MSG_TYPE_LF_L2_INDEX      = 103;
 const short MSG_TYPE_LF_L2_ORDER      = 104;
 const short MSG_TYPE_LF_L2_TRADE      = 105;
+const short MSG_TYPE_LF_PRICE_BOOK_20 = 106;
 const short MSG_TYPE_LF_BAR_MD        = 110;
 const short MSG_TYPE_LF_QRY_POS       = 201;
 const short MSG_TYPE_LF_RSP_POS       = 202;
