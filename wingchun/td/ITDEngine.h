@@ -140,7 +140,7 @@ public:
     /** request account info */
     virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId) = 0;
     /** insert order */
-    virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time) = 0;
+    virtual void req_order_insert(LFInputOrderField* data, int account_index, int requestId, long rcv_time) = 0;
     /** request order action (only cancel is accomplished) */
     virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time) = 0;
     /** on investor position, engine (on_data) */
