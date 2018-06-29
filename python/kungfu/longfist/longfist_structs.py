@@ -55,7 +55,7 @@ class LFMarketDataField(Structure):
         ]
 
 class LFPriceLevelField(Structure):
-   _fields_ = [("price", c_int64_t), ("volume", c_uint64_t)]
+   _fields_ = [("price", c_int64), ("volume", c_uint64)]
 
 class LFPriceBook20Field(Structure):
    _fields_ = [
