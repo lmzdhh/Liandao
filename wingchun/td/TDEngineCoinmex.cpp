@@ -93,19 +93,20 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 //test
-    Document d = get_exchange_time(unit);
+    Document d;
+    get_exchange_time(unit, d);
     KF_LOG_INFO(logger, "[print get_exchange_time]");
     printResponse(d);
 
-    d = get_account(unit);
+    get_account(unit, d);
     KF_LOG_INFO(logger, "[print get_account]");
     printResponse(d);
 
-    d = get_products(unit);
+    get_products(unit, d);
     KF_LOG_INFO(logger, "[print get_products]");
     printResponse(d);
 
-    d = get_depth(unit, "LTC_BTC");
+    get_depth(unit, "LTC_BTC", d);
     KF_LOG_INFO(logger, "[print get_depth]");
     printResponse(d);
 
@@ -115,20 +116,23 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     double size=0;
     double price=0.0000;
     double funds=0;
-    d = send_order(unit, code.c_str(), side.c_str(), type.c_str(), size, price, funds);
+    send_order(unit, code.c_str(), side.c_str(), type.c_str(), size, price, funds, d);
     KF_LOG_INFO(logger, "[print send_order]");
     printResponse(d);
 
-    d = cancel_all_orders(unit, "LTC_BTC");
+    cancel_all_orders(unit, "LTC_BTC", d);
     KF_LOG_INFO(logger, "[print cancel_all_orders]");
     printResponse(d);
 
-    cancel_order(unit, "LTC_BTC", 123456L);
-    d = query_orders(unit, "LTC_BTC", "open");
+    cancel_order(unit, "LTC_BTC", 123456L, d);
+    KF_LOG_INFO(logger, "[print cancel_order]");
+    printResponse(d);
+
+    query_orders(unit, "LTC_BTC", "open", d);
     KF_LOG_INFO(logger, "[print query_orders]");
     printResponse(d);
 
-    d = query_order(unit, "LTC_BTC", 123456L);
+    query_order(unit, "LTC_BTC", 123456L, d);
     KF_LOG_INFO(logger, "[print query_order]");
     printResponse(d);
 //test end
@@ -150,7 +154,8 @@ void TDEngineCoinmex::connect(long timeout_nsec)
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
-            Document d = get_exchange_time(unit);
+            Document d;
+            get_exchange_time(unit, d);
             if(d.HasMember("timestamp")) {
                 Value& s = d["timestamp"];
                 KF_LOG_INFO(logger, "[connect] (response.timestamp.type) " << s.GetType() << " (response.timestamp) " << d["timestamp"].GetInt64());
@@ -259,14 +264,15 @@ LfOrderStatusType TDEngineCoinmex::GetOrderStatus(std::string input) {
  */
 void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int account_index, int requestId)
 {
-    KF_LOG_INFO(logger, "[req_investor_position]");
+    KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId);
 
     AccountUnitCoinmex& unit = account_units[account_index];
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key << " (InstrumentID) " << data->InstrumentID);
 
     int errorId = 0;
     std::string errorMsg = "";
-    Document d = get_account(unit);
+    Document d;
+    get_account(unit, d);
 
     if(d.IsObject() && d.HasMember("code"))
     {
@@ -284,9 +290,13 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
     strncpy(pos.BrokerID, data->BrokerID, 11);
     strncpy(pos.InvestorID, data->InvestorID, 19);
     strncpy(pos.InstrumentID, data->InstrumentID, 31);
-    //pos.PosiDirection = LF_CHAR_Long;
+    pos.PosiDirection = LF_CHAR_Long;
+    pos.HedgeFlag = LF_CHAR_Speculation;
     pos.Position = 0;
+    pos.YdPosition = 0;
+    pos.PositionCost = 0;
     bool findSymbolInResult = false;
+
 /*
  # Response
     [{"available":"0.099","balance":"0.099","currencyCode":"BTC","hold":"0","id":83906},{"available":"188","balance":"188","currencyCode":"MVP","hold":"0","id":83906}]
@@ -299,20 +309,21 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
         {
             std::string symbol = d.GetArray()[i]["currencyCode"].GetString();
             strncpy(pos.InstrumentID, symbol.c_str(), 31);
-            KF_LOG_INFO(logger, "[req_investor_position] (symbol)" << symbol
+            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
                                                                    << " available:" << d.GetArray()[i]["available"].GetString()
                                                                    << " balance: " << d.GetArray()[i]["balance"].GetString()
                                                                    << " hold: " << d.GetArray()[i]["hold"].GetString());
             pos.Position = std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset;
-            on_rsp_position(&pos, i == (len - 1), request_id);
+            on_rsp_position(&pos, i == (len - 1), requestId, errorId, errorMsg.c_str());
+            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol);
             findSymbolInResult = true;
         }
     }
 
     if(!findSymbolInResult)
     {
-        KF_LOG_INFO(logger, "[req_investor_position] (!findSymbolInResult)");
-        on_rsp_position(&pos, 1, request_id, errorId, errorMsg.c_str());
+        KF_LOG_INFO(logger, "[req_investor_position] (!findSymbolInResult) (requestId)" << requestId);
+        on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
     }
     raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_COINMEX, 1, requestId, errorId, errorMsg.c_str());
 }
@@ -328,10 +339,14 @@ void TDEngineCoinmex::req_order_insert(LFInputOrderField* data, int account_inde
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Tid)" << data->InstrumentID
+                                              << " (Volume)" << data->Volume
+                                              << " (LimitPrice)" << data->LimitPrice
                                               << " (OrderRef)" << data->OrderRef);
+
     double funds = 0;
-    Document d = send_order(unit, data->InstrumentID, GetSide(data->Direction).c_str(),
-            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset, funds);
+    Document d;
+    send_order(unit, data->InstrumentID, GetSide(data->Direction).c_str(),
+            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset, funds, d);
 /*
  * # Response
 
@@ -403,7 +418,8 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
                                               << " (Iid)" << data->InvestorID
                                               << " (OrderRef)" << data->OrderRef);
 
-    Document d = cancel_order(unit, data->InstrumentID, stod(data->OrderRef));
+    Document d;
+    cancel_order(unit, data->InstrumentID, stod(data->OrderRef), d);
     send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId);
     int errorId = 0;
     std::string errorMsg = "";
@@ -475,7 +491,8 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
                                                                <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
         );
 
-        Document d = query_order(unit, orderStatusIterator->InstrumentID, stod(orderStatusIterator->OrderRef));
+        Document d;
+        query_order(unit, orderStatusIterator->InstrumentID, stod(orderStatusIterator->OrderRef), d);
         KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
                                                                << " (orderId)" << orderStatusIterator->OrderRef);
         /*
@@ -674,49 +691,50 @@ HTTP状态码200表示成功响应，并可能包含内容。如果响应含有�
  * */
 //当出错时，返回http error code和出错信息message
 //当不出错时，返回结果信息
-Document TDEngineCoinmex::getResponse(int http_status_code, std::string responseText, std::string errorMsg)
+void TDEngineCoinmex::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
 {
     if(http_status_code == HTTP_RESPONSE_OK)
     {
-        Document d;
-        d.Parse(responseText.c_str());
-        return d;
+        json.Parse(responseText.c_str());
     } else if(http_status_code == 0 && responseText.length() == 0)
     {
-        Document document;
-        document.SetObject();
-        Document::AllocatorType& allocator = document.GetAllocator();
+        json.SetObject();
+        Document::AllocatorType& allocator = json.GetAllocator();
         int code = 1;
-        document.AddMember("code", code, allocator);
-
+        json.AddMember("code", code, allocator);
         KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
-        //if(errorMsg.length() > 0)
-            document.AddMember("message", StringRef(errorMsg.c_str()), allocator);
-        //else{
-          //  std::string message = "error";
-            //document.AddMember("message", StringRef(message.c_str()), allocator);
-        //}
-
-        return document;
+        rapidjson::Value val;
+        val.SetString(errorMsg.c_str(), errorMsg.length());
+        json.AddMember("message", val, allocator);
     } else
     {
         Document d;
         d.Parse(responseText.c_str());
         KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
 
-        Document document;
-        document.SetObject();
-        Document::AllocatorType& allocator = document.GetAllocator();
-        document.AddMember("code", http_status_code, allocator);
-
-        KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["message"].GetString());
-        std::string message = d["message"].GetString();
-        document.AddMember("message", StringRef(message.c_str()), allocator);
-        return document;
+        json.SetObject();
+        Document::AllocatorType& allocator = json.GetAllocator();
+        json.AddMember("code", http_status_code, allocator);
+        if(d.IsObject()) {
+            if( d.HasMember("message")) {
+                KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["message"].GetString());
+                std::string message = d["message"].GetString();
+                rapidjson::Value val;
+                val.SetString(message.c_str(), message.length());
+                json.AddMember("message", val, allocator);
+            }
+            if( d.HasMember("msg")) {
+                KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["msg"].GetString());
+                std::string message = d["msg"].GetString();
+                rapidjson::Value val;
+                val.SetString(message.c_str(), message.length());
+                json.AddMember("message", val, allocator);
+            }
+        }
     }
 }
 
-Document TDEngineCoinmex::get_exchange_time(AccountUnitCoinmex& unit)
+void TDEngineCoinmex::get_exchange_time(AccountUnitCoinmex& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_exchange_time]");
     std::string Timestamp = getTimestampString();
@@ -727,28 +745,10 @@ Document TDEngineCoinmex::get_exchange_time(AccountUnitCoinmex& unit)
     string Message = Timestamp + Method + requestPath + queryString + body;
     string url = unit.baseUrl + requestPath + queryString;
     const auto response = Get(Url{url}, Parameters{}, Timeout{10000});
-    /*
-    if(response.status_code == HTTP_RESPONSE_OK)
-    {
-        KF_LOG_INFO(logger, "[get_exchange_time] (response.status_code) " << response.status_code);
-        Document d;
-        d.Parse(response.text.c_str());
-        KF_LOG_INFO(logger, "[get_exchange_time] (url) " << url << " (response) " << response.text.c_str());
-        //{"iso":"2018-06-28T06:46:50.205Z","timestamp":1530168410205}
-        if(d.HasMember("timestamp")) {
-            Value& s = d["timestamp"];
-            KF_LOG_INFO(logger, "[get_exchange_time] (response.timestamp) " << d["timestamp"].GetInt64());
-        }
-        if(d.HasMember("iso")) {
-            Value& s = d["iso"];
-            KF_LOG_INFO(logger, "[get_exchange_time] (response.iso) " << d["iso"].GetString());
-        }
-    }
-    */
-    return getResponse(response.status_code, response.text, response.error.message);
+    return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-Document TDEngineCoinmex::get_account(AccountUnitCoinmex& unit)
+void TDEngineCoinmex::get_account(AccountUnitCoinmex& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
     std::string Timestamp = getTimestampString();
@@ -770,10 +770,10 @@ Document TDEngineCoinmex::get_account(AccountUnitCoinmex& unit)
 
     KF_LOG_INFO(logger, "[get_account] (url) " << url << " (response) " << response.text.c_str());
     //[]
-    return getResponse(response.status_code, response.text, response.error.message);
+    return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-Document TDEngineCoinmex::get_products(AccountUnitCoinmex& unit)
+void TDEngineCoinmex::get_products(AccountUnitCoinmex& unit, Document& json)
 {
  /*
 [{
@@ -818,11 +818,11 @@ Document TDEngineCoinmex::get_products(AccountUnitCoinmex& unit)
 
     KF_LOG_INFO(logger, "[get_account] (url) " << url << " (response) " << response.text.c_str());
     //
-    return getResponse(response.status_code, response.text, response.error.message);
+    return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-Document TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
-                                     const char *side, const char *type, double size, double price, double funds)
+void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
+                                     const char *side, const char *type, double size, double price, double funds, Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
 
@@ -853,24 +853,28 @@ Document TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
             return d;
         }
         */
-        return getResponse(0, "", "market buy is not supported!");
+        getResponse(0, "", "market buy is not supported!", json);
+        return;
     }
 
     if(strcmp("limit", type) == 0)
     {
         if(price == 0 || size == 0) {
             KF_LOG_ERROR(logger, "[send_order] limit order, price or size cannot be null");
-            return getResponse(0, "", "price or size cannot be null");
+            getResponse(0, "", "price or size cannot be null", json);
+            return;
         }
 
     } else if(strcmp("market", type) == 0) {
         if(strcmp("buy", side) == 0 &&  funds == 0) {
             KF_LOG_ERROR(logger, "[send_order] market order, type is buy, the funds cannot be null");
-            return getResponse(0, "", "market order, type is buy, the funds cannot be null");
+            getResponse(0, "", "market order, type is buy, the funds cannot be null", json);
+            return;
         }
         if(strcmp("sell", side) == 0 &&  size == 0) {
             KF_LOG_ERROR(logger, "[send_order] market order, type is sell, the size cannot be null");
-            return getResponse(0, "", "market order, type is sell, the size cannot be null");
+            getResponse(0, "", "market order, type is sell, the size cannot be null", json);
+            return;
         }
     }
 
@@ -890,7 +894,7 @@ Document TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
     convertFundsStream >> fundsStr;
 
     KF_LOG_INFO(logger, "[send_order] (code) " << code << " (side) "<< side << " (type) " <<
-                                               type << " (size) "<< size << " (price) "<< price << " (funds) " << funds);
+                                               type << " (size) "<< sizeStr << " (price) "<< priceStr << " (funds) " << fundsStr);
 
     Document document;
     document.SetObject();
@@ -929,11 +933,11 @@ Document TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
     KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                               " (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
-    return getResponse(response.status_code, response.text, response.error.message);
+    getResponse(response.status_code, response.text, response.error.message, json);
 }
 
 
-Document TDEngineCoinmex::cancel_all_orders(AccountUnitCoinmex& unit, std::string code)
+void TDEngineCoinmex::cancel_all_orders(AccountUnitCoinmex& unit, std::string code, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
     rapidjson::Document document;
@@ -964,10 +968,10 @@ Document TDEngineCoinmex::cancel_all_orders(AccountUnitCoinmex& unit, std::strin
     KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url << " (response.status_code) " << response.status_code <<
                                                      " (response.error.message) " << response.error.message <<
                                                      " (response.text) " << response.text.c_str());
-    return getResponse(response.status_code, response.text, response.error.message);
+    getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-Document TDEngineCoinmex::get_depth(AccountUnitCoinmex& unit, std::string code)
+void TDEngineCoinmex::get_depth(AccountUnitCoinmex& unit, std::string code, Document& json)
 {
     KF_LOG_INFO(logger, "[get_depth]");
 /*
@@ -1044,10 +1048,10 @@ bids 	买方深度
                                              " (response.error.message) " << response.error.message <<
                                              " (response.text) " << response.text.c_str());
     //{"asks":[],"bids":[]}
-    return getResponse(response.status_code, response.text, response.error.message);
+    getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-Document TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId)
+void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
     rapidjson::Document document;
@@ -1078,11 +1082,11 @@ Document TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string cod
     KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
-    return getResponse(response.status_code, response.text, response.error.message);
+    getResponse(response.status_code, response.text, response.error.message, json);
 }
 
 //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-Document TDEngineCoinmex::query_orders(AccountUnitCoinmex& unit, std::string code, std::string status)
+void TDEngineCoinmex::query_orders(AccountUnitCoinmex& unit, std::string code, std::string status, Document& json)
 {
     KF_LOG_INFO(logger, "[query_orders]");
 /*
@@ -1121,10 +1125,10 @@ Document TDEngineCoinmex::query_orders(AccountUnitCoinmex& unit, std::string cod
     KF_LOG_INFO(logger, "[query_orders] (url) " << url << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
-    return getResponse(response.status_code, response.text, response.error.message);
+    getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-Document TDEngineCoinmex::query_order(AccountUnitCoinmex& unit, std::string code, long orderId)
+void TDEngineCoinmex::query_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[query_order]");
 /*
@@ -1163,7 +1167,7 @@ Document TDEngineCoinmex::query_order(AccountUnitCoinmex& unit, std::string code
                                                " (response.error.message) " << response.error.message <<
                                                " (response.text) " << response.text.c_str());
     //(response.status_code) 404 (response.error.message)  (response.text) {"message":"Order does not exist"}
-    return getResponse(response.status_code, response.text, response.error.message);
+    getResponse(response.status_code, response.text, response.error.message, json);
 }
 
 std::string TDEngineCoinmex::getTimestampString()

@@ -108,18 +108,18 @@ private:
 
 private:
     int HTTP_RESPONSE_OK = 200;
-    Document get_exchange_time(AccountUnitCoinmex& unit);
-    Document get_account(AccountUnitCoinmex& unit);
-    Document get_depth(AccountUnitCoinmex& unit, std::string code);
-    Document get_products(AccountUnitCoinmex& unit);
-    Document send_order(AccountUnitCoinmex& unit, const char *code,
-                        const char *side, const char *type, double size, double price, double funds);
+    void get_exchange_time(AccountUnitCoinmex& unit, Document& json);
+    void get_account(AccountUnitCoinmex& unit, Document& json);
+    void get_depth(AccountUnitCoinmex& unit, std::string code, Document& json);
+    void get_products(AccountUnitCoinmex& unit, Document& json);
+    void send_order(AccountUnitCoinmex& unit, const char *code,
+                        const char *side, const char *type, double size, double price, double funds, Document& json);
 
-    Document cancel_all_orders(AccountUnitCoinmex& unit, std::string code);
-    Document cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId);
-    Document query_orders(AccountUnitCoinmex& unit, std::string code, std::string status);
-    Document query_order(AccountUnitCoinmex& unit, std::string code, long orderId);
-    Document getResponse(int http_status_code, std::string responseText, std::string errorMsg);
+    void cancel_all_orders(AccountUnitCoinmex& unit, std::string code, Document& json);
+    void cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
+    void query_orders(AccountUnitCoinmex& unit, std::string code, std::string status, Document& json);
+    void query_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
+    void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
     inline std::string getTimestampString();
 
