@@ -70,6 +70,7 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_CTP);
     loadJournalInfo(SOURCE_XTP);
     loadJournalInfo(SOURCE_BINANCE);
+    loadJournalInfo(SOURCE_COINMEX);
 
     loadJournalInfo(0, getSystemJournalPair);
 
