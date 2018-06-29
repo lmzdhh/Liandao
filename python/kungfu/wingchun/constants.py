@@ -19,6 +19,7 @@ class SOURCE:
     CTP = 1
     XTP = 15
     BINANCE = 16
+    COINMEX = 19
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
