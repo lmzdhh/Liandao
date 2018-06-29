@@ -252,14 +252,14 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
                                                                        << " locked: "
                                                                        << result["balances"][i]["locked"].asString().c_str());
                 pos.Position = stod(result["balances"][i]["free"].asString().c_str()) * scale_offset;
-                on_rsp_position(&pos, i == (balancesSize - 1), request_id);
+                on_rsp_position(&pos, i == (balancesSize - 1), requestId);
                 findSymbolInResult = true;
             //}
         }
     }
     if(!findSymbolInResult)
     {
-        on_rsp_position(&pos, 1, request_id, errorId, errorMsg.c_str());
+        on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
     }
     raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 }
