@@ -7,6 +7,7 @@
 #include <vector>
 #include <sstream>
 #include <map>
+#include <mutex>
 #include "binacpp.h"
 #include "binacpp_websocket.h"
 #include <json/json.h>
@@ -15,14 +16,33 @@
 WC_NAMESPACE_START
 
 /**
- * account information unit extra for CTP is here.
+ * account information unit extra is here.
  */
+
+struct PendingBinanceOrderStatus
+{
+    char_31 InstrumentID;   //合约代码
+    char_21 OrderRef;       //报单引用
+    LfOrderStatusType OrderStatus;  //报单状态
+    uint64_t VolumeTraded;  //今成交数量
+};
+
+struct PendingBinanceTradeStatus
+{
+    char_31 InstrumentID;   //合约代码
+    uint64_t last_trade_id; //for myTrade
+};
+
 struct AccountUnitBinance
 {
-    string api_key;
-	string secret_key;
+    std::string api_key;
+    std::string secret_key;
     // internal flags
     bool    logged_in;
+    std::vector<PendingBinanceOrderStatus> newOrderStatus;
+    std::vector<PendingBinanceOrderStatus> pendingOrderStatus;
+    std::vector<PendingBinanceTradeStatus> newTradeStatus;
+    std::vector<PendingBinanceTradeStatus> pendingTradeStatus;
 };
 
 /**
@@ -54,7 +74,7 @@ public:
 
 public:
     TDEngineBinance();
-
+    ~TDEngineBinance();
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
@@ -67,20 +87,28 @@ private:
     std::string GetTimeInForce(const LfTimeConditionType& input);
     LfTimeConditionType GetTimeCondition(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
-    std::string GetInputOrderData(const LFInputOrderField* order, int recvWindow);
 
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
-    void GetAndHandleOrderResponse();
+    void GetAndHandleOrderTradeResponse();
+    void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
+                                        const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded);
 
+    inline void onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
+    inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
+    inline void onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
+
+    void retrieveOrderStatus(AccountUnitBinance& unit);
+    void retrieveTradeStatus(AccountUnitBinance& unit);
+    void moveNewtoPending(AccountUnitBinance& unit);
     static constexpr int scale_offset = 1e8;
-    std::map<std::string, std::vector<std::string>*> symbols_pending_orderref;
+
     ThreadPtr rest_thread;
     uint64_t last_rest_get_ts = 0;
     int rest_get_interval_ms = 500;
-    
-    
-    
+
+    std::mutex* mutex_order_and_trade = nullptr;
+
 };
 
 WC_NAMESPACE_END

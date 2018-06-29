@@ -33,7 +33,7 @@ LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/utils/binacpp/lib/libbinacpp/lib ${CMAKE_SO
 
 SET(BINANCE_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBinance.cpp TDEngineBinance.h)
 
-ADD_LIBRARY(binancetd SHARED ${BINANCE_SOURCE_FILES} ${CTP_SOURCE_FILES})
+ADD_LIBRARY(binancetd SHARED ${BINANCE_SOURCE_FILES})
 
 TARGET_LINK_LIBRARIES(binancetd journal kflog thosttraderapi -lcurl -lwebsockets -lbinacpp ${Boost_LIBRARIES})
 
