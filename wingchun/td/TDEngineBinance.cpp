@@ -692,7 +692,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
         } else {
             ++orderStatusIterator;
         }
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
+        //KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
     }
 }
 
