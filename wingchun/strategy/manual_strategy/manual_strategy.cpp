@@ -14,6 +14,8 @@
 
 USING_WC_NAMESPACE
 
+using exchange_list_t = std::vector<std::pair<short, std::string>>;
+
 enum event_type
 {
 	status_update = 0,
@@ -416,8 +418,8 @@ class manual_strategy_controller
 {
 public:
 	
-	manual_strategy_controller(WCStrategyUtilPtr util, exchange_source_index exch_source, std::string ex_name) 
-																: mscc(util), exch_src(exch_source), exch_name(ex_name)
+	manual_strategy_controller(WCStrategyUtilPtr util, const exchange_list_t& mes, const exchange_list_t& tes) 
+                                                                    : mscc(util), md_exchanges(mes), td_exchanges(tes)
 	{
 	}
 
@@ -459,8 +461,6 @@ public:
 		if(event_ptr && event_ptr->parse_line(event_line))
 		{
 		    event_ptr->set_strategy_context(mscc);
-			event_ptr->exch_source = exch_src;
-			event_ptr->exch_name = exch_name.c_str();
 		    event_queue.push(event_ptr);
 		}
 		else
@@ -516,21 +516,15 @@ private:
 	
 	std::queue<event_base*> event_queue;
 
+    const exchange_list_t& md_exchange_list;
+
+    const exchange_list_t td_exchange_list;
+
 	manual_strategy_controller_context mscc;
-	
-	exchange_source_index exch_src;
-	
-	std::string exch_name;
 };
 
 class ManualStrategy: public IWCStrategy
 {
-protected:
-    bool td_connected;
-    bool trade_completed;
-    int rid;
-    int md_num;
-    int traded_volume;
 public:
     virtual void init();
     virtual void on_market_data(const LFMarketDataField* data, short source, long rcv_time);
@@ -542,23 +536,22 @@ public:
     virtual void on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId, const char* errorMsg);
 
 public:
-    ManualStrategy(const string& name, exchange_source_index _exch_src_idx, const string& _exch_name, const string& _symbol);
+    ManualStrategy(const string& name, const exchange_list_t& md_exchanges, const exchange_list_t& td_exchanges);
 
     void on_command_line(const char*);
 
 private:
-    exchange_source_index exch_src_index = SOURCE_UNKNOWN;
-    string exch_name;
-    string symbol;
-	
+    
+    exchange_list_t md_exchange_list;
+
+    exchange_list_t td_exchange_list;
+
     manual_strategy_controller msc;
 };
 
-ManualStrategy::ManualStrategy(const string& name, exchange_source_index _exch_src_idx, 
-			const string& _exch_name, const string& _symbol): IWCStrategy(name), 
-						exch_src_index(_exch_src_idx), exch_name(_exch_name), symbol(_symbol), msc(util, exch_src_index, exch_name)
+ManualStrategy::ManualStrategy(const string& name, const exchange_list_t& md_exchanges, const exchange_list_t& td_exchanges): 
+                            IWCStrategy(name), md_exchange_list(md_exchanges), td_exchange_list(td_exchanges), msc(util, md_exchanges, td_exchanges)
 {
-    rid = -1;
 }
 
 void ManualStrategy::on_command_line(const char* line)
@@ -579,16 +572,15 @@ void ManualStrategy::on_command_line(const char* line)
 
 void ManualStrategy::init()
 {
-    data->add_market_data(exch_src_index);
-    data->add_register_td(exch_src_index);
-    vector<string> tickers;
-    tickers.push_back(symbol);
-    util->subscribeMarketData(tickers, exch_src_index);
-    // necessary initialization of internal fields.
-    td_connected = false;
-    trade_completed = true;
-    md_num = 0;
-    traded_volume = 0;
+    for(const auto& i : md_exchange_list)
+    {
+        data->add_market_data(i.first);
+    }
+
+    for(const auto& i : td_exchange_list)
+    {
+        data->add_register_td(i.first);
+    }
 
     fprintf(stdout, msc.help_msg());
 }
@@ -667,11 +659,12 @@ int main(int argc, const char* argv[])
 {
     if(argc != 3)
     {
-        fprintf(stderr, "usage: %s <exchange> <symbol>\n", argv[0]);
+        fprintf(stderr, "usage: %s <config_file_path>\n", argv[0]);
         exit(1);
     }
     
-    const std::string exchange_name = argv[1];
+    const std::string config_file_path = argv[1];
+    //TODO load config
     exchange_source_index exch_src_idx = get_source_index_from_str(exchange_name);
    
     if(exch_src_idx == SOURCE_UNKNOWN)
@@ -680,12 +673,10 @@ int main(int argc, const char* argv[])
 			exit(1);
 	}
 
-    const std::string symbol_str = argv[2];
+    fprintf(stdout, "going to initialize strategy with exchange name [%s],  exchange source id [%d]\n", 
+						exchange_name.c_str(), static_cast<int>(exch_src_idx));
 
-    fprintf(stdout, "going to initialize strategy with exchange name [%s],  exchange source id [%d], symbol [%s]\n", 
-						exchange_name.c_str(), static_cast<int>(exch_src_idx), symbol_str.c_str());
-
-    ManualStrategy str(string("manual_strategy"), exch_src_idx, exchange_name, symbol_str);
+    ManualStrategy str(string("manual_strategy"), exch_src_idx, exchange_name);
     str.init();
     str.start();
 
