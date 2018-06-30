@@ -49,8 +49,7 @@ YJJ_NAMESPACE_START
 #define PH_POS_FEE_INDEX    1
 #define COST_NUM_PER_DIR    2
 
-/** pos will be updated to long */
-typedef uint64_t VOLUME_DATA_TYPE;
+typedef double VOLUME_DATA_TYPE;
 
 /**
  * easy marco for pos array index calculation
@@ -182,9 +181,9 @@ public:
 
     static inline bool is_stock(short source)
     {
-        return source == SOURCE_XTP;
+        return source == SOURCE_XTP || source == SOURCE_BINANCE;
     }
-
+	
     inline bool update(const string& ticker, VOLUME_DATA_TYPE volume, LfDirectionType direction, LfOffsetFlagType offset)
     {
         if (is_stock_flag)
@@ -202,9 +201,9 @@ public:
     inline bool update(const LFRtnTradeField* rtn_trade)
     {
         if (is_stock_flag)
-            stock_update(rtn_trade->InstrumentID, rtn_trade->Volume, rtn_trade->Price, rtn_trade->Direction, rtn_trade->OffsetFlag);
+            stock_update(rtn_trade->InstrumentID, scale_to_double(rtn_trade->Volume), scale_to_double(rtn_trade->Price), rtn_trade->Direction, rtn_trade->OffsetFlag);
         else
-            future_update(rtn_trade->InstrumentID, rtn_trade->Volume, rtn_trade->Price, rtn_trade->Direction, rtn_trade->OffsetFlag);
+            future_update(rtn_trade->InstrumentID, scale_to_double(rtn_trade->Volume), scale_to_double(rtn_trade->Price), rtn_trade->Direction, rtn_trade->OffsetFlag);
         return !is_poisoned;
     }
 
@@ -444,6 +443,8 @@ protected:
 
     inline void stock_update(const string& ticker, VOLUME_DATA_TYPE volume, double price, LfDirectionType direction, LfOffsetFlagType offset)
     {
+		fprintf(stdout, "PosHandler::stock_update: %lf, %lf, %c\n", volume, price, direction);
+
         json& pos_array = get_pos_array(ticker);
         json& cost_array = get_cost_array(ticker);
         switch(direction)

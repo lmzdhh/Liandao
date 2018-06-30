@@ -1,4 +1,6 @@
 #include "IWCStrategy.h"
+#include "longfist/LFUtils.h"
+
 #include <queue>
 #include <string>
 #include <readline/readline.h>
@@ -7,6 +9,8 @@
 #include <unordered_map>
 #include <vector>
 #include <sstream>
+#include <mutex>
+#include <algorithm>
 
 USING_WC_NAMESPACE
 
@@ -35,13 +39,6 @@ struct order_info
 	uint64_t trade_qty = 0;
 };
 
-enum req_state
-{
-	new_order,
-	cancel_order
-};
-using request_info = std::pair<order_info*, req_state>;
-
 struct trade_info
 {
 	order_info* order;
@@ -52,6 +49,17 @@ struct trade_info
 
 struct manual_strategy_controller_context
 {
+	static const char* help_msg()
+	{
+		return  "usage: \n"
+			"0 - print strategy status e.g. information of order, pos and etc\n"
+			"1 <exchange> <ticker> <price> <qty> <side>(0->buy, 1->sell) <tif>(1->IOC, 3->GTD) - insert order\n"
+			"2 <exchange> <order_id> - cancel order\n"
+			"3 <exchange> <ticker> - print latest market data e.g. bbo, last price and etc\n"
+			"4 <exchange> - request pos from exchange\n"
+			"5 - print this help message\n";
+	}
+
 	manual_strategy_controller_context(WCStrategyUtilPtr util) : strategy_util(util)
 	{
 	}
@@ -67,6 +75,7 @@ struct manual_strategy_controller_context
 	};
 
 	std::unordered_map<std::string, market_data_info> ticker_market_data;
+	std::mutex market_data_mutex;
 	
 	struct pos_info
 	{
@@ -84,10 +93,7 @@ struct manual_strategy_controller_context
 
 	std::unordered_map<std::string, pending_order_info> ticker_pending_order_info;
 	
-	
 	std::unordered_map<int, order_info*> all_order_map;
-	
-	std::unordered_map<int, request_info> all_request_map;
 	
 	WCStrategyUtilPtr strategy_util;
 };
@@ -133,6 +139,7 @@ struct status_update_event : event_base
 	{
 		char buf[128] = {};
 		to_str(buf, 128);
+
 		fprintf(stdout, "%s\n", buf);
 	}
 
@@ -151,8 +158,8 @@ struct insert_order_event : event_base
 	bool parse_line(const char* line_str) override
 	{
 		int et;
-		int ret = sscanf(line_str, "%d %s %s %ld %lu %c %c %c ", &et, exchange, ticker, &price, &qty, &side, &type, &tif);
-		if(ret != 8)
+		int ret = sscanf(line_str, "%d %s %s %ld %lu %c %c ", &et, exchange, ticker, &price, &qty, &side, &tif);
+		if(ret != 7)
 		{
 			return false;
 		}
@@ -168,19 +175,38 @@ struct insert_order_event : event_base
 			to_str(buf, 128);
 			fprintf(stdout, "%s\n", buf);
 			
-			int request_id = 0;	
-			if(type == LF_CHAR_LimitPrice)
+			int request_id = -1;	
+			
+			if(tif == LF_CHAR_IOC)
+			{
+				request_id = strategy_context->strategy_util->insert_fok_order(
+						exch_source, std::string(ticker), std::string(exch_name), price, qty, side, LF_CHAR_Open);
+			}
+			else if(tif == LF_CHAR_GFD)
 			{
 				request_id = strategy_context->strategy_util->insert_limit_order(
 						exch_source, std::string(ticker), std::string(exch_name), price, qty, side, LF_CHAR_Open);
 			}
+			
+			if(request_id != -1)
+			{	
+				fprintf(stdout, "inserted a limit order with returned request_id [%d]\n", request_id);
+			}
+			else
+			{
+				char buf[128] = {};
+				
+				to_str(buf, 128);
+				fprintf(stdout, "failed to insert order with [%s]\n", buf);
+			}
+
+			/*
 			else if (type == LF_CHAR_AnyPrice)
 			{
 				request_id = strategy_context->strategy_util->insert_market_order(
 						exch_source, std::string(ticker), std::string(exch_name),  qty, side, LF_CHAR_Open);
 			}
-
-			//track request and order
+			*/
 		}
 		else
 		{
@@ -198,7 +224,7 @@ struct insert_order_event : event_base
 	int64_t price = 0;
 	uint64_t qty = 0;
 	LfDirectionType side = 0;
-	LfOrderPriceTypeType type = 0;
+	LfOrderPriceTypeType type = LF_CHAR_LimitPrice;
 	LfTimeConditionType tif = 0;
 };
 
@@ -229,6 +255,8 @@ struct cancel_order_event : event_base
 			fprintf(stdout, "%s\n", buf);
 
 			int request_id = strategy_context->strategy_util->cancel_order(exch_source, order_id);
+			
+			fprintf(stdout, "cancel an order with returned request_id [%d]\n", request_id);
 		}
 		else
 		{
@@ -265,9 +293,8 @@ struct req_pos_event : event_base
 	
 	void process() const override
 	{
-		char buf[128] = {};
-		to_str(buf, 128);
-		fprintf(stdout, "%s\n", buf);
+		int request_id = strategy_context->strategy_util->req_position(exch_source);
+		fprintf(stdout, "req position with returned request id [%d]\n", request_id);
 	}
 
 	void to_str(char* buf, size_t size) const override
@@ -302,6 +329,10 @@ struct market_data_event : event_base
 		if(strategy_context)
 		{
 			std::string symbol(ticker);
+			std::transform(symbol.begin(), symbol.end(), symbol.begin(), ::toupper);
+
+		    std::lock_guard<std::mutex> guard(strategy_context->market_data_mutex);
+
 			auto iter = strategy_context->ticker_market_data.find(symbol);
 			if(iter != strategy_context->ticker_market_data.end())
 			{
@@ -342,9 +373,7 @@ struct help_event : event_base
 
 	void process() const override
 	{
-		char buf[128] = {};
-		to_str(buf, 128);
-		fprintf(stdout, "%s\n", buf);
+		fprintf(stdout, strategy_context->help_msg());
 	}
 
 	void to_str(char* buf, size_t size) const override
@@ -392,15 +421,9 @@ public:
 	{
 	}
 
-	static const char* help_msg()
+	const char* help_msg()
 	{
-		return  "usage: \n"
-			"0 - print strategy status e.g. information of order, pos and etc\n"
-			"1 <exchange> <ticker> <price> <qty> <side> <type> <tif> - insert order\n"
-			"2 <exchange> <order_id> - cancel order\n"
-			"3 <exchange> <ticker> - print latest market data e.g. bbo, last price and etc\n"
-			"4 <exchange> - request pos from exchange\n"
-			"5 - print this help message\n";
+		return mscc.help_msg();
 	}	
 	
 	void add_event(int v, const char* event_line)
@@ -469,6 +492,8 @@ public:
 	
     void on_market_data(const LFMarketDataField* data, short source, long rcv_time)
 	{
+		std::lock_guard<std::mutex> guard(mscc.market_data_mutex);
+
 		std::string ticker = data->InstrumentID;
 		auto& md = mscc.ticker_market_data[ticker];
 		md.best_bid_px = data->BidPrice1;
@@ -479,6 +504,8 @@ public:
 	
 	void on_l2_trade(const LFL2TradeField* data, short source, long rcv_time)
 	{
+		std::lock_guard<std::mutex> guard(mscc.market_data_mutex);
+
 		std::string ticker = data->InstrumentID;
 		auto& md = mscc.ticker_market_data[ticker];
 		md.last_px = data->Price;
@@ -580,6 +607,8 @@ void ManualStrategy::on_rsp_position(const PosHandlerPtr posMap, int request_id,
     else
     {
         KF_LOG_DEBUG(logger, "[RSP_POS] " << posMap->to_string());
+
+		fprintf(stdout, "on_rsp_position: %s\n", posMap->to_string().c_str());
     }
 }
 
@@ -593,10 +622,13 @@ void ManualStrategy::on_l2_trade(const LFL2TradeField* data, short source, long 
 	msc.on_l2_trade(data, source, rcv_time);
 }
 
-void ManualStrategy::on_rtn_order(const LFRtnOrderField* data, int request_id, short source, long rcv_time)
+void ManualStrategy::on_rtn_order(const LFRtnOrderField* msg, int request_id, short source, long rcv_time)
 {
-    KF_LOG_DEBUG(logger, "[ORDER]" << " (t)" << data->InstrumentID << " (px)" << data->LimitPrice
-                                   << " (volume)" << data->VolumeTotal << " (pos)" << data->get_pos(source)->to_string());
+    KF_LOG_DEBUG(logger, "[ORDER]" << " (t)" << msg->InstrumentID << " (px)" << msg->LimitPrice
+                                   << " (volume)" << msg->VolumeTotal << " (pos)" << data->get_pos(source)->to_string());
+	
+	fprintf(stdout, "on_rtn_order: instrument_id [%s], request_id [%d], source [%u], price [%ld], volume [%lu], volume traded [%lu], status [%s]\n",
+						msg->InstrumentID, request_id, source, msg->LimitPrice, msg->VolumeTotalOriginal, msg->VolumeTraded, getLfOrderStatusType(msg->OrderStatus).c_str());
 
 }
 
@@ -606,12 +638,17 @@ void ManualStrategy::on_rsp_order_action(const LFOrderActionField* data, int req
 	{
         KF_LOG_ERROR(logger, " (err_id)" << errorId << " (err_msg)" << errorMsg << "(order_id)" << request_id << " (source)" << source);
 	}
+
+	fprintf(stdout, "on_rsp_order_action: request_id [%d], error_id [%u], error_msg [%s]\n", request_id, errorId, errorMsg);
 }
 
 void ManualStrategy::on_rtn_trade(const LFRtnTradeField* rtn_trade, int request_id, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[TRADE]" << " (ticker)" << rtn_trade->InstrumentID << " (px)" << rtn_trade->Price
                                    << " (volume)" << rtn_trade->Volume << " (pos)" << data->get_pos(source)->to_string());
+
+	fprintf(stdout, "on_rtn_trade: instrument_id [%s], price [%ld], volume [%lu], position [%s]\n", 
+					rtn_trade->InstrumentID, rtn_trade->Price, rtn_trade->Volume, data->get_pos(source)->to_string().c_str());
 }
 
 void ManualStrategy::on_rsp_order(const LFInputOrderField* order, int request_id, short source, long rcv_time, short errorId, const char* errorMsg)
@@ -620,7 +657,11 @@ void ManualStrategy::on_rsp_order(const LFInputOrderField* order, int request_id
 	{
         KF_LOG_ERROR(logger, " (err_id)" << errorId << " (err_msg)" << errorMsg << "(order_id)" << request_id << " (source)" << source);
 	}
+	
+	fprintf(stdout, "on_rsp_order: request_id [%d], error_id [%u], error_msg [%s]\n", request_id, errorId, errorMsg);
 }
+
+static char* line = nullptr;
 
 int main(int argc, const char* argv[])
 {
@@ -634,10 +675,10 @@ int main(int argc, const char* argv[])
     exchange_source_index exch_src_idx = get_source_index_from_str(exchange_name);
    
     if(exch_src_idx == SOURCE_UNKNOWN)
-    {
-	fprintf(stderr, "invalid exchange name [%s]", argv[1]);
-	exit(1);
-    }
+	{
+			fprintf(stderr, "invalid exchange name [%s]", argv[1]);
+			exit(1);
+	}
 
     const std::string symbol_str = argv[2];
 
@@ -650,23 +691,23 @@ int main(int argc, const char* argv[])
 
     fprintf(stdout, "going to interactive session, print <quit> to end the session\n");
 	
-    while(true && IWCDataProcessor::signal_received < 0)
-    { 
-	char *line = readline (">> ");
-	if(line && strlen(line) > 0)
-	{
-		if(strcmp(line, "quit") == 0)
-		{
-			str.stop();
-			break;
-		}
-	    add_history(line);
-	   	
-		str.on_command_line(line);	
-		 
-	    free(line);
+	while(IWCDataProcessor::signal_received < 0)
+	{ 
+			line = readline (">> ");
+			if(line && strlen(line) > 0)
+			{
+					if(strcmp(line, "quit") == 0)
+					{
+							str.stop();
+							break;
+					}
+					add_history(line);
+
+					str.on_command_line(line);	
+
+					free(line);
+			}
 	}
-    }
 
     str.block();
 }
