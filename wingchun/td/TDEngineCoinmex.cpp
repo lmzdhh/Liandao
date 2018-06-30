@@ -704,7 +704,7 @@ void TDEngineCoinmex::getResponse(int http_status_code, std::string responseText
         json.AddMember("code", code, allocator);
         KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
         rapidjson::Value val;
-        val.SetString(errorMsg.c_str(), errorMsg.length());
+        val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
         json.AddMember("message", val, allocator);
     } else
     {
@@ -720,14 +720,14 @@ void TDEngineCoinmex::getResponse(int http_status_code, std::string responseText
                 KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["message"].GetString());
                 std::string message = d["message"].GetString();
                 rapidjson::Value val;
-                val.SetString(message.c_str(), message.length());
+                val.SetString(message.c_str(), message.length(), allocator);
                 json.AddMember("message", val, allocator);
             }
             if( d.HasMember("msg")) {
                 KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["msg"].GetString());
                 std::string message = d["msg"].GetString();
                 rapidjson::Value val;
-                val.SetString(message.c_str(), message.length());
+                val.SetString(message.c_str(), message.length(), allocator);
                 json.AddMember("message", val, allocator);
             }
         }
@@ -899,6 +899,7 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
     Document document;
     document.SetObject();
     Document::AllocatorType& allocator = document.GetAllocator();
+    //used inner this method only.so  can use reference
     document.AddMember("code", StringRef(code), allocator);
     document.AddMember("side", StringRef(side), allocator);
     document.AddMember("type", StringRef(type), allocator);
@@ -943,6 +944,7 @@ void TDEngineCoinmex::cancel_all_orders(AccountUnitCoinmex& unit, std::string co
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+    //used inner this method only.so  can use reference
     document.AddMember("code", StringRef(code.c_str()), allocator);
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
@@ -1057,6 +1059,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, l
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+    //used inner this method only.so  can use reference
     document.AddMember("code", StringRef(code.c_str()), allocator);
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
