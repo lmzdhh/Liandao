@@ -93,7 +93,9 @@ void MDEngineBinance::load(const json& j_config)
 {
 	for(const auto& t : j_config["symbols"])
 	{
-    	symbols.push_back(t.get<string>());
+		std::string symbol = t.get<string>();
+		std::transform(symbol.begin(), symbol.end(), symbol.begin(), ::toupper);
+    		symbols.push_back(symbol);
 	}
 
     book_depth_count = j_config["book_depth_count"].get<int>();
@@ -139,8 +141,9 @@ void MDEngineBinance::login(long timeout_nsec)
    	logged_in = true;
 }
 
-void MDEngineBinance::connect_lws(std::string t, lws_event e)
+void MDEngineBinance::connect_lws(std::string symbol, lws_event e)
 {
+		std::string t = symbol;
 		std::transform(t.begin(), t.end(), t.begin(), ::tolower);
 		std::string path("/ws/");
 		switch(e)
@@ -169,7 +172,7 @@ void MDEngineBinance::connect_lws(std::string t, lws_event e)
 		struct lws* conn = lws_client_connect_via_info(&ccinfo);
 		KF_LOG_INFO_FMT(logger, "create a lws connection for %s %d at %lu", 
 						t.c_str(), static_cast<int>(e), reinterpret_cast<uint64_t>(conn));
-		lws_handle_map[conn] = std::make_pair(t, e);
+		lws_handle_map[conn] = std::make_pair(symbol, e);
 }
 
 void MDEngineBinance::on_lws_data(struct lws* conn, const char* data, size_t len)

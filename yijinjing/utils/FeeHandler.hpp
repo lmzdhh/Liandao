@@ -166,10 +166,12 @@ public:
      * @param close_today: flag, only useful when get future fee with close offset
      * @return
      */
+    /*
     inline double get_fee(const LFRtnTradeField* rtn_trade, bool is_stock, bool close_today=false) const
     {
         return get_fee(rtn_trade->InstrumentID, rtn_trade->Volume, rtn_trade->Price, rtn_trade->Direction, rtn_trade->OffsetFlag, is_stock, close_today);
     }
+    */
 
     inline int get_contract_multiplier(const string& ticker, bool is_stock)
     {
@@ -218,7 +220,7 @@ public:
         return detail;
     }
 
-    inline double get_fee(const string& ticker, int volume, double price, LfDirectionType direction, LfOffsetFlagType offset, bool is_stock, bool close_today=false) const
+    inline double get_fee(const string& ticker, double volume, double price, LfDirectionType direction, LfOffsetFlagType offset, bool is_stock, bool close_today=false) const
     {
         if (is_stock)
         {
