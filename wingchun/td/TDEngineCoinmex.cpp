@@ -93,6 +93,7 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 //test
+    /*
     Document d;
     get_exchange_time(unit, d);
     KF_LOG_INFO(logger, "[print get_exchange_time]");
@@ -120,21 +121,45 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     KF_LOG_INFO(logger, "[print send_order]");
     printResponse(d);
 
-    cancel_all_orders(unit, "LTC_BTC", d);
-    KF_LOG_INFO(logger, "[print cancel_all_orders]");
+    query_orders(unit, "LTC_BTC", "open", d);
+    KF_LOG_INFO(logger, "[print query_orders]");
     printResponse(d);
 
-    cancel_order(unit, "LTC_BTC", 123456L, d);
+//----------------------
+    query_order(unit, "LTC_BTC", 20269511L, d);
+    KF_LOG_INFO(logger, "[print query_order]");
+    printResponse(d);
+
+    cancel_order(unit, "LTC_BTC", 20269511L, d);
     KF_LOG_INFO(logger, "[print cancel_order]");
+    printResponse(d);
+
+    query_order(unit, "LTC_BTC", 20269511L, d);
+    KF_LOG_INFO(logger, "[print query_order]");
+    printResponse(d);
+//----------------------
+    query_order(unit, "LTC_BTC", 20321247L, d);
+    KF_LOG_INFO(logger, "[print query_order]");
+    printResponse(d);
+
+    cancel_order(unit, "LTC_BTC", 20321247L, d);
+    KF_LOG_INFO(logger, "[print cancel_order]");
+    printResponse(d);
+
+    query_order(unit, "LTC_BTC", 20321247L, d);
+    KF_LOG_INFO(logger, "[print query_order]");
+    printResponse(d);
+//----------------------
+
+    cancel_all_orders(unit, "LTC_BTC", d);
+    KF_LOG_INFO(logger, "[print cancel_all_orders]");
     printResponse(d);
 
     query_orders(unit, "LTC_BTC", "open", d);
     KF_LOG_INFO(logger, "[print query_orders]");
     printResponse(d);
+*/
 
-    query_order(unit, "LTC_BTC", 123456L, d);
-    KF_LOG_INFO(logger, "[print query_order]");
-    printResponse(d);
 //test end
 
     // set up
@@ -277,11 +302,11 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
     if(d.IsObject() && d.HasMember("code"))
     {
         errorId = d["code"].GetInt();
-        KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (code)" << errorId);
         if(d.HasMember("message") && d["message"].IsString())
         {
             errorMsg = d["message"].GetString();
         }
+        KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
     send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_COINMEX, 1, requestId);
 
@@ -315,7 +340,7 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
                                                                    << " hold: " << d.GetArray()[i]["hold"].GetString());
             pos.Position = std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset;
             on_rsp_position(&pos, i == (len - 1), requestId, errorId, errorMsg.c_str());
-            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol);
+            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
             findSymbolInResult = true;
         }
     }
@@ -347,66 +372,66 @@ void TDEngineCoinmex::req_order_insert(LFInputOrderField* data, int account_inde
     Document d;
     send_order(unit, data->InstrumentID, GetSide(data->Direction).c_str(),
             GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset, funds, d);
-/*
- * # Response
-
-    {
-        "result": true,
-        "order_id": 123456
-    }
- * */
-
-    KF_LOG_INFO(logger, "[req_order_insert] before send (OrderRef) " << data->OrderRef);
-    //when send successful, we need change the orderRef of the InputOrder
-    if(! d.HasMember("code") )
-    {//send success
-        if(d.HasMember("order_id") && d.HasMember("result"))
-        {
-            strncpy(data->OrderRef, std::to_string(d["order_id"].GetInt64()).c_str(), 13);
-        }
-    }
-    KF_LOG_INFO(logger, "[req_order_insert] after send (OrderRef) " << data->OrderRef);
-    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1/*ISLAST*/, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
 
-    if(d.HasMember("code"))
+
+    if(d.HasMember("orderId") && d.HasMember("result"))
     {
-        errorId = d["code"].GetInt();
-        KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (code)" << errorId);
-        if(d.HasMember("message") && d["message"].IsString())
+        std::string remoteOrderId = std::to_string(d["orderId"].GetInt64());
+        localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
+        KF_LOG_INFO(logger, "[req_order_insert] after send (OrderRef) " << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+        if(d.HasMember("result") && d["result"].IsBool())
         {
-            errorMsg = d["message"].GetString();
+            if(d["result"].GetBool()){
+                /*
+                 * # Response OK
+                    {
+                        "result": true,
+                        "order_id": 123456
+                    }
+                 * */
+                //if send successful and the exchange has received ok, then add to  pending query order list
+                char noneStatus = '\0';//none
+                addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
+            } else {
+                /*
+                 * # Response error
+                    {
+                        "result": false,
+                        "order_id": 123456
+                    }
+                 * */
+                //send successful BUT the exchange has received fail
+                errorId = 200;
+                errorMsg = "http.code is 200, but result is false";
+                on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+                raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+            }
         }
     }
+
+    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1/*ISLAST*/, requestId);
+
+    if (errorId == 0 && d.HasMember("code")) {
+        //send error, examle: http timeout.
+        {
+            errorId = d["code"].GetInt();
+            if(d.HasMember("message") && d["message"].IsString())
+            {
+                errorMsg = d["message"].GetString();
+            }
+            KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        }
+    }
+
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
     }
-/*
- * # Response
 
-    {
-        "result": true,
-        "order_id": 123456
-    }
- * */
-    if(d.HasMember("result") && d["result"].IsBool())
-    {
-        //send successful and the exchange has received ok
-        if(d["result"].GetBool()){
-            char noneStatus = '\0';//none
-            addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
-        } else {
-            //send successful BUT the exchange has received fail
-            errorId = 200;
-            errorMsg = "false";
-            on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
-        }
-    }
 }
 
 
@@ -416,22 +441,40 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Iid)" << data->InvestorID
-                                              << " (OrderRef)" << data->OrderRef);
-
-    Document d;
-    cancel_order(unit, data->InstrumentID, stod(data->OrderRef), d);
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId);
+                                              << " (OrderRef)" << data->OrderRef
+                                              << " (KfOrderID)" << data->KfOrderID);
     int errorId = 0;
     std::string errorMsg = "";
 
-    if(d.HasMember("code"))
+    std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
+    std::string remoteOrderId;
+    if(itr == localOrderRefRemoteOrderId.end()) {
+        KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef);
+        errorId = 1;
+        std::stringstream ss;
+        ss << "[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef;
+        errorMsg = ss.str();
+        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    } else {
+        remoteOrderId = itr->second;
+        KF_LOG_ERROR(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+    }
+
+
+    Document d;
+    cancel_order(unit, data->InstrumentID, stod(remoteOrderId), d);
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId);
+
+    if(!d.HasParseError() && d.HasMember("code") && d["code"].IsNumber())
     {
         errorId = d["code"].GetInt();
-        KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (code)" << errorId);
         if(d.HasMember("message") && d["message"].IsString())
         {
             errorMsg = d["message"].GetString();
         }
+        KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
     if(errorId != 0)
     {
@@ -476,40 +519,53 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
     {
         indexNum++;
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    account.api_key:"<< unit.api_key
-                                                                << "  account.pendingOrderStatus.InstrumentID: "<< orderStatusIterator->InstrumentID
-                                                                <<"  account.pendingOrderStatus.OrderRef: " << orderStatusIterator->OrderRef
-                                                                <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    (account.api_key)"<< unit.api_key
+                                                                << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
+                                                                <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
+                                                                <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
         );
     }
 
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
     {
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "account.api_key:"<< unit.api_key
-                                                               << "  account.pendingOrderStatus.InstrumentID: "<< orderStatusIterator->InstrumentID
-                                                               <<"  account.pendingOrderStatus.OrderRef: " << orderStatusIterator->OrderRef
-                                                               <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "( account.api_key) "<< unit.api_key
+                                                               << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
+                                                               <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
+                                                               <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
         );
 
+
+        std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(orderStatusIterator->OrderRef);
+        std::string remoteOrderId;
+        if(itr == localOrderRefRemoteOrderId.end()) {
+            KF_LOG_ERROR(logger, "[retrieveOrderStatus] not found in localOrderRefRemoteOrderId map (orderRef) " << orderStatusIterator->OrderRef);
+            continue;
+        } else {
+            remoteOrderId = itr->second;
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] found in localOrderRefRemoteOrderId map (orderRef) " << orderStatusIterator->OrderRef << " (remoteOrderId) " << remoteOrderId);
+        }
+
+
+
         Document d;
-        query_order(unit, orderStatusIterator->InstrumentID, stod(orderStatusIterator->OrderRef), d);
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
-                                                               << " (orderId)" << orderStatusIterator->OrderRef);
+        query_order(unit, orderStatusIterator->InstrumentID, stod(remoteOrderId), d);
+
         /*
  # Response
-    {
-        "averagePrice": "0",
-        "code": "chp-eth",
-        "createdDate": 1526299182000,
-        "filledVolume": "0",
-        "funds": "0",
-        "orderId": 9865872,
-        "orderType": "limit",
-        "price": "0.00001",
-        "side": "buy",
-        "status": "canceled",
-        "volume": "1"
-    }
+
+{
+	"averagePrice": "0",
+	"code": "MVP_BTC",
+	"createdDate": 1530417365000,
+	"filledVolume": "0",
+	"funds": "0",
+	"orderId": 20283535,
+	"orderType": "limit",
+	"price": "0.00000001",
+	"side": "buy",
+	"status": "open",
+	"volume": "1"
+}
 
 返回值说明
 返回字段 	字段说明
@@ -526,13 +582,20 @@ volume 	订单委托数量
         */
         //parse order status
         //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-        if(!d.HasMember("code") && d.HasMember("status"))
+        if(d.HasParseError()) {
+            //HasParseError, skip
+            KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order response HasParseError " << " (symbol)" << orderStatusIterator->InstrumentID
+                                                                   << " (orderRef)" << orderStatusIterator->OrderRef
+                                                                   << " (remoteOrderId) " << remoteOrderId);
+            continue;
+        }
+        if(d.HasMember("status"))
         {
             //parse success
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
             rtn_order.OrderStatus = GetOrderStatus(d["status"].GetString());
-            rtn_order.VolumeTraded = d["filledVolume"].GetDouble() * scale_offset;
+            rtn_order.VolumeTraded = std::stod(d["filledVolume"].GetString()) * scale_offset;
 
             //if status changed or LF_CHAR_PartTradedNotQueueing but traded valume changes, emit onRtnOrder
             if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
@@ -546,18 +609,17 @@ volume 	订单委托数量
                 rtn_order.Direction = GetDirection(d["side"].GetString());
                 //No this setting on coinmex
                 rtn_order.TimeCondition = LF_CHAR_GFD;
-                rtn_order.OrderPriceType = GetPriceType(d["type"].GetString());
-                strncpy(rtn_order.OrderRef, std::to_string(d["orderId"].GetInt()).c_str(), 13);
-                rtn_order.VolumeTotalOriginal = d["volume"].GetDouble() * scale_offset;
-                rtn_order.LimitPrice = d["price"].GetDouble() * scale_offset;
+                rtn_order.OrderPriceType = GetPriceType(d["orderType"].GetString());
+                strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
+                rtn_order.VolumeTotalOriginal = std::stod(d["volume"].GetString()) * scale_offset;
+                rtn_order.LimitPrice = std::stod(d["price"].GetString()) * scale_offset;
 
                 on_rtn_order(&rtn_order);
                 raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                                         source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
                                         1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
-
-                uint64_t newAveragePrice = d["averagePrice"].GetDouble() * scale_offset;
+                uint64_t newAveragePrice = std::stod(d["averagePrice"].GetString()) * scale_offset;
                 //second, if the status is PartTraded/AllTraded, send OnRtnTrade
                 if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded ||
                     (LF_CHAR_PartTradedNotQueueing == rtn_order.OrderStatus
@@ -568,8 +630,8 @@ volume 	订单委托数量
                     strcpy(rtn_trade.ExchangeID, "coinmex");
                     strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
                     strncpy(rtn_trade.InstrumentID, d["code"].GetString(), 31);
-                    strncpy(rtn_trade.OrderRef, std::to_string(d["orderId"].GetInt()).c_str(), 13);
-
+                    strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
+                    rtn_trade.Direction = rtn_order.Direction;
                     uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
                     uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
 
@@ -587,14 +649,18 @@ volume 	订单委托数量
                 orderStatusIterator->averagePrice = newAveragePrice;
             }
         } else {
-            int errorId = d["code"].GetInt();
+            int errorId = 0;
             std::string errorMsg = "";
+            //no status, it must be a Error response. see details in getResponse(...)
+            if(d.HasMember("code") && d["code"].IsInt()) {
+                errorId = d["code"].GetInt();
+            }
             if(d.HasMember("message") && d["message"].IsString())
             {
                 errorMsg = d["message"].GetString();
             }
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                         << " (orderId)" << orderStatusIterator->OrderRef
+                                                                         << " (orderRef)" << orderStatusIterator->OrderRef
                                                                          << " (errorId)" << errorId
                                                                          << " (errorMsg)" << errorMsg);
         }
@@ -603,12 +669,12 @@ volume 	订单委托数量
         if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
            || orderStatusIterator->OrderStatus == LF_CHAR_Error)
         {
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
             orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
         } else {
             ++orderStatusIterator;
         }
-        KF_LOG_ERROR(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
     }
 }
 
@@ -695,14 +761,16 @@ void TDEngineCoinmex::getResponse(int http_status_code, std::string responseText
 {
     if(http_status_code == HTTP_RESPONSE_OK)
     {
+        //KF_LOG_INFO(logger, "[getResponse] (http_status_code == 200) (responseText)" << responseText << " (errorMsg) " << errorMsg);
         json.Parse(responseText.c_str());
+        //KF_LOG_INFO(logger, "[getResponse] (http_status_code == 200) (HasParseError)" << json.HasParseError());
     } else if(http_status_code == 0 && responseText.length() == 0)
     {
         json.SetObject();
         Document::AllocatorType& allocator = json.GetAllocator();
-        int code = 1;
-        json.AddMember("code", code, allocator);
-        KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
+        int errorId = 1;
+        json.AddMember("code", errorId, allocator);
+        //KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
         rapidjson::Value val;
         val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
         json.AddMember("message", val, allocator);
@@ -710,21 +778,21 @@ void TDEngineCoinmex::getResponse(int http_status_code, std::string responseText
     {
         Document d;
         d.Parse(responseText.c_str());
-        KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
+        //KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
 
         json.SetObject();
         Document::AllocatorType& allocator = json.GetAllocator();
         json.AddMember("code", http_status_code, allocator);
         if(d.IsObject()) {
             if( d.HasMember("message")) {
-                KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["message"].GetString());
+                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["message"].GetString());
                 std::string message = d["message"].GetString();
                 rapidjson::Value val;
                 val.SetString(message.c_str(), message.length(), allocator);
                 json.AddMember("message", val, allocator);
             }
             if( d.HasMember("msg")) {
-                KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["msg"].GetString());
+                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["msg"].GetString());
                 std::string message = d["msg"].GetString();
                 rapidjson::Value val;
                 val.SetString(message.c_str(), message.length(), allocator);
@@ -745,6 +813,7 @@ void TDEngineCoinmex::get_exchange_time(AccountUnitCoinmex& unit, Document& json
     string Message = Timestamp + Method + requestPath + queryString + body;
     string url = unit.baseUrl + requestPath + queryString;
     const auto response = Get(Url{url}, Parameters{}, Timeout{10000});
+    KF_LOG_INFO(logger, "[get_exchange_time] (url) " << url << " (response) " << response.text.c_str());
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -799,7 +868,7 @@ void TDEngineCoinmex::get_products(AccountUnitCoinmex& unit, Document& json)
 	"quoteIncrement": "8"
 }.......]
   * */
-    KF_LOG_INFO(logger, "[get_account]");
+    KF_LOG_INFO(logger, "[get_products]");
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "/api/v1/spot/public/products";
@@ -816,7 +885,7 @@ void TDEngineCoinmex::get_products(AccountUnitCoinmex& unit, Document& json)
                                      {"ACCESS-SIGN", sign},
                                      {"ACCESS-TIMESTAMP",  Timestamp}}, Timeout{10000} );
 
-    KF_LOG_INFO(logger, "[get_account] (url) " << url << " (response) " << response.text.c_str());
+    KF_LOG_INFO(logger, "[get_products] (url) " << url << " (response) " << response.text.c_str());
     //
     return getResponse(response.status_code, response.text, response.error.message, json);
 }

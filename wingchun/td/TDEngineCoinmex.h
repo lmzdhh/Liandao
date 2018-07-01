@@ -105,7 +105,7 @@ private:
 
     std::mutex* mutex_order_and_trade = nullptr;
 
-
+    std::map<std::string, std::string> localOrderRefRemoteOrderId;
 private:
     int HTTP_RESPONSE_OK = 200;
     void get_exchange_time(AccountUnitCoinmex& unit, Document& json);
