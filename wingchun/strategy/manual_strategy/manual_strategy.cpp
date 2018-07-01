@@ -149,18 +149,27 @@ struct status_update_event : event_base
 	void process() const override
 	{
 		std::lock_guard<std::mutex> guard(strategy_context->order_info_mutex);
-		std::stringstream ss;
-		for(auto i : strategy_context->all_order_info_map)
-		{
-			const auto status = i.second->status;
-			if (status != LF_CHAR_Unknown && status != LF_CHAR_Error && status != LF_CHAR_AllTraded
-            		&& status != LF_CHAR_Canceled && status != LF_CHAR_PartTradedNotQueueing)
-			{	
-				ss << i.first << ", ";
-			}
-		}
-		
-		fprintf(stdout, "all active order request id: %s\n", ss.str().c_str());
+        for(const auto& item : strategy_context->exchange_order_info)
+        {
+            std::stringstream ss;
+            for(auto i : item.second)
+            {
+                auto iter = strategy_context->all_order_info_map.find(i);
+                if(iter == strategy_context->all_order_info_map.end())
+                {
+                    continue;
+                }
+
+                const auto status = iter->second->status;
+                if (status != LF_CHAR_Unknown && status != LF_CHAR_Error && status != LF_CHAR_AllTraded
+                        && status != LF_CHAR_Canceled && status != LF_CHAR_PartTradedNotQueueing)
+                {	
+                    ss << i << ", ";
+                }
+            }
+
+            fprintf(stdout, "all active order on exchange %u request id: %s\n", item.first, ss.str().c_str());
+        }
 	}
 
 	void to_str(char* buf, size_t size) const override
@@ -810,8 +819,8 @@ void ManualStrategy::on_rtn_trade(const LFRtnTradeField* rtn_trade, int request_
     KF_LOG_DEBUG(logger, "[TRADE]" << " (ticker)" << rtn_trade->InstrumentID << " (px)" << rtn_trade->Price
                                    << " (volume)" << rtn_trade->Volume << " (pos)" << data->get_pos(source)->to_string());
 
-	fprintf(stdout, "on_rtn_trade: instrument_id [%s], price [%ld], volume [%lu], position [%s]\n", 
-					rtn_trade->InstrumentID, rtn_trade->Price, rtn_trade->Volume, data->get_pos(source)->to_string().c_str());
+	fprintf(stdout, "on_rtn_trade: instrument_id [%s], request_id [%d], price [%ld], volume [%lu], position [%s]\n", 
+					rtn_trade->InstrumentID, request_id, rtn_trade->Price, rtn_trade->Volume, data->get_pos(source)->to_string().c_str());
 }
 
 void ManualStrategy::on_rsp_order(const LFInputOrderField* order, int request_id, short source, long rcv_time, short errorId, const char* errorMsg)
