@@ -21,25 +21,11 @@
       "symbols": ["BTCUSDT"],
       "book_depth_count": 5,
       "trade_count": 10,
-      "rest_get_interval_ms": 500
+      "rest_get_interval_ms": 2000
     },
     "coinmex":
     {
-      "symbol": "BTCUSDT",
-      "book_depth_count": 5,
-      "trade_count": 10,
-      "rest_get_interval_ms": 500
-    },
-    "coinmex":
-    {
-      "symbol": "BTCUSDT",
-      "book_depth_count": 5,
-      "trade_count": 10,
-      "rest_get_interval_ms": 500
-    },
-    "coinmex":
-    {
-      "symbol": "BTCUSDT",
+      "symbols": ["MVP_BTC"],
       "book_depth_count": 5,
       "trade_count": 10,
       "rest_get_interval_ms": 500
@@ -55,7 +41,8 @@
             "info":
             {
               "APIKey": "your-api-key",
-              "SecretKey": "your-secret-key"
+              "SecretKey": "your-secret-key",
+              "rest_get_interval_ms": 2000
             },
             "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
             "is_default": true
@@ -89,7 +76,10 @@
             "info":
             {
               "APIKey": "your-api-key",
-              "SecretKey": "your-secret-key"
+              "SecretKey": "your-secret-key",
+              "passphrase": "your-passphrase",
+              "baseUrl": "https://www.coinmex.com",
+              "rest_get_interval_ms": 2000
             },
             "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
             "is_default": true
