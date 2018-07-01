@@ -668,7 +668,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
                 strncpy(rtn_order.OrderRef, orderResult["clientOrderId"].asString().c_str(), 13);
                 rtn_order.VolumeTotalOriginal = stod(orderResult["origQty"].asString().c_str()) * scale_offset;
                 rtn_order.LimitPrice = stod(orderResult["price"].asString().c_str()) * scale_offset;
-
+                rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
                 on_rtn_order(&rtn_order);
                 raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                                         source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,

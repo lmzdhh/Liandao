@@ -150,11 +150,12 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     KF_LOG_INFO(logger, "[print query_order]");
     printResponse(d);
 //----------------------
-
-    cancel_all_orders(unit, "LTC_BTC", d);
+*/
+    Document d;
+    cancel_all_orders(unit, "MVP_BTC", d);
     KF_LOG_INFO(logger, "[print cancel_all_orders]");
     printResponse(d);
-
+/*
     query_orders(unit, "LTC_BTC", "open", d);
     KF_LOG_INFO(logger, "[print query_orders]");
     printResponse(d);
@@ -591,6 +592,21 @@ volume 	订单委托数量
         }
         if(d.HasMember("status"))
         {
+            /*
+             {
+                "averagePrice": "0.00000148",
+                "code": "MVP_BTC",
+                "createdDate": 1530439964000,
+                "filledVolume": "1",
+                "funds": "0",
+                "orderId": 20644648,
+                "orderType": "limit",
+                "price": "0.00001111",
+                "side": "buy",
+                "status": "filled",
+                "volume": "1"
+            }
+             * */
             //parse success
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
@@ -613,6 +629,7 @@ volume 	订单委托数量
                 strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
                 rtn_order.VolumeTotalOriginal = std::stod(d["volume"].GetString()) * scale_offset;
                 rtn_order.LimitPrice = std::stod(d["price"].GetString()) * scale_offset;
+                rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
 
                 on_rtn_order(&rtn_order);
                 raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
@@ -621,7 +638,7 @@ volume 	订单委托数量
 
                 uint64_t newAveragePrice = std::stod(d["averagePrice"].GetString()) * scale_offset;
                 //second, if the status is PartTraded/AllTraded, send OnRtnTrade
-                if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded ||
+                if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
                     (LF_CHAR_PartTradedNotQueueing == rtn_order.OrderStatus
                     && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
                 {
@@ -693,6 +710,9 @@ void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const
     status.VolumeTraded = VolumeTraded;
     status.averagePrice = 0.0;
     unit.newOrderStatus.push_back(status);
+    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << InstrumentID
+                                                                       << " (OrderRef) " << OrderRef
+                                                                       << "(VolumeTraded)" << VolumeTraded);
 }
 
 void TDEngineCoinmex::loop()
