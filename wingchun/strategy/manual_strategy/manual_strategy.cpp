@@ -64,7 +64,7 @@ struct manual_strategy_controller_context
 		return  "usage: \n"
 			"0 - print strategy status e.g. information of order, pos and etc\n"
 			"1 <exchange> <ticker> <price> <qty> <side>(0->buy, 1->sell) <tif>(1->IOC, 3->GTD) - insert order\n"
-			"2 <exchange> <order_id> - cancel order\n"
+			"2 <exchange> <order_id>(-1 -> cancel all) - cancel order\n"
 			"3 <exchange> <ticker> - print latest market data e.g. bbo, last price and etc\n"
 			"4 <exchange> - request pos from exchange\n"
 			"5 - print this help message\n";
@@ -139,8 +139,11 @@ struct status_update_event : event_base
 	}
 
 	bool parse_line(const char* line_str) override
-	{
-		return true;
+	{ 
+		int et;
+		int ret = sscanf(line_str, "%d", &et);
+		
+		return ret == 1 && et == static_cast<int>(status_update);
 	}
 	
 	void process() const override
@@ -176,7 +179,7 @@ struct insert_order_event : event_base
 	{
 		int et;
 		int ret = sscanf(line_str, "%d %s %s %ld %lu %c %c ", &et, exchange, ticker, &price, &qty, &side, &tif);
-		if(ret != 7)
+		if(ret != 7 || et != static_cast<int>(insert_order))
 		{
 			return false;
 		}
@@ -231,7 +234,7 @@ struct insert_order_event : event_base
 				
 				strategy_context->exchange_order_info[exch_source].insert(request_id);
 	
-				fprintf(stdout, "inserted a limit order with returned request_id [%d]\n", request_id);
+				fprintf(stdout, "inserted a limit order with returned request_id [%d] and source %u\n", request_id, exch_source);
 			}
 			else
 			{
@@ -279,7 +282,7 @@ struct cancel_order_event : event_base
 	{
 		int et;
 		int ret = sscanf(line_str, "%d %s %d", &et, exchange, &order_id);
-		if(ret != 3)
+		if(ret != 3 || et != static_cast<int>(cancel_order))
 		{
 			return false;
 		}
@@ -291,6 +294,13 @@ struct cancel_order_event : event_base
 			return false;
 		}
 		
+		exch_source = iter->second;
+
+		if(order_id == -1)
+		{
+			return true;
+		}
+	
 		std::lock_guard<std::mutex> guard(strategy_context->order_info_mutex);
 		auto oiter = strategy_context->all_order_info_map.find(order_id);
 		if(oiter == strategy_context->all_order_info_map.end())
@@ -301,34 +311,59 @@ struct cancel_order_event : event_base
 		
 		orig_order = oiter->second;
 
-		exch_source = iter->second;
-
 		return true;
 	}
 	
 	void process() const override
 	{
-		if(orig_order && strategy_context && strategy_context->strategy_util)
+		if(strategy_context && strategy_context->strategy_util)
 		{
-			char buf[128] = {};
-			to_str(buf, 128);
-			fprintf(stdout, "%s\n", buf);
-
 			std::lock_guard<std::mutex> guard(strategy_context->order_info_mutex);
 
-			int request_id = strategy_context->strategy_util->cancel_order(exch_source, order_id);
-			if(request_id != -1)
-			{	
-				orig_order->request_id_set.insert(request_id);
-				strategy_context->all_order_info_map[request_id] = orig_order;
-				
-				fprintf(stdout, "cancel an order with returned request_id [%d]\n", request_id);
-			}
-			else
+			if(order_id == -1)
 			{
-				fprintf(stdout, "failed to cancel an order [%d], exit\n", order_id);
-				g_should_stop = true;
-				return;
+				auto& exch_request_id_set = strategy_context->exchange_order_info[exch_source];
+				for(auto i : exch_request_id_set)
+				{
+					auto oiter = strategy_context->all_order_info_map.find(i);
+					if(oiter == strategy_context->all_order_info_map.end())
+					{
+						fprintf(stdout, "cancel all orders: unknown request id [%d] in order map\n", i);
+						continue;
+					}
+					
+					int request_id = strategy_context->strategy_util->cancel_order(exch_source, i);
+					if(request_id != -1)
+					{	
+							oiter->second->request_id_set.insert(request_id);
+							strategy_context->all_order_info_map[request_id] = oiter->second;
+
+							fprintf(stdout, "cancel an order [%d] with returned request_id [%d]\n", i, request_id);
+					}
+					else
+					{
+							fprintf(stdout, "failed to cancel an order [%d], exit\n", i);
+							g_should_stop = true;
+							continue;
+					}	
+				}
+			}
+			else if(orig_order)
+			{
+					int request_id = strategy_context->strategy_util->cancel_order(exch_source, order_id);
+					if(request_id != -1)
+					{	
+							orig_order->request_id_set.insert(request_id);
+							strategy_context->all_order_info_map[request_id] = orig_order;
+
+							fprintf(stdout, "cancel an order [%d] with returned request_id [%d]\n", order_id, request_id);
+					}
+					else
+					{
+							fprintf(stdout, "failed to cancel an order [%d], exit\n", order_id);
+							g_should_stop = true;
+							return;
+					}
 			}
 		}
 		else
@@ -343,7 +378,7 @@ struct cancel_order_event : event_base
 	}
 	
 	char exchange[16] = {};
-	int order_id = -1;
+	int order_id = 0;
 	std::shared_ptr<order_info> orig_order;
 };
 
@@ -357,7 +392,7 @@ struct req_pos_event : event_base
 	{
 		int et;
 		int ret = sscanf(line_str, "%d %s", &et, exchange);
-		if(ret != 2)
+		if(ret != 2 || et != static_cast<int>(req_pos))
 		{
 			return false;
 		}
@@ -366,6 +401,7 @@ struct req_pos_event : event_base
 		if(iter == strategy_context->td_exchanges.end())
 		{
 			fprintf(stdout, "req_pos_event: invalid td exchange %s\n", exchange);
+			return false;
 		}
 
 		exch_source = iter->second;
@@ -376,7 +412,7 @@ struct req_pos_event : event_base
 	void process() const override
 	{
 		int request_id = strategy_context->strategy_util->req_position(exch_source);
-		fprintf(stdout, "req position with returned request id [%d]\n", request_id);
+		fprintf(stdout, "req position with returned request id [%d] and td source [%u]\n", request_id, exch_source);
 	}
 
 	void to_str(char* buf, size_t size) const override
@@ -398,15 +434,17 @@ struct market_data_event : event_base
 	{
 		int et;
 		int ret = sscanf(line_str, "%d %s %s", &et, exchange, ticker);
-		if(ret != 3)
+		if(ret != 3 || et != static_cast<int>(market_data))
 		{
 			return false;
 		}
 		
-		auto iter = strategy_context->md_exchanges.find(std::string(exchange));
+		std::string exch_str(exchange);	
+		auto iter = strategy_context->md_exchanges.find(exch_str);
 		if(iter == strategy_context->md_exchanges.end())
 		{
 			fprintf(stdout, "market_data_event: invalid md exchange %s\n", exchange);
+			return false;
 		}
 
 		exch_source = iter->second;
@@ -467,7 +505,10 @@ struct help_event : event_base
 
 	bool parse_line(const char* line_str) override
 	{
-		return true;
+		int et;
+		int ret = sscanf(line_str, "%d", &et);
+		
+		return ret == 1 && et == static_cast<int>(help);
 	}
 
 	void process() const override
@@ -555,9 +596,9 @@ public:
 		}
 		
 		auto event_ptr = event_factory::create_event(event);
-		if(event_ptr && event_ptr->parse_line(event_line))
+		event_ptr->set_strategy_context(mscc);
+		if(event_ptr->parse_line(event_line))
 		{
-		    event_ptr->set_strategy_context(mscc);
 		    event_queue.push(event_ptr);
 		}
 		else
