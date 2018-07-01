@@ -262,6 +262,12 @@ void WCDataWrapper::run()
                                                     frame->getErrorId(), frame->getErrorMsg());
                             break;
                         }
+                        case MSG_TYPE_LF_ORDER_ACTION:
+                        {
+                            processor->on_rsp_order_action((LFOrderActionField *) data, request_id, msg_source, cur_time,
+                                                    frame->getErrorId(), frame->getErrorMsg());
+                            break;
+                        }
                         case MSG_TYPE_LF_RTN_ORDER:
                         {
                             LFRtnOrderField * rtn_order = (LFRtnOrderField *) data;

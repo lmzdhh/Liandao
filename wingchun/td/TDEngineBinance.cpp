@@ -252,14 +252,14 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
                                                                        << " locked: "
                                                                        << result["balances"][i]["locked"].asString().c_str());
                 pos.Position = stod(result["balances"][i]["free"].asString().c_str()) * scale_offset;
-                on_rsp_position(&pos, i == (balancesSize - 1), request_id);
+                on_rsp_position(&pos, i == (balancesSize - 1), requestId);
                 findSymbolInResult = true;
             //}
         }
     }
     if(!findSymbolInResult)
     {
-        on_rsp_position(&pos, 1, request_id, errorId, errorMsg.c_str());
+        on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
     }
     raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 }
@@ -404,6 +404,24 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                             source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
                             1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+    //if All Traded, emit OnRtnTrade
+    if(rtn_order.OrderStatus == LF_CHAR_AllTraded)
+    {
+        LFRtnTradeField rtn_trade;
+        memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+        strcpy(rtn_trade.ExchangeID, "binance");
+        strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+        strncpy(rtn_trade.InstrumentID, result["symbol"].asString().c_str(), 31);
+        strncpy(rtn_trade.OrderRef, result["clientOrderId"].asString().c_str(), 13);
+        //rtn_trade.Direction = ;
+        rtn_trade.Volume = stod(result["executedQty"].asString().c_str()) * scale_offset;
+        rtn_trade.Price = stod(result["price"].asString().c_str()) * scale_offset;
+
+        on_rtn_trade(&rtn_trade);
+        raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
+    }
 
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
@@ -669,12 +687,12 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
         if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
            || orderStatusIterator->OrderStatus == LF_CHAR_Error)
         {   
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] remove a pendingOrderStatus."); 
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
             orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
         } else {
             ++orderStatusIterator;
         }
-        KF_LOG_ERROR(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
+        //KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
     }
 }
 

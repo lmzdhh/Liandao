@@ -50,7 +50,7 @@ YJJ_NAMESPACE_START
 #define COST_NUM_PER_DIR    2
 
 /** pos will be updated to long */
-typedef int VOLUME_DATA_TYPE;
+typedef uint64_t VOLUME_DATA_TYPE;
 
 /**
  * easy marco for pos array index calculation
@@ -161,7 +161,7 @@ public:
     {
         for (string& ticker: get_tickers())
         {
-            KF_LOG_INFO_FMT(logger, "[pos] (ticker)%s net:(t)%i(a)%i(y)%i long:(t)%i(a)%i(y)%i short:(t)%i(a)%i(y)%i",
+            KF_LOG_INFO_FMT(logger, "[pos] (ticker)%s net:(t)%llu(a)%llu(y)%llu long:(t)%llu(a)%llu(y)%llu short:(t)%llu(a)%llu(y)%llu",
                             ticker.c_str(), get_net_total(ticker), get_net_avail(ticker), get_net_yestd(ticker),
                             get_long_total(ticker), get_long_avail(ticker), get_long_yestd(ticker),
                             get_short_total(ticker), get_short_avail(ticker), get_short_yestd(ticker)
