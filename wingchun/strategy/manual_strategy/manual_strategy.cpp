@@ -11,10 +11,17 @@
 #include <sstream>
 #include <mutex>
 #include <algorithm>
+#include <unordered_map>
+#include <unordered_set>
+#include <sstream>
+#include <fstream>
+#include <memory>
 
 USING_WC_NAMESPACE
 
-using exchange_list_t = std::vector<std::pair<short, std::string>>;
+static bool g_should_stop = false;
+
+using exchange_map_t = std::unordered_map<std::string, short>;
 
 enum event_type
 {
@@ -29,9 +36,10 @@ enum event_type
 
 struct order_info
 {
-	int order_id;
+	std::unordered_set<int> request_id_set;
 	
-	LfOrderStatusType state = LF_CHAR_Unknown;	
+	short exch_source = SOURCE_UNKNOWN;		
+	LfOrderStatusType status = LF_CHAR_Unknown;	
 	LfDirectionType side = LF_CHAR_Buy;
 	LfTimeConditionType tif = LF_CHAR_IOC;
 	LfOrderPriceTypeType type;
@@ -62,7 +70,8 @@ struct manual_strategy_controller_context
 			"5 - print this help message\n";
 	}
 
-	manual_strategy_controller_context(WCStrategyUtilPtr util) : strategy_util(util)
+	manual_strategy_controller_context(WCStrategyUtilPtr util, const exchange_map_t& mes, const exchange_map_t& tes) 
+																: strategy_util(util), md_exchanges(mes), td_exchanges(tes)
 	{
 	}
 
@@ -76,7 +85,9 @@ struct manual_strategy_controller_context
   		uint64_t last_volume;
 	};
 
-	std::unordered_map<std::string, market_data_info> ticker_market_data;
+	using ticker_market_data_t = std::unordered_map<std::string, market_data_info>;
+	std::unordered_map<short, ticker_market_data_t> all_ticker_market_data;
+
 	std::mutex market_data_mutex;
 	
 	struct pos_info
@@ -87,16 +98,13 @@ struct manual_strategy_controller_context
 	
 	std::unordered_map<std::string, pos_info> ticker_pos_info;
 	
-	struct pending_order_info
-	{
-		uint64_t total_buy_qty;
-		uint64_t total_sell_qty;	
-	};
+	std::mutex order_info_mutex;	
+	std::unordered_map<int, std::shared_ptr<order_info>> all_order_info_map;
+	std::unordered_map<short, std::unordered_set<int>> exchange_order_info;
+	
+	const exchange_map_t& md_exchanges;
+	const exchange_map_t& td_exchanges;
 
-	std::unordered_map<std::string, pending_order_info> ticker_pending_order_info;
-	
-	std::unordered_map<int, order_info*> all_order_map;
-	
 	WCStrategyUtilPtr strategy_util;
 };
 
@@ -119,9 +127,7 @@ struct event_base
 
 	event_type type = unknown;	
 	
-	exchange_source_index exch_source = SOURCE_UNKNOWN;
- 	
-	const char* exch_name = "";
+	short exch_source = SOURCE_UNKNOWN;
 	
 	manual_strategy_controller_context* strategy_context = nullptr;
 };
@@ -139,10 +145,19 @@ struct status_update_event : event_base
 	
 	void process() const override
 	{
-		char buf[128] = {};
-		to_str(buf, 128);
-
-		fprintf(stdout, "%s\n", buf);
+		std::lock_guard<std::mutex> guard(strategy_context->order_info_mutex);
+		std::stringstream ss;
+		for(auto i : strategy_context->all_order_info_map)
+		{
+			const auto status = i.second->status;
+			if (status != LF_CHAR_Unknown && status != LF_CHAR_Error && status != LF_CHAR_AllTraded
+            		&& status != LF_CHAR_Canceled && status != LF_CHAR_PartTradedNotQueueing)
+			{	
+				ss << i.first << ", ";
+			}
+		}
+		
+		fprintf(stdout, "all active order request id: %s\n", ss.str().c_str());
 	}
 
 	void to_str(char* buf, size_t size) const override
@@ -166,6 +181,15 @@ struct insert_order_event : event_base
 			return false;
 		}
 
+		auto iter = strategy_context->td_exchanges.find(std::string(exchange));
+		if(iter == strategy_context->td_exchanges.end())
+		{
+			fprintf(stdout, "insert_order_event: invalid td exchange %s\n", exchange);
+			return false;
+		}
+
+		exch_source = iter->second;
+
 		return true;
 	}
 
@@ -179,19 +203,34 @@ struct insert_order_event : event_base
 			
 			int request_id = -1;	
 			
+			std::lock_guard<std::mutex> guard(strategy_context->order_info_mutex);
+
 			if(tif == LF_CHAR_IOC)
 			{
 				request_id = strategy_context->strategy_util->insert_fok_order(
-						exch_source, std::string(ticker), std::string(exch_name), price, qty, side, LF_CHAR_Open);
+						exch_source, std::string(ticker), std::string(exchange), price, qty, side, LF_CHAR_Open);
 			}
 			else if(tif == LF_CHAR_GFD)
 			{
 				request_id = strategy_context->strategy_util->insert_limit_order(
-						exch_source, std::string(ticker), std::string(exch_name), price, qty, side, LF_CHAR_Open);
+						exch_source, std::string(ticker), std::string(exchange), price, qty, side, LF_CHAR_Open);
 			}
 			
 			if(request_id != -1)
 			{	
+				auto ret = strategy_context->all_order_info_map.emplace(std::make_pair(request_id, std::make_shared<order_info>()));
+				if(!ret.second)
+				{
+					fprintf(stdout, "duplicate request id [%d] in order map, exit...\n", request_id);
+					g_should_stop = true;
+					return;
+				}
+				
+				ret.first->second->request_id_set.insert(request_id);
+				ret.first->second->exch_source = exch_source;
+				
+				strategy_context->exchange_order_info[exch_source].insert(request_id);
+	
 				fprintf(stdout, "inserted a limit order with returned request_id [%d]\n", request_id);
 			}
 			else
@@ -206,7 +245,7 @@ struct insert_order_event : event_base
 			else if (type == LF_CHAR_AnyPrice)
 			{
 				request_id = strategy_context->strategy_util->insert_market_order(
-						exch_source, std::string(ticker), std::string(exch_name),  qty, side, LF_CHAR_Open);
+						exch_source, std::string(ticker), std::string(exchange),  qty, side, LF_CHAR_Open);
 			}
 			*/
 		}
@@ -244,21 +283,53 @@ struct cancel_order_event : event_base
 		{
 			return false;
 		}
+		
+		auto iter = strategy_context->td_exchanges.find(std::string(exchange));
+		if(iter == strategy_context->td_exchanges.end())
+		{
+			fprintf(stdout, "cancel_order_event: invalid td exchange %s\n", exchange);
+			return false;
+		}
+		
+		std::lock_guard<std::mutex> guard(strategy_context->order_info_mutex);
+		auto oiter = strategy_context->all_order_info_map.find(order_id);
+		if(oiter == strategy_context->all_order_info_map.end())
+		{
+			fprintf(stdout, "cancel order: unknown request id [%d] in order map\n", order_id);
+			return false;
+		}
+		
+		orig_order = oiter->second;
+
+		exch_source = iter->second;
 
 		return true;
 	}
 	
 	void process() const override
 	{
-		if(strategy_context && strategy_context->strategy_util)
+		if(orig_order && strategy_context && strategy_context->strategy_util)
 		{
 			char buf[128] = {};
 			to_str(buf, 128);
 			fprintf(stdout, "%s\n", buf);
 
+			std::lock_guard<std::mutex> guard(strategy_context->order_info_mutex);
+
 			int request_id = strategy_context->strategy_util->cancel_order(exch_source, order_id);
-			
-			fprintf(stdout, "cancel an order with returned request_id [%d]\n", request_id);
+			if(request_id != -1)
+			{	
+				orig_order->request_id_set.insert(request_id);
+				strategy_context->all_order_info_map[request_id] = orig_order;
+				
+				fprintf(stdout, "cancel an order with returned request_id [%d]\n", request_id);
+			}
+			else
+			{
+				fprintf(stdout, "failed to cancel an order [%d], exit\n", order_id);
+				g_should_stop = true;
+				return;
+			}
 		}
 		else
 		{
@@ -273,6 +344,7 @@ struct cancel_order_event : event_base
 	
 	char exchange[16] = {};
 	int order_id = -1;
+	std::shared_ptr<order_info> orig_order;
 };
 
 struct req_pos_event : event_base
@@ -289,6 +361,14 @@ struct req_pos_event : event_base
 		{
 			return false;
 		}
+		
+		auto iter = strategy_context->td_exchanges.find(std::string(exchange));
+		if(iter == strategy_context->td_exchanges.end())
+		{
+			fprintf(stdout, "req_pos_event: invalid td exchange %s\n", exchange);
+		}
+
+		exch_source = iter->second;
 
 		return true;
 	}
@@ -322,6 +402,14 @@ struct market_data_event : event_base
 		{
 			return false;
 		}
+		
+		auto iter = strategy_context->md_exchanges.find(std::string(exchange));
+		if(iter == strategy_context->md_exchanges.end())
+		{
+			fprintf(stdout, "market_data_event: invalid md exchange %s\n", exchange);
+		}
+
+		exch_source = iter->second;
 
 		return true;
 	}
@@ -334,9 +422,18 @@ struct market_data_event : event_base
 			std::transform(symbol.begin(), symbol.end(), symbol.begin(), ::toupper);
 
 		    std::lock_guard<std::mutex> guard(strategy_context->market_data_mutex);
+			
+			auto exch_iter = strategy_context->all_ticker_market_data.find(exch_source);
+			if(exch_iter == strategy_context->all_ticker_market_data.end())
+			{
+				fprintf(stdout, "no market data for exchange %s", exchange);
+				return;
+			}
+			
+			const auto& ticker_market_data = exch_iter->second;
 
-			auto iter = strategy_context->ticker_market_data.find(symbol);
-			if(iter != strategy_context->ticker_market_data.end())
+			auto iter = ticker_market_data.find(symbol);
+			if(iter != ticker_market_data.end())
 			{
 				auto& md = iter->second;
 				fprintf(stdout, "%lu %ld X %lu %ld, %lu @ %ld\n", 
@@ -344,7 +441,7 @@ struct market_data_event : event_base
 			}
 			else
 			{
-				fprintf(stdout, "no market data for ticker %s\n", ticker);
+				fprintf(stdout, "no market data for ticker %s on exchange %s\n", ticker, exchange);
 			}
 		}
 		else
@@ -418,8 +515,8 @@ class manual_strategy_controller
 {
 public:
 	
-	manual_strategy_controller(WCStrategyUtilPtr util, const exchange_list_t& mes, const exchange_list_t& tes) 
-                                                                    : mscc(util), md_exchanges(mes), td_exchanges(tes)
+	manual_strategy_controller(WCStrategyUtilPtr util, const exchange_map_t& mes, const exchange_map_t& tes) 
+                                                                    : mscc(util, mes, tes), md_exchanges(mes), td_exchanges(tes)
 	{
 	}
 
@@ -495,7 +592,7 @@ public:
 		std::lock_guard<std::mutex> guard(mscc.market_data_mutex);
 
 		std::string ticker = data->InstrumentID;
-		auto& md = mscc.ticker_market_data[ticker];
+		auto& md = mscc.all_ticker_market_data[source][ticker];
 		md.best_bid_px = data->BidPrice1;
 		md.best_bid_qty = data->BidVolume1;
 		md.best_ask_px = data->AskPrice1;
@@ -507,18 +604,51 @@ public:
 		std::lock_guard<std::mutex> guard(mscc.market_data_mutex);
 
 		std::string ticker = data->InstrumentID;
-		auto& md = mscc.ticker_market_data[ticker];
+		auto& md = mscc.all_ticker_market_data[source][ticker];
 		md.last_px = data->Price;
 		md.last_volume = data->Volume;
+	}
+	
+	void on_rtn_order(const LFRtnOrderField* msg, int request_id, short source, long rcv_time)
+	{
+		std::lock_guard<std::mutex> guard(mscc.order_info_mutex);
+		auto iter = mscc.all_order_info_map.find(request_id);
+		if(iter == mscc.all_order_info_map.end())
+		{
+			fprintf(stdout, "on_rtn_order: unknown request id %d\n", request_id);
+			return;
+		}
+
+		auto order = iter->second;
+		order->status = msg->OrderStatus;
+		order->side = msg->Direction;
+		order->tif = msg->TimeCondition;
+		order->type = msg->OrderPriceType;
+
+		order->price = msg->LimitPrice;
+		order->total_qty = msg->VolumeTotalOriginal;
+		order->trade_qty = msg->VolumeTraded;		
+	
+		const auto status = order->status;	
+		if (status == LF_CHAR_Unknown || status == LF_CHAR_Error || status == LF_CHAR_AllTraded
+                    || status == LF_CHAR_Canceled || status == LF_CHAR_PartTradedNotQueueing)
+       	{
+			auto& exch_request_id_set = mscc.exchange_order_info[order->exch_source];
+        	for(auto i : order->request_id_set)
+			{
+				mscc.all_order_info_map.erase(i);			
+				exch_request_id_set.erase(i);
+			}
+        }
 	}
 
 private:
 	
 	std::queue<event_base*> event_queue;
 
-    const exchange_list_t& md_exchange_list;
+    const exchange_map_t& md_exchanges;
 
-    const exchange_list_t td_exchange_list;
+    const exchange_map_t& td_exchanges;
 
 	manual_strategy_controller_context mscc;
 };
@@ -536,21 +666,21 @@ public:
     virtual void on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId, const char* errorMsg);
 
 public:
-    ManualStrategy(const string& name, const exchange_list_t& md_exchanges, const exchange_list_t& td_exchanges);
+    ManualStrategy(const string& name, const exchange_map_t& md_exchanges, const exchange_map_t& td_exchanges);
 
     void on_command_line(const char*);
 
 private:
     
-    exchange_list_t md_exchange_list;
+    exchange_map_t md_exchanges;
 
-    exchange_list_t td_exchange_list;
+    exchange_map_t td_exchanges;
 
     manual_strategy_controller msc;
 };
 
-ManualStrategy::ManualStrategy(const string& name, const exchange_list_t& md_exchanges, const exchange_list_t& td_exchanges): 
-                            IWCStrategy(name), md_exchange_list(md_exchanges), td_exchange_list(td_exchanges), msc(util, md_exchanges, td_exchanges)
+ManualStrategy::ManualStrategy(const string& name, const exchange_map_t& _md_exchanges, const exchange_map_t& _td_exchanges): 
+                            IWCStrategy(name), md_exchanges(_md_exchanges), td_exchanges(_td_exchanges), msc(util, md_exchanges, td_exchanges)
 {
 }
 
@@ -572,14 +702,14 @@ void ManualStrategy::on_command_line(const char* line)
 
 void ManualStrategy::init()
 {
-    for(const auto& i : md_exchange_list)
+    for(const auto& i : md_exchanges)
     {
-        data->add_market_data(i.first);
+        data->add_market_data(i.second);
     }
 
-    for(const auto& i : td_exchange_list)
+    for(const auto& i : td_exchanges)
     {
-        data->add_register_td(i.first);
+        data->add_register_td(i.second);
     }
 
     fprintf(stdout, msc.help_msg());
@@ -587,9 +717,8 @@ void ManualStrategy::init()
 
 void ManualStrategy::on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time)
 {
-    if (request_id == -1 && source == exch_src_index)
+    if (request_id == -1)
     {
-        td_connected = true;
         KF_LOG_INFO(logger, "td connected");
         if (posMap.get() == nullptr)
         {
@@ -621,7 +750,8 @@ void ManualStrategy::on_rtn_order(const LFRtnOrderField* msg, int request_id, sh
 	
 	fprintf(stdout, "on_rtn_order: instrument_id [%s], request_id [%d], source [%u], price [%ld], volume [%lu], volume traded [%lu], status [%s]\n",
 						msg->InstrumentID, request_id, source, msg->LimitPrice, msg->VolumeTotalOriginal, msg->VolumeTraded, getLfOrderStatusType(msg->OrderStatus).c_str());
-
+	
+	msc.on_rtn_order(msg, request_id, source, rcv_time);
 }
 
 void ManualStrategy::on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId, const char* errorMsg)
@@ -657,39 +787,58 @@ static char* line = nullptr;
 
 int main(int argc, const char* argv[])
 {
-    if(argc != 3)
+    if(argc != 2)
     {
         fprintf(stderr, "usage: %s <config_file_path>\n", argv[0]);
         exit(1);
     }
     
     const std::string config_file_path = argv[1];
-    //TODO load config
-    exchange_source_index exch_src_idx = get_source_index_from_str(exchange_name);
-   
-    if(exch_src_idx == SOURCE_UNKNOWN)
-	{
-			fprintf(stderr, "invalid exchange name [%s]", argv[1]);
-			exit(1);
-	}
+    std::ifstream inFile;
+    inFile.open(config_file_path);
+    
+    std::stringstream strStream;
+    strStream << inFile.rdbuf();
+    const string config_str = strStream.str();
 
-    fprintf(stdout, "going to initialize strategy with exchange name [%s],  exchange source id [%d]\n", 
-						exchange_name.c_str(), static_cast<int>(exch_src_idx));
+	json j_config = json::parse(config_str);
+	
+	exchange_map_t md_exchanges;
+	exchange_map_t td_exchanges;
+	
+	auto parse_exchange_func = [&j_config](const char* name, exchange_map_t& exchanges){
+							for(const auto& t : j_config[name])
+							{
+								std::string exchange_name = t.get<string>();
+								exchange_source_index exch_src_idx = get_source_index_from_str(exchange_name);
+								
+								if(exch_src_idx == SOURCE_UNKNOWN)
+								{
+									fprintf(stderr, "invalid md exchange name [%s]", exchange_name.c_str());
+									exit(1);
+								}
+								
+								fprintf(stdout, "%s - add %s with source %u\n", name, exchange_name.c_str(), exch_src_idx);	
+								exchanges[exchange_name] = exch_src_idx;
+							}
+						};
+	
+   	parse_exchange_func("md_exchanges", md_exchanges); 
+   	parse_exchange_func("td_exchanges", td_exchanges); 
 
-    ManualStrategy str(string("manual_strategy"), exch_src_idx, exchange_name);
+    ManualStrategy str(string("manual_strategy"), md_exchanges, td_exchanges);
     str.init();
     str.start();
 
     fprintf(stdout, "going to interactive session, print <quit> to end the session\n");
-	
-	while(IWCDataProcessor::signal_received < 0)
+		
+	while(g_should_stop || IWCDataProcessor::signal_received < 0)
 	{ 
 			line = readline (">> ");
 			if(line && strlen(line) > 0)
 			{
 					if(strcmp(line, "quit") == 0)
 					{
-							str.stop();
 							break;
 					}
 					add_history(line);
@@ -700,5 +849,6 @@ int main(int argc, const char* argv[])
 			}
 	}
 
+	str.stop();
     str.block();
 }
