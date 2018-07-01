@@ -69,7 +69,7 @@ public:
     // req functions
     virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
     virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId);
-    virtual void req_order_insert( LFInputOrderField* data, int account_index, int requestId, long rcv_time);
+    virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
     virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
 
 public:

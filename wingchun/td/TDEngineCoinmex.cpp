@@ -151,10 +151,12 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     printResponse(d);
 //----------------------
 */
+   /*
     Document d;
     cancel_all_orders(unit, "MVP_BTC", d);
     KF_LOG_INFO(logger, "[print cancel_all_orders]");
     printResponse(d);
+    */
 /*
     query_orders(unit, "LTC_BTC", "open", d);
     KF_LOG_INFO(logger, "[print query_orders]");
@@ -359,7 +361,7 @@ void TDEngineCoinmex::req_qry_account(const LFQryAccountField *data, int account
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-void TDEngineCoinmex::req_order_insert(LFInputOrderField* data, int account_index, int requestId, long rcv_time)
+void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     AccountUnitCoinmex& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId

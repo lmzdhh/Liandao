@@ -278,7 +278,7 @@ void TDEngineIndodax::req_qry_account(const LFQryAccountField *data, int account
     send_writer->write_frame(&req, sizeof(CThostFtdcQryTradingAccountField), source_id, MSG_TYPE_LF_QRY_ACCOUNT_CTP, 1/*ISLAST*/, requestId);
 }
 
-void TDEngineIndodax::req_order_insert( LFInputOrderField* data, int account_index, int requestId, long rcv_time)
+void TDEngineIndodax::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     struct CThostFtdcInputOrderField req = parseTo(*data);
     req.RequestID = requestId;

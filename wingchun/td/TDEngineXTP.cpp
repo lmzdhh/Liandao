@@ -197,7 +197,7 @@ void TDEngineXTP::req_qry_account(const LFQryAccountField *data, int account_ind
     }
 }
 
-void TDEngineXTP::req_order_insert( LFInputOrderField* data, int account_index, int requestId, long rcv_time)
+void TDEngineXTP::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     struct XTPOrderInsertInfo req = parseTo(*data);
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId

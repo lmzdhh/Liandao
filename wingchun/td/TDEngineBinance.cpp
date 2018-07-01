@@ -269,7 +269,7 @@ void TDEngineBinance::req_qry_account(const LFQryAccountField *data, int account
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-void TDEngineBinance::req_order_insert( LFInputOrderField* data, int account_index, int requestId, long rcv_time)
+void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     AccountUnitBinance& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
