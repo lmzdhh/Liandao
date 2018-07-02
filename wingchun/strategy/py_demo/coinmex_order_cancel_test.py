@@ -73,15 +73,15 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
 def on_tick(context, market_data, source, rcv_time):
     print('market_data', market_data)
     if market_data.InstrumentID == context.ticker:
-        # context.buy_price = 489 #market_data.LowerLimitPrice
+        # context.buy_price = 1 #market_data.LowerLimitPrice
         context.sell_price = 99999999 #market_data.UpperLimitPrice
         # if context.order_rid < 0:
-        #     print("context.insert_limit_order 512.")
+        #     print("context.insert_limit_order 1.")
         #     context.order_rid = context.insert_limit_order(source=SOURCE.COINMEX,
         #                                                  ticker=context.ticker,
         #                                                  price=context.buy_price,
         #                                                  exchange_id=context.exchange_id,
-        #                                                  volume=51200000000,
+        #                                                  volume=100000000,
         #                                                  direction=DIRECTION.Buy,
         #                                                  offset=OFFSET.Open)
         #     print("context.order_rid:", context.order_rid)
