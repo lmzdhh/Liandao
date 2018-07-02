@@ -33,6 +33,13 @@ struct PendingBinanceTradeStatus
     uint64_t last_trade_id; //for myTrade
 };
 
+//当Order已经全部成交完成之后，到get_myTrades拿到这个OrderRef记录的信息以后， 删除记录，不再get_myTrades
+struct OnRtnOrderDoneAndWaitingOnRtnTrade
+{
+    char_21 OrderRef;       //报单引用
+    LfDirectionType Direction;  //买卖方向
+};
+
 struct AccountUnitBinance
 {
     std::string api_key;
@@ -43,6 +50,9 @@ struct AccountUnitBinance
     std::vector<PendingBinanceOrderStatus> pendingOrderStatus;
     std::vector<PendingBinanceTradeStatus> newTradeStatus;
     std::vector<PendingBinanceTradeStatus> pendingTradeStatus;
+
+    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> newOnRtnTrades;
+    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
 };
 
 /**
@@ -92,7 +102,7 @@ private:
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
     void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
-                                        const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded);
+                                        const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction);
 
     inline void onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
     inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
@@ -101,6 +111,8 @@ private:
     void retrieveOrderStatus(AccountUnitBinance& unit);
     void retrieveTradeStatus(AccountUnitBinance& unit);
     void moveNewtoPending(AccountUnitBinance& unit);
+    bool isExistSymbolInPendingTradeStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
+    bool isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
     static constexpr int scale_offset = 1e8;
 
     ThreadPtr rest_thread;

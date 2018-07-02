@@ -339,31 +339,9 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
                     }
     */
 
-    /*  do nothing?
-    LFRtnOrderField rtn_order;
-    memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-    strcpy(rtn_order.ExchangeID, "binance");
-    strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_order.InstrumentID, result["symbol"].asString().c_str(), 31);
-    rtn_order.Direction = data->Direction;
-    rtn_order.TimeCondition = data->TimeCondition;
-    rtn_order.OrderPriceType = data->OrderPriceType;
-    strncpy(rtn_order.OrderRef, result["clientOrderId"].asString().c_str(), 13);
-    rtn_order.VolumeTraded = 0;
-    rtn_order.VolumeTotalOriginal = data->Volume;
-    rtn_order.LimitPrice = data->LimitPrice;
-    rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus = GetOrderStatus("NEW");
-
-    on_rtn_order(&rtn_order);
-    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                            source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
-                            1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-    */
-
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     char noneStatus = '\0';//none
-    addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
+    addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction);
 }
 
 
@@ -397,6 +375,7 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     strncpy(rtn_order.OrderRef, result["clientOrderId"].asString().c_str(), 13);
     rtn_order.VolumeTraded = stod(result["executedQty"].asString().c_str()) * scale_offset;
     rtn_order.VolumeTotalOriginal = stod(result["origQty"].asString().c_str()) * scale_offset;
+    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
     rtn_order.LimitPrice = stod(result["price"].asString().c_str()) * scale_offset;
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
@@ -414,7 +393,7 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
         strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
         strncpy(rtn_trade.InstrumentID, result["symbol"].asString().c_str(), 31);
         strncpy(rtn_trade.OrderRef, result["clientOrderId"].asString().c_str(), 13);
-        //rtn_trade.Direction = ;
+        rtn_trade.Direction = data->Direction;
         rtn_trade.Volume = stod(result["executedQty"].asString().c_str()) * scale_offset;
         rtn_trade.Price = stod(result["price"].asString().c_str()) * scale_offset;
 
@@ -427,7 +406,7 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
         addNewQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
-                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded);
+                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction);
     }
 }
 
@@ -493,6 +472,7 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     strncpy(rtn_order.OrderRef, result["clientOrderId"].asString().c_str(), 13);
     rtn_order.VolumeTraded = stod(result["executedQty"].asString().c_str()) * scale_offset;
     rtn_order.VolumeTotalOriginal = stod(result["origQty"].asString().c_str()) * scale_offset;
+    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
     rtn_order.LimitPrice = stod(result["price"].asString().c_str()) * scale_offset;
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
@@ -526,7 +506,7 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
         addNewQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
-                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded);
+                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction);
     }
 }
 
@@ -591,6 +571,13 @@ void TDEngineBinance::moveNewtoPending(AccountUnitBinance& unit)
         newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
     }
 
+    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
+    for(tradeIterator = unit.newOnRtnTrades.begin(); tradeIterator != unit.newOnRtnTrades.end();)
+    {
+        unit.pendingOnRtnTrades.push_back(*tradeIterator);
+        tradeIterator = unit.newOnRtnTrades.erase(tradeIterator);
+    }
+
     std::vector<PendingBinanceTradeStatus>::iterator newTradeStatusIterator;
     for(newTradeStatusIterator = unit.newTradeStatus.begin(); newTradeStatusIterator != unit.newTradeStatus.end();) {
         unit.pendingTradeStatus.push_back(*newTradeStatusIterator);
@@ -602,16 +589,16 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 {
     KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
     std::vector<PendingBinanceOrderStatus>::iterator orderStatusIterator;
-    int indexNum = 0;    
-    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
-    {
-        indexNum++;
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    account.api_key:"<< unit.api_key
-                                                                          << "  account.pendingOrderStatus.InstrumentID: "<< orderStatusIterator->InstrumentID
-                                                                          <<"  account.pendingOrderStatus.OrderRef: " << orderStatusIterator->OrderRef
-                                                                          <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
-        );
-    }
+//    int indexNum = 0;
+//    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
+//    {
+//        indexNum++;
+//        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    account.api_key:"<< unit.api_key
+//                                                                          << "  account.pendingOrderStatus.InstrumentID: "<< orderStatusIterator->InstrumentID
+//                                                                          <<"  account.pendingOrderStatus.OrderRef: " << orderStatusIterator->OrderRef
+//                                                                          <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
+//        );
+//    }
 
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
     {
@@ -686,7 +673,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
         //remove order when finish
         if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
            || orderStatusIterator->OrderStatus == LF_CHAR_Error)
-        {   
+        {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
             orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
         } else {
@@ -699,8 +686,8 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 {
     KF_LOG_INFO(logger, "[retrieveTradeStatus] ");
-    //if 'ours' order is finished, dont get trade info anymore.
-    if(unit.pendingOrderStatus.size() == 0) return;
+    //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
+    if(unit.pendingOrderStatus.size() == 0 && unit.pendingOnRtnTrades.size() == 0) return;
     Json::Value resultTrade;
     long recvWindow = 10000;
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
@@ -724,6 +711,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
           }
         ]
         */
+
         KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id << " (result)"<< resultTrade);
         for(int i = 0 ; i < resultTrade.size(); i++)
         {
@@ -733,9 +721,18 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
             strncpy(rtn_trade.OrderRef, resultTrade[i]["orderId"].asString().c_str(), 13);
-            //rtn_trade.Direction = ;
             rtn_trade.Volume = stod(resultTrade[i]["qty"].asString().c_str()) * scale_offset;
             rtn_trade.Price = stod(resultTrade[i]["price"].asString().c_str()) * scale_offset;
+
+            //apply the direction of the OrderRef
+            std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
+            for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
+            {
+                if(strcmp(tradeIterator->OrderRef, rtn_trade.OrderRef) == 0)
+                {
+                    rtn_trade.Direction = tradeIterator->Direction;
+                }
+            }
 
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
@@ -748,12 +745,31 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             }
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id);
         }
+
+        //here, use another for-loop is for there maybe more than one trades on the same orderRef.
+        //if the first one remove pendingOnRtnTrades, the second one could not get the Direction.
+        for(int i = 0 ; i < resultTrade.size(); i++)
+        {
+            if(! isExistSymbolInPendingBinanceOrderStatus(unit, tradeStatusIterator->InstrumentID)) {
+                //all the OnRtnOrder is finished.
+                std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
+                for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
+                {
+                    if(strcmp(tradeIterator->OrderRef, resultTrade[i]["orderId"].asString().c_str()) == 0)
+                    {
+                        KF_LOG_INFO(logger, "[retrieveTradeStatus] there is no pendingOrderStatus(LF_CHAR_AllTraded/LF_CHAR_Canceled/LF_CHAR_Error occur). after this turn of get_myTrades, done need more");
+                        tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
+                    }
+                }
+            }
+        }
     }
 }
 
 
 void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
-                                                     const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded)
+                                                     const char_21 OrderRef, const LfOrderStatusType OrderStatus,
+                                                 const uint64_t VolumeTraded, LfDirectionType Direction)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
@@ -766,18 +782,13 @@ void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const
     status.VolumeTraded = VolumeTraded;
     unit.newOrderStatus.push_back(status);
 
-    //add new symbol for GetAndHandleOrderTradeResponse if had no this symbol before
-    std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
-    bool existSymbol = false;
-    for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
-    {
-        if(strcmp(tradeStatusIterator->InstrumentID, InstrumentID) == 0)
-        {
-            existSymbol = true;
-        }
-    }
+    OnRtnOrderDoneAndWaitingOnRtnTrade waitingTrade;
+    strncpy(waitingTrade.OrderRef, OrderRef, 21);
+    waitingTrade.Direction = Direction;
+    unit.newOnRtnTrades.push_back(waitingTrade);
 
-    if(!existSymbol)
+    //add new symbol for GetAndHandleOrderTradeResponse if had no this symbol before
+    if(!isExistSymbolInPendingTradeStatus(unit, InstrumentID))
     {
         PendingBinanceTradeStatus tradeStatus;
         memset(&tradeStatus, 0, sizeof(PendingBinanceTradeStatus));
@@ -786,6 +797,34 @@ void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const
         unit.newTradeStatus.push_back(tradeStatus);
     }
 }
+
+bool TDEngineBinance::isExistSymbolInPendingTradeStatus(AccountUnitBinance& unit, const char_31 InstrumentID)
+{
+    std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
+
+    for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
+    {
+        if(strcmp(tradeStatusIterator->InstrumentID, InstrumentID) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bool TDEngineBinance::isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID)
+{
+    std::vector<PendingBinanceOrderStatus>::iterator orderStatusIterator;
+
+    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++) {
+        if (strcmp(orderStatusIterator->InstrumentID, InstrumentID) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 
 void TDEngineBinance::loop()
 {
