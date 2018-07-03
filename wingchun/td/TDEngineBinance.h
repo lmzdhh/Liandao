@@ -114,6 +114,7 @@ private:
     void moveNewtoPending(AccountUnitBinance& unit);
     bool isExistSymbolInPendingTradeStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
     bool isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
+    bool removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, uint64_t binanceOrderId);
     static constexpr int scale_offset = 1e8;
 
     ThreadPtr rest_thread;

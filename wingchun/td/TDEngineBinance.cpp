@@ -665,6 +665,18 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
                 //update last status
                 orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
                 orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
+
+                //is status is canceled, dont need get the orderref's trade info
+                if(orderStatusIterator->OrderStatus == LF_CHAR_Canceled) {
+                    uint64_t binanceOrderId =  orderResult["orderId"].asInt64();
+                    if(removeBinanceOrderIdFromPendingOnRtnTrades(unit, binanceOrderId))
+                    {
+                        KF_LOG_INFO(logger, "[retrieveTradeStatus] the (OrderRef) "
+                                            << orderStatusIterator->OrderRef
+                                            << " is LF_CHAR_Canceled. done need get this (binanceOrderId)"
+                                               << binanceOrderId << " trade info");
+                    }
+                }
             }
         } else {
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
@@ -687,7 +699,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 
 void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 {
-    KF_LOG_INFO(logger, "[retrieveTradeStatus] ");
+    KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())" << unit.pendingOrderStatus.size() << " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size());
     //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
     if(unit.pendingOrderStatus.size() == 0 && unit.pendingOnRtnTrades.size() == 0) return;
     Json::Value resultTrade;
@@ -791,27 +803,35 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id);
         }
 
-        //here, use another for-loop is for there maybe more than one trades on the same orderRef.
+        //here, use another for-loop is for there maybe more than one trades on the same orderRef:
         //if the first one remove pendingOnRtnTrades, the second one could not get the Direction.
         for(int i = 0 ; i < resultTrade.size(); i++)
         {
             if(! isExistSymbolInPendingBinanceOrderStatus(unit, tradeStatusIterator->InstrumentID)) {
                 //all the OnRtnOrder is finished.
                 uint64_t binanceOrderId =  resultTrade[i]["orderId"].asInt64();
-                std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
-                for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
+                if(removeBinanceOrderIdFromPendingOnRtnTrades(unit, binanceOrderId))
                 {
-                    if(tradeIterator->binanceOrderId == binanceOrderId)
-                    {//find this order's final trade info
-                        KF_LOG_INFO(logger, "[retrieveTradeStatus] there is no pendingOrderStatus(LF_CHAR_AllTraded/LF_CHAR_Canceled/LF_CHAR_Error occur). after this turn of get_myTrades, done need more");
-                        tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
-                    }
+                    KF_LOG_INFO(logger, "[retrieveTradeStatus] there is no pendingOrderStatus(LF_CHAR_AllTraded/LF_CHAR_Canceled/LF_CHAR_Error occur). this is the last turn of get_myTrades on (symbol)" << tradeStatusIterator->InstrumentID);
                 }
             }
         }
     }
 }
 
+bool TDEngineBinance::removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, uint64_t binanceOrderId)
+{
+    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
+    for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); )
+    {
+        if(tradeIterator->binanceOrderId == binanceOrderId)
+        {
+            tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
+        } else {
+            ++tradeIterator;
+        }
+    }
+}
 
 void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
                                                      const char_21 OrderRef, const LfOrderStatusType OrderStatus,
