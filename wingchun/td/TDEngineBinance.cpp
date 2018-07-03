@@ -760,15 +760,25 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             //apply the direction of the OrderRef
             uint64_t binanceOrderId =  resultTrade[i]["orderId"].asInt64();
             std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
+
+            bool match_one = false;
             for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
             {
                 if(tradeIterator->binanceOrderId == binanceOrderId)
                 {
                     rtn_trade.Direction = tradeIterator->Direction;
                     strncpy(rtn_trade.OrderRef, tradeIterator->OrderRef, 13);
+                    match_one = true;
                 }
             }
-
+            if(!match_one) {
+                //Note: the firsttime run of get_myTrades use last_trade_id from 0, so we got some 'unknown' trade
+                //is maybe from manuelly order, other strategy, or by td restart losing pendingOnRtnTrades lasttime.
+                //if we dont set the orderref, there is a stoi std::invalid_argument exception in on_rtn_trade
+                std::string when_no_match_binanceOrderId_use_this_default_orderref="0";
+                strncpy(rtn_trade.OrderRef, when_no_match_binanceOrderId_use_this_default_orderref.c_str(), 13);
+            }
+            
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                     source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
