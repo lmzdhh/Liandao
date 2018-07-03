@@ -710,8 +710,40 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             "isBestMatch": true
           }
         ]
-        */
 
+         example2, isBuyer=isMaker=true:
+         [{
+                "commission" : "0.00137879",
+                "commissionAsset" : "BNB",
+                "id" : 30801527,
+                "isBestMatch" : true,
+                "isBuyer" : true,
+                "isMaker" : true,
+                "orderId" : 61311309,
+                "price" : "0.00000603",
+                "qty" : "1000.00000000",
+                "time" : 1530541407016
+        }]
+        */
+        if(resultTrade.isObject()) {
+            //expected is array,but get object, it must be the error response json:
+            /*
+             {
+            "code" : -1021,
+            "msg" : "Timestamp for this request is outside of the recvWindow."
+            }
+             * */
+            int errorId = 0;
+            std::string errorMsg = "";
+            if(resultTrade["code"] != Json::nullValue)
+            {
+                errorId = resultTrade["code"].asInt();
+                errorMsg = (resultTrade["msg"] == Json::nullValue) ? "" : resultTrade["msg"].asString();
+                KF_LOG_ERROR(logger, "[retrieveTradeStatus] get_myTrades failed!" << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
+
+            }
+            continue;
+        }
         KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id << " (result)"<< resultTrade);
         for(int i = 0 ; i < resultTrade.size(); i++)
         {
@@ -741,7 +773,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             uint64_t newtradeId = resultTrade[i]["id"].asInt64();
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (newtradeId)" << newtradeId);
             if(newtradeId > tradeStatusIterator->last_trade_id) {
-                tradeStatusIterator->last_trade_id = newtradeId;
+                tradeStatusIterator->last_trade_id = newtradeId + 1;// for new trade
             }
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id);
         }
