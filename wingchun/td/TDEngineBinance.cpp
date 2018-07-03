@@ -340,7 +340,8 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
 
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     char noneStatus = '\0';//none
-    addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction);
+    uint64_t binanceOrderId =  result["orderId"].asInt64();
+    addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction, binanceOrderId);
 }
 
 
@@ -404,8 +405,9 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
+        uint64_t binanceOrderId =  result["orderId"].asInt64();
         addNewQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
-                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction);
+                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
 
@@ -504,8 +506,9 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
+        uint64_t binanceOrderId =  result["orderId"].asInt64();
         addNewQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
-                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction);
+                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
 
@@ -751,17 +754,18 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             strcpy(rtn_trade.ExchangeID, "binance");
             strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
-            strncpy(rtn_trade.OrderRef, resultTrade[i]["orderId"].asString().c_str(), 13);
             rtn_trade.Volume = stod(resultTrade[i]["qty"].asString().c_str()) * scale_offset;
             rtn_trade.Price = stod(resultTrade[i]["price"].asString().c_str()) * scale_offset;
 
             //apply the direction of the OrderRef
+            uint64_t binanceOrderId =  resultTrade[i]["orderId"].asInt64();
             std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
             for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
             {
-                if(strcmp(tradeIterator->OrderRef, rtn_trade.OrderRef) == 0)
+                if(tradeIterator->binanceOrderId == binanceOrderId)
                 {
                     rtn_trade.Direction = tradeIterator->Direction;
+                    strncpy(rtn_trade.OrderRef, tradeIterator->OrderRef, 13);
                 }
             }
 
@@ -783,11 +787,12 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
         {
             if(! isExistSymbolInPendingBinanceOrderStatus(unit, tradeStatusIterator->InstrumentID)) {
                 //all the OnRtnOrder is finished.
+                uint64_t binanceOrderId =  resultTrade[i]["orderId"].asInt64();
                 std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
                 for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
                 {
-                    if(strcmp(tradeIterator->OrderRef, resultTrade[i]["orderId"].asString().c_str()) == 0)
-                    {
+                    if(tradeIterator->binanceOrderId == binanceOrderId)
+                    {//find this order's final trade info
                         KF_LOG_INFO(logger, "[retrieveTradeStatus] there is no pendingOrderStatus(LF_CHAR_AllTraded/LF_CHAR_Canceled/LF_CHAR_Error occur). after this turn of get_myTrades, done need more");
                         tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
                     }
@@ -800,7 +805,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 
 void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
                                                      const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                 const uint64_t VolumeTraded, LfDirectionType Direction)
+                                                 const uint64_t VolumeTraded, LfDirectionType Direction, uint64_t binanceOrderId)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
@@ -815,6 +820,7 @@ void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const
 
     OnRtnOrderDoneAndWaitingOnRtnTrade waitingTrade;
     strncpy(waitingTrade.OrderRef, OrderRef, 21);
+    waitingTrade.binanceOrderId = binanceOrderId;
     waitingTrade.Direction = Direction;
     unit.newOnRtnTrades.push_back(waitingTrade);
 

@@ -37,6 +37,7 @@ struct PendingBinanceTradeStatus
 struct OnRtnOrderDoneAndWaitingOnRtnTrade
 {
     char_21 OrderRef;       //报单引用
+    uint64_t binanceOrderId;       //binance 报单引用
     LfDirectionType Direction;  //买卖方向
 };
 
@@ -102,7 +103,7 @@ private:
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
     void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
-                                        const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction);
+                                        const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, uint64_t binanceOrderId);
 
     inline void onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
     inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
