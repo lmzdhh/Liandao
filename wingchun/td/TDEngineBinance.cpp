@@ -246,15 +246,14 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
         int balancesSize = result["balances"].size();
         for (int i = 0; i < balancesSize; i++) {
             string symbol = result["balances"][i]["asset"].asString();
-            //if (strcmp(symbol.c_str(), data->InstrumentID) == 0) {
-                KF_LOG_INFO(logger, "[req_investor_position] (symbol)" << symbol << " free:"
-                                                                       << result["balances"][i]["free"].asString().c_str()
-                                                                       << " locked: "
-                                                                       << result["balances"][i]["locked"].asString().c_str());
-                pos.Position = stod(result["balances"][i]["free"].asString().c_str()) * scale_offset;
-                on_rsp_position(&pos, i == (balancesSize - 1), requestId);
-                findSymbolInResult = true;
-            //}
+            strncpy(pos.InstrumentID, symbol.c_str(), 31);
+            KF_LOG_INFO(logger, "[req_investor_position] (symbol)" << symbol << " free:"
+                                                                   << result["balances"][i]["free"].asString().c_str()
+                                                                   << " locked: "
+                                                                   << result["balances"][i]["locked"].asString().c_str());
+            pos.Position = stod(result["balances"][i]["free"].asString().c_str()) * scale_offset;
+            on_rsp_position(&pos, i == (balancesSize - 1), requestId);
+            findSymbolInResult = true;
         }
     }
     if(!findSymbolInResult)
