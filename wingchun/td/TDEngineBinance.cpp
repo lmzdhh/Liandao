@@ -703,7 +703,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
     //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
     if(unit.pendingOrderStatus.size() == 0 && unit.pendingOnRtnTrades.size() == 0) return;
     Json::Value resultTrade;
-    long recvWindow = 10000;
+    long recvWindow = 900000;
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
     for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
     {
