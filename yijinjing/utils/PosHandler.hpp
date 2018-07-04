@@ -49,6 +49,7 @@ YJJ_NAMESPACE_START
 #define PH_POS_FEE_INDEX    1
 #define COST_NUM_PER_DIR    2
 
+/** pos will be updated to long */
 typedef double VOLUME_DATA_TYPE;
 
 /**
