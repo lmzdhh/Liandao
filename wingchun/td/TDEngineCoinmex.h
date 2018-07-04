@@ -45,6 +45,7 @@ struct AccountUnitCoinmex
     bool    logged_in;
     std::vector<PendingCoinmexOrderStatus> newOrderStatus;
     std::vector<PendingCoinmexOrderStatus> pendingOrderStatus;
+    std::vector<std::string> whiteListInstrumentIDs;
 };
 
 

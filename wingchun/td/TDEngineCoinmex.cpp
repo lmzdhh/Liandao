@@ -92,6 +92,26 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     unit.baseUrl = baseUrl;
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
+    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (is whiteListInstrumentIDs exist?)" << (j_config.find("whiteListInstrumentIDs") != j_config.end()));
+
+    if(j_config.find("whiteListInstrumentIDs") != j_config.end()) {
+        string whiteListInstrumentIDs = j_config["whiteListInstrumentIDs"].get<string>();
+        if(whiteListInstrumentIDs.length() > 0)
+        {
+            KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (whiteListInstrumentIDs)" << whiteListInstrumentIDs);
+            unit.whiteListInstrumentIDs = split(whiteListInstrumentIDs, ",");
+            if(unit.whiteListInstrumentIDs.size() > 0)
+            {
+                for(int i=0; i < unit.whiteListInstrumentIDs.size(); i++)
+                {
+                    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID)" << unit.whiteListInstrumentIDs[i]);
+                    Document d;
+                    cancel_all_orders(unit, unit.whiteListInstrumentIDs[i], d);
+                    printResponse(d);
+                }
+            }
+        }
+    }
 //test
     /*
     Document d;
