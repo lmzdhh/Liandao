@@ -42,6 +42,8 @@ const int MB = KB * KB;
 const int JOURNAL_PAGE_SIZE = 128 * MB;
 const int PAGE_MIN_HEADROOM = 2 * MB;
 
+const int64_t SCALE_OFFSET = 1e8;
+
 YJJ_NAMESPACE_END
 
 #endif //YIJINJING_CONSTANTS_H

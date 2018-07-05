@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "YJJ_DECLARE.h"
+#include "constants.h"
 #include <boost/python/object.hpp>
 #include <boost/locale.hpp>
 #include <boost/python/stl_iterator.hpp>
@@ -162,6 +163,16 @@ inline void getString(const boost::python::dict &d, const string &key, char *val
 inline string gbk2utf8(const string& str)
 {
     return boost::locale::conv::between(str, "UTF-8", "GBK");
+}
+
+template<typename src_t>
+double scale_to_double(src_t src)
+{
+	src_t int_src = src / SCALE_OFFSET;
+	
+	src_t fra_src = src - int_src * SCALE_OFFSET;
+
+	return (double)int_src + (double)(fra_src) / double(SCALE_OFFSET);
 }
 
 YJJ_NAMESPACE_END
