@@ -99,8 +99,44 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
                 {
                     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID)" << unit.whiteListInstrumentIDs[i]);
                     Document d;
-                    cancel_all_orders(unit, unit.whiteListInstrumentIDs[i], d);
+                    get_open_orders(unit, unit.whiteListInstrumentIDs[i].c_str(), d);
+                    KF_LOG_INFO(logger, "[load_account] print get_open_orders");
+                    printResponse(d);
 
+                    if(d.IsArray()) { // expected success response is array
+                        size_t len = d.Size();
+                        KF_LOG_INFO(logger, "[get_open_orders] (length)" << len);
+                        for (int i = 0; i < len; i++) {
+                            if(d[i].IsObject() && d[i].HasMember("symbol") && d[i].HasMember("clientOrderId"))
+                            {
+                                if(d[i]["symbol"].IsString() && d[i]["clientOrderId"].IsString())
+                                {
+                                    std::string symbol = d[i]["symbol"].GetString();
+                                    std::string orderRef = d[i]["clientOrderId"].GetString();
+
+                                    Json::Value result;
+                                    long recvWindow = 10000;
+                                    BinaCPP::init( unit.api_key, unit.secret_key );
+                                    BinaCPP::cancel_order(symbol.c_str(), 0, orderRef.c_str(),"", recvWindow, result);
+
+                                    KF_LOG_INFO(logger, "[load_account] cancel_order" << " (result)" << result);
+                                    int errorId = 0;
+                                    std::string errorMsg = "";
+                                    if(result["code"] != Json::nullValue)
+                                    {
+                                        errorId = result["code"].asInt();
+                                        errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
+                                        KF_LOG_ERROR(logger, "[load_account] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+                                    }
+//                                    if(errorId != 0)
+//                                    {
+//                                        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+//                                        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
+//                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -982,6 +1018,146 @@ std::vector<std::string> TDEngineBinance::split(std::string str, std::string tok
         }
     }
     return result;
+}
+
+void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &json)
+{
+    KF_LOG_INFO(logger, "[get_open_orders]");
+    long recvWindow = 10000;
+    std::string Timestamp = getTimestampString();
+    std::string Method = "GET";
+    std::string requestPath = "https://api.binance.com/api/v3/openOrders";
+    std::string queryString("?");
+    std::string body = "";
+
+    bool hasSetParameter = false;
+
+    if(strlen(symbol) > 0) {
+        queryString.append( "symbol=" );
+        queryString.append( symbol );
+        hasSetParameter = true;
+    }
+
+    if ( recvWindow > 0 ) {
+        if(hasSetParameter)
+        {
+            queryString.append("&recvWindow=");
+            queryString.append( to_string( recvWindow) );
+        } else {
+            queryString.append("recvWindow=");
+            queryString.append( to_string( recvWindow) );
+        }
+        hasSetParameter = true;
+    }
+
+    if(hasSetParameter)
+    {
+        queryString.append("&timestamp=");
+        queryString.append( Timestamp );
+    } else {
+        queryString.append("timestamp=");
+        queryString.append( Timestamp );
+    }
+
+    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
+    queryString.append( "&signature=");
+    queryString.append( signature );
+
+    string url = requestPath + queryString;
+
+    const auto response = Get(Url{url},
+                                 Header{{"X-MBX-APIKEY", unit.api_key}},
+                                 Body{body}, Timeout{100000});
+
+    KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response) " << response.text.c_str());
+    /*If the symbol is not sent, orders for all symbols will be returned in an array.
+    [
+      {
+        "symbol": "LTCBTC",
+        "orderId": 1,
+        "clientOrderId": "myOrder1",
+        "price": "0.1",
+        "origQty": "1.0",
+        "executedQty": "0.0",
+        "status": "NEW",
+        "timeInForce": "GTC",
+        "type": "LIMIT",
+        "side": "BUY",
+        "stopPrice": "0.0",
+        "icebergQty": "0.0",
+        "time": 1499827319559,
+        "isWorking": trueO
+      }
+    ]
+     * */
+    return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
+void TDEngineBinance::printResponse(const Document& d)
+{
+    if(d.IsObject() && d.HasMember("code")) {
+        KF_LOG_INFO(logger, "[printResponse] error (code) " << d["code"].GetInt() << " (message) " << d["message"].GetString());
+    } else {
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        d.Accept(writer);
+        KF_LOG_INFO(logger, "[printResponse] ok (text) " << buffer.GetString());
+    }
+}
+
+void TDEngineBinance::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
+{
+    if(http_status_code == HTTP_RESPONSE_OK)
+    {
+        //KF_LOG_INFO(logger, "[getResponse] (http_status_code == 200) (responseText)" << responseText << " (errorMsg) " << errorMsg);
+        json.Parse(responseText.c_str());
+        //KF_LOG_INFO(logger, "[getResponse] (http_status_code == 200) (HasParseError)" << json.HasParseError());
+    } else if(http_status_code == 0 && responseText.length() == 0)
+    {
+        json.SetObject();
+        Document::AllocatorType& allocator = json.GetAllocator();
+        int errorId = 1;
+        json.AddMember("code", errorId, allocator);
+        //KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
+        rapidjson::Value val;
+        val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
+        json.AddMember("message", val, allocator);
+    } else
+    {
+        Document d;
+        d.Parse(responseText.c_str());
+        //KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
+
+        json.SetObject();
+        Document::AllocatorType& allocator = json.GetAllocator();
+        json.AddMember("code", http_status_code, allocator);
+        if(d.IsObject()) {
+            if( d.HasMember("message")) {
+                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["message"].GetString());
+                std::string message = d["message"].GetString();
+                rapidjson::Value val;
+                val.SetString(message.c_str(), message.length(), allocator);
+                json.AddMember("message", val, allocator);
+            }
+            if( d.HasMember("msg")) {
+                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["msg"].GetString());
+                std::string message = d["msg"].GetString();
+                rapidjson::Value val;
+                val.SetString(message.c_str(), message.length(), allocator);
+                json.AddMember("message", val, allocator);
+            }
+        }
+    }
+}
+
+std::string TDEngineBinance::getTimestampString()
+{
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    std::string timestampStr;
+    std::stringstream convertStream;
+    convertStream << timestamp;
+    convertStream >> timestampStr;
+    return timestampStr;
 }
 
 

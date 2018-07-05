@@ -128,7 +128,11 @@ private:
     std::mutex* mutex_order_and_trade = nullptr;
 
 private:
-    void get_open_orders(AccountUnitBinance& unit, const char_31 InstrumentID, Document &doc);
+    int HTTP_RESPONSE_OK = 200;
+    void get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &doc);
+    void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
+    void printResponse(const Document& d);
+    inline std::string getTimestampString();
 
 };
 
