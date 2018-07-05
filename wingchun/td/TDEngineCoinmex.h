@@ -7,21 +7,47 @@
 #include <vector>
 #include <sstream>
 #include <map>
-
+#include <mutex>
 #include "Timer.h"
+#include <document.h>
+
+using rapidjson::Document;
 
 WC_NAMESPACE_START
 
 /**
- * account information unit extra for CTP is here.
+ * account information unit extra is here.
  */
+
+struct PendingCoinmexOrderStatus
+{
+    char_31 InstrumentID;   //合约代码
+    char_21 OrderRef;       //报单引用
+    LfOrderStatusType OrderStatus;  //报单状态
+    uint64_t VolumeTraded;  //今成交数量
+    uint64_t averagePrice;//coinmex given averagePrice on response of query_order
+};
+
+struct PendingCoinmexTradeStatus
+{
+    char_31 InstrumentID;   //合约代码
+    uint64_t last_trade_id; //for myTrade
+};
+
 struct AccountUnitCoinmex
 {
     string api_key;
-	string secret_key;
+    string secret_key;
+    string passphrase;
+    //coinmex and bitmore use the same api, use this parameter for them
+    string baseUrl;
     // internal flags
     bool    logged_in;
+    std::vector<PendingCoinmexOrderStatus> newOrderStatus;
+    std::vector<PendingCoinmexOrderStatus> pendingOrderStatus;
+    std::vector<std::string> whiteListInstrumentIDs;
 };
+
 
 /**
  * CTP trade engine
@@ -52,7 +78,7 @@ public:
 
 public:
     TDEngineCoinmex();
-
+    ~TDEngineCoinmex();
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
@@ -62,24 +88,42 @@ private:
     LfDirectionType GetDirection(std::string input);
     std::string GetType(const LfOrderPriceTypeType& input);
     LfOrderPriceTypeType GetPriceType(std::string input);
-    std::string GetTimeInForce(const LfTimeConditionType& input);
-    LfTimeConditionType GetTimeCondition(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
-    std::string GetInputOrderData(const LFInputOrderField* order, int recvWindow);
 
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
-    void GetAndHandleOrderResponse();
+    void GetAndHandleOrderTradeResponse();
+    void addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
+                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded);
 
+    void retrieveOrderStatus(AccountUnitCoinmex& unit);
+    void moveNewtoPending(AccountUnitCoinmex& unit);
     static constexpr int scale_offset = 1e8;
-    std::map<std::string, std::vector<std::string>*> symbols_pending_orderref;
+
     ThreadPtr rest_thread;
     uint64_t last_rest_get_ts = 0;
     int rest_get_interval_ms = 500;
-    
-    //for CMake to load JSON
-    void GetAndHandleTradeResponse(const std::string& symbol, int limit);
-    
+
+    std::mutex* mutex_order_and_trade = nullptr;
+
+    std::map<std::string, std::string> localOrderRefRemoteOrderId;
+private:
+    int HTTP_RESPONSE_OK = 200;
+    void get_exchange_time(AccountUnitCoinmex& unit, Document& json);
+    void get_account(AccountUnitCoinmex& unit, Document& json);
+    void get_depth(AccountUnitCoinmex& unit, std::string code, Document& json);
+    void get_products(AccountUnitCoinmex& unit, Document& json);
+    void send_order(AccountUnitCoinmex& unit, const char *code,
+                        const char *side, const char *type, double size, double price, double funds, Document& json);
+
+    void cancel_all_orders(AccountUnitCoinmex& unit, std::string code, Document& json);
+    void cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
+    void query_orders(AccountUnitCoinmex& unit, std::string code, std::string status, Document& json);
+    void query_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
+    void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
+    void printResponse(const Document& d);
+    inline std::string getTimestampString();
+
 };
 
 WC_NAMESPACE_END
