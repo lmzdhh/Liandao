@@ -216,9 +216,9 @@ void IMDEngine::on_price_book_update(const LFPriceBook20Field* data)
     if (isRunning)
     {
         writer->write_frame(data, sizeof(LFPriceBook20Field), source_id, MSG_TYPE_LF_PRICE_BOOK_20, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "price book 20 update: %-10s %d[%ll, %lu | %ll, %lu]",
+        KF_LOG_DEBUG_FMT(logger, "price book 20 update: %-10s %d | %d [%ll, %lu | %ll, %lu]",
                          data->InstrumentID,
-                         data->ValidLevelCount,
+                         data->BidLevelCount, data->AskLevelCount,
 						 data->BidLevels[0].price,
 						 data->BidLevels[0].volume,
 						 data->AskLevels[0].price,

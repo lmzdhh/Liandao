@@ -75,7 +75,8 @@ struct LFPriceBookFieldTmpl
 	char_31  	InstrumentID;          
 	char_9   	ExchangeID;           
 	uint64_t      	UpdateMicroSecond;    
-	int		ValidLevelCount;	
+	int		BidLevelCount;	
+	int		AskLevelCount;	
 	LFPriceLevel 	BidLevels[level_count];
 	LFPriceLevel	AskLevels[level_count];
 };

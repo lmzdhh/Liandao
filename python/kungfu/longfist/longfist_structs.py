@@ -62,7 +62,8 @@ class LFPriceBook20Field(Structure):
         ("InstrumentID", c_char * 31),	 
         ("ExchangeID", c_char * 9),	 
         ("UpdateMicroSecond", c_uint64),
-        ("ValidLevelCount", c_int),
+        ("BidLevelCount", c_int),
+        ("AskLevelCount", c_int),
         ("BidLevels", LFPriceLevelField * 20),	
         ("AskLevels", LFPriceLevelField * 20),	
         ]

@@ -63,7 +63,8 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "ExchangeID:" << std::setw(6) << "(c9)" << " " << ptr->ExchangeID << std::endl \
 	 << std::setw(20) << "InstrumentID:" << std::setw(6) << "(c9)" << " " << ptr->InstrumentID << std::endl \
 	 << std::setw(20) << "UpdateMicroSecond:" << std::setw(6) << "(i)" << " " << ptr->UpdateMicroSecond << std::endl \
-	 << std::setw(20) << "ValidLevelCount:" << std::setw(6) << "(i)" << " " << ptr->ValidLevelCount << std::endl \
+	 << std::setw(20) << "BidLevelCount:" << std::setw(6) << "(i)" << " " << ptr->BidLevelCount << std::endl \
+	 << std::setw(20) << "AskLevelCount:" << std::setw(6) << "(i)" << " " << ptr->AskLevelCount << std::endl \
 
 #define PRINT_L2_MD(ptr) ""\
 	 << std::setw(20) << "TradingDay:" << std::setw(6) << "(c9)" << " " << ptr->TradingDay << std::endl \
@@ -559,13 +560,13 @@ inline void printData(const void* data, short msg_type)
 		{
 			LFPriceBook20Field* ptr = (LFPriceBook20Field*)data;
 			std::cout << PRINT_PRICE_BOOK_20(ptr);
-			for(int i = 1; i <= ptr->ValidLevelCount; ++i)
+			for(int i = 1; i <= ptr->BidLevelCount; ++i)
 	 		{ 
 	 			std::cout << std::setw(20) << "BidLevel[" << i << "]:" << std::setw(6) 
 					<< "(i)" << " " << ptr->BidLevels[i].volume << "@" << ptr->BidLevels[i].price << std::endl;
 	 		}
 
-	 		for(int i = 1; i <= ptr->ValidLevelCount; ++i)
+	 		for(int i = 1; i <= ptr->AskLevelCount; ++i)
 	 		{
 	 			std::cout << std::setw(20) << "AskLevel[" << i << "]:" << std::setw(6) 
 					<< "(i)" << " " << ptr->AskLevels[i].volume << "@" << ptr->AskLevels[i].price << std::endl;
