@@ -4,6 +4,38 @@
 #include "TypeConvert.hpp"
 #include <boost/algorithm/string.hpp>
 
+
+#include "../../utils/crypto/openssl_util.h"
+
+#include "TypeConvert.hpp"
+#include <boost/algorithm/string.hpp>
+#include <cpr/cpr.h>
+#include <writer.h>
+#include <stringbuffer.h>
+using cpr::Delete;
+using cpr::Get;
+using cpr::Url;
+using cpr::Body;
+using cpr::Header;
+using cpr::Parameters;
+using cpr::Payload;
+using cpr::Post;
+using cpr::Timeout;
+
+using rapidjson::StringRef;
+using rapidjson::Writer;
+using rapidjson::StringBuffer;
+using rapidjson::Document;
+using rapidjson::SizeType;
+using rapidjson::Value;
+using std::string;
+using std::to_string;
+using std::stod;
+using std::stoi;
+using utils::crypto::hmac_sha256;
+using utils::crypto::hmac_sha256_byte;
+using utils::crypto::base64_encode;
+
 USING_WC_NAMESPACE
 
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
@@ -49,6 +81,30 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     unit.api_key = api_key;
     unit.secret_key = secret_key;
 
+    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (is whiteListInstrumentIDs exist?)" << (j_config.find("whiteListInstrumentIDs") != j_config.end()));
+    BinaCPP::init( unit.api_key , unit.secret_key );
+
+    Json::Value result;
+    long recvWindow = 10000;
+
+    if(j_config.find("whiteListInstrumentIDs") != j_config.end()) {
+        string whiteListInstrumentIDs = j_config["whiteListInstrumentIDs"].get<string>();
+        if(whiteListInstrumentIDs.length() > 0)
+        {
+            KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (whiteListInstrumentIDs)" << whiteListInstrumentIDs);
+            unit.whiteListInstrumentIDs = split(whiteListInstrumentIDs, ",");
+            if(unit.whiteListInstrumentIDs.size() > 0)
+            {
+                for(int i=0; i < unit.whiteListInstrumentIDs.size(); i++)
+                {
+                    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID)" << unit.whiteListInstrumentIDs[i]);
+                    Document d;
+                    cancel_all_orders(unit, unit.whiteListInstrumentIDs[i], d);
+
+                }
+            }
+        }
+    }
     // set up
     TradeAccount account = {};
     //partly copy this fields

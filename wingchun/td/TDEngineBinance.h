@@ -12,6 +12,9 @@
 #include "binacpp_websocket.h"
 #include <json/json.h>
 #include "Timer.h"
+#include <document.h>
+
+using rapidjson::Document;
 
 WC_NAMESPACE_START
 
@@ -54,6 +57,7 @@ struct AccountUnitBinance
 
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> newOnRtnTrades;
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
+    std::vector<std::string> whiteListInstrumentIDs;
 };
 
 /**
@@ -122,6 +126,9 @@ private:
     int rest_get_interval_ms = 500;
 
     std::mutex* mutex_order_and_trade = nullptr;
+
+private:
+    void get_open_orders(AccountUnitBinance& unit, const char_31 InstrumentID, Document &doc);
 
 };
 
