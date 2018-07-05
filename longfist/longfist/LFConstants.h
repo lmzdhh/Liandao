@@ -42,6 +42,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
 	return SOURCE_OKEX;
     }
+	else if(exch_str == "coinmex")
+	{
+		return SOURCE_COINMEX;
+	}
     else
     {
 	return SOURCE_UNKNOWN;
