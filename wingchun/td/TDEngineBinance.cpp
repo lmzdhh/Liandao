@@ -168,8 +168,6 @@ void TDEngineBinance::connect(long timeout_nsec)
                 << " locked: " << result["balances"][i]["locked"].asString().c_str());
             }
             unit.logged_in = true;
-            BinaCPP::get_openOrders( "TRXBTC", recvWindow, result ) ;
-	        KF_LOG_INFO(logger, "[connect] (get_openOrders TRXBTC)" << result);
         }
     }
 
