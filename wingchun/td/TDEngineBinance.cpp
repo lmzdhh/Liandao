@@ -114,9 +114,6 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
                                     std::string symbol = d[i]["symbol"].GetString();
                                     std::string orderRef = d[i]["clientOrderId"].GetString();
 
-                                    Json::Value result;
-                                    long recvWindow = 10000;
-                                    BinaCPP::init( unit.api_key, unit.secret_key );
                                     BinaCPP::cancel_order(symbol.c_str(), 0, orderRef.c_str(),"", recvWindow, result);
 
                                     KF_LOG_INFO(logger, "[load_account] cancel_order" << " (result)" << result);
@@ -1026,8 +1023,8 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
     long recvWindow = 10000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
-    std::string requestPath = "https://api.binance.com/api/v3/openOrders";
-    std::string queryString("?");
+    std::string requestPath = "https://api.binance.com/api/v3/openOrders?";
+    std::string queryString("");
     std::string body = "";
 
     bool hasSetParameter = false;
