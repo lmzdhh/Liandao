@@ -4,6 +4,38 @@
 #include "TypeConvert.hpp"
 #include <boost/algorithm/string.hpp>
 
+
+#include "../../utils/crypto/openssl_util.h"
+
+#include "TypeConvert.hpp"
+#include <boost/algorithm/string.hpp>
+#include <cpr/cpr.h>
+#include <writer.h>
+#include <stringbuffer.h>
+using cpr::Delete;
+using cpr::Get;
+using cpr::Url;
+using cpr::Body;
+using cpr::Header;
+using cpr::Parameters;
+using cpr::Payload;
+using cpr::Post;
+using cpr::Timeout;
+
+using rapidjson::StringRef;
+using rapidjson::Writer;
+using rapidjson::StringBuffer;
+using rapidjson::Document;
+using rapidjson::SizeType;
+using rapidjson::Value;
+using std::string;
+using std::to_string;
+using std::stod;
+using std::stoi;
+using utils::crypto::hmac_sha256;
+using utils::crypto::hmac_sha256_byte;
+using utils::crypto::base64_encode;
+
 USING_WC_NAMESPACE
 
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
@@ -49,6 +81,63 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     unit.api_key = api_key;
     unit.secret_key = secret_key;
 
+    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (is whiteListInstrumentIDs exist?)" << (j_config.find("whiteListInstrumentIDs") != j_config.end()));
+    BinaCPP::init( unit.api_key , unit.secret_key );
+
+    Json::Value result;
+    long recvWindow = 10000;
+
+    if(j_config.find("whiteListInstrumentIDs") != j_config.end()) {
+        string whiteListInstrumentIDs = j_config["whiteListInstrumentIDs"].get<string>();
+        if(whiteListInstrumentIDs.length() > 0)
+        {
+            KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (whiteListInstrumentIDs)" << whiteListInstrumentIDs);
+            unit.whiteListInstrumentIDs = split(whiteListInstrumentIDs, ",");
+            if(unit.whiteListInstrumentIDs.size() > 0)
+            {
+                for(int i=0; i < unit.whiteListInstrumentIDs.size(); i++)
+                {
+                    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID)" << unit.whiteListInstrumentIDs[i]);
+                    Document d;
+                    get_open_orders(unit, unit.whiteListInstrumentIDs[i].c_str(), d);
+                    KF_LOG_INFO(logger, "[load_account] print get_open_orders");
+                    printResponse(d);
+
+                    if(d.IsArray()) { // expected success response is array
+                        size_t len = d.Size();
+                        KF_LOG_INFO(logger, "[get_open_orders] (length)" << len);
+                        for (int i = 0; i < len; i++) {
+                            if(d[i].IsObject() && d[i].HasMember("symbol") && d[i].HasMember("clientOrderId"))
+                            {
+                                if(d[i]["symbol"].IsString() && d[i]["clientOrderId"].IsString())
+                                {
+                                    std::string symbol = d[i]["symbol"].GetString();
+                                    std::string orderRef = d[i]["clientOrderId"].GetString();
+
+                                    BinaCPP::cancel_order(symbol.c_str(), 0, orderRef.c_str(),"", recvWindow, result);
+
+                                    KF_LOG_INFO(logger, "[load_account] cancel_order" << " (result)" << result);
+                                    int errorId = 0;
+                                    std::string errorMsg = "";
+                                    if(result["code"] != Json::nullValue)
+                                    {
+                                        errorId = result["code"].asInt();
+                                        errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
+                                        KF_LOG_ERROR(logger, "[load_account] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+                                    }
+//                                    if(errorId != 0)
+//                                    {
+//                                        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+//                                        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
+//                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -79,8 +168,6 @@ void TDEngineBinance::connect(long timeout_nsec)
                 << " locked: " << result["balances"][i]["locked"].asString().c_str());
             }
             unit.logged_in = true;
-            BinaCPP::get_openOrders( "TRXBTC", recvWindow, result ) ;
-	        KF_LOG_INFO(logger, "[connect] (get_openOrders TRXBTC)" << result);
         }
     }
 
@@ -246,15 +333,14 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
         int balancesSize = result["balances"].size();
         for (int i = 0; i < balancesSize; i++) {
             string symbol = result["balances"][i]["asset"].asString();
-            //if (strcmp(symbol.c_str(), data->InstrumentID) == 0) {
-                KF_LOG_INFO(logger, "[req_investor_position] (symbol)" << symbol << " free:"
-                                                                       << result["balances"][i]["free"].asString().c_str()
-                                                                       << " locked: "
-                                                                       << result["balances"][i]["locked"].asString().c_str());
-                pos.Position = stod(result["balances"][i]["free"].asString().c_str()) * scale_offset;
-                on_rsp_position(&pos, i == (balancesSize - 1), requestId);
-                findSymbolInResult = true;
-            //}
+            strncpy(pos.InstrumentID, symbol.c_str(), 31);
+            KF_LOG_INFO(logger, "[req_investor_position] (symbol)" << symbol << " free:"
+                                                                   << result["balances"][i]["free"].asString().c_str()
+                                                                   << " locked: "
+                                                                   << result["balances"][i]["locked"].asString().c_str());
+            pos.Position = stod(result["balances"][i]["free"].asString().c_str()) * scale_offset;
+            on_rsp_position(&pos, i == (balancesSize - 1), requestId);
+            findSymbolInResult = true;
         }
     }
     if(!findSymbolInResult)
@@ -341,7 +427,8 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
 
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     char noneStatus = '\0';//none
-    addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction);
+    uint64_t binanceOrderId =  result["orderId"].asInt64();
+    addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction, binanceOrderId);
 }
 
 
@@ -405,8 +492,9 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
+        uint64_t binanceOrderId =  result["orderId"].asInt64();
         addNewQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
-                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction);
+                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
 
@@ -505,8 +593,9 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
+        uint64_t binanceOrderId =  result["orderId"].asInt64();
         addNewQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
-                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction);
+                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
 
@@ -663,6 +752,18 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
                 //update last status
                 orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
                 orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
+
+                //is status is canceled, dont need get the orderref's trade info
+                if(orderStatusIterator->OrderStatus == LF_CHAR_Canceled) {
+                    uint64_t binanceOrderId =  orderResult["orderId"].asInt64();
+                    if(removeBinanceOrderIdFromPendingOnRtnTrades(unit, binanceOrderId))
+                    {
+                        KF_LOG_INFO(logger, "[retrieveTradeStatus] the (OrderRef) "
+                                            << orderStatusIterator->OrderRef
+                                            << " is LF_CHAR_Canceled. done need get this (binanceOrderId)"
+                                               << binanceOrderId << " trade info");
+                    }
+                }
             }
         } else {
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
@@ -685,11 +786,11 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 
 void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 {
-    KF_LOG_INFO(logger, "[retrieveTradeStatus] ");
+    KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())" << unit.pendingOrderStatus.size() << " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size());
     //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
     if(unit.pendingOrderStatus.size() == 0 && unit.pendingOnRtnTrades.size() == 0) return;
     Json::Value resultTrade;
-    long recvWindow = 10000;
+    long recvWindow = 900000;
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
     for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
     {
@@ -710,8 +811,40 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             "isBestMatch": true
           }
         ]
-        */
 
+         example2, isBuyer=isMaker=true:
+         [{
+                "commission" : "0.00137879",
+                "commissionAsset" : "BNB",
+                "id" : 30801527,
+                "isBestMatch" : true,
+                "isBuyer" : true,
+                "isMaker" : true,
+                "orderId" : 61311309,
+                "price" : "0.00000603",
+                "qty" : "1000.00000000",
+                "time" : 1530541407016
+        }]
+        */
+        if(resultTrade.isObject()) {
+            //expected is array,but get object, it must be the error response json:
+            /*
+             {
+            "code" : -1021,
+            "msg" : "Timestamp for this request is outside of the recvWindow."
+            }
+             * */
+            int errorId = 0;
+            std::string errorMsg = "";
+            if(resultTrade["code"] != Json::nullValue)
+            {
+                errorId = resultTrade["code"].asInt();
+                errorMsg = (resultTrade["msg"] == Json::nullValue) ? "" : resultTrade["msg"].asString();
+                KF_LOG_ERROR(logger, "[retrieveTradeStatus] get_myTrades failed!" << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
+
+            }
+            continue;
+        }
         KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id << " (result)"<< resultTrade);
         for(int i = 0 ; i < resultTrade.size(); i++)
         {
@@ -720,20 +853,31 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             strcpy(rtn_trade.ExchangeID, "binance");
             strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
-            strncpy(rtn_trade.OrderRef, resultTrade[i]["orderId"].asString().c_str(), 13);
             rtn_trade.Volume = stod(resultTrade[i]["qty"].asString().c_str()) * scale_offset;
             rtn_trade.Price = stod(resultTrade[i]["price"].asString().c_str()) * scale_offset;
 
             //apply the direction of the OrderRef
+            uint64_t binanceOrderId =  resultTrade[i]["orderId"].asInt64();
             std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
+
+            bool match_one = false;
             for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
             {
-                if(strcmp(tradeIterator->OrderRef, rtn_trade.OrderRef) == 0)
+                if(tradeIterator->binanceOrderId == binanceOrderId)
                 {
                     rtn_trade.Direction = tradeIterator->Direction;
+                    strncpy(rtn_trade.OrderRef, tradeIterator->OrderRef, 13);
+                    match_one = true;
                 }
             }
-
+            if(!match_one) {
+                //Note: the firsttime run of get_myTrades use last_trade_id from 0, so we got some 'unknown' trade
+                //is maybe from manuelly order, other strategy, or by td restart losing pendingOnRtnTrades lasttime.
+                //if we dont set the orderref, there is a stoi std::invalid_argument exception in on_rtn_trade
+                std::string when_no_match_binanceOrderId_use_this_default_orderref="0";
+                strncpy(rtn_trade.OrderRef, when_no_match_binanceOrderId_use_this_default_orderref.c_str(), 13);
+            }
+            
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                     source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
@@ -741,35 +885,44 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             uint64_t newtradeId = resultTrade[i]["id"].asInt64();
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (newtradeId)" << newtradeId);
             if(newtradeId > tradeStatusIterator->last_trade_id) {
-                tradeStatusIterator->last_trade_id = newtradeId;
+                tradeStatusIterator->last_trade_id = newtradeId + 1;// for new trade
             }
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id);
         }
 
-        //here, use another for-loop is for there maybe more than one trades on the same orderRef.
+        //here, use another for-loop is for there maybe more than one trades on the same orderRef:
         //if the first one remove pendingOnRtnTrades, the second one could not get the Direction.
         for(int i = 0 ; i < resultTrade.size(); i++)
         {
             if(! isExistSymbolInPendingBinanceOrderStatus(unit, tradeStatusIterator->InstrumentID)) {
                 //all the OnRtnOrder is finished.
-                std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
-                for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
+                uint64_t binanceOrderId =  resultTrade[i]["orderId"].asInt64();
+                if(removeBinanceOrderIdFromPendingOnRtnTrades(unit, binanceOrderId))
                 {
-                    if(strcmp(tradeIterator->OrderRef, resultTrade[i]["orderId"].asString().c_str()) == 0)
-                    {
-                        KF_LOG_INFO(logger, "[retrieveTradeStatus] there is no pendingOrderStatus(LF_CHAR_AllTraded/LF_CHAR_Canceled/LF_CHAR_Error occur). after this turn of get_myTrades, done need more");
-                        tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
-                    }
+                    KF_LOG_INFO(logger, "[retrieveTradeStatus] there is no pendingOrderStatus(LF_CHAR_AllTraded/LF_CHAR_Canceled/LF_CHAR_Error occur). this is the last turn of get_myTrades on (symbol)" << tradeStatusIterator->InstrumentID);
                 }
             }
         }
     }
 }
 
+bool TDEngineBinance::removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, uint64_t binanceOrderId)
+{
+    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
+    for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); )
+    {
+        if(tradeIterator->binanceOrderId == binanceOrderId)
+        {
+            tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
+        } else {
+            ++tradeIterator;
+        }
+    }
+}
 
 void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
                                                      const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                 const uint64_t VolumeTraded, LfDirectionType Direction)
+                                                 const uint64_t VolumeTraded, LfDirectionType Direction, uint64_t binanceOrderId)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
@@ -784,6 +937,7 @@ void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const
 
     OnRtnOrderDoneAndWaitingOnRtnTrade waitingTrade;
     strncpy(waitingTrade.OrderRef, OrderRef, 21);
+    waitingTrade.binanceOrderId = binanceOrderId;
     waitingTrade.Direction = Direction;
     unit.newOnRtnTrades.push_back(waitingTrade);
 
@@ -859,6 +1013,146 @@ std::vector<std::string> TDEngineBinance::split(std::string str, std::string tok
         }
     }
     return result;
+}
+
+void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &json)
+{
+    KF_LOG_INFO(logger, "[get_open_orders]");
+    long recvWindow = 10000;
+    std::string Timestamp = getTimestampString();
+    std::string Method = "GET";
+    std::string requestPath = "https://api.binance.com/api/v3/openOrders?";
+    std::string queryString("");
+    std::string body = "";
+
+    bool hasSetParameter = false;
+
+    if(strlen(symbol) > 0) {
+        queryString.append( "symbol=" );
+        queryString.append( symbol );
+        hasSetParameter = true;
+    }
+
+    if ( recvWindow > 0 ) {
+        if(hasSetParameter)
+        {
+            queryString.append("&recvWindow=");
+            queryString.append( to_string( recvWindow) );
+        } else {
+            queryString.append("recvWindow=");
+            queryString.append( to_string( recvWindow) );
+        }
+        hasSetParameter = true;
+    }
+
+    if(hasSetParameter)
+    {
+        queryString.append("&timestamp=");
+        queryString.append( Timestamp );
+    } else {
+        queryString.append("timestamp=");
+        queryString.append( Timestamp );
+    }
+
+    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
+    queryString.append( "&signature=");
+    queryString.append( signature );
+
+    string url = requestPath + queryString;
+
+    const auto response = Get(Url{url},
+                                 Header{{"X-MBX-APIKEY", unit.api_key}},
+                                 Body{body}, Timeout{100000});
+
+    KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response) " << response.text.c_str());
+    /*If the symbol is not sent, orders for all symbols will be returned in an array.
+    [
+      {
+        "symbol": "LTCBTC",
+        "orderId": 1,
+        "clientOrderId": "myOrder1",
+        "price": "0.1",
+        "origQty": "1.0",
+        "executedQty": "0.0",
+        "status": "NEW",
+        "timeInForce": "GTC",
+        "type": "LIMIT",
+        "side": "BUY",
+        "stopPrice": "0.0",
+        "icebergQty": "0.0",
+        "time": 1499827319559,
+        "isWorking": trueO
+      }
+    ]
+     * */
+    return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
+void TDEngineBinance::printResponse(const Document& d)
+{
+    if(d.IsObject() && d.HasMember("code")) {
+        KF_LOG_INFO(logger, "[printResponse] error (code) " << d["code"].GetInt() << " (message) " << d["message"].GetString());
+    } else {
+        StringBuffer buffer;
+        Writer<StringBuffer> writer(buffer);
+        d.Accept(writer);
+        KF_LOG_INFO(logger, "[printResponse] ok (text) " << buffer.GetString());
+    }
+}
+
+void TDEngineBinance::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
+{
+    if(http_status_code == HTTP_RESPONSE_OK)
+    {
+        //KF_LOG_INFO(logger, "[getResponse] (http_status_code == 200) (responseText)" << responseText << " (errorMsg) " << errorMsg);
+        json.Parse(responseText.c_str());
+        //KF_LOG_INFO(logger, "[getResponse] (http_status_code == 200) (HasParseError)" << json.HasParseError());
+    } else if(http_status_code == 0 && responseText.length() == 0)
+    {
+        json.SetObject();
+        Document::AllocatorType& allocator = json.GetAllocator();
+        int errorId = 1;
+        json.AddMember("code", errorId, allocator);
+        //KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
+        rapidjson::Value val;
+        val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
+        json.AddMember("message", val, allocator);
+    } else
+    {
+        Document d;
+        d.Parse(responseText.c_str());
+        //KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
+
+        json.SetObject();
+        Document::AllocatorType& allocator = json.GetAllocator();
+        json.AddMember("code", http_status_code, allocator);
+        if(d.IsObject()) {
+            if( d.HasMember("message")) {
+                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["message"].GetString());
+                std::string message = d["message"].GetString();
+                rapidjson::Value val;
+                val.SetString(message.c_str(), message.length(), allocator);
+                json.AddMember("message", val, allocator);
+            }
+            if( d.HasMember("msg")) {
+                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["msg"].GetString());
+                std::string message = d["msg"].GetString();
+                rapidjson::Value val;
+                val.SetString(message.c_str(), message.length(), allocator);
+                json.AddMember("message", val, allocator);
+            }
+        }
+    }
+}
+
+std::string TDEngineBinance::getTimestampString()
+{
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    std::string timestampStr;
+    std::stringstream convertStream;
+    convertStream << timestamp;
+    convertStream >> timestampStr;
+    return timestampStr;
 }
 
 

@@ -12,6 +12,9 @@
 #include "binacpp_websocket.h"
 #include <json/json.h>
 #include "Timer.h"
+#include <document.h>
+
+using rapidjson::Document;
 
 WC_NAMESPACE_START
 
@@ -37,6 +40,7 @@ struct PendingBinanceTradeStatus
 struct OnRtnOrderDoneAndWaitingOnRtnTrade
 {
     char_21 OrderRef;       //报单引用
+    uint64_t binanceOrderId;       //binance 报单引用
     LfDirectionType Direction;  //买卖方向
 };
 
@@ -53,6 +57,7 @@ struct AccountUnitBinance
 
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> newOnRtnTrades;
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
+    std::vector<std::string> whiteListInstrumentIDs;
 };
 
 /**
@@ -102,7 +107,7 @@ private:
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
     void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
-                                        const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction);
+                                        const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, uint64_t binanceOrderId);
 
     inline void onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
     inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
@@ -113,6 +118,7 @@ private:
     void moveNewtoPending(AccountUnitBinance& unit);
     bool isExistSymbolInPendingTradeStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
     bool isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
+    bool removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, uint64_t binanceOrderId);
     static constexpr int scale_offset = 1e8;
 
     ThreadPtr rest_thread;
@@ -120,6 +126,13 @@ private:
     int rest_get_interval_ms = 500;
 
     std::mutex* mutex_order_and_trade = nullptr;
+
+private:
+    int HTTP_RESPONSE_OK = 200;
+    void get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &doc);
+    void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
+    void printResponse(const Document& d);
+    inline std::string getTimestampString();
 
 };
 
