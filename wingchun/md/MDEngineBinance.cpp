@@ -133,7 +133,8 @@ void MDEngineBinance::login(long timeout_nsec)
 	for(const auto& s : symbols)
 	{
 			connect_lws(s, lws_event::trade);
-			connect_lws(s, lws_event::depth5);
+			//connect_lws(s, lws_event::depth5);
+			connect_lws(s, lws_event::depth20);
 	}
 
    	KF_LOG_INFO(logger, "MDEngineBinance::login:"); 	
@@ -153,6 +154,9 @@ void MDEngineBinance::connect_lws(std::string symbol, lws_event e)
 						break;
 				case depth5:
 						path += t + "@depth5";
+						break;
+				case depth20:
+						path += t + "@depth20";
 						break;
 				default:
 						KF_LOG_ERROR(logger, "invalid lws event");
@@ -184,13 +188,13 @@ void MDEngineBinance::on_lws_data(struct lws* conn, const char* data, size_t len
 		return;
 	}
 
-	KF_LOG_INFO_FMT(logger, "%s, %d, %s", iter->second.first.c_str(), static_cast<int>(iter->second.second), data);
+	//KF_LOG_INFO_FMT(logger, "%s, %d, %s", iter->second.first.c_str(), static_cast<int>(iter->second.second), data);
 	
 	if(iter->second.second == lws_event::trade)
 	{
 		on_lws_market_trade(data, len);
 	}
-	else if(iter->second.second == lws_event::depth5)
+	else if(iter->second.second == lws_event::depth5 || iter->second.second == lws_event::depth20)
 	{
 		on_lws_book_update(data, len, iter->second.first);
 	}
@@ -241,48 +245,54 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
     Document d;
     d.Parse(data);
 
-	LFMarketDataField md;
+	LFPriceBook20Field md;
 	memset(&md, 0, sizeof(md));
 
     bool has_update = false;	    	
-	if(d.HasMember("bids") && d["bids"].IsArray() && d["bids"].Size() == 5)
+	if(d.HasMember("bids"))
 	{
-		md.BidPrice1 = stod(d["bids"].GetArray()[0][0].GetString()) * scale_offset;
-		md.BidVolume1 = stod(d["bids"].GetArray()[0][1].GetString()) * scale_offset;
-		md.BidPrice2 = stod(d["bids"].GetArray()[1][0].GetString()) * scale_offset;
-		md.BidVolume2 = stod(d["bids"].GetArray()[1][1].GetString()) * scale_offset;
-		md.BidPrice3 = stod(d["bids"].GetArray()[2][0].GetString()) * scale_offset;
-		md.BidVolume3 = stod(d["bids"].GetArray()[2][1].GetString()) * scale_offset;
-		md.BidPrice4 = stod(d["bids"].GetArray()[3][0].GetString()) * scale_offset;
-		md.BidVolume4 = stod(d["bids"].GetArray()[3][1].GetString()) * scale_offset;
-		md.BidPrice5 = stod(d["bids"].GetArray()[4][0].GetString()) * scale_offset;
-		md.BidVolume5 = stod(d["bids"].GetArray()[4][1].GetString()) * scale_offset;
+		auto& bids = d["bids"];
+
+		if(bids.IsArray() && bids.Size() >0)
+		{
+			auto size = std::min((int)bids.Size(), 20);
 		
-		has_update = true;
+			for(int i = 0; i < size; ++i)
+			{
+				md.BidLevels[i].price = stod(bids.GetArray()[i][0].GetString()) * scale_offset;
+				md.BidLevels[i].volume = stod(bids.GetArray()[i][1].GetString()) * scale_offset;
+			}
+			md.BidLevelCount = size;
+
+			has_update = true;
+		}
 	}
 
-	if(d.HasMember("asks") && d["asks"].IsArray() && d["asks"].Size() == 5)
+	if(d.HasMember("asks"))
 	{
-		md.AskPrice1 = stod(d["asks"].GetArray()[0][0].GetString()) * scale_offset;
-		md.AskVolume1 = stod(d["asks"].GetArray()[0][1].GetString()) * scale_offset;
-		md.AskPrice2 = stod(d["asks"].GetArray()[1][0].GetString()) * scale_offset;
-		md.AskVolume2 = stod(d["asks"].GetArray()[1][1].GetString()) * scale_offset;
-		md.AskPrice3 = stod(d["asks"].GetArray()[2][0].GetString()) * scale_offset;
-		md.AskVolume3 = stod(d["asks"].GetArray()[2][1].GetString()) * scale_offset;
-		md.AskPrice4 = stod(d["asks"].GetArray()[3][0].GetString()) * scale_offset;
-		md.AskVolume4 = stod(d["asks"].GetArray()[3][1].GetString()) * scale_offset;
-		md.AskPrice5 = stod(d["asks"].GetArray()[4][0].GetString()) * scale_offset;
-		md.AskVolume5 = stod(d["asks"].GetArray()[4][1].GetString()) * scale_offset;
+		auto& asks = d["asks"];
+
+		if(asks.IsArray() && asks.Size() >0)
+		{
+			auto size = std::min((int)asks.Size(), 20);
 		
-		has_update = true;
-	}
+			for(int i = 0; i < size; ++i)
+			{
+				md.AskLevels[i].price = stod(asks.GetArray()[i][0].GetString()) * scale_offset;
+				md.AskLevels[i].volume = stod(asks.GetArray()[i][1].GetString()) * scale_offset;
+			}
+			md.AskLevelCount = size;
+
+			has_update = true;
+		}
+	}	
     
     if(has_update)
     {
         strcpy(md.InstrumentID, ticker.c_str());
 	    strcpy(md.ExchangeID, "binance");
 
-	    on_market_data(&md);
+	    on_price_book_update(&md);
 	} 
 }
 

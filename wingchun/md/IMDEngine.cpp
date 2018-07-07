@@ -202,7 +202,7 @@ void IMDEngine::on_market_data(const LFMarketDataField* data)
     if (isRunning)
     {
         writer->write_frame(data, sizeof(LFMarketDataField), source_id, MSG_TYPE_LF_MD, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "%-10s[%ll, %lu | %ll, %lu]",
+        KF_LOG_DEBUG_FMT(logger, "%-10s[%ld, %lu | %ld, %lu]",
                          data->InstrumentID,
                          data->BidPrice1,
                          data->BidVolume1,
@@ -216,7 +216,7 @@ void IMDEngine::on_price_book_update(const LFPriceBook20Field* data)
     if (isRunning)
     {
         writer->write_frame(data, sizeof(LFPriceBook20Field), source_id, MSG_TYPE_LF_PRICE_BOOK_20, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "price book 20 update: %-10s %d | %d [%ll, %lu | %ll, %lu]",
+        KF_LOG_DEBUG_FMT(logger, "price book 20 update: %-10s %d | %d [%ld, %lu | %ld, %lu]",
                          data->InstrumentID,
                          data->BidLevelCount, data->AskLevelCount,
 						 data->BidLevels[0].price,
@@ -231,7 +231,7 @@ void IMDEngine::on_trade(const LFL2TradeField* trade)
     if (isRunning)
     {
         writer->write_frame(trade, sizeof(LFL2TradeField), source_id, MSG_TYPE_LF_L2_TRADE, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "%-10s[%ll, %lu]",
+        KF_LOG_DEBUG_FMT(logger, "%-10s [%ld, %lu]",
                          trade->InstrumentID,
                          trade->Price,
                          trade->Volume);

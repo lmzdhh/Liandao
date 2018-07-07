@@ -98,6 +98,12 @@ void IWCStrategy::on_market_data(const LFMarketDataField* data, short source, lo
     KF_LOG_DEBUG(logger, "[market_data] (source)" << source << " (ticker)" << data->InstrumentID << " (bid1_price)" << data->BidPrice1 << " (ask1_price)" << data->AskPrice1);
 }
 
+void IWCStrategy::on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time)
+{
+    KF_LOG_DEBUG(logger, "[price_book_update] (source)" << source << " (ticker)" << data->InstrumentID 
+					<< " (bidcount)" << data->BidLevelCount << " (askcount)" << data->AskLevelCount);
+}
+
 void IWCStrategy::on_market_data_level2(const LFL2MarketDataField* data, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[market_data_level2] (source)" << source << " (ticker)" << data->InstrumentID << " (lp)" << data->LastPrice);

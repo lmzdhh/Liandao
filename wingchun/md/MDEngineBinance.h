@@ -17,7 +17,8 @@ public:
 	enum lws_event
 	{
 		trade,
-		depth5
+		depth5,
+		depth20
 	};
 
 public:
