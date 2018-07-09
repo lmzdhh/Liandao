@@ -217,6 +217,7 @@ int main(void)
     ctxCreationInfo.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
     ctxCreationInfo.fd_limit_per_thread = 1024;
     ctxCreationInfo.max_http_header_pool = 1024;
+    ctxCreationInfo.ws_ping_pong_interval = 1;
 
     protocol.name  = protocols[PROTOCOL_TEST].name;
     protocol.callback = &ws_service_cb;

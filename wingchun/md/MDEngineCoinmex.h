@@ -3,8 +3,51 @@
 
 #include "IMDEngine.h"
 #include "longfist/LFConstants.h"
+#include <libwebsockets.h>
+#include <document.h>
 
 WC_NAMESPACE_START
+
+using rapidjson::Document;
+
+
+struct PriceAndVolume
+{
+    int64_t price;
+    uint64_t volume;
+    bool operator < (const PriceAndVolume &other) const
+    {
+        if (price<other.price)
+        {
+            return true;
+        }
+        return false;
+    }
+};
+
+
+static int sort_price_asc(const PriceAndVolume &p1,const PriceAndVolume &p2)
+{
+    return p1.price < p2.price;
+};
+
+static int sort_price_desc(const PriceAndVolume &p1,const PriceAndVolume &p2)
+{
+    return p1.price > p2.price;
+};
+
+template<typename T>
+static void sortMapByKey(std::map<int64_t, uint64_t> &t_map, std::vector<PriceAndVolume> &t_vec, T& sort_by)
+{
+    for(std::map<int64_t, uint64_t>::iterator iter = t_map.begin();iter != t_map.end(); iter ++)
+    {
+        PriceAndVolume pv;
+        pv.price = iter->first;
+        pv.volume = iter->second;
+        t_vec.push_back(pv);
+    }
+    sort(t_vec.begin(), t_vec.end(), sort_by);
+};
 
 class MDEngineCoinmex: public IMDEngine
 {
@@ -23,26 +66,38 @@ public:
 public:
     MDEngineCoinmex();
 
-private:
-    void GetAndHandleDepthResponse(const std::string& symbol, int limit);
+    void on_lws_data(struct lws* conn, const char* data, size_t len);
+    void on_lws_connection_error(struct lws* conn);
+    int lws_write_subscribe(struct lws* conn);
 
-    void GetAndHandleTradeResponse(const std::string& symbol, int limit);
-    
+private:
+    void onDepth(Document& json);
+
+    std::string parseJsonToString(const char* in);
+    std::string createDepthJsonString(std::string base, std::string quote);
+    std::string createTickersJsonString();
+    void clearPriceBook();
     void loop();
 
+
+    virtual void set_reader_thread() override;
 private:
     ThreadPtr rest_thread;
     bool connected = false;
     bool logged_in = false;
 
-    std::vector<std::string> symbols;
-    int book_depth_count = 5;
-    int trade_count = 10;
     int rest_get_interval_ms = 500;
 
-    uint64_t last_rest_get_ts = 0;
-    uint64_t last_trade_id = 0;
     static constexpr int scale_offset = 1e8;
+
+    struct lws_context *context = nullptr;
+
+    int order_index=0;
+    //<ticker, <price, volume>>
+    std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;
+    std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
+
+
 };
 
 DECLARE_PTR(MDEngineCoinmex);
