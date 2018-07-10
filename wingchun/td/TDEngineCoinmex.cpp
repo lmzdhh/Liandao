@@ -871,7 +871,7 @@ void TDEngineCoinmex::get_account(AccountUnitCoinmex& unit, Document& json)
 
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
 
     const auto response = Get(Url{url},
                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
@@ -920,7 +920,7 @@ void TDEngineCoinmex::get_products(AccountUnitCoinmex& unit, Document& json)
 
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                      {"Content-Type", "application/json"},
@@ -1030,7 +1030,7 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
 
     const auto response = Post(Url{url},
                                Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
@@ -1069,7 +1069,7 @@ void TDEngineCoinmex::cancel_all_orders(AccountUnitCoinmex& unit, std::string co
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Delete(Url{url},
                                  Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                         {"Content-Type", "application/json; charset=UTF-8"},
@@ -1149,7 +1149,7 @@ bids 	买方深度
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
                                  Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                         {"Content-Type", "application/json"},
@@ -1184,7 +1184,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, l
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Delete(Url{url},
                                  Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                         {"Content-Type", "application/json; charset=UTF-8"},
@@ -1228,7 +1228,7 @@ void TDEngineCoinmex::query_orders(AccountUnitCoinmex& unit, std::string code, s
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                      {"Content-Type", "application/json"},
@@ -1269,7 +1269,7 @@ void TDEngineCoinmex::query_order(AccountUnitCoinmex& unit, std::string code, lo
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                      {"Content-Type", "application/json"},
