@@ -204,10 +204,12 @@ void TDEngineCoinmex::connect(long timeout_nsec)
         {
             Document d;
             get_exchange_time(unit, d);
-            if(d.HasMember("timestamp")) {
-                Value& s = d["timestamp"];
-                KF_LOG_INFO(logger, "[connect] (response.timestamp.type) " << s.GetType() << " (response.timestamp) " << d["timestamp"].GetInt64());
+            if(!d.HasParseError() && d.IsObject() && d.HasMember("iso")) {
+                Value& s = d["iso"];
+                KF_LOG_INFO(logger, "[connect] (response.iso.type) " << s.GetType() << " (response.iso) " << d["iso"].GetString());
                 unit.logged_in = true;
+            } else {
+                KF_LOG_ERROR(logger, "[connect] login fail by get_exchange_time response without iso.");
             }
         }
     }
