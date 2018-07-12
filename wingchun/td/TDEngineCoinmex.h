@@ -34,6 +34,12 @@ struct PendingCoinmexTradeStatus
     uint64_t last_trade_id; //for myTrade
 };
 
+struct SubscribeCoinmexBaseQuote
+{
+    std::string base;
+    std::string quote;
+};
+
 struct AccountUnitCoinmex
 {
     string api_key;
@@ -45,7 +51,13 @@ struct AccountUnitCoinmex
     bool    logged_in;
     std::vector<PendingCoinmexOrderStatus> newOrderStatus;
     std::vector<PendingCoinmexOrderStatus> pendingOrderStatus;
-    std::vector<std::string> whiteListInstrumentIDs;
+    //in TD, lookup direction is:
+    // our strategy recognized coinpair ---> outcoming exchange coinpair
+    //if strategy's coinpair is not in this map ,ignore it
+    //"strategy_coinpair(base_quote)":"exchange_coinpair",
+    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
+
+    std::vector<SubscribeCoinmexBaseQuote> subscribeCoinmexBaseQuote;
 };
 
 
@@ -124,6 +136,13 @@ private:
     void printResponse(const Document& d);
     inline std::string getTimestampString();
 
+private:
+    void readWhiteLists(AccountUnitCoinmex& unit, const json& j_config);
+    std::string getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, const char_31 strategy_coinpair);
+    bool hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote> &sub, std::string symbol);
+    void split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub);
+    void debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub);
+    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
 };
 
 WC_NAMESPACE_END

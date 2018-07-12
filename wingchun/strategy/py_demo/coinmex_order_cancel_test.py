@@ -22,7 +22,7 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 
 def initialize(context):
     #context.add_md(source=SOURCE.COINMEX)
-    context.ticker = 'MVP_BTC'
+    context.ticker = 'mvp_btc'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1

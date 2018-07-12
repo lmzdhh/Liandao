@@ -92,105 +92,141 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     unit.baseUrl = baseUrl;
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
-    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (is whiteListInstrumentIDs exist?)" << (j_config.find("whiteListInstrumentIDs") != j_config.end()));
+    //keyIsStrategySideWhiteList
+    readWhiteLists(unit, j_config);
 
-    if(j_config.find("whiteListInstrumentIDs") != j_config.end()) {
-        string whiteListInstrumentIDs = j_config["whiteListInstrumentIDs"].get<string>();
-        if(whiteListInstrumentIDs.length() > 0)
+    debug_print(unit.keyIsStrategyCoinpairWhiteList);
+    debug_print(unit.subscribeCoinmexBaseQuote);
+    //display usage:
+    if(unit.keyIsStrategyCoinpairWhiteList.size() == 0) {
+        KF_LOG_ERROR(logger, "TDEngineCoinmex::load_account: subscribeCoinmexBaseQuote is empty. please add whiteLists in kungfu.json like this :");
+        KF_LOG_ERROR(logger, "\"whiteLists\":{");
+        KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
+        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
+        KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
+        KF_LOG_ERROR(logger, "},");
+    }
+
+    //cancel all openning orders on TD startup
+    if(unit.keyIsStrategyCoinpairWhiteList.size() > 0)
+    {
+        std::map<std::string, std::string>::iterator map_itr;
+        map_itr = unit.keyIsStrategyCoinpairWhiteList.begin();
+        while(map_itr != unit.keyIsStrategyCoinpairWhiteList.end())
         {
-            KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (whiteListInstrumentIDs)" << whiteListInstrumentIDs);
-            unit.whiteListInstrumentIDs = split(whiteListInstrumentIDs, ",");
-            if(unit.whiteListInstrumentIDs.size() > 0)
-            {
-                for(int i=0; i < unit.whiteListInstrumentIDs.size(); i++)
-                {
-                    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID)" << unit.whiteListInstrumentIDs[i]);
-                    Document d;
-                    cancel_all_orders(unit, unit.whiteListInstrumentIDs[i], d);
-                    printResponse(d);
-                }
-            }
+            KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID) of exchange coinpair: " << map_itr->second);
+            Document d;
+            cancel_all_orders(unit, map_itr->second, d);
+            printResponse(d);
+
+            map_itr++;
         }
     }
-//test
-    /*
-    Document d;
-    get_exchange_time(unit, d);
-    KF_LOG_INFO(logger, "[print get_exchange_time]");
-    printResponse(d);
-
-    get_account(unit, d);
-    KF_LOG_INFO(logger, "[print get_account]");
-    printResponse(d);
-
-    get_products(unit, d);
-    KF_LOG_INFO(logger, "[print get_products]");
-    printResponse(d);
-
-    get_depth(unit, "LTC_BTC", d);
-    KF_LOG_INFO(logger, "[print get_depth]");
-    printResponse(d);
-
-    std::string code="LTC_BTC";
-    std::string side="buy";
-    std:string type="market";
-    double size=0;
-    double price=0.0000;
-    double funds=0;
-    send_order(unit, code.c_str(), side.c_str(), type.c_str(), size, price, funds, d);
-    KF_LOG_INFO(logger, "[print send_order]");
-    printResponse(d);
-
-    query_orders(unit, "LTC_BTC", "open", d);
-    KF_LOG_INFO(logger, "[print query_orders]");
-    printResponse(d);
-
-//----------------------
-    query_order(unit, "LTC_BTC", 20269511L, d);
-    KF_LOG_INFO(logger, "[print query_order]");
-    printResponse(d);
-
-    cancel_order(unit, "LTC_BTC", 20269511L, d);
-    KF_LOG_INFO(logger, "[print cancel_order]");
-    printResponse(d);
-
-    query_order(unit, "LTC_BTC", 20269511L, d);
-    KF_LOG_INFO(logger, "[print query_order]");
-    printResponse(d);
-//----------------------
-    query_order(unit, "LTC_BTC", 20321247L, d);
-    KF_LOG_INFO(logger, "[print query_order]");
-    printResponse(d);
-
-    cancel_order(unit, "LTC_BTC", 20321247L, d);
-    KF_LOG_INFO(logger, "[print cancel_order]");
-    printResponse(d);
-
-    query_order(unit, "LTC_BTC", 20321247L, d);
-    KF_LOG_INFO(logger, "[print query_order]");
-    printResponse(d);
-//----------------------
-*/
-   /*
-    Document d;
-    cancel_all_orders(unit, "MVP_BTC", d);
-    KF_LOG_INFO(logger, "[print cancel_all_orders]");
-    printResponse(d);
-    */
-/*
-    query_orders(unit, "LTC_BTC", "open", d);
-    KF_LOG_INFO(logger, "[print query_orders]");
-    printResponse(d);
-*/
-
-//test end
-
     // set up
     TradeAccount account = {};
     //partly copy this fields
     strncpy(account.UserID, api_key.c_str(), 16);
     strncpy(account.Password, secret_key.c_str(), 21);
     return account;
+}
+
+void TDEngineCoinmex::readWhiteLists(AccountUnitCoinmex& unit, const json& j_config)
+{
+    KF_LOG_INFO(logger, "[readWhiteLists]");
+    if(j_config.find("whiteLists") != j_config.end()) {
+        KF_LOG_INFO(logger, "[readWhiteLists] found whiteLists");
+        //has whiteLists
+        json whiteLists = j_config["whiteLists"].get<json>();
+        if(whiteLists.is_object())
+        {
+            for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
+                std::string strategy_coinpair = it.key();
+                std::string exchange_coinpair = it.value();
+                KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
+                unit.keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
+
+                SubscribeCoinmexBaseQuote baseQuote;
+                split(it.key(), "_", baseQuote);
+                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinmexBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote << " (baseQuote.base.length() )" << baseQuote.base.length() );
+
+                if(baseQuote.base.length() > 0)
+                {
+                    //get correct base_quote config
+                    unit.subscribeCoinmexBaseQuote.push_back(baseQuote);
+                }
+            }
+        }
+    }
+}
+
+bool TDEngineCoinmex::hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote> &sub, std::string symbol)
+{
+    KF_LOG_INFO(logger, "[hasSymbolInWhiteList]");
+    int count = sub.size();
+    std::string t = symbol;
+    std::transform(t.begin(), t.end(), t.begin(), ::tolower);
+    for (int i = 0; i < count;i++)
+    {
+        if(sub[i].base == t) {
+            KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (found) (symbol) " << symbol);
+            return true;
+        }
+    }
+    KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (not found) (symbol) " << symbol);
+    return false;
+}
+
+//example: btc_usdt
+void TDEngineCoinmex::split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub)
+{
+    if (str.size() > 0) {
+        size_t index = str.find(token);
+        if (index != std::string::npos) {
+            sub.base = str.substr(0, index);
+            sub.quote = str.substr(index + token.size());
+        }
+        else {
+            //not found, do nothing
+        }
+    }
+}
+
+void TDEngineCoinmex::debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub)
+{
+    int count = sub.size();
+    KF_LOG_INFO(logger, "[debug_print] SubscribeCoinmexBaseQuote (count) " << count);
+
+    for (int i = 0; i < count;i++)
+    {
+        KF_LOG_INFO(logger, "[debug_print] SubscribeCoinmexBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
+    }
+}
+
+void TDEngineCoinmex::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
+{
+    std::map<std::string, std::string>::iterator map_itr;
+    map_itr = keyIsStrategyCoinpairWhiteList.begin();
+    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
+        KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
+        map_itr++;
+    }
+}
+
+std::string TDEngineCoinmex::getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, const char_31 strategy_coinpair)
+{
+    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find strategy_coinpair (strategy_coinpair) " << strategy_coinpair);
+    std::map<std::string, std::string>::iterator map_itr;
+    map_itr = unit.keyIsStrategyCoinpairWhiteList.begin();
+    while(map_itr != unit.keyIsStrategyCoinpairWhiteList.end()) {
+        if(strcmp(strategy_coinpair, map_itr->first.c_str()) == 0)
+        {
+            KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
+            return map_itr->second;
+        }
+        map_itr++;
+    }
+    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] not found strategy_coinpair (strategy_coinpair) " << strategy_coinpair);
+    return "";
 }
 
 void TDEngineCoinmex::connect(long timeout_nsec)
@@ -204,11 +240,12 @@ void TDEngineCoinmex::connect(long timeout_nsec)
         {
             Document d;
             get_exchange_time(unit, d);
-            if(d.HasMember("timestamp")) {
-                Value& s = d["timestamp"];
-                KF_LOG_INFO(logger, "[connect] (response.timestamp.type) " << s.GetType() << " (response.timestamp) " << d["timestamp"].GetInt64());
-                unit.logged_in = true;
-            }
+//            if(d.HasMember("timestamp")) {
+//                Value& s = d["timestamp"];
+//                KF_LOG_INFO(logger, "[connect] (response.timestamp.type) " << s.GetType() << " (response.timestamp) " << d["timestamp"].GetInt64());
+//                unit.logged_in = true;
+//            }
+            unit.logged_in = true;
         }
     }
 
@@ -343,12 +380,13 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
     pos.Position = 0;
     pos.YdPosition = 0;
     pos.PositionCost = 0;
-    bool findSymbolInResult = false;
+
 
 /*
  # Response
     [{"available":"0.099","balance":"0.099","currencyCode":"BTC","hold":"0","id":83906},{"available":"188","balance":"188","currencyCode":"MVP","hold":"0","id":83906}]
  * */
+    std::vector<LFRspPositionField> tmp_vector;
     if(d.IsArray())
     {
         size_t len = d.Size();
@@ -356,16 +394,27 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
         for(int i = 0; i < len; i++)
         {
             std::string symbol = d.GetArray()[i]["currencyCode"].GetString();
-            strncpy(pos.InstrumentID, symbol.c_str(), 31);
-            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
-                                                                   << " available:" << d.GetArray()[i]["available"].GetString()
-                                                                   << " balance: " << d.GetArray()[i]["balance"].GetString()
-                                                                   << " hold: " << d.GetArray()[i]["hold"].GetString());
-            pos.Position = std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset;
-            on_rsp_position(&pos, i == (len - 1), requestId, errorId, errorMsg.c_str());
-            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
-            findSymbolInResult = true;
+            if(hasSymbolInWhiteList(unit.subscribeCoinmexBaseQuote, symbol))
+            {
+                strncpy(pos.InstrumentID, symbol.c_str(), 31);
+                KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
+                                                                          << " available:" << d.GetArray()[i]["available"].GetString()
+                                                                          << " balance: " << d.GetArray()[i]["balance"].GetString()
+                                                                          << " hold: " << d.GetArray()[i]["hold"].GetString());
+                pos.Position = std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset;
+                tmp_vector.push_back(pos);
+                KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
+            }
         }
+    }
+
+    bool findSymbolInResult = false;
+    //send the filtered position
+    int position_count = tmp_vector.size();
+    for (int i = 0; i < position_count; i++)
+    {
+        on_rsp_position(&pos, i == (position_count - 1), requestId, errorId, errorMsg.c_str());
+        findSymbolInResult = true;
     }
 
     if(!findSymbolInResult)
@@ -390,15 +439,24 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
                                               << " (Volume)" << data->Volume
                                               << " (LimitPrice)" << data->LimitPrice
                                               << " (OrderRef)" << data->OrderRef);
-
-    double funds = 0;
-    Document d;
-    send_order(unit, data->InstrumentID, GetSide(data->Direction).c_str(),
-            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset, funds, d);
-
     int errorId = 0;
     std::string errorMsg = "";
 
+    std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
+    if(ticker.length() == 0) {
+        KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList , ignore it:" << data->InstrumentID);
+        errorId = 200;
+        errorMsg = "not in WhiteList, ignore it";
+        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    }
+    KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
+
+    double funds = 0;
+    Document d;
+    send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
+            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset, funds, d);
 
     if(d.HasMember("orderId") && d.HasMember("result"))
     {
@@ -469,6 +527,17 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
     int errorId = 0;
     std::string errorMsg = "";
 
+    std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
+    if(ticker.length() == 0) {
+        KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it:" << data->InstrumentID);
+        errorId = 200;
+        errorMsg = "not in WhiteList, ignore it";
+        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    }
+    KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
+
     std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
     std::string remoteOrderId;
     if(itr == localOrderRefRemoteOrderId.end()) {
@@ -487,7 +556,7 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
 
 
     Document d;
-    cancel_order(unit, data->InstrumentID, stod(remoteOrderId), d);
+    cancel_order(unit, ticker, stod(remoteOrderId), d);
     send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId);
 
     if(!d.HasParseError() && d.HasMember("code") && d["code"].IsNumber())
@@ -568,10 +637,15 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
             KF_LOG_INFO(logger, "[retrieveOrderStatus] found in localOrderRefRemoteOrderId map (orderRef) " << orderStatusIterator->OrderRef << " (remoteOrderId) " << remoteOrderId);
         }
 
-
+        std::string ticker = getWhiteListCoinpairFrom(unit, orderStatusIterator->InstrumentID);
+        if(ticker.length() == 0) {
+            KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
+            continue;
+        }
+        KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
 
         Document d;
-        query_order(unit, orderStatusIterator->InstrumentID, stod(remoteOrderId), d);
+        query_order(unit, ticker, stod(remoteOrderId), d);
 
         /*
  # Response
@@ -871,7 +945,7 @@ void TDEngineCoinmex::get_account(AccountUnitCoinmex& unit, Document& json)
 
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
 
     const auto response = Get(Url{url},
                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
@@ -920,7 +994,7 @@ void TDEngineCoinmex::get_products(AccountUnitCoinmex& unit, Document& json)
 
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                      {"Content-Type", "application/json"},
@@ -1030,7 +1104,7 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
 
     const auto response = Post(Url{url},
                                Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
@@ -1042,7 +1116,7 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
 
     //an error:
     //(response.status_code) 0 (response.error.message) Failed to connect to www.bitmore.top port 443: Connection refused (response.text)
-    KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                               " (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
     getResponse(response.status_code, response.text, response.error.message, json);
@@ -1069,7 +1143,7 @@ void TDEngineCoinmex::cancel_all_orders(AccountUnitCoinmex& unit, std::string co
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Delete(Url{url},
                                  Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                         {"Content-Type", "application/json; charset=UTF-8"},
@@ -1078,7 +1152,7 @@ void TDEngineCoinmex::cancel_all_orders(AccountUnitCoinmex& unit, std::string co
                                         {"ACCESS-TIMESTAMP",  Timestamp}},
                                  Body{body}, Timeout{10000});
 
-    KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url << " (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                                      " (response.error.message) " << response.error.message <<
                                                      " (response.text) " << response.text.c_str());
     getResponse(response.status_code, response.text, response.error.message, json);
@@ -1149,7 +1223,7 @@ bids 	买方深度
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
                                  Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                         {"Content-Type", "application/json"},
@@ -1184,7 +1258,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, l
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Delete(Url{url},
                                  Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                         {"Content-Type", "application/json; charset=UTF-8"},
@@ -1193,7 +1267,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, l
                                         {"ACCESS-TIMESTAMP",  Timestamp}},
                                  Body{body}, Timeout{10000});
 
-    KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
     getResponse(response.status_code, response.text, response.error.message, json);
@@ -1228,7 +1302,7 @@ void TDEngineCoinmex::query_orders(AccountUnitCoinmex& unit, std::string code, s
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                      {"Content-Type", "application/json"},
@@ -1269,7 +1343,7 @@ void TDEngineCoinmex::query_order(AccountUnitCoinmex& unit, std::string code, lo
     string Message = Timestamp + Method + requestPath + queryString + body;
     unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, strlen((char*)signature));
+    std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
                                      {"Content-Type", "application/json"},

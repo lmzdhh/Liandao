@@ -5,6 +5,8 @@
 #include "longfist/LFConstants.h"
 #include <libwebsockets.h>
 #include <document.h>
+#include <map>
+#include <vector>
 
 WC_NAMESPACE_START
 
@@ -25,6 +27,12 @@ struct PriceAndVolume
     }
 };
 
+//coinmex use base and quote to sub depth data
+struct SubscribeCoinmexBaseQuote
+{
+    std::string base;
+    std::string quote;
+};
 
 static int sort_price_asc(const PriceAndVolume &p1,const PriceAndVolume &p2)
 {
@@ -92,12 +100,27 @@ private:
 
     struct lws_context *context = nullptr;
 
-    int order_index=0;
+    int subscribe_index = 0;
     //<ticker, <price, volume>>
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
 
+private:
+    void readWhiteLists(const json& j_config);
+    std::string getWhiteListCoinpairFrom(std::string md_coinpair);
 
+    void split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub);
+    void debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub);
+    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
+
+    //coinmex use base and quote to sub depth data, so make this vector for it
+    std::vector<SubscribeCoinmexBaseQuote> subscribeCoinmexBaseQuote;
+
+    //in MD, lookup direction is:
+    // incoming exchange coinpair ---> our strategy recognized coinpair
+    //if coming data 's coinpair is not in this map ,ignore it
+    //"strategy_coinpair(base_quote)":"exchange_coinpair",
+    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
 };
 
 DECLARE_PTR(MDEngineCoinmex);

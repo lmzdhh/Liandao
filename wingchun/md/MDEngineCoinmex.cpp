@@ -120,6 +120,104 @@ void MDEngineCoinmex::load(const json& j_config)
 {
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineCoinmex:: rest_get_interval_ms: " << rest_get_interval_ms);
+
+    readWhiteLists(j_config);
+
+    debug_print(subscribeCoinmexBaseQuote);
+    debug_print(keyIsStrategyCoinpairWhiteList);
+    //display usage:
+    if(subscribeCoinmexBaseQuote.size() == 0) {
+        KF_LOG_ERROR(logger, "MDEngineCoinmex::lws_write_subscribe: subscribeCoinmexBaseQuote is empty. please add whiteLists in kungfu.json like this :");
+        KF_LOG_ERROR(logger, "\"whiteLists\":{");
+        KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
+        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
+        KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
+        KF_LOG_ERROR(logger, "},");
+    }
+}
+
+void MDEngineCoinmex::readWhiteLists(const json& j_config)
+{
+	KF_LOG_INFO(logger, "[readWhiteLists]");
+
+	if(j_config.find("whiteLists") != j_config.end()) {
+		KF_LOG_INFO(logger, "[readWhiteLists] found whiteLists");
+		//has whiteLists
+		json whiteLists = j_config["whiteLists"].get<json>();
+		if(whiteLists.is_object())
+		{
+			for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
+				std::string strategy_coinpair = it.key();
+				std::string exchange_coinpair = it.value();
+				KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
+				keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
+				//make subscribeCoinmexBaseQuote
+
+                SubscribeCoinmexBaseQuote baseQuote;
+				split(it.key(), "_", baseQuote);
+                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinmexBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote << " (baseQuote.base.length() )" << baseQuote.base.length() );
+
+				if(baseQuote.base.length() > 0)
+				{
+					//get correct base_quote config
+                    subscribeCoinmexBaseQuote.push_back(baseQuote);
+				}
+			}
+		}
+	}
+}
+
+//example: btc_usdt
+void MDEngineCoinmex::split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub)
+{
+	if (str.size() > 0) {
+		size_t index = str.find(token);
+		if (index != std::string::npos) {
+			sub.base = str.substr(0, index);
+			sub.quote = str.substr(index + token.size());
+		}
+		else {
+			//not found, do nothing
+		}
+	}
+}
+
+std::string MDEngineCoinmex::getWhiteListCoinpairFrom(std::string md_coinpair)
+{
+    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find md_coinpair (md_coinpair) " << md_coinpair);
+    std::map<std::string, std::string>::iterator map_itr;
+    map_itr = keyIsStrategyCoinpairWhiteList.begin();
+    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
+		if(md_coinpair == map_itr->second)
+		{
+            KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
+            return map_itr->first;
+		}
+        map_itr++;
+    }
+    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] not found md_coinpair (md_coinpair) " << md_coinpair);
+    return "";
+}
+
+void MDEngineCoinmex::debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub)
+{
+    int count = sub.size();
+    KF_LOG_INFO(logger, "[debug_print] SubscribeCoinmexBaseQuote (count) " << count);
+
+	for (int i = 0; i < count;i++)
+	{
+		KF_LOG_INFO(logger, "[debug_print] SubscribeCoinmexBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
+	}
+}
+
+void MDEngineCoinmex::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
+{
+	std::map<std::string, std::string>::iterator map_itr;
+	map_itr = keyIsStrategyCoinpairWhiteList.begin();
+	while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
+		KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
+		map_itr++;
+	}
 }
 
 void MDEngineCoinmex::connect(long timeout_nsec)
@@ -250,46 +348,28 @@ void MDEngineCoinmex::subscribeMarketData(const vector<string>& instruments, con
 int MDEngineCoinmex::lws_write_subscribe(struct lws* conn)
 {
 	KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe:");
-	if(order_index == 0)
+
+	if(subscribe_index > subscribeCoinmexBaseQuote.size())
 	{
-        unsigned char msg[512];
-        memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
-
-
-        std::string jsonString = createDepthJsonString("btc", "usdt");
-
-
-        KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe 111111111111111:" << jsonString.c_str());
-        int length = jsonString.length();
-
-        strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
-        int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
-
-        order_index++;
-//        lws_callback_on_writable( conn );
-
-        return ret;
+        subscribe_index = 0;
 	}
-    if(order_index == 1)
-    {
-        unsigned char msg[512];
-        memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
 
+    SubscribeCoinmexBaseQuote baseQuote = subscribeCoinmexBaseQuote[subscribe_index++];
 
-        std::string jsonString = createDepthJsonString("etc", "eth");
+    unsigned char msg[512];
+    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
 
-        KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe 222222222222222:" << jsonString.c_str());
-        int length = jsonString.length();
+    std::string jsonString = createDepthJsonString(baseQuote.base, baseQuote.quote);
 
-        strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
-        int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+    KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe: " << jsonString.c_str());
+    int length = jsonString.length();
 
-        order_index++;
-        return ret;
-    }
+    strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
+    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 
-    KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe:  do not sub anymore");
-    return 0;
+    lws_callback_on_writable( conn );
+
+    return ret;
 }
 
 void MDEngineCoinmex::on_lws_data(struct lws* conn, const char* data, size_t len)
@@ -371,12 +451,16 @@ void MDEngineCoinmex::onDepth(Document& json)
     }
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "base : " << base << "  quote: " << quote);
-	std::map<int64_t, uint64_t>*  asksPriceAndVolume;
-	std::map<int64_t, uint64_t>*  bidsPriceAndVolume;
 
-    std::string ticker = base + quote;
+    std::string ticker = getWhiteListCoinpairFrom(base + quote);
+    if(ticker.length() == 0) {
+		KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: not in WhiteList , ignore it:" << "base : " << base << "  quote: " << quote);
+		return;
+    }
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "(ticker) " << ticker);
+	std::map<int64_t, uint64_t>*  asksPriceAndVolume;
+	std::map<int64_t, uint64_t>*  bidsPriceAndVolume;
 
 	auto iter = tickerAskPriceMap.find(ticker);
 	if(iter != tickerAskPriceMap.end()) {

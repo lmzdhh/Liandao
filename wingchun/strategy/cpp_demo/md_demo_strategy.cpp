@@ -9,8 +9,8 @@
 
 USING_WC_NAMESPACE
 
-#define SOURCE_INDEX SOURCE_CTP
-#define M_TICKER "rb1801"
+#define SOURCE_INDEX SOURCE_COINMEX
+#define M_TICKER "btcusdt"
 #define M_EXCHANGE EXCHANGE_SHFE
 #define TRADED_VOLUME_LIMIT 500
 
@@ -41,8 +41,9 @@ public:
     virtual void init();
     virtual void on_market_data(const LFMarketDataField* data, short source, long rcv_time);
     virtual void on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time);
-    virtual void on_rtn_trade(const LFRtnTradeField* data, int request_id, short source, long rcv_time);
-    virtual void on_rsp_order(const LFInputOrderField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
+    //virtual void on_rtn_trade(const LFRtnTradeField* data, int request_id, short source, long rcv_time);
+    //virtual void on_rsp_order(const LFInputOrderField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
+    virtual void on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time);
 
 public:
     Strategy(const string& name);
@@ -50,11 +51,15 @@ public:
 
 Strategy::Strategy(const string& name): IWCStrategy(name)
 {
+    std::cout << "[Strategy] (Strategy)" <<std::endl;
     rid = -1;
+
 }
 
 void Strategy::init()
 {
+    std::cout << "[Strategy] (init)" <<std::endl;
+    KF_LOG_DEBUG(logger, "[init] SOURCE_INDEX:" << SOURCE_INDEX);
     data->add_market_data(SOURCE_INDEX);
     data->add_register_td(SOURCE_INDEX);
     vector<string> tickers;
@@ -76,6 +81,7 @@ void Strategy::init()
     signal.has_open_short_position = false;
     signal.trade_size = 1;
     int my_order_id = 0;
+    std::cout << "[Strategy] (init) end" <<std::endl;
 }
 
 void Strategy::on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time)
@@ -97,44 +103,22 @@ void Strategy::on_rsp_position(const PosHandlerPtr posMap, int request_id, short
 
 void Strategy::on_market_data(const LFMarketDataField* md, short source, long rcv_time)
 {
-    if (strcmp(M_TICKER, md->InstrumentID) == 0 && td_connected)
-    {
-        signal.TickPrice.push_back(md->LastPrice);
-        if (signal.TickPrice.size() > signal.look_back)
-            signal.TickPrice.pop_front();
-        md_num += 1;
-        if (md_num < signal.look_back + 2)
-            return;
-        // ============ prepare data ============
-        double rolling_min = 9999999;
-        double rolling_max = 0;
-        
-        for (int i = 0; i < signal.param1; i++)
-        {
-            int idx = signal.look_back - 1 - signal.param2 - i; // delay
-            double curPrice = signal.TickPrice[idx];
-            rolling_max = (curPrice > rolling_max) ? curPrice: rolling_max;
-            rolling_min = (curPrice < rolling_min) ? curPrice: rolling_min;
-        }
-        bool long_entry_condition = rolling_max <= md->LastPrice;
-        bool short_entry_condition = rolling_min >= md->LastPrice;
-        bool exit_condition = rolling_max > md->LastPrice && rolling_min < md->LastPrice;
-        rid = util->insert_limit_order(SOURCE_INDEX, M_TICKER, M_EXCHANGE,
-                                               curPrice*0.98, signal.trade_size,
-                                               LF_CHAR_Buy, LF_CHAR_Open);
-        sleep(0.1)
-
-        util->cancel_order(SOURCE_INDEX,rid)
-
-
-
-    }
+    std::cout << "[on_market_data] (source)"<< source << " (InstrumentID)" << md->InstrumentID <<  "(AskPrice1)" << md->AskPrice1<<std::endl;
 }
 
+void Strategy::on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time)
+{
+    std::cout << "LIBINGCHEN RECV[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID
+              << " (bidcount)" << data->BidLevelCount
+              << " (askcount)" << data->AskLevelCount << std::endl;
+    KF_LOG_INFO(logger, "LIBINGCHEN RECV[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID
+                                                        << " (bidcount)" << data->BidLevelCount
+                                                        << " (askcount)" << data->AskLevelCount);
+}
 
 int main(int argc, const char* argv[])
 {
-    Strategy str(string("cpp_test"));
+    Strategy str(string("YOUR_STRATEGY2"));
     str.init();
     str.start();
     str.block();
