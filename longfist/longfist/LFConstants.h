@@ -20,6 +20,27 @@ enum exchange_source_index : short
     SOURCE_UNKNOWN
 };
 
+inline const char* get_str_from_source_index(exchange_source_index source)
+{
+	switch(source)
+	{
+		case SOURCE_CTP:
+			return "ctp";
+		case SOURCE_XTP:
+			return "xtp";
+		case SOURCE_BINANCE:
+			return "binance";
+		case SOURCE_INDODAX:
+			return "indodax";
+		case SOURCE_OKEX:
+			return "okex";
+		case SOURCE_COINMEX:
+			return "coinmex";
+		default:
+			return "unknown";
+	}
+}
+
 inline exchange_source_index get_source_index_from_str(const std::string& exch_str)
 {
     if(exch_str == "ctp")
