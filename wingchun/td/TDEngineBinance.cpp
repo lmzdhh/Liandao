@@ -338,7 +338,7 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
                                                                    << result["balances"][i]["free"].asString().c_str()
                                                                    << " locked: "
                                                                    << result["balances"][i]["locked"].asString().c_str());
-            pos.Position = stod(result["balances"][i]["free"].asString().c_str()) * scale_offset;
+            pos.Position = std::round(stod(result["balances"][i]["free"].asString().c_str()) * scale_offset);
             on_rsp_position(&pos, i == (balancesSize - 1), requestId);
             findSymbolInResult = true;
         }
@@ -460,10 +460,10 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     rtn_order.TimeCondition = data->TimeCondition;
     rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, result["clientOrderId"].asString().c_str(), 13);
-    rtn_order.VolumeTraded = stod(result["executedQty"].asString().c_str()) * scale_offset;
-    rtn_order.VolumeTotalOriginal = stod(result["origQty"].asString().c_str()) * scale_offset;
+    rtn_order.VolumeTraded = std::round(stod(result["executedQty"].asString().c_str()) * scale_offset);
+    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].asString().c_str()) * scale_offset);
     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-    rtn_order.LimitPrice = stod(result["price"].asString().c_str()) * scale_offset;
+    rtn_order.LimitPrice = std::round(stod(result["price"].asString().c_str()) * scale_offset);
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
     on_rtn_order(&rtn_order);
@@ -481,8 +481,8 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
         strncpy(rtn_trade.InstrumentID, result["symbol"].asString().c_str(), 31);
         strncpy(rtn_trade.OrderRef, result["clientOrderId"].asString().c_str(), 13);
         rtn_trade.Direction = data->Direction;
-        rtn_trade.Volume = stod(result["executedQty"].asString().c_str()) * scale_offset;
-        rtn_trade.Price = stod(result["price"].asString().c_str()) * scale_offset;
+        rtn_trade.Volume = std::round(stod(result["executedQty"].asString().c_str()) * scale_offset);
+        rtn_trade.Price = std::round(stod(result["price"].asString().c_str()) * scale_offset);
 
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
@@ -558,10 +558,10 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     rtn_order.TimeCondition = data->TimeCondition;
     rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, result["clientOrderId"].asString().c_str(), 13);
-    rtn_order.VolumeTraded = stod(result["executedQty"].asString().c_str()) * scale_offset;
-    rtn_order.VolumeTotalOriginal = stod(result["origQty"].asString().c_str()) * scale_offset;
+    rtn_order.VolumeTraded = std::round(stod(result["executedQty"].asString().c_str()) * scale_offset);
+    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].asString().c_str()) * scale_offset);
     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-    rtn_order.LimitPrice = stod(result["price"].asString().c_str()) * scale_offset;
+    rtn_order.LimitPrice = std::round(stod(result["price"].asString().c_str()) * scale_offset);
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
     on_rtn_order(&rtn_order);
@@ -583,8 +583,8 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
 
     for(int i = 0; i < fills_size; ++i)
     {
-        rtn_trade.Volume = stod(result["executedQty"].asString().c_str()) * scale_offset;
-        rtn_trade.Price = stod(result["price"].asString().c_str()) * scale_offset;
+        rtn_trade.Volume = std::round(stod(result["executedQty"].asString().c_str()) * scale_offset);
+        rtn_trade.Price = std::round(stod(result["price"].asString().c_str()) * scale_offset);
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
@@ -728,7 +728,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
             rtn_order.OrderStatus = GetOrderStatus(orderResult["status"].asString().c_str());
-            rtn_order.VolumeTraded = stod(orderResult["executedQty"].asString().c_str()) * scale_offset;
+            rtn_order.VolumeTraded = std::round(stod(orderResult["executedQty"].asString().c_str()) * scale_offset);
 
             //if status changed or LF_CHAR_PartTradedNotQueueing but traded valume changes, emit onRtnOrder
             if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
@@ -742,8 +742,8 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
                 rtn_order.TimeCondition = GetTimeCondition(orderResult["timeInForce"].asString());
                 rtn_order.OrderPriceType = GetPriceType(orderResult["type"].asString());
                 strncpy(rtn_order.OrderRef, orderResult["clientOrderId"].asString().c_str(), 13);
-                rtn_order.VolumeTotalOriginal = stod(orderResult["origQty"].asString().c_str()) * scale_offset;
-                rtn_order.LimitPrice = stod(orderResult["price"].asString().c_str()) * scale_offset;
+                rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["origQty"].asString().c_str()) * scale_offset);
+                rtn_order.LimitPrice = std::round(stod(orderResult["price"].asString().c_str()) * scale_offset);
                 rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
                 on_rtn_order(&rtn_order);
                 raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
@@ -853,8 +853,8 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             strcpy(rtn_trade.ExchangeID, "binance");
             strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
-            rtn_trade.Volume = stod(resultTrade[i]["qty"].asString().c_str()) * scale_offset;
-            rtn_trade.Price = stod(resultTrade[i]["price"].asString().c_str()) * scale_offset;
+            rtn_trade.Volume = std::round(stod(resultTrade[i]["qty"].asString().c_str()) * scale_offset);
+            rtn_trade.Price = std::round(stod(resultTrade[i]["price"].asString().c_str()) * scale_offset);
 
             //apply the direction of the OrderRef
             uint64_t binanceOrderId =  resultTrade[i]["orderId"].asInt64();
