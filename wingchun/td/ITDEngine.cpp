@@ -325,13 +325,14 @@ void ITDEngine::on_rtn_order(const LFRtnOrderField* rtn_order)
     int local_id = std::stoi(string(rtn_order->OrderRef));
     int rid = td_helper->get_order_id(local_id);
     writer->write_frame(rtn_order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER, 1/*islast*/, rid);
-    KF_LOG_DEBUG_FMT(logger, "[o] (id)%d (ref)%s (ticker)%s (Vsum)%llu (Vtrd)%llu (Vrmn)%llu (St)%c",
+    KF_LOG_DEBUG_FMT(logger, "[o] (id)%d (ref)%s (ticker)%s (Vsum)%llu (Vtrd)%llu (Vrmn)%llu (Price)%llu (St)%c",
                      rid,
                      rtn_order->OrderRef,
                      rtn_order->InstrumentID,
                      rtn_order->VolumeTotalOriginal,
                      rtn_order->VolumeTraded,
                      rtn_order->VolumeTotal,
+                     rtn_order->LimitPrice,
                      rtn_order->OrderStatus);
     string name = rid_manager.get(rid);
     user_helper->set_order_status(name, rid, rtn_order->OrderStatus);
