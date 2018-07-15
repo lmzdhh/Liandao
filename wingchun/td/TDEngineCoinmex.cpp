@@ -401,7 +401,7 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
                                                                           << " available:" << d.GetArray()[i]["available"].GetString()
                                                                           << " balance: " << d.GetArray()[i]["balance"].GetString()
                                                                           << " hold: " << d.GetArray()[i]["hold"].GetString());
-                pos.Position = std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset;
+                pos.Position = std::round(std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset);
                 tmp_vector.push_back(pos);
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
             }
@@ -707,7 +707,7 @@ volume 	订单委托数量
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
             rtn_order.OrderStatus = GetOrderStatus(d["status"].GetString());
-            rtn_order.VolumeTraded = std::stod(d["filledVolume"].GetString()) * scale_offset;
+            rtn_order.VolumeTraded = std::round(std::stod(d["filledVolume"].GetString()) * scale_offset);
 
             //if status changed or LF_CHAR_PartTradedNotQueueing but traded valume changes, emit onRtnOrder
             if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
@@ -723,8 +723,8 @@ volume 	订单委托数量
                 rtn_order.TimeCondition = LF_CHAR_GFD;
                 rtn_order.OrderPriceType = GetPriceType(d["orderType"].GetString());
                 strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-                rtn_order.VolumeTotalOriginal = std::stod(d["volume"].GetString()) * scale_offset;
-                rtn_order.LimitPrice = std::stod(d["price"].GetString()) * scale_offset;
+                rtn_order.VolumeTotalOriginal = std::round(std::stod(d["volume"].GetString()) * scale_offset);
+                rtn_order.LimitPrice = std::round(std::stod(d["price"].GetString()) * scale_offset);
                 rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
 
                 on_rtn_order(&rtn_order);
@@ -732,7 +732,7 @@ volume 	订单委托数量
                                         source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
                                         1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
-                uint64_t newAveragePrice = std::stod(d["averagePrice"].GetString()) * scale_offset;
+                uint64_t newAveragePrice = std::round(std::stod(d["averagePrice"].GetString()) * scale_offset);
                 //second, if the status is PartTraded/AllTraded, send OnRtnTrade
                 if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
                     (LF_CHAR_PartTradedNotQueueing == rtn_order.OrderStatus
@@ -1026,9 +1026,9 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
         {
             double currentPrice = 0;
             if(strcmp("buy", side) == 0) {
-                currentPrice = std::stod(d["asks"].GetArray()[0][0].GetString());
+                currentPrice = std::round(std::stod(d["asks"].GetArray()[0][0].GetString());
             } else {
-                currentPrice = std::stod(d["bids"].GetArray()[0][0].GetString());
+                currentPrice = std::round(std::stod(d["bids"].GetArray()[0][0].GetString());
             }
             KF_LOG_INFO(logger, "[send_order] (currentPrice) " << std::setprecision(8) << currentPrice);
             funds = size * price /currentPrice;

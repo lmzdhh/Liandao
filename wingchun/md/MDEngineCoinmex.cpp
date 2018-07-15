@@ -490,8 +490,8 @@ void MDEngineCoinmex::onDepth(Document& json)
             auto& asks = json["data"]["asks"];
             for(int i = 0 ; i < len; i++)
             {
-                double price = stod(asks.GetArray()[i][0].GetString()) * scale_offset;
-                double volume = stod(asks.GetArray()[i][0].GetString()) * scale_offset;
+                int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
+                uint64_t volume = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
                 //if volume is 0, remove it
                 if(volume == 0) {
                     asksPriceAndVolume->erase(price);
@@ -508,8 +508,8 @@ void MDEngineCoinmex::onDepth(Document& json)
             auto& bids = json["data"]["bids"];
             for(int i = 0 ; i < len; i++)
             {
-                double price = stod(bids.GetArray()[i][0].GetString()) * scale_offset;
-                double volume = stod(bids.GetArray()[i][0].GetString()) * scale_offset;
+                int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
+                uint64_t volume = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
                 if(volume == 0) {
                     bidsPriceAndVolume->erase(price);
                 } else {
