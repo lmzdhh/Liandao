@@ -870,21 +870,15 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                     match_one = true;
                 }
             }
-            if(!match_one) {
-                //Note: the firsttime run of get_myTrades use last_trade_id from 0, so we got some 'unknown' trade
-                //is maybe from manuelly order, other strategy, or by td restart losing pendingOnRtnTrades lasttime.
-                //if we dont set the orderref, there is a stoi std::invalid_argument exception in on_rtn_trade
-                std::string when_no_match_binanceOrderId_use_this_default_orderref="0";
-                strncpy(rtn_trade.OrderRef, when_no_match_binanceOrderId_use_this_default_orderref.c_str(), 13);
+            if(match_one) {
+                on_rtn_trade(&rtn_trade);
+                raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                        source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
             }
-            
-            on_rtn_trade(&rtn_trade);
-            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
 
             uint64_t newtradeId = resultTrade[i]["id"].asInt64();
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (newtradeId)" << newtradeId);
-            if(newtradeId > tradeStatusIterator->last_trade_id) {
+            if(newtradeId >= tradeStatusIterator->last_trade_id) {
                 tradeStatusIterator->last_trade_id = newtradeId + 1;// for new trade
             }
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id);
