@@ -34,6 +34,13 @@ struct PendingCoinmexTradeStatus
     uint64_t last_trade_id; //for myTrade
 };
 
+struct SendOrderFilter
+{
+    char_31 InstrumentID;   //合约代码
+    int ticksize; //for price round.
+    //...other
+};
+
 struct SubscribeCoinmexBaseQuote
 {
     std::string base;
@@ -51,6 +58,8 @@ struct AccountUnitCoinmex
     bool    logged_in;
     std::vector<PendingCoinmexOrderStatus> newOrderStatus;
     std::vector<PendingCoinmexOrderStatus> pendingOrderStatus;
+    std::map<std::string, SendOrderFilter> sendOrderFilters;
+
     //in TD, lookup direction is:
     // our strategy recognized coinpair ---> outcoming exchange coinpair
     //if strategy's coinpair is not in this map ,ignore it
@@ -136,6 +145,11 @@ private:
     void printResponse(const Document& d);
     inline std::string getTimestampString();
 
+    int Round(std::string tickSizeStr);
+    int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
+    bool loadExchangeOrderFilters(AccountUnitCoinmex& unit, Document &doc);
+    void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
+    SendOrderFilter getSendOrderFilter(AccountUnitCoinmex& unit, const char *symbol);
 private:
     void readWhiteLists(AccountUnitCoinmex& unit, const json& j_config);
     std::string getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, const char_31 strategy_coinpair);

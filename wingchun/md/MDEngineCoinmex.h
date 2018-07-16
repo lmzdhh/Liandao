@@ -28,7 +28,7 @@ struct PriceAndVolume
 };
 
 //coinmex use base and quote to sub depth data
-struct SubscribeCoinmexBaseQuote
+struct SubscribeCoinBaseQuote
 {
     std::string base;
     std::string quote;
@@ -109,12 +109,12 @@ private:
     void readWhiteLists(const json& j_config);
     std::string getWhiteListCoinpairFrom(std::string md_coinpair);
 
-    void split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub);
-    void debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub);
+    void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
+    void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
     void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
 
     //coinmex use base and quote to sub depth data, so make this vector for it
-    std::vector<SubscribeCoinmexBaseQuote> subscribeCoinmexBaseQuote;
+    std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
 
     //in MD, lookup direction is:
     // incoming exchange coinpair ---> our strategy recognized coinpair

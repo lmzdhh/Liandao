@@ -123,11 +123,11 @@ void MDEngineCoinmex::load(const json& j_config)
 
     readWhiteLists(j_config);
 
-    debug_print(subscribeCoinmexBaseQuote);
+    debug_print(subscribeCoinBaseQuote);
     debug_print(keyIsStrategyCoinpairWhiteList);
     //display usage:
-    if(subscribeCoinmexBaseQuote.size() == 0) {
-        KF_LOG_ERROR(logger, "MDEngineCoinmex::lws_write_subscribe: subscribeCoinmexBaseQuote is empty. please add whiteLists in kungfu.json like this :");
+    if(keyIsStrategyCoinpairWhiteList.size() == 0) {
+        KF_LOG_ERROR(logger, "MDEngineCoinmex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
         KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
@@ -151,16 +151,17 @@ void MDEngineCoinmex::readWhiteLists(const json& j_config)
 				std::string exchange_coinpair = it.value();
 				KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
 				keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
-				//make subscribeCoinmexBaseQuote
+				//make subscribeCoinBaseQuote
 
-                SubscribeCoinmexBaseQuote baseQuote;
+				//coinmex MD must has base and quote, please see this->createDepthJsonString.
+                SubscribeCoinBaseQuote baseQuote;
 				split(it.key(), "_", baseQuote);
-                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinmexBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote << " (baseQuote.base.length() )" << baseQuote.base.length() );
+                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
 
 				if(baseQuote.base.length() > 0)
 				{
 					//get correct base_quote config
-                    subscribeCoinmexBaseQuote.push_back(baseQuote);
+                    subscribeCoinBaseQuote.push_back(baseQuote);
 				}
 			}
 		}
@@ -168,7 +169,7 @@ void MDEngineCoinmex::readWhiteLists(const json& j_config)
 }
 
 //example: btc_usdt
-void MDEngineCoinmex::split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub)
+void MDEngineCoinmex::split(std::string str, std::string token, SubscribeCoinBaseQuote& sub)
 {
 	if (str.size() > 0) {
 		size_t index = str.find(token);
@@ -184,11 +185,14 @@ void MDEngineCoinmex::split(std::string str, std::string token, SubscribeCoinmex
 
 std::string MDEngineCoinmex::getWhiteListCoinpairFrom(std::string md_coinpair)
 {
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find md_coinpair (md_coinpair) " << md_coinpair);
+    std::string ticker = md_coinpair;
+    std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
+
+    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find md_coinpair (md_coinpair) " << md_coinpair << " (toupper(ticker)) " << ticker);
     std::map<std::string, std::string>::iterator map_itr;
     map_itr = keyIsStrategyCoinpairWhiteList.begin();
     while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-		if(md_coinpair == map_itr->second)
+		if(ticker == map_itr->second)
 		{
             KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
             return map_itr->first;
@@ -199,14 +203,14 @@ std::string MDEngineCoinmex::getWhiteListCoinpairFrom(std::string md_coinpair)
     return "";
 }
 
-void MDEngineCoinmex::debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub)
+void MDEngineCoinmex::debug_print(std::vector<SubscribeCoinBaseQuote> &sub)
 {
     int count = sub.size();
-    KF_LOG_INFO(logger, "[debug_print] SubscribeCoinmexBaseQuote (count) " << count);
+    KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (count) " << count);
 
 	for (int i = 0; i < count;i++)
 	{
-		KF_LOG_INFO(logger, "[debug_print] SubscribeCoinmexBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
+		KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
 	}
 }
 
@@ -347,14 +351,13 @@ void MDEngineCoinmex::subscribeMarketData(const vector<string>& instruments, con
 
 int MDEngineCoinmex::lws_write_subscribe(struct lws* conn)
 {
-	KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe:");
-
-	if(subscribe_index > subscribeCoinmexBaseQuote.size())
-	{
+	KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe: (subscribe_index)" << subscribe_index);
+    if(subscribe_index >= subscribeCoinBaseQuote.size())
+    {
         subscribe_index = 0;
-	}
+    }
 
-    SubscribeCoinmexBaseQuote baseQuote = subscribeCoinmexBaseQuote[subscribe_index++];
+    SubscribeCoinBaseQuote baseQuote = subscribeCoinBaseQuote[subscribe_index++];
 
     unsigned char msg[512];
     memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
@@ -367,7 +370,10 @@ int MDEngineCoinmex::lws_write_subscribe(struct lws* conn)
     strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 
-    lws_callback_on_writable( conn );
+    if(subscribe_index < subscribeCoinBaseQuote.size())
+    {
+        lws_callback_on_writable( conn );
+    }
 
     return ret;
 }
@@ -452,7 +458,7 @@ void MDEngineCoinmex::onDepth(Document& json)
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "base : " << base << "  quote: " << quote);
 
-    std::string ticker = getWhiteListCoinpairFrom(base + quote);
+    std::string ticker = getWhiteListCoinpairFrom(base + "_" +  quote);
     if(ticker.length() == 0) {
 		KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: not in WhiteList , ignore it:" << "base : " << base << "  quote: " << quote);
 		return;
@@ -465,23 +471,22 @@ void MDEngineCoinmex::onDepth(Document& json)
 	auto iter = tickerAskPriceMap.find(ticker);
 	if(iter != tickerAskPriceMap.end()) {
 		asksPriceAndVolume = iter->second;
-        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  get from map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
+//        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  get from map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
 	} else {
         asksPriceAndVolume = new std::map<int64_t, uint64_t>();
 		tickerAskPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, asksPriceAndVolume));
-        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  insert into map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
+//        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  insert into map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
 	}
 
 	iter = tickerBidPriceMap.find(ticker);
 	if(iter != tickerBidPriceMap.end()) {
 		bidsPriceAndVolume = iter->second;
-        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  get from map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
+//        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  get from map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
 	} else {
         bidsPriceAndVolume = new std::map<int64_t, uint64_t>();
 		tickerBidPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, bidsPriceAndVolume));
-        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  insert into map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
+//        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  insert into map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
 	}
-
 
     //make depth map
     if(json.HasMember("data") && json["data"].IsObject()) {
@@ -491,14 +496,15 @@ void MDEngineCoinmex::onDepth(Document& json)
             for(int i = 0 ; i < len; i++)
             {
                 int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
-                uint64_t volume = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
+                uint64_t volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
                 //if volume is 0, remove it
                 if(volume == 0) {
                     asksPriceAndVolume->erase(price);
+                    KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
                 } else {
                     asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
                 }
-                KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: asks price:" << price<<  "  volume:"<< volume);
+//                KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: asks price:" << price<<  "  volume:"<< volume);
                 asks_update = true;
             }
         }
@@ -509,13 +515,15 @@ void MDEngineCoinmex::onDepth(Document& json)
             for(int i = 0 ; i < len; i++)
             {
                 int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
-                uint64_t volume = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
+                uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
                 if(volume == 0) {
                     bidsPriceAndVolume->erase(price);
+                    KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
+
                 } else {
                     bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
                 }
-                KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: bids price:" << price<<  "  volume:"<< volume);
+//                KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: bids price:" << price<<  "  volume:"<< volume);
                 bids_update = true;
             }
         }
@@ -529,7 +537,7 @@ void MDEngineCoinmex::onDepth(Document& json)
         memset(&md, 0, sizeof(md));
 
         sortMapByKey(*asksPriceAndVolume, sort_result, sort_price_desc);
-        std::cout<<"asksPriceAndVolume sorted :"<< std::endl;
+        std::cout<<"asksPriceAndVolume sorted desc:"<< std::endl;
         for(int i=0; i<sort_result.size(); i++)
         {
             std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
@@ -540,15 +548,16 @@ void MDEngineCoinmex::onDepth(Document& json)
 
         for(int i = 0; i < size; ++i)
         {
-            md.AskLevels[i].price = sort_result[askTotalSize - i - 1].price;
-            md.AskLevels[i].volume = sort_result[askTotalSize - i - 1].volume;
+            md.AskLevels[i].price = sort_result[askTotalSize - size + i].price;
+            md.AskLevels[i].volume = sort_result[askTotalSize - size + i].volume;
+            KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:  LFPriceBook20Field AskLevels: (i)" << i << "(price)" << md.AskLevels[i].price<<  "  (volume)"<< md.AskLevels[i].volume);
         }
         md.AskLevelCount = size;
 
 
         sort_result.clear();
         sortMapByKey(*bidsPriceAndVolume, sort_result, sort_price_asc);
-        std::cout<<"bidsPriceAndVolume sorted :"<< std::endl;
+        std::cout<<"bidsPriceAndVolume sorted asc:"<< std::endl;
         for(int i=0; i<sort_result.size(); i++)
         {
             std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
@@ -559,8 +568,9 @@ void MDEngineCoinmex::onDepth(Document& json)
 
         for(int i = 0; i < size; ++i)
         {
-            md.BidLevels[i].price = sort_result[askTotalSize - i - 1].price;
-            md.BidLevels[i].volume = sort_result[askTotalSize - i - 1].volume;
+            md.BidLevels[i].price = sort_result[bidTotalSize - i - 1].price;
+            md.BidLevels[i].volume = sort_result[bidTotalSize - i - 1].volume;
+            KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:  LFPriceBook20Field BidLevels: (i) " << i << "(price)" << md.BidLevels[i].price<<  "  (volume)"<< md.BidLevels[i].volume);
         }
         md.BidLevelCount = size;
         sort_result.clear();

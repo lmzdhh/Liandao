@@ -145,9 +145,13 @@ void TDEngineCoinmex::readWhiteLists(AccountUnitCoinmex& unit, const json& j_con
                 KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
                 unit.keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
 
+                //use strategy_coinpair
+                std::string coinpair = strategy_coinpair;
+                std::transform(coinpair.begin(), coinpair.end(), coinpair.begin(), ::toupper);
+
                 SubscribeCoinmexBaseQuote baseQuote;
-                split(it.key(), "_", baseQuote);
-                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinmexBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote << " (baseQuote.base.length() )" << baseQuote.base.length() );
+                split(coinpair, "_", baseQuote);
+                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinmexBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
 
                 if(baseQuote.base.length() > 0)
                 {
@@ -164,7 +168,7 @@ bool TDEngineCoinmex::hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote
     KF_LOG_INFO(logger, "[hasSymbolInWhiteList]");
     int count = sub.size();
     std::string t = symbol;
-    std::transform(t.begin(), t.end(), t.begin(), ::tolower);
+    std::transform(t.begin(), t.end(), t.begin(), ::toupper);
     for (int i = 0; i < count;i++)
     {
         if(sub[i].base == t) {
@@ -238,19 +242,152 @@ void TDEngineCoinmex::connect(long timeout_nsec)
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
-            Document d;
-            get_exchange_time(unit, d);
+//            Document d;
+//            get_exchange_time(unit, d);
 //            if(d.HasMember("timestamp")) {
 //                Value& s = d["timestamp"];
 //                KF_LOG_INFO(logger, "[connect] (response.timestamp.type) " << s.GetType() << " (response.timestamp) " << d["timestamp"].GetInt64());
 //                unit.logged_in = true;
 //            }
+            //exchange infos
+            Document doc;
+            get_products(unit, doc);
+            KF_LOG_INFO(logger, "[connect] get_products");
+            printResponse(doc);
+
+            if(loadExchangeOrderFilters(unit, doc))
+            {
+                unit.logged_in = true;
+            } else {
+                KF_LOG_ERROR(logger, "[connect] logged_in = false for loadExchangeOrderFilters return false");
+            }
+            debug_print(unit.sendOrderFilters);
             unit.logged_in = true;
         }
     }
 
     KF_LOG_INFO(logger, "[connect] rest_thread start on TDEngineCoinmex::loop");
     rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineCoinmex::loop, this)));
+}
+
+bool TDEngineCoinmex::loadExchangeOrderFilters(AccountUnitCoinmex& unit, Document &doc)
+{
+    KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
+    //changelog 2018-07-20. use hardcode mode
+    /*
+    BTC_USDT	0.0001		4
+    ETH_USDT	0.0001		4
+    LTC_USDT	0.0001		4
+    BCH_USDT	0.0001		4
+    ETC_USDT	0.0001		4
+    ETC_ETH	0.00000001		8
+    LTC_BTC	0.00000001		8
+    BCH_BTC	0.00000001		8
+    ETH_BTC	0.00000001		8
+    ETC_BTC	0.00000001		8
+     * */
+    SendOrderFilter afilter;
+
+    strncpy(afilter.InstrumentID, "BTC_USDT", 31);
+    afilter.ticksize = 4;
+    unit.sendOrderFilters.insert(std::make_pair("BTC_USDT", afilter));
+
+    strncpy(afilter.InstrumentID, "ETH_USDT", 31);
+    afilter.ticksize = 4;
+    unit.sendOrderFilters.insert(std::make_pair("ETH_USDT", afilter));
+
+    strncpy(afilter.InstrumentID, "LTC_USDT", 31);
+    afilter.ticksize = 4;
+    unit.sendOrderFilters.insert(std::make_pair("LTC_USDT", afilter));
+
+    strncpy(afilter.InstrumentID, "BCH_USDT", 31);
+    afilter.ticksize = 4;
+    unit.sendOrderFilters.insert(std::make_pair("BCH_USDT", afilter));
+
+    strncpy(afilter.InstrumentID, "ETC_USDT", 31);
+    afilter.ticksize = 4;
+    unit.sendOrderFilters.insert(std::make_pair("ETC_USDT", afilter));
+
+    strncpy(afilter.InstrumentID, "ETC_ETH", 31);
+    afilter.ticksize = 8;
+    unit.sendOrderFilters.insert(std::make_pair("ETC_ETH", afilter));
+
+    strncpy(afilter.InstrumentID, "LTC_BTC", 31);
+    afilter.ticksize = 8;
+    unit.sendOrderFilters.insert(std::make_pair("LTC_BTC", afilter));
+
+    strncpy(afilter.InstrumentID, "BCH_BTC", 31);
+    afilter.ticksize = 8;
+    unit.sendOrderFilters.insert(std::make_pair("BCH_BTC", afilter));
+
+    strncpy(afilter.InstrumentID, "ETH_BTC", 31);
+    afilter.ticksize = 8;
+    unit.sendOrderFilters.insert(std::make_pair("ETH_BTC", afilter));
+
+    strncpy(afilter.InstrumentID, "ETC_BTC", 31);
+    afilter.ticksize = 8;
+    unit.sendOrderFilters.insert(std::make_pair("ETC_BTC", afilter));
+
+    //parse coinmex json
+    /*
+     [{"baseCurrency":"LTC","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"LTC_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
+     {"baseCurrency":"BCH","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"BCH_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
+     {"baseCurrency":"ETH","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"ETH_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
+     {"baseCurrency":"ETC","baseMaxSize":"100000.00","baseMinSize":"0.01","code":"ETC_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
+     ...
+     ]
+     * */
+//    if(doc.HasParseError() || doc.IsObject())
+//    {
+//        return false;
+//    }
+//    if(doc.IsArray())
+//    {
+//        int symbolsCount = doc.Size();
+//        for (int i = 0; i < symbolsCount; i++) {
+//            const rapidjson::Value& sym = doc.GetArray()[i];
+//            std::string symbol = sym["code"].GetString();
+//            std::string tickSizeStr =  sym["baseMinSize"].GetString();
+//            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+//                                                                                       " (tickSizeStr)" << tickSizeStr);
+//            //0.0000100; 0.001;  1; 10
+//            SendOrderFilter afilter;
+//            strncpy(afilter.InstrumentID, symbol.c_str(), 31);
+//            afilter.ticksize = Round(tickSizeStr);
+//            unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
+//            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+//                                                                                       " (tickSizeStr)" << tickSizeStr
+//                                                                                       <<" (tickSize)" << afilter.ticksize);
+//        }
+//    }
+}
+
+void TDEngineCoinmex::debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters)
+{
+    std::map<std::string, SendOrderFilter>::iterator map_itr = sendOrderFilters.begin();
+    while(map_itr != sendOrderFilters.end())
+    {
+        KF_LOG_INFO(logger, "[debug_print] sendOrderFilters (symbol)" << map_itr->first <<
+                                                                      " (tickSize)" << map_itr->second.ticksize);
+        map_itr++;
+    }
+}
+
+SendOrderFilter TDEngineCoinmex::getSendOrderFilter(AccountUnitCoinmex& unit, const char *symbol)
+{
+    std::map<std::string, SendOrderFilter>::iterator map_itr = unit.sendOrderFilters.begin();
+    while(map_itr != unit.sendOrderFilters.end())
+    {
+        if(strcmp(map_itr->first.c_str(), symbol) == 0)
+        {
+            return map_itr->second;
+        }
+        map_itr++;
+    }
+    SendOrderFilter defaultFilter;
+    defaultFilter.ticksize = 8;
+    strcpy(defaultFilter.InstrumentID, "notfound");
+    return defaultFilter;
 }
 
 void TDEngineCoinmex::login(long timeout_nsec)
@@ -413,7 +550,7 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
     int position_count = tmp_vector.size();
     for (int i = 0; i < position_count; i++)
     {
-        on_rsp_position(&pos, i == (position_count - 1), requestId, errorId, errorMsg.c_str());
+        on_rsp_position(&tmp_vector[i], i == (position_count - 1), requestId, errorId, errorMsg.c_str());
         findSymbolInResult = true;
     }
 
@@ -429,6 +566,41 @@ void TDEngineCoinmex::req_qry_account(const LFQryAccountField *data, int account
 {
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
+
+int64_t TDEngineCoinmex::fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy) {
+    if(keepPrecision == 8) return price;
+
+    int removePrecisions = (8 - keepPrecision);
+    double cutter = pow(10, removePrecisions);
+
+    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 1(price)" << std::fixed  << std::setprecision(9) << price);
+    double new_price = price/cutter;
+    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 2(price/cutter)" << std::fixed  << std::setprecision(9) << new_price);
+    if(isBuy){
+        new_price += 0.9;
+        new_price = std::floor(new_price);
+        KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 3(price is buy)" << std::fixed  << std::setprecision(9) << new_price);
+    } else {
+        new_price = std::floor(new_price);
+        KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 3(price is sell)" << std::fixed  << std::setprecision(9) << new_price);
+    }
+    int64_t  ret_price = new_price * cutter;
+    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 4(new_price * cutter)" << std::fixed  << std::setprecision(9) << new_price);
+    return ret_price;
+}
+
+int TDEngineCoinmex::Round(std::string tickSizeStr) {
+    size_t docAt = tickSizeStr.find( ".", 0 );
+    size_t oneAt = tickSizeStr.find( "1", 0 );
+
+    if(docAt == string::npos) {
+        //not ".", it must be "1" or "10"..."100"
+        return -1 * (tickSizeStr.length() -  1);
+    }
+    //there must exist 1 in the string.
+    return oneAt - docAt;
+}
+
 
 void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
@@ -446,7 +618,7 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
     if(ticker.length() == 0) {
         KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList , ignore it:" << data->InstrumentID);
         errorId = 200;
-        errorMsg = "not in WhiteList, ignore it";
+        errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
         return;
@@ -455,8 +627,18 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
 
     double funds = 0;
     Document d;
+
+    SendOrderFilter filter = getSendOrderFilter(unit, ticker.c_str());
+
+    int64_t fixedPrice = fixPriceTickSize(filter.ticksize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
+
+    KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<
+                                                                     " (LimitPrice)" << data->LimitPrice <<
+                                                                     " (ticksize)" << filter.ticksize <<
+                                                                     " (fixedPrice)" << fixedPrice);
+
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
-            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset, funds, d);
+            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, d);
 
     if(d.HasMember("orderId") && d.HasMember("result"))
     {
@@ -531,7 +713,7 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
     if(ticker.length() == 0) {
         KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it:" << data->InstrumentID);
         errorId = 200;
-        errorMsg = "not in WhiteList, ignore it";
+        errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
         return;
@@ -607,16 +789,16 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
 {
     KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
     std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator;
-    int indexNum = 0;
-    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
-    {
-        indexNum++;
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    (account.api_key)"<< unit.api_key
-                                                                << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
-                                                                <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
-                                                                <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
-        );
-    }
+//    int indexNum = 0;
+//    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
+//    {
+//        indexNum++;
+//        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    (account.api_key)"<< unit.api_key
+//                                                                << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
+//                                                                <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
+//                                                                <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
+//        );
+//    }
 
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
     {
@@ -717,7 +899,7 @@ volume 	订单委托数量
                 //first send onRtnOrder about the status change or VolumeTraded change
                 strcpy(rtn_order.ExchangeID, "coinmex");
                 strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_order.InstrumentID, d["code"].GetString(), 31);
+                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
                 rtn_order.Direction = GetDirection(d["side"].GetString());
                 //No this setting on coinmex
                 rtn_order.TimeCondition = LF_CHAR_GFD;
@@ -742,7 +924,7 @@ volume 	订单委托数量
                     memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
                     strcpy(rtn_trade.ExchangeID, "coinmex");
                     strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-                    strncpy(rtn_trade.InstrumentID, d["code"].GetString(), 31);
+                    strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
                     strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
                     rtn_trade.Direction = rtn_order.Direction;
                     uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
@@ -1112,7 +1294,7 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
                                       {"Content-Length", to_string(body.size())},
                                       {"ACCESS-SIGN", sign},
                                       {"ACCESS-TIMESTAMP",  Timestamp}},
-                               Body{body}, Timeout{10000});
+                               Body{body}, Timeout{30000});
 
     //an error:
     //(response.status_code) 0 (response.error.message) Failed to connect to www.bitmore.top port 443: Connection refused (response.text)
@@ -1150,7 +1332,7 @@ void TDEngineCoinmex::cancel_all_orders(AccountUnitCoinmex& unit, std::string co
                                         {"Content-Length", to_string(body.size())},
                                         {"ACCESS-SIGN", sign},
                                         {"ACCESS-TIMESTAMP",  Timestamp}},
-                                 Body{body}, Timeout{10000});
+                                 Body{body}, Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                                      " (response.error.message) " << response.error.message <<
@@ -1265,7 +1447,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, l
                                         {"Content-Length", to_string(body.size())},
                                         {"ACCESS-SIGN", sign},
                                         {"ACCESS-TIMESTAMP",  Timestamp}},
-                                 Body{body}, Timeout{10000});
+                                 Body{body}, Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
