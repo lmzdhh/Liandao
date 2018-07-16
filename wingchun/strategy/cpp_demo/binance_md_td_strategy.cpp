@@ -10,7 +10,7 @@
 USING_WC_NAMESPACE
 
 #define SOURCE_INDEX SOURCE_BINANCE
-#define M_TICKER "btcusdt"
+#define M_TICKER "TRXBTC"
 #define M_EXCHANGE EXCHANGE_SHFE
 #define TRADED_VOLUME_LIMIT 500
 
@@ -88,7 +88,7 @@ void Strategy::init()
 
 void Strategy::on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time)
 {
-    KF_LOG_INFO(logger, " [on_rsp_position] (source)" << source << " (request_id)" << request_id << " (PosHandlerPtr)" << posMap->to_string());
+    KF_LOG_INFO(logger, " [on_rsp_position] (source)" << source << " (request_id)" << request_id);
     if (request_id == -1 && source == SOURCE_INDEX)
     {
         td_connected = true;
@@ -117,17 +117,18 @@ void Strategy::on_price_book_update(const LFPriceBook20Field* data, short source
 
     if(rid == -1)
     {
+KF_LOG_INFO(logger, "[on_price_book_update] insert order ");
         //new insert
         rid = util->insert_limit_order(SOURCE_INDEX, M_TICKER, M_EXCHANGE,
                                        289, 51200000000,
                                        LF_CHAR_Buy, LF_CHAR_Open);
 
-        KF_LOG_DEBUG(logger, "[insert_limit_order] (rid)" << rid);
+        KF_LOG_INFO(logger, "[insert_limit_order] (rid)" << rid);
     } else {
         //cancel it
         if(cancel_id == -1) {
             cancel_id = util->cancel_order(SOURCE_INDEX, rid);
-            KF_LOG_DEBUG(logger, "[cancel_order] (cancel_id)" << cancel_id);
+            KF_LOG_INFO(logger, "[cancel_order] (cancel_id)" << cancel_id);
         }
     }
 }
