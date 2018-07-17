@@ -41,6 +41,13 @@ struct OnRtnOrderDoneAndWaitingOnRtnTrade
     LfDirectionType Direction;  //买卖方向
 };
 
+struct SendOrderFilter
+{
+    char_31 InstrumentID;   //合约代码
+    int ticksize; //for price round.
+    //...other
+};
+
 struct AccountUnitBinance
 {
     std::string api_key;
@@ -55,6 +62,7 @@ struct AccountUnitBinance
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> newOnRtnTrades;
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
     std::vector<std::string> whiteListInstrumentIDs;
+    std::map<std::string, SendOrderFilter> sendOrderFilters;
 };
 
 /**
@@ -102,6 +110,7 @@ private:
 
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
+    bool loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc);
     void GetAndHandleOrderTradeResponse();
     void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
                                         const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, int64_t binanceOrderId);
@@ -117,6 +126,7 @@ private:
     bool isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
     bool removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId);
     static constexpr int scale_offset = 1e8;
+    int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
 
     ThreadPtr rest_thread;
     uint64_t last_rest_get_ts = 0;
@@ -147,6 +157,10 @@ private:
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& doc);
     void printResponse(const Document& d);
     inline std::string getTimestampString();
+
+    void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
+
+    SendOrderFilter getSendOrderFilter(AccountUnitBinance& unit, const char *symbol);
 
 };
 
