@@ -4,14 +4,18 @@
 #include "TypeConvert.hpp"
 #include <boost/algorithm/string.hpp>
 
-
-#include "../../utils/crypto/openssl_util.h"
-
-#include "TypeConvert.hpp"
-#include <boost/algorithm/string.hpp>
-#include <cpr/cpr.h>
 #include <writer.h>
 #include <stringbuffer.h>
+#include <document.h>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <stdio.h>
+#include <assert.h>
+#include <cpr/cpr.h>
+#include <chrono>
+#include "../../utils/crypto/openssl_util.h"
+
 using cpr::Delete;
 using cpr::Get;
 using cpr::Url;
@@ -35,6 +39,7 @@ using std::stoi;
 using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
+
 
 USING_WC_NAMESPACE
 
@@ -82,10 +87,6 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     unit.secret_key = secret_key;
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (is whiteListInstrumentIDs exist?)" << (j_config.find("whiteListInstrumentIDs") != j_config.end()));
-    BinaCPP::init( unit.api_key , unit.secret_key );
-
-    Json::Value result;
-    long recvWindow = 10000;
 
     if(j_config.find("whiteListInstrumentIDs") != j_config.end()) {
         string whiteListInstrumentIDs = j_config["whiteListInstrumentIDs"].get<string>();
@@ -105,31 +106,37 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
 
                     if(d.IsArray()) { // expected success response is array
                         size_t len = d.Size();
-                        KF_LOG_INFO(logger, "[get_open_orders] (length)" << len);
+                        KF_LOG_INFO(logger, "[load_account][get_open_orders] (length)" << len);
                         for (int i = 0; i < len; i++) {
                             if(d[i].IsObject() && d[i].HasMember("symbol") && d[i].HasMember("clientOrderId"))
                             {
-                                if(d[i]["symbol"].IsString() && d[i]["clientOrderId"].IsString())
+                                if(d.GetArray()[i]["symbol"].IsString() && d.GetArray()[i]["clientOrderId"].IsString())
                                 {
-                                    std::string symbol = d[i]["symbol"].GetString();
-                                    std::string orderRef = d[i]["clientOrderId"].GetString();
+                                    std::string symbol = d.GetArray()[i]["symbol"].GetString();
+                                    std::string orderRef = d.GetArray()[i]["clientOrderId"].GetString();
+                                    Document cancelResponse;
+                                    cancel_order(unit, symbol.c_str(), 0, orderRef.c_str(),"", cancelResponse);
 
-                                    BinaCPP::cancel_order(symbol.c_str(), 0, orderRef.c_str(),"", recvWindow, result);
-
-                                    KF_LOG_INFO(logger, "[load_account] cancel_order" << " (result)" << result);
+                                    KF_LOG_INFO(logger, "[load_account] cancel_order:");
+                                    printResponse(cancelResponse);
                                     int errorId = 0;
                                     std::string errorMsg = "";
-                                    if(result["code"] != Json::nullValue)
+                                    if(d.HasParseError() )
                                     {
-                                        errorId = result["code"].asInt();
-                                        errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
+                                        errorId=100;
+                                        errorMsg= "cancel_order http response has parse error. please check the log";
+                                        KF_LOG_ERROR(logger, "[load_account] cancel_order error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+                                    }
+                                    if(!cancelResponse.HasParseError() && cancelResponse.IsObject() && cancelResponse.HasMember("code") && cancelResponse["code"].IsNumber())
+                                    {
+                                        errorId = cancelResponse["code"].GetInt();
+                                        if(cancelResponse.HasMember("msg") && cancelResponse["msg"].IsString())
+                                        {
+                                            errorMsg = cancelResponse["msg"].GetString();
+                                        }
+
                                         KF_LOG_ERROR(logger, "[load_account] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
                                     }
-//                                    if(errorId != 0)
-//                                    {
-//                                        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-//                                        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
-//                                    }
                                 }
                             }
                         }
@@ -152,27 +159,93 @@ void TDEngineBinance::connect(long timeout_nsec)
     for (int idx = 0; idx < account_units.size(); idx ++)
     {
         AccountUnitBinance& unit = account_units[idx];
-        BinaCPP::init( unit.api_key , unit.secret_key );
 
-        Json::Value result;
-        long recvWindow = 10000;
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
-            // User Balance
-            BinaCPP::get_account( recvWindow , result );
-            KF_LOG_INFO(logger, "[connect] get_account " << " (result)" << result);
-            for ( int i  = 0 ; i < result["balances"].size() ; i++ ) {
-                string symbol = result["balances"][i]["asset"].asString();
-                KF_LOG_INFO(logger,  "[connect] (symbol)" << symbol << " free:" <<  result["balances"][i]["free"].asString().c_str()
-                << " locked: " << result["balances"][i]["locked"].asString().c_str());
+            //exchange infos
+            Document doc;
+            get_exchange_infos(unit, doc);
+            KF_LOG_INFO(logger, "[connect] get_exchange_infos");
+//            printResponse(doc);
+
+            if(loadExchangeOrderFilters(unit, doc))
+            {
+                unit.logged_in = true;
+            } else {
+                KF_LOG_ERROR(logger, "[connect] logged_in = false for loadExchangeOrderFilters return false");
             }
-            unit.logged_in = true;
+            debug_print(unit.sendOrderFilters);
         }
     }
 
-    KF_LOG_INFO(logger, "[connect] rest_thread start on TDEngineBinance::loop");
+
     rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::loop, this)));
+}
+
+bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc)
+{
+    KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
+    if(doc.HasParseError() || !doc.IsObject())
+    {
+        return false;
+    }
+    if(doc.HasMember("symbols") && doc["symbols"].IsArray())
+    {
+        int symbolsCount = doc["symbols"].Size();
+        for (int i = 0; i < symbolsCount; i++) {
+            const rapidjson::Value& sym = doc["symbols"].GetArray()[i];
+            std::string symbol = sym["symbol"].GetString();
+            if(sym.IsObject() && sym.HasMember("filters") && sym["filters"].IsArray()) {
+                int filtersCount = sym["filters"].Size();
+                for (int j = 0; j < filtersCount; j++) {
+                    const rapidjson::Value& filter = sym["filters"].GetArray()[j];
+                    if (strcmp("PRICE_FILTER", filter["filterType"].GetString()) == 0) {
+                        std::string tickSizeStr =  filter["tickSize"].GetString();
+                        KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+                                                                                                   " (tickSizeStr)" << tickSizeStr);
+                        //0.0000100; 0.001;
+                        unsigned int locStart = tickSizeStr.find( ".", 0 );
+                        unsigned int locEnd = tickSizeStr.find( "1", 0 );
+                        if( locStart != string::npos  && locEnd != string::npos ){
+                            int num = locEnd - locStart;
+                            SendOrderFilter afilter;
+                            strncpy(afilter.InstrumentID, symbol.c_str(), 31);
+                            afilter.ticksize = num;
+                            unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
+                            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+                                                                                                       " (tickSizeStr)" << tickSizeStr
+                                                                                                       <<" (tickSize)" << afilter.ticksize);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void TDEngineBinance::debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters)
+{
+    std::map<std::string, SendOrderFilter>::iterator map_itr = sendOrderFilters.begin();
+    while(map_itr != sendOrderFilters.end())
+    {
+        KF_LOG_INFO(logger, "[debug_print] sendOrderFilters (symbol)" << map_itr->first <<
+                                                                                   " (tickSize)" << map_itr->second.ticksize);
+        map_itr++;
+    }
+}
+
+SendOrderFilter TDEngineBinance::getSendOrderFilter(AccountUnitBinance& unit, const char *symbol)
+{
+    std::map<std::string, SendOrderFilter>::iterator map_itr = unit.sendOrderFilters.begin();
+    while(map_itr != unit.sendOrderFilters.end())
+    {
+        if(strcmp(map_itr->first.c_str(), symbol) == 0)
+        {
+            return map_itr->second;
+        }
+        map_itr++;
+    }
 }
 
 void TDEngineBinance::login(long timeout_nsec)
@@ -302,20 +375,32 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
     KF_LOG_INFO(logger, "[req_investor_position]");
 
     AccountUnitBinance& unit = account_units[account_index];
-    BinaCPP::init( unit.api_key , unit.secret_key );
-    Json::Value result;
-    long recvWindow = 10000;
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key);
 
     // User Balance
-    BinaCPP::get_account( recvWindow , result );
+    Document d;
+    get_account(unit, d);
+    KF_LOG_INFO(logger, "[req_investor_position] get_account");
+    printResponse(d);
+
     int errorId = 0;
     std::string errorMsg = "";
-    if(result["code"] != Json::nullValue)
+    if(d.HasParseError() )
     {
-        errorId = result["code"].asInt();
-        KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (code)" << errorId);
-        errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
+        errorId=100;
+        errorMsg= "get_account http response has parse error. please check the log";
+        KF_LOG_ERROR(logger, "[req_investor_position] get_account error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+    }
+
+    if(!d.HasParseError() && d.IsObject() && d.HasMember("code") && d["code"].IsNumber())
+    {
+        errorId = d["code"].GetInt();
+        if(d.HasMember("msg") && d["msg"].IsString())
+        {
+            errorMsg = d["msg"].GetString();
+        }
+
+        KF_LOG_ERROR(logger, "[req_investor_position] get_account failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
     send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BINANCE, 1, requestId);
 
@@ -329,20 +414,21 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
 
     bool findSymbolInResult = false;
 
-    if(result["code"] == Json::nullValue) {
-        int balancesSize = result["balances"].size();
-        for (int i = 0; i < balancesSize; i++) {
-            string symbol = result["balances"][i]["asset"].asString();
+    if(!d.HasParseError() && d.IsObject() && d.HasMember("balances"))
+    {
+        int len = d["balances"].Size();
+        for ( int i  = 0 ; i < len ; i++ ) {
+            std::string symbol = d["balances"].GetArray()[i]["asset"].GetString();
+            std::string free = d["balances"].GetArray()[i]["free"].GetString();
+            std::string locked = d["balances"].GetArray()[i]["locked"].GetString();
+            KF_LOG_INFO(logger,  "[connect] (symbol)" << symbol << " (free)" <<  free << " (locked)" << locked);
             strncpy(pos.InstrumentID, symbol.c_str(), 31);
-            KF_LOG_INFO(logger, "[req_investor_position] (symbol)" << symbol << " free:"
-                                                                   << result["balances"][i]["free"].asString().c_str()
-                                                                   << " locked: "
-                                                                   << result["balances"][i]["locked"].asString().c_str());
-            pos.Position = std::round(stod(result["balances"][i]["free"].asString().c_str()) * scale_offset);
-            on_rsp_position(&pos, i == (balancesSize - 1), requestId);
+            pos.Position = std::round(stod(d["balances"].GetArray()[i]["free"].GetString()) * scale_offset);
+            on_rsp_position(&pos, i == (len - 1), requestId);
             findSymbolInResult = true;
         }
     }
+
     if(!findSymbolInResult)
     {
         on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
@@ -355,6 +441,23 @@ void TDEngineBinance::req_qry_account(const LFQryAccountField *data, int account
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
+
+int64_t TDEngineBinance::fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy)
+{
+    //the 8 is come from 1e8.
+    if(keepPrecision == 8) return price;
+    int removePrecisions = (8 - keepPrecision);
+    double cutter =  pow(10, removePrecisions);
+    int64_t new_price = 0;
+    if(isBuy)
+    {
+        new_price = std::ceil(price / cutter) * cutter;
+    } else {
+        new_price = std::floor(price / cutter) * cutter;
+    }
+    return new_price;
+}
+
 void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     AccountUnitBinance& unit = account_units[account_index];
@@ -362,32 +465,46 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
                                               << " (APIKey)" << unit.api_key
                                               << " (Tid)" << data->InstrumentID
                                               << " (OrderRef)" << data->OrderRef);
-    long recvWindow = 10000;
     double stopPrice = 0;
     double icebergQty = 0;
-    Json::Value result;
-    //KF_LOG_INFO(logger, "[req_order_insert]" << " (Volume)" << data->Volume);
-    //KF_LOG_INFO(logger, "[req_order_insert]" << " (data->Volume*1.0/scale_offset)" << data->Volume*1.0/scale_offset);
-    //KF_LOG_INFO(logger, "[req_order_insert]" << " (LimitPrice)" << data->LimitPrice);
-    //KF_LOG_INFO(logger, "[req_order_insert]" << " (LimitPrice*1.0/scale_offset)" << data->LimitPrice*1.0/scale_offset);
-    //BinaCPP::send_order( "BNBETH", "BUY", "LIMIT", "GTC", 20 , 0.00380000, "",0,0, recvWindow, result );
-    //BinaCPP::send_order( "BNBETH", "BUY", "MARKET", "GTC", 20 , 0,   "",0,0, recvWindow, result );
-    BinaCPP::init( unit.api_key, unit.secret_key );
-    BinaCPP::send_order( data->InstrumentID, GetSide(data->Direction).c_str(), GetType(data->OrderPriceType).c_str(),
-        GetTimeInForce(data->TimeCondition).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset, data->OrderRef, 
-        stopPrice, icebergQty, recvWindow, result);
+    Document d;
+
+    SendOrderFilter filter = getSendOrderFilter(unit, data->InstrumentID);
+
+    int64_t fixedPrice = fixPriceTickSize(filter.ticksize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
+
+    KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << data->InstrumentID <<
+                                                                     " (LimitPrice)" << data->LimitPrice <<
+                                                                     " (ticksize)" << filter.ticksize <<
+                                                                     " (fixedPrice)" << fixedPrice);
+
+    send_order(unit, data->InstrumentID, GetSide(data->Direction).c_str(), GetType(data->OrderPriceType).c_str(),
+        GetTimeInForce(data->TimeCondition).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef,
+        stopPrice, icebergQty, d);
+    KF_LOG_INFO(logger, "[req_order_insert] send_order");
+    printResponse(d);
 
     send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1/*ISLAST*/, requestId);
-    KF_LOG_INFO(logger, "[req_order_insert]" << " (result)" << result);
 
     int errorId = 0;
     std::string errorMsg = "";
-    if(result["code"] != Json::nullValue)
+    if(d.HasParseError() )
     {
-        errorId = result["code"].asInt();
-        KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (code)" << errorId);
-        errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
+        errorId=100;
+        errorMsg= "send_order http response has parse error. please check the log";
+        KF_LOG_ERROR(logger, "[req_order_insert] send_order error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
+    if(!d.HasParseError() && d.IsObject() && d.HasMember("code") && d["code"].IsNumber())
+    {
+        errorId = d["code"].GetInt();
+        if(d.HasMember("msg") && d["msg"].IsString())
+        {
+            errorMsg = d["msg"].GetString();
+        }
+
+        KF_LOG_ERROR(logger, "[req_order_insert] send_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+    }
+
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
@@ -395,26 +512,26 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     }
 
     //paser the order/trade info in the response result
-    if(result["code"] == Json::nullValue)
+    if(!d.HasParseError() && d.IsObject() && !d.HasMember("code"))
     {
-        if(result["status"] == Json::nullValue)
+        if(!d.HasMember("status"))
         {//no status, it is ACK
-            onRspNewOrderACK(data, unit, result, requestId);
+            onRspNewOrderACK(data, unit, d, requestId);
         } else {
-            if(result["fills"] == Json::nullValue)
+            if(!d.HasMember("fills"))
             {
                 // it is RESULT
-                onRspNewOrderRESULT(data, unit, result, requestId);
+                onRspNewOrderRESULT(data, unit, d, requestId);
             } else {
                 // it is FULL
-                onRspNewOrderFULL(data, unit, result, requestId);
+                onRspNewOrderFULL(data, unit, d, requestId);
             }
         }
     }
 }
 
 
-void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId)
+void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId)
 {
     /*Response ACK:
                     {
@@ -427,12 +544,12 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
 
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     char noneStatus = '\0';//none
-    uint64_t binanceOrderId =  result["orderId"].asInt64();
+    int64_t binanceOrderId =  result["orderId"].GetInt64();
     addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction, binanceOrderId);
 }
 
 
-void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId)
+void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId)
 {
     /*Response RESULT:
                     {
@@ -455,17 +572,17 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     memset(&rtn_order, 0, sizeof(LFRtnOrderField));
     strcpy(rtn_order.ExchangeID, "binance");
     strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_order.InstrumentID, result["symbol"].asString().c_str(), 31);
+    strncpy(rtn_order.InstrumentID, result["symbol"].GetString(), 31);
     rtn_order.Direction = data->Direction;
     rtn_order.TimeCondition = data->TimeCondition;
     rtn_order.OrderPriceType = data->OrderPriceType;
-    strncpy(rtn_order.OrderRef, result["clientOrderId"].asString().c_str(), 13);
-    rtn_order.VolumeTraded = std::round(stod(result["executedQty"].asString().c_str()) * scale_offset);
-    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].asString().c_str()) * scale_offset);
+    strncpy(rtn_order.OrderRef, result["clientOrderId"].GetString(), 13);
+    rtn_order.VolumeTraded = std::round(stod(result["executedQty"].GetString()) * scale_offset);
+    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-    rtn_order.LimitPrice = std::round(stod(result["price"].asString().c_str()) * scale_offset);
+    rtn_order.LimitPrice = std::round(stod(result["price"].GetString()) * scale_offset);
     rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
+    rtn_order.OrderStatus = GetOrderStatus(result["status"].GetString());
     on_rtn_order(&rtn_order);
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                             source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
@@ -478,11 +595,11 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
         memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
         strcpy(rtn_trade.ExchangeID, "binance");
         strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-        strncpy(rtn_trade.InstrumentID, result["symbol"].asString().c_str(), 31);
-        strncpy(rtn_trade.OrderRef, result["clientOrderId"].asString().c_str(), 13);
+        strncpy(rtn_trade.InstrumentID, result["symbol"].GetString(), 31);
+        strncpy(rtn_trade.OrderRef, result["clientOrderId"].GetString(), 13);
         rtn_trade.Direction = data->Direction;
-        rtn_trade.Volume = std::round(stod(result["executedQty"].asString().c_str()) * scale_offset);
-        rtn_trade.Price = std::round(stod(result["price"].asString().c_str()) * scale_offset);
+        rtn_trade.Volume = std::round(stod(result["executedQty"].GetString()) * scale_offset);
+        rtn_trade.Price = std::round(stod(result["price"].GetString()) * scale_offset);
 
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
@@ -492,13 +609,13 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
-        uint64_t binanceOrderId =  result["orderId"].asInt64();
+        int64_t binanceOrderId =  result["orderId"].GetInt64();
         addNewQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
                                        rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
 
-void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId)
+void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId)
 {
     /*Response FULL:
                 {
@@ -553,38 +670,37 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     memset(&rtn_order, 0, sizeof(LFRtnOrderField));
     strcpy(rtn_order.ExchangeID, "binance");
     strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_order.InstrumentID, result["symbol"].asString().c_str(), 31);
+    strncpy(rtn_order.InstrumentID, result["symbol"].GetString(), 31);
     rtn_order.Direction = data->Direction;
     rtn_order.TimeCondition = data->TimeCondition;
     rtn_order.OrderPriceType = data->OrderPriceType;
-    strncpy(rtn_order.OrderRef, result["clientOrderId"].asString().c_str(), 13);
-    rtn_order.VolumeTraded = std::round(stod(result["executedQty"].asString().c_str()) * scale_offset);
-    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].asString().c_str()) * scale_offset);
+    strncpy(rtn_order.OrderRef, result["clientOrderId"].GetString(), 13);
+    rtn_order.VolumeTraded = std::round(stod(result["executedQty"].GetString()) * scale_offset);
+    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-    rtn_order.LimitPrice = std::round(stod(result["price"].asString().c_str()) * scale_offset);
+    rtn_order.LimitPrice = std::round(stod(result["price"].GetString()) * scale_offset);
     rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus = GetOrderStatus(result["status"].asString().c_str());
+    rtn_order.OrderStatus = GetOrderStatus(result["status"].GetString());
     on_rtn_order(&rtn_order);
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                             source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
                             1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
     //we have strike price, emit OnRtnTrade
-    int fills_size = result["fills"].size();
-    KF_LOG_INFO(logger, "[req_order_insert]" << " result[fills] exist. (result)" << result);
+    int fills_size = result["fills"].Size();
 
     LFRtnTradeField rtn_trade;
     memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
     strcpy(rtn_trade.ExchangeID, "binance");
     strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_trade.InstrumentID, result["symbol"].asString().c_str(), 31);
-    strncpy(rtn_trade.OrderRef, result["clientOrderId"].asString().c_str(), 13);
+    strncpy(rtn_trade.InstrumentID, result["symbol"].GetString(), 31);
+    strncpy(rtn_trade.OrderRef, result["clientOrderId"].GetString(), 13);
     rtn_trade.Direction = data->Direction;
 
     for(int i = 0; i < fills_size; ++i)
     {
-        rtn_trade.Volume = std::round(stod(result["executedQty"].asString().c_str()) * scale_offset);
-        rtn_trade.Price = std::round(stod(result["price"].asString().c_str()) * scale_offset);
+        rtn_trade.Volume = std::round(stod(result["executedQty"].GetString()) * scale_offset);
+        rtn_trade.Price = std::round(stod(result["price"].GetString()) * scale_offset);
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
@@ -593,7 +709,7 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
-        uint64_t binanceOrderId =  result["orderId"].asInt64();
+        int64_t binanceOrderId =  result["orderId"].GetInt64();
         addNewQueryOrdersAndTrades(unit, rtn_order.InstrumentID,
                                        rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
@@ -608,20 +724,30 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
                                               << " (Iid)" << data->InvestorID
                                               << " (OrderRef)" << data->OrderRef);
 
-    Json::Value result;
-    long recvWindow = 10000;
-    BinaCPP::init( unit.api_key, unit.secret_key );
-	BinaCPP::cancel_order(data->InstrumentID, 0, data->OrderRef,"", recvWindow, result);
+    Document d;
+	cancel_order(unit, data->InstrumentID, 0, data->OrderRef, "", d);
     send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId);
 
-    KF_LOG_INFO(logger, "[req_order_action]" << " (result)" << result);
+    KF_LOG_INFO(logger, "[req_order_action] cancel_order");
+    printResponse(d);
+
     int errorId = 0;
     std::string errorMsg = "";
-    if(result["code"] != Json::nullValue)
+    if(d.HasParseError() )
     {
-        errorId = result["code"].asInt();
-        KF_LOG_ERROR(logger, "[req_order_action] failed!" << " (rid)" << requestId << " (code)" << errorId);
-        errorMsg = (result["msg"] == Json::nullValue) ? "" : result["msg"].asString();
+        errorId=100;
+        errorMsg= "cancel_order http response has parse error. please check the log";
+        KF_LOG_ERROR(logger, "[req_order_action] cancel_order error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+    }
+    if(!d.HasParseError() && d.IsObject() && d.HasMember("code") && d["code"].IsNumber())
+    {
+        errorId = d["code"].GetInt();
+        if(d.HasMember("msg") && d["msg"].IsString())
+        {
+            errorMsg = d["msg"].GetString();
+        }
+
+        KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
     if(errorId != 0)
     {
@@ -641,7 +767,7 @@ void TDEngineBinance::GetAndHandleOrderTradeResponse()
         {
             continue;
         }
-        //BinaCPP::init( unit.api_key , unit.secret_key );
+
         moveNewtoPending(unit);
         retrieveOrderStatus(unit);
         retrieveTradeStatus(unit);
@@ -676,18 +802,8 @@ void TDEngineBinance::moveNewtoPending(AccountUnitBinance& unit)
 
 void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 {
-    KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
+    KF_LOG_INFO(logger, "[retrieveOrderStatus] (unit.pendingOrderStatus.size())" << unit.pendingOrderStatus.size());
     std::vector<PendingBinanceOrderStatus>::iterator orderStatusIterator;
-//    int indexNum = 0;
-//    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
-//    {
-//        indexNum++;
-//        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    account.api_key:"<< unit.api_key
-//                                                                          << "  account.pendingOrderStatus.InstrumentID: "<< orderStatusIterator->InstrumentID
-//                                                                          <<"  account.pendingOrderStatus.OrderRef: " << orderStatusIterator->OrderRef
-//                                                                          <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
-//        );
-//    }
 
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
     {
@@ -697,13 +813,15 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
                                                                           <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
         );
 
-        Json::Value orderResult;
-        long recvWindow = 10000;
-        BinaCPP::init( unit.api_key , unit.secret_key );
-        BinaCPP::get_order( orderStatusIterator->InstrumentID, 0, orderStatusIterator->OrderRef, recvWindow, orderResult );
+        Document orderResult;
+        get_order(unit, orderStatusIterator->InstrumentID, 0, orderStatusIterator->OrderRef, orderResult);
         KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                          << " (orderId)" << orderStatusIterator->OrderRef
-                                                                          << " (result)" << orderResult);
+                                                                          << " (orderId)" << orderStatusIterator->OrderRef);
+        printResponse(orderResult);
+        if(orderResult.HasParseError()) {
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order HasParseError, call continue");
+            continue;
+        }
         /*
             {
                 "symbol": "LTCBTC",
@@ -723,12 +841,12 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
             }
         */
         //parse order status
-        if(orderResult["code"] == Json::nullValue)
+        if(orderResult.IsObject() && !orderResult.HasMember("code"))
         {
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.OrderStatus = GetOrderStatus(orderResult["status"].asString().c_str());
-            rtn_order.VolumeTraded = std::round(stod(orderResult["executedQty"].asString().c_str()) * scale_offset);
+            rtn_order.OrderStatus = GetOrderStatus(orderResult["status"].GetString());
+            rtn_order.VolumeTraded = std::round(stod(orderResult["executedQty"].GetString()) * scale_offset);
 
             //if status changed or LF_CHAR_PartTradedNotQueueing but traded valume changes, emit onRtnOrder
             if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
@@ -737,13 +855,13 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
             {
                 strcpy(rtn_order.ExchangeID, "binance");
                 strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_order.InstrumentID, orderResult["symbol"].asString().c_str(), 31);
-                rtn_order.Direction = GetDirection(orderResult["side"].asString());
-                rtn_order.TimeCondition = GetTimeCondition(orderResult["timeInForce"].asString());
-                rtn_order.OrderPriceType = GetPriceType(orderResult["type"].asString());
-                strncpy(rtn_order.OrderRef, orderResult["clientOrderId"].asString().c_str(), 13);
-                rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["origQty"].asString().c_str()) * scale_offset);
-                rtn_order.LimitPrice = std::round(stod(orderResult["price"].asString().c_str()) * scale_offset);
+                strncpy(rtn_order.InstrumentID, orderResult["symbol"].GetString(), 31);
+                rtn_order.Direction = GetDirection(orderResult["side"].GetString());
+                rtn_order.TimeCondition = GetTimeCondition(orderResult["timeInForce"].GetString());
+                rtn_order.OrderPriceType = GetPriceType(orderResult["type"].GetString());
+                strncpy(rtn_order.OrderRef, orderResult["clientOrderId"].GetString(), 13);
+                rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["origQty"].GetString()) * scale_offset);
+                rtn_order.LimitPrice = std::round(stod(orderResult["price"].GetString()) * scale_offset);
                 rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
                 on_rtn_order(&rtn_order);
                 raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
@@ -755,7 +873,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 
                 //is status is canceled, dont need get the orderref's trade info
                 if(orderStatusIterator->OrderStatus == LF_CHAR_Canceled) {
-                    uint64_t binanceOrderId =  orderResult["orderId"].asInt64();
+                    int64_t binanceOrderId =  orderResult["orderId"].GetInt64();
                     if(removeBinanceOrderIdFromPendingOnRtnTrades(unit, binanceOrderId))
                     {
                         KF_LOG_INFO(logger, "[retrieveTradeStatus] the (OrderRef) "
@@ -767,8 +885,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
             }
         } else {
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                                    << " (orderId)" << orderStatusIterator->OrderRef
-                                                                                    << " (result)" << orderResult);
+                                                                                    << " (orderId)" << orderStatusIterator->OrderRef);
         }
 
         //remove order when finish
@@ -789,13 +906,16 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
     KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())" << unit.pendingOrderStatus.size() << " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size());
     //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
     if(unit.pendingOrderStatus.size() == 0 && unit.pendingOnRtnTrades.size() == 0) return;
-    Json::Value resultTrade;
-    long recvWindow = 900000;
+    Document resultTrade;
+
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
     for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
     {
-        BinaCPP::init( unit.api_key , unit.secret_key );
-        BinaCPP::get_myTrades( tradeStatusIterator->InstrumentID, 500, tradeStatusIterator->last_trade_id, recvWindow , resultTrade );
+        get_my_trades(unit, tradeStatusIterator->InstrumentID, 500, tradeStatusIterator->last_trade_id, resultTrade);
+        if(resultTrade.HasParseError()) {
+            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades HasParseError, call continue");
+            continue;
+        }
         /*
          [
           {
@@ -826,7 +946,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                 "time" : 1530541407016
         }]
         */
-        if(resultTrade.isObject()) {
+        if(resultTrade.IsObject()) {
             //expected is array,but get object, it must be the error response json:
             /*
              {
@@ -836,28 +956,33 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
              * */
             int errorId = 0;
             std::string errorMsg = "";
-            if(resultTrade["code"] != Json::nullValue)
+            if(resultTrade.HasMember("code"))
             {
-                errorId = resultTrade["code"].asInt();
-                errorMsg = (resultTrade["msg"] == Json::nullValue) ? "" : resultTrade["msg"].asString();
-                KF_LOG_ERROR(logger, "[retrieveTradeStatus] get_myTrades failed!" << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
+                errorId = resultTrade["code"].GetInt();
+                if(resultTrade.HasMember("msg") && resultTrade["msg"].IsString())
+                {
+                    errorMsg = resultTrade["msg"].GetString();
+                }
+                KF_LOG_ERROR(logger, "[retrieveTradeStatus] get_my_trades failed!" << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
 
             }
             continue;
         }
-        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id << " (result)"<< resultTrade);
-        for(int i = 0 ; i < resultTrade.size(); i++)
+        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (last_trade_id)" << tradeStatusIterator->last_trade_id);
+        //must be Array
+        int len = resultTrade.Size();
+        for(int i = 0 ; i < len; i++)
         {
             LFRtnTradeField rtn_trade;
             memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
             strcpy(rtn_trade.ExchangeID, "binance");
             strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
-            rtn_trade.Volume = std::round(stod(resultTrade[i]["qty"].asString().c_str()) * scale_offset);
-            rtn_trade.Price = std::round(stod(resultTrade[i]["price"].asString().c_str()) * scale_offset);
+            rtn_trade.Volume = std::round(stod(resultTrade.GetArray()[i]["qty"].GetString()) * scale_offset);
+            rtn_trade.Price = std::round(stod(resultTrade.GetArray()[i]["price"].GetString()) * scale_offset);
 
             //apply the direction of the OrderRef
-            uint64_t binanceOrderId =  resultTrade[i]["orderId"].asInt64();
+            int64_t binanceOrderId =  resultTrade.GetArray()[i]["orderId"].GetInt64();
             std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
 
             bool match_one = false;
@@ -876,21 +1001,22 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                                         source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
             }
 
-            uint64_t newtradeId = resultTrade[i]["id"].asInt64();
-            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (newtradeId)" << newtradeId);
+            int64_t newtradeId = resultTrade.GetArray()[i]["id"].GetInt64();
+            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (newtradeId)" << newtradeId);
             if(newtradeId >= tradeStatusIterator->last_trade_id) {
                 tradeStatusIterator->last_trade_id = newtradeId + 1;// for new trade
             }
-            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_myTrades (last_trade_id)" << tradeStatusIterator->last_trade_id);
+            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (last_trade_id)" << tradeStatusIterator->last_trade_id);
         }
 
         //here, use another for-loop is for there maybe more than one trades on the same orderRef:
         //if the first one remove pendingOnRtnTrades, the second one could not get the Direction.
-        for(int i = 0 ; i < resultTrade.size(); i++)
+
+        for(int i = 0 ; i < len; i++)
         {
             if(! isExistSymbolInPendingBinanceOrderStatus(unit, tradeStatusIterator->InstrumentID)) {
                 //all the OnRtnOrder is finished.
-                uint64_t binanceOrderId =  resultTrade[i]["orderId"].asInt64();
+                int64_t binanceOrderId =  resultTrade.GetArray()[i]["orderId"].GetInt64();
                 if(removeBinanceOrderIdFromPendingOnRtnTrades(unit, binanceOrderId))
                 {
                     KF_LOG_INFO(logger, "[retrieveTradeStatus] there is no pendingOrderStatus(LF_CHAR_AllTraded/LF_CHAR_Canceled/LF_CHAR_Error occur). this is the last turn of get_myTrades on (symbol)" << tradeStatusIterator->InstrumentID);
@@ -900,7 +1026,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
     }
 }
 
-bool TDEngineBinance::removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, uint64_t binanceOrderId)
+bool TDEngineBinance::removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId)
 {
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
     for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); )
@@ -916,7 +1042,7 @@ bool TDEngineBinance::removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBina
 
 void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
                                                      const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                 const uint64_t VolumeTraded, LfDirectionType Direction, uint64_t binanceOrderId)
+                                                 const uint64_t VolumeTraded, LfDirectionType Direction, int64_t binanceOrderId)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
@@ -1009,6 +1135,247 @@ std::vector<std::string> TDEngineBinance::split(std::string str, std::string tok
     return result;
 }
 
+void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
+                const char *side,
+                const char *type,
+                const char *timeInForce,
+                double quantity,
+                double price,
+                const char *newClientOrderId,
+                double stopPrice,
+                double icebergQty,
+                Document& json)
+{
+    KF_LOG_INFO(logger, "[send_order]");
+    long recvWindow = 10000;
+    std::string Timestamp = getTimestampString();
+    std::string Method = "POST";
+    std::string requestPath = "https://api.binance.com/api/v3/order?";
+    std::string queryString("");
+    std::string body = "";
+
+    queryString.append( "symbol=" );
+    queryString.append( symbol );
+
+    queryString.append("&side=");
+    queryString.append( side );
+
+    queryString.append("&type=");
+    queryString.append( type );
+    //if MARKET,not send price or timeInForce
+    if(strcmp("MARKET", type) != 0)
+    {
+        queryString.append("&timeInForce=");
+        queryString.append( timeInForce );
+    }
+
+    queryString.append("&quantity=");
+    queryString.append( to_string( quantity) );
+
+    if(strcmp("MARKET", type) != 0)
+    {
+        queryString.append("&price=");
+        std::string priceStr;
+        std::stringstream convertStream;
+        convertStream <<std::fixed << std::setprecision(8) << price;
+        convertStream >> priceStr;
+
+        KF_LOG_INFO(logger, "[send_order] (priceStr)" << priceStr);
+
+        queryString.append( priceStr );
+    }
+
+    if ( strlen( newClientOrderId ) > 0 ) {
+        queryString.append("&newClientOrderId=");
+        queryString.append( newClientOrderId );
+    }
+
+    if ( stopPrice > 0.0 ) {
+        queryString.append("&stopPrice=");
+        queryString.append( to_string( stopPrice ) );
+    }
+
+    if ( icebergQty > 0.0 ) {
+        queryString.append("&icebergQty=");
+        queryString.append( to_string( icebergQty ) );
+    }
+
+    if ( recvWindow > 0 ) {
+        queryString.append("&recvWindow=");
+        queryString.append( to_string( recvWindow) );
+    }
+
+
+    queryString.append("&timestamp=");
+    queryString.append(Timestamp);
+
+
+    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
+    queryString.append( "&signature=");
+    queryString.append( signature );
+
+    string url = requestPath + queryString;
+
+    const auto response = Post(Url{url},
+                              Header{{"X-MBX-APIKEY", unit.api_key}},
+                              Body{body}, Timeout{100000});
+
+    KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                     " (response.error.message) " << response.error.message <<
+                                                     " (response.text) " << response.text.c_str());
+
+    return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
+void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json)
+{
+    KF_LOG_INFO(logger, "[get_order]");
+    long recvWindow = 10000;
+    std::string Timestamp = getTimestampString();
+    std::string Method = "GET";
+    std::string requestPath = "https://api.binance.com/api/v3/order?";
+    std::string queryString("");
+    std::string body = "";
+
+    queryString.append( "symbol=" );
+    queryString.append( symbol );
+
+    if ( orderId > 0 ) {
+        queryString.append("&orderId=");
+        queryString.append( to_string( orderId ) );
+    }
+
+    if ( strlen( origClientOrderId ) > 0 ) {
+        queryString.append("&origClientOrderId=");
+        queryString.append( origClientOrderId );
+    }
+
+    if ( recvWindow > 0 ) {
+        queryString.append("&recvWindow=");
+        queryString.append( to_string( recvWindow) );
+    }
+
+    queryString.append("&timestamp=");
+    queryString.append( Timestamp );
+
+    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
+    queryString.append( "&signature=");
+    queryString.append( signature );
+
+    string url = requestPath + queryString;
+
+    const auto response = Get(Url{url},
+                              Header{{"X-MBX-APIKEY", unit.api_key}},
+                              Body{body}, Timeout{100000});
+
+    KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
+                                              " (response.error.message) " << response.error.message <<
+                                              " (response.text) " << response.text.c_str());
+
+    return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
+void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
+                  long orderId, const char *origClientOrderId, const char *newClientOrderId, Document &json)
+{
+    KF_LOG_INFO(logger, "[cancel_order]");
+    long recvWindow = 10000;
+    std::string Timestamp = getTimestampString();
+    std::string Method = "DELETE";
+    std::string requestPath = "https://api.binance.com/api/v3/order?";
+    std::string queryString("");
+    std::string body = "";
+
+    queryString.append( "symbol=" );
+    queryString.append( symbol );
+
+    if ( orderId > 0 ) {
+        queryString.append("&orderId=");
+        queryString.append( to_string( orderId ) );
+    }
+
+    if ( strlen( origClientOrderId ) > 0 ) {
+        queryString.append("&origClientOrderId=");
+        queryString.append( origClientOrderId );
+    }
+
+    if ( strlen( newClientOrderId ) > 0 ) {
+        queryString.append("&newClientOrderId=");
+        queryString.append( newClientOrderId );
+    }
+
+    if ( recvWindow > 0 ) {
+        queryString.append("&recvWindow=");
+        queryString.append( std::to_string( recvWindow) );
+    }
+
+    queryString.append("&timestamp=");
+    queryString.append( Timestamp );
+
+    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
+    queryString.append( "&signature=");
+    queryString.append( signature );
+
+    string url = requestPath + queryString;
+
+    const auto response = Delete(Url{url},
+                              Header{{"X-MBX-APIKEY", unit.api_key}},
+                              Body{body}, Timeout{100000});
+
+    KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
+                                             " (response.error.message) " << response.error.message <<
+                                             " (response.text) " << response.text.c_str());
+
+    return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
+void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol, int limit, int64_t fromId, Document &json)
+{
+    KF_LOG_INFO(logger, "[get_my_trades]");
+    long recvWindow = 10000;
+    std::string Timestamp = getTimestampString();
+    std::string Method = "GET";
+    std::string requestPath = "https://api.binance.com/api/v3/myTrades?";
+    std::string queryString("");
+    std::string body = "";
+
+    queryString.append( "symbol=" );
+    queryString.append( symbol );
+    if ( limit > 0 ) {
+        queryString.append("&limit=");
+        queryString.append( std::to_string( limit ) );
+    }
+    if ( fromId > 0 ) {
+        queryString.append("&fromId=");
+        queryString.append( std::to_string( fromId ) );
+    }
+
+    if ( recvWindow > 0 ) {
+        queryString.append("&recvWindow=");
+        queryString.append( std::to_string( recvWindow ) );
+    }
+
+    queryString.append("&timestamp=");
+    queryString.append( Timestamp );
+
+
+    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
+    queryString.append( "&signature=");
+    queryString.append( signature );
+
+    string url = requestPath + queryString;
+
+    const auto response = Get(Url{url},
+                              Header{{"X-MBX-APIKEY", unit.api_key}},
+                              Body{body}, Timeout{100000});
+
+    KF_LOG_INFO(logger, "[get_my_trades] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                " (response.error.message) " << response.error.message <<
+                                                " (response.text) " << response.text.c_str());
+
+    return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
 void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &json)
 {
     KF_LOG_INFO(logger, "[get_open_orders]");
@@ -1058,7 +1425,9 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
                                  Header{{"X-MBX-APIKEY", unit.api_key}},
                                  Body{body}, Timeout{100000});
 
-    KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response) " << response.text.c_str());
+    KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                 " (response.error.message) " << response.error.message <<
+                                                 " (response.text) " << response.text.c_str());
     /*If the symbol is not sent, orders for all symbols will be returned in an array.
     [
       {
@@ -1082,10 +1451,69 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
+
+void TDEngineBinance::get_exchange_infos(AccountUnitBinance& unit, Document &json)
+{
+    KF_LOG_INFO(logger, "[get_exchange_infos]");
+    long recvWindow = 10000;
+    std::string Timestamp = getTimestampString();
+    std::string Method = "GET";
+    std::string requestPath = "https://api.binance.com/api/v1/exchangeInfo";
+    std::string queryString("");
+    std::string body = "";
+
+
+    string url = requestPath + queryString;
+
+    const auto response = Get(Url{url},
+                              Header{{"X-MBX-APIKEY", unit.api_key}},
+                              Body{body}, Timeout{100000});
+
+    KF_LOG_INFO(logger, "[get_exchange_infos] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                   " (response.error.message) " << response.error.message <<
+                                                   " (response.text) " << response.text.c_str());
+    return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
+void TDEngineBinance::get_account(AccountUnitBinance& unit, Document &json)
+{
+    KF_LOG_INFO(logger, "[get_account]");
+    long recvWindow = 10000;
+    std::string Timestamp = getTimestampString();
+    std::string Method = "GET";
+    std::string requestPath = "https://api.binance.com/api/v3/account?";
+    std::string queryString("");
+    std::string body = "";
+
+    queryString.append("timestamp=");
+    queryString.append( Timestamp );
+
+    if ( recvWindow > 0 ) {
+        queryString.append("&recvWindow=");
+        queryString.append( std::to_string( recvWindow ) );
+    }
+
+    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
+    queryString.append( "&signature=");
+    queryString.append( signature );
+
+    string url = requestPath + queryString;
+
+    const auto response = Get(Url{url},
+                              Header{{"X-MBX-APIKEY", unit.api_key}},
+                              Body{body}, Timeout{100000});
+
+    KF_LOG_INFO(logger, "[get_account] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                      " (response.error.message) " << response.error.message <<
+                                                      " (response.text) " << response.text.c_str());
+
+    return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
 void TDEngineBinance::printResponse(const Document& d)
 {
-    if(d.IsObject() && d.HasMember("code")) {
-        KF_LOG_INFO(logger, "[printResponse] error (code) " << d["code"].GetInt() << " (message) " << d["message"].GetString());
+    if(d.IsObject() && d.HasMember("code") && d.HasMember("msg")) {
+        KF_LOG_INFO(logger, "[printResponse] error (code) " << d["code"].GetInt() << " (msg) " << d["msg"].GetString());
     } else {
         StringBuffer buffer;
         Writer<StringBuffer> writer(buffer);
@@ -1096,47 +1524,7 @@ void TDEngineBinance::printResponse(const Document& d)
 
 void TDEngineBinance::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
 {
-    if(http_status_code == HTTP_RESPONSE_OK)
-    {
-        //KF_LOG_INFO(logger, "[getResponse] (http_status_code == 200) (responseText)" << responseText << " (errorMsg) " << errorMsg);
-        json.Parse(responseText.c_str());
-        //KF_LOG_INFO(logger, "[getResponse] (http_status_code == 200) (HasParseError)" << json.HasParseError());
-    } else if(http_status_code == 0 && responseText.length() == 0)
-    {
-        json.SetObject();
-        Document::AllocatorType& allocator = json.GetAllocator();
-        int errorId = 1;
-        json.AddMember("code", errorId, allocator);
-        //KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
-        rapidjson::Value val;
-        val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
-        json.AddMember("message", val, allocator);
-    } else
-    {
-        Document d;
-        d.Parse(responseText.c_str());
-        //KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
-
-        json.SetObject();
-        Document::AllocatorType& allocator = json.GetAllocator();
-        json.AddMember("code", http_status_code, allocator);
-        if(d.IsObject()) {
-            if( d.HasMember("message")) {
-                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["message"].GetString());
-                std::string message = d["message"].GetString();
-                rapidjson::Value val;
-                val.SetString(message.c_str(), message.length(), allocator);
-                json.AddMember("message", val, allocator);
-            }
-            if( d.HasMember("msg")) {
-                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["msg"].GetString());
-                std::string message = d["msg"].GetString();
-                rapidjson::Value val;
-                val.SetString(message.c_str(), message.length(), allocator);
-                json.AddMember("message", val, allocator);
-            }
-        }
-    }
+    json.Parse(responseText.c_str());
 }
 
 std::string TDEngineBinance::getTimestampString()

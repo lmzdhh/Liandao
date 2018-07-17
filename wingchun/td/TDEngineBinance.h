@@ -8,9 +8,6 @@
 #include <sstream>
 #include <map>
 #include <mutex>
-#include "binacpp.h"
-#include "binacpp_websocket.h"
-#include <json/json.h>
 #include "Timer.h"
 #include <document.h>
 
@@ -33,15 +30,22 @@ struct PendingBinanceOrderStatus
 struct PendingBinanceTradeStatus
 {
     char_31 InstrumentID;   //合约代码
-    uint64_t last_trade_id; //for myTrade
+    int64_t last_trade_id; //for myTrade
 };
 
 //当Order已经全部成交完成之后，到get_myTrades拿到这个OrderRef记录的信息以后， 删除记录，不再get_myTrades
 struct OnRtnOrderDoneAndWaitingOnRtnTrade
 {
     char_21 OrderRef;       //报单引用
-    uint64_t binanceOrderId;       //binance 报单引用
+    int64_t binanceOrderId;       //binance 报单引用
     LfDirectionType Direction;  //买卖方向
+};
+
+struct SendOrderFilter
+{
+    char_31 InstrumentID;   //合约代码
+    int ticksize; //for price round.
+    //...other
 };
 
 struct AccountUnitBinance
@@ -58,6 +62,7 @@ struct AccountUnitBinance
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> newOnRtnTrades;
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
     std::vector<std::string> whiteListInstrumentIDs;
+    std::map<std::string, SendOrderFilter> sendOrderFilters;
 };
 
 /**
@@ -105,21 +110,23 @@ private:
 
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
+    bool loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc);
     void GetAndHandleOrderTradeResponse();
     void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
-                                        const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, uint64_t binanceOrderId);
+                                        const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, int64_t binanceOrderId);
 
-    inline void onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
-    inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
-    inline void onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitBinance& unit, Json::Value& result, int requestId);
+    inline void onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
+    inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
+    inline void onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
 
     void retrieveOrderStatus(AccountUnitBinance& unit);
     void retrieveTradeStatus(AccountUnitBinance& unit);
     void moveNewtoPending(AccountUnitBinance& unit);
     bool isExistSymbolInPendingTradeStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
     bool isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
-    bool removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, uint64_t binanceOrderId);
+    bool removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId);
     static constexpr int scale_offset = 1e8;
+    int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
 
     ThreadPtr rest_thread;
     uint64_t last_rest_get_ts = 0;
@@ -129,10 +136,31 @@ private:
 
 private:
     int HTTP_RESPONSE_OK = 200;
+    void send_order(AccountUnitBinance& unit, const char *symbol,
+                    const char *side,
+                    const char *type,
+                    const char *timeInForce,
+                    double quantity,
+                    double price,
+                    const char *newClientOrderId,
+                    double stopPrice,
+                    double icebergQty,
+                    Document& json);
+
+    void get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json);
+    void cancel_order(AccountUnitBinance& unit, const char *symbol,
+                      long orderId, const char *origClientOrderId, const char *newClientOrderId, Document &doc);
+    void get_my_trades(AccountUnitBinance& unit, const char *symbol, int limit, int64_t fromId, Document &doc);
     void get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &doc);
-    void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
+    void get_exchange_infos(AccountUnitBinance& unit, Document &doc);
+    void get_account(AccountUnitBinance& unit, Document &doc);
+    void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& doc);
     void printResponse(const Document& d);
     inline std::string getTimestampString();
+
+    void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
+
+    SendOrderFilter getSendOrderFilter(AccountUnitBinance& unit, const char *symbol);
 
 };
 
