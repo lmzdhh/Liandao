@@ -5,7 +5,7 @@
 #include "longfist/LFConstants.h"
 
 #include <libwebsockets.h>
-
+#include <map>
 #include <unordered_map>
 
 WC_NAMESPACE_START
@@ -55,12 +55,20 @@ private:
 
     virtual void set_reader_thread() override;
 
+    void readWhiteLists(const json& j_config);
+	std::string getWhiteListCoinpairFrom(std::string md_coinpair);
+    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
+    //in MD, lookup direction is:
+    // incoming exchange coinpair ---> our strategy recognized coinpair
+    //if coming data 's coinpair is not in this map ,ignore it
+    //"strategy_coinpair(base_quote)":"exchange_coinpair",
+    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
+
 private:
     ThreadPtr rest_thread;
     bool connected = false;
     bool logged_in = false;
 
-    std::vector<std::string> symbols;
     int book_depth_count = 5;
     int trade_count = 10;
     int rest_get_interval_ms = 500;
