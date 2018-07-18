@@ -5,6 +5,9 @@
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
 #include <vector>
+#include <algorithm>
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <map>
 #include <mutex>
@@ -48,6 +51,12 @@ struct SendOrderFilter
     //...other
 };
 
+struct SubscribeCoinBaseQuote
+{
+    std::string base;
+    std::string quote;
+};
+
 struct AccountUnitBinance
 {
     std::string api_key;
@@ -63,6 +72,14 @@ struct AccountUnitBinance
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
     std::vector<std::string> whiteListInstrumentIDs;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
+
+    //in TD, lookup direction is:
+    // our strategy recognized coinpair ---> outcoming exchange coinpair
+    //if strategy's coinpair is not in this map ,ignore it
+    //"strategy_coinpair(base_quote)":"exchange_coinpair",
+    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
+
+    std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
 };
 
 /**
@@ -161,6 +178,14 @@ private:
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
 
     SendOrderFilter getSendOrderFilter(AccountUnitBinance& unit, const char *symbol);
+
+private:
+    void readWhiteLists(AccountUnitBinance& unit, const json& j_config);
+    std::string getWhiteListCoinpairFrom(AccountUnitBinance& unit, const char_31 strategy_coinpair);
+    bool hasSymbolInWhiteList(std::vector<SubscribeCoinBaseQuote> &sub, std::string symbol);
+    void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
+    void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
+    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
 
 };
 

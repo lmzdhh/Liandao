@@ -91,19 +91,77 @@ MDEngineBinance::MDEngineBinance(): IMDEngine(SOURCE_BINANCE)
 
 void MDEngineBinance::load(const json& j_config)
 {
-	for(const auto& t : j_config["symbols"])
-	{
-		std::string symbol = t.get<string>();
-		std::transform(symbol.begin(), symbol.end(), symbol.begin(), ::toupper);
-    		symbols.push_back(symbol);
-	}
-
     book_depth_count = j_config["book_depth_count"].get<int>();
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
-	
-    KF_LOG_INFO(logger, "MDEngineBinance::load: symbol: " << symbols[0] << " book_depth_count: " 
+
+    readWhiteLists(j_config);
+
+    debug_print(keyIsStrategyCoinpairWhiteList);
+    //display usage:
+    if(keyIsStrategyCoinpairWhiteList.size() == 0) {
+        KF_LOG_ERROR(logger, "MDEngineBinance::lws_write_subscribe: subscribeCoinmexBaseQuote is empty. please add whiteLists in kungfu.json like this :");
+        KF_LOG_ERROR(logger, "\"whiteLists\":{");
+        KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
+        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"BTCUSDT\",");
+        KF_LOG_ERROR(logger, "     \"etc_eth\": \"ETCETH\"");
+        KF_LOG_ERROR(logger, "},");
+    }
+
+    KF_LOG_INFO(logger, "MDEngineBinance::load:  book_depth_count: "
 		<< book_depth_count << " trade_count: " << trade_count << " rest_get_interval_ms: " << rest_get_interval_ms); 	
+}
+
+
+void MDEngineBinance::readWhiteLists(const json& j_config)
+{
+	KF_LOG_INFO(logger, "[readWhiteLists]");
+
+	if(j_config.find("whiteLists") != j_config.end()) {
+		KF_LOG_INFO(logger, "[readWhiteLists] found whiteLists");
+		//has whiteLists
+		json whiteLists = j_config["whiteLists"].get<json>();
+		if(whiteLists.is_object())
+		{
+			for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
+				std::string strategy_coinpair = it.key();
+				std::string exchange_coinpair = it.value();
+				KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
+				keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
+			}
+		}
+	}
+}
+
+
+std::string MDEngineBinance::getWhiteListCoinpairFrom(std::string md_coinpair)
+{
+    std::string ticker = md_coinpair;
+    std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
+
+    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find md_coinpair (md_coinpair) " << md_coinpair << " (toupper(ticker)) " << ticker);
+    std::map<std::string, std::string>::iterator map_itr;
+    map_itr = keyIsStrategyCoinpairWhiteList.begin();
+    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
+        if(ticker == map_itr->second)
+        {
+            KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
+            return map_itr->first;
+        }
+        map_itr++;
+    }
+    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] not found md_coinpair (md_coinpair) " << md_coinpair);
+    return "";
+}
+
+void MDEngineBinance::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
+{
+    std::map<std::string, std::string>::iterator map_itr;
+    map_itr = keyIsStrategyCoinpairWhiteList.begin();
+    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
+        KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
+        map_itr++;
+    }
 }
 
 void MDEngineBinance::connect(long timeout_nsec)
@@ -129,13 +187,19 @@ void MDEngineBinance::login(long timeout_nsec)
 	info.fd_limit_per_thread = 1024;
 
 	context = lws_create_context( &info );
-      	
-	for(const auto& s : symbols)
-	{
-			connect_lws(s, lws_event::trade);
-			//connect_lws(s, lws_event::depth5);
-			connect_lws(s, lws_event::depth20);
-	}
+
+    std::map<std::string, std::string>::iterator map_itr;
+    map_itr = keyIsStrategyCoinpairWhiteList.begin();
+    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
+        KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) "<< map_itr->second);
+        connect_lws(map_itr->second, lws_event::trade);
+        //connect_lws(map_itr->second, lws_event::depth5);
+        connect_lws(map_itr->second, lws_event::depth20);
+
+        map_itr++;
+    }
+
+
 
    	KF_LOG_INFO(logger, "MDEngineBinance::login:"); 	
 
@@ -229,11 +293,18 @@ void MDEngineBinance::on_lws_market_trade(const char* data, size_t len)
 		return;	
 	}
 
-	strcpy(trade.InstrumentID, d["s"].GetString());
+	std::string symbol = d["s"].GetString();
+	std::string ticker = getWhiteListCoinpairFrom(symbol);
+    if(ticker.length() == 0) {
+        KF_LOG_INFO(logger, "MDEngineBinance::on_lws_market_trade: not in WhiteList , ignore it:" << symbol);
+        return;
+    }
+
+	strcpy(trade.InstrumentID, ticker.c_str());
 	strcpy(trade.ExchangeID, "binance");
 
-	trade.Price = std::stod(d["p"].GetString()) * scale_offset;
-	trade.Volume = std::stod(d["q"].GetString()) * scale_offset;
+	trade.Price = std::round(std::stod(d["p"].GetString()) * scale_offset);
+	trade.Volume = std::round(std::stod(d["q"].GetString()) * scale_offset);
 	trade.OrderBSFlag[0] = d["m"].GetBool() ? 'B' : 'S';
 	on_trade(&trade);
 }
@@ -289,7 +360,13 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
     
     if(has_update)
     {
-        strcpy(md.InstrumentID, ticker.c_str());
+        std::string strategy_ticker = getWhiteListCoinpairFrom(ticker);
+        if(strategy_ticker.length() == 0) {
+            KF_LOG_INFO(logger, "MDEngineBinance::on_lws_market_trade: not in WhiteList , ignore it:" << strategy_ticker);
+            return;
+        }
+
+        strcpy(md.InstrumentID, strategy_ticker.c_str());
 	    strcpy(md.ExchangeID, "binance");
 
 	    on_price_book_update(&md);
@@ -385,7 +462,8 @@ void MDEngineBinance::GetAndHandleTradeResponse(const std::string& symbol, int l
     {
 	    LFL2TradeField trade;
 	    memset(&trade, 0, sizeof(trade));
-	    strcpy(trade.InstrumentID, symbols[0].c_str());
+	    std::string symbols = "TRXBTC";
+	    strcpy(trade.InstrumentID, symbols.c_str());
 	    strcpy(trade.ExchangeID, "binance");
 
 	    for(int i = 0; i < d.Size(); ++i)
