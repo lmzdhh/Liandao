@@ -554,7 +554,7 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
     int position_count = tmp_vector.size();
     for (int i = 0; i < position_count; i++)
     {
-        on_rsp_position(&pos, i == (position_count - 1), requestId, errorId, errorMsg.c_str());
+        on_rsp_position(&tmp_vector[i], i == (position_count - 1), requestId, errorId, errorMsg.c_str());
         findSymbolInResult = true;
     }
 
