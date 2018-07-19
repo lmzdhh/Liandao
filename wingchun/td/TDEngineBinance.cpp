@@ -1067,9 +1067,19 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
     KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())" << unit.pendingOrderStatus.size() << " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size());
     //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
     if(unit.pendingOrderStatus.size() == 0 && unit.pendingOnRtnTrades.size() == 0) return;
+    std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
+    int indexNum = 0;
+    for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
+    {
+        KF_LOG_INFO(logger, "[retrieveTradeStatus] pendingTradeStatus [" << indexNum <<"]"
+                                                                << "  (InstrumentID) "<< tradeStatusIterator->InstrumentID
+                                                                <<"  (last_trade_id) " << tradeStatusIterator->last_trade_id);
+        indexNum++;
+    }
+
     Document resultTrade;
 
-    std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
+
     for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
     {
         std::string ticker = getWhiteListCoinpairFrom(unit, tradeStatusIterator->InstrumentID);
@@ -1136,7 +1146,8 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             }
             continue;
         }
-        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (last_trade_id)" << tradeStatusIterator->last_trade_id);
+        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (last_trade_id)" << tradeStatusIterator->last_trade_id
+                                                                                  << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
         //must be Array
         int len = resultTrade.Size();
         for(int i = 0 ; i < len; i++)
@@ -1174,7 +1185,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             if(newtradeId >= tradeStatusIterator->last_trade_id) {
                 tradeStatusIterator->last_trade_id = newtradeId + 1;// for new trade
             }
-            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (last_trade_id)" << tradeStatusIterator->last_trade_id);
+            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (last_trade_id)" << tradeStatusIterator->last_trade_id << " (for_i)" << i);
         }
 
         //here, use another for-loop is for there maybe more than one trades on the same orderRef:
