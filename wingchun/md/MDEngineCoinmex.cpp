@@ -548,8 +548,8 @@ void MDEngineCoinmex::onDepth(Document& json)
 
         for(int i = 0; i < size; ++i)
         {
-            md.AskLevels[i].price = sort_result[askTotalSize - size + i].price;
-            md.AskLevels[i].volume = sort_result[askTotalSize - size + i].volume;
+            md.AskLevels[i].price = sort_result[askTotalSize - i - 1].price;
+            md.AskLevels[i].volume = sort_result[askTotalSize - i - 1].volume;
             KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:  LFPriceBook20Field AskLevels: (i)" << i << "(price)" << md.AskLevels[i].price<<  "  (volume)"<< md.AskLevels[i].volume);
         }
         md.AskLevelCount = size;
