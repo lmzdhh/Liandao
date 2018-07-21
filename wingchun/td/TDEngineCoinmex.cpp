@@ -469,7 +469,7 @@ LfOrderStatusType TDEngineCoinmex::GetOrderStatus(std::string input) {
     if ("open" == input) {
         return LF_CHAR_NotTouched;
     } else if ("partially-filled" == input) {
-        return LF_CHAR_PartTradedNotQueueing;
+        return LF_CHAR_PartTradedQueueing;
     } else if ("filled" == input) {
         return LF_CHAR_AllTraded;
     } else if ("canceled" == input) {
@@ -891,9 +891,9 @@ volume 	订单委托数量
             rtn_order.OrderStatus = GetOrderStatus(d["status"].GetString());
             rtn_order.VolumeTraded = std::round(std::stod(d["filledVolume"].GetString()) * scale_offset);
 
-            //if status changed or LF_CHAR_PartTradedNotQueueing but traded valume changes, emit onRtnOrder
+            //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
             if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
-               (LF_CHAR_PartTradedNotQueueing == rtn_order.OrderStatus
+               (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
                 && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
             {
                 //first send onRtnOrder about the status change or VolumeTraded change
@@ -917,7 +917,7 @@ volume 	订单委托数量
                 uint64_t newAveragePrice = std::round(std::stod(d["averagePrice"].GetString()) * scale_offset);
                 //second, if the status is PartTraded/AllTraded, send OnRtnTrade
                 if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
-                    (LF_CHAR_PartTradedNotQueueing == rtn_order.OrderStatus
+                    (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
                     && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
                 {
                     LFRtnTradeField rtn_trade;

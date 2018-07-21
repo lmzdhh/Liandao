@@ -468,7 +468,7 @@ LfOrderStatusType TDEngineBinance::GetOrderStatus(std::string input) {
     if ("NEW" == input) {
       return LF_CHAR_NotTouched;
     } else if ("PARTIALLY_FILLED" == input) {
-      return LF_CHAR_PartTradedNotQueueing;
+      return LF_CHAR_PartTradedQueueing;
     } else if ("FILLED" == input) {
       return LF_CHAR_AllTraded;
     } else if ("CANCELED" == input) {
@@ -1009,9 +1009,9 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
             rtn_order.OrderStatus = GetOrderStatus(orderResult["status"].GetString());
             rtn_order.VolumeTraded = std::round(stod(orderResult["executedQty"].GetString()) * scale_offset);
 
-            //if status changed or LF_CHAR_PartTradedNotQueueing but traded valume changes, emit onRtnOrder
+            //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
             if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
-               (LF_CHAR_PartTradedNotQueueing == rtn_order.OrderStatus
+               (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
                 && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
             {
                 strcpy(rtn_order.ExchangeID, "binance");
