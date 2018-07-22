@@ -82,6 +82,10 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     string secret_key = j_config["SecretKey"].get<string>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
+    if(j_config.find("sync_time_interval") != j_config.end()) {
+        SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
+    }
+
     AccountUnitBinance& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
@@ -295,8 +299,10 @@ void TDEngineBinance::connect(long timeout_nsec)
             debug_print(unit.sendOrderFilters);
         }
     }
+    //sync time of exchange
+    timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
 
-
+    KF_LOG_INFO(logger, "[connect] rest_thread start on AccountUnitBinance::loop");
     rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::loop, this)));
 }
 
@@ -925,6 +931,13 @@ void TDEngineBinance::GetAndHandleOrderTradeResponse()
         retrieveOrderStatus(unit);
         retrieveTradeStatus(unit);
     }//end every account
+
+    sync_time_interval--;
+    if(sync_time_interval <= 0) {
+        //reset
+        sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
+        timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
+    }
 }
 
 
@@ -1631,6 +1644,29 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
 }
 
 
+void TDEngineBinance::get_exchange_time(AccountUnitBinance& unit, Document &json)
+{
+    KF_LOG_INFO(logger, "[get_exchange_time]");
+    long recvWindow = 10000;
+    std::string Timestamp = getTimestampString();
+    std::string Method = "GET";
+    std::string requestPath = "https://api.binance.com/api/v1/time";
+    std::string queryString("");
+    std::string body = "";
+
+    string url = requestPath + queryString;
+
+    const auto response = Get(Url{url},
+                              Header{{"X-MBX-APIKEY", unit.api_key}},
+                              Body{body}, Timeout{100000});
+
+    KF_LOG_INFO(logger, "[get_exchange_time] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                      " (response.error.message) " << response.error.message <<
+                                                      " (response.text) " << response.text.c_str());
+    return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
+
 void TDEngineBinance::get_exchange_infos(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_exchange_infos]");
@@ -1640,7 +1676,6 @@ void TDEngineBinance::get_exchange_infos(AccountUnitBinance& unit, Document &jso
     std::string requestPath = "https://api.binance.com/api/v1/exchangeInfo";
     std::string queryString("");
     std::string body = "";
-
 
     string url = requestPath + queryString;
 
@@ -1706,9 +1741,16 @@ void TDEngineBinance::getResponse(int http_status_code, std::string responseText
     json.Parse(responseText.c_str());
 }
 
+inline int64_t TDEngineBinance::getTimestamp()
+{
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return timestamp;
+}
+
 std::string TDEngineBinance::getTimestampString()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    timestamp =  timestamp - timeDiffOfExchange;
     std::string timestampStr;
     std::stringstream convertStream;
     convertStream << timestamp;
@@ -1716,6 +1758,43 @@ std::string TDEngineBinance::getTimestampString()
     return timestampStr;
 }
 
+
+int64_t TDEngineBinance::getTimeDiffOfExchange(AccountUnitBinance& unit)
+{
+    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
+    //reset to 0
+    int64_t timeDiffOfExchange = 0;
+
+    int calculateTimes = 3;
+    int64_t accumulationDiffTime = 0;
+    bool hasResponse = false;
+    for(int i = 0 ; i < calculateTimes; i++)
+    {
+        Document d;
+        int64_t start_time = getTimestamp();
+        int64_t exchangeTime = start_time;
+        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
+        get_exchange_time(unit, d);
+        if(!d.HasParseError() && d.HasMember("serverTime")) {//binance serverTime
+            exchangeTime = d["serverTime"].GetInt64();
+            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
+            hasResponse = true;
+        }
+        int64_t finish_time = getTimestamp();
+        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
+        int64_t tripTime = (finish_time - start_time) / 2;
+        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
+        accumulationDiffTime += start_time + tripTime - exchangeTime;
+        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
+    }
+    //set the diff
+    if(hasResponse)
+    {
+        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
+    }
+    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
+    return timeDiffOfExchange;
+}
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
 

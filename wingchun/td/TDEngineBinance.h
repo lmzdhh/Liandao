@@ -151,6 +151,9 @@ private:
 
     std::mutex* mutex_order_and_trade = nullptr;
 
+    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
+    int sync_time_interval;
+    int64_t timeDiffOfExchange = 0;
 private:
     int HTTP_RESPONSE_OK = 200;
     void send_order(AccountUnitBinance& unit, const char *symbol,
@@ -170,6 +173,7 @@ private:
     void get_my_trades(AccountUnitBinance& unit, const char *symbol, int limit, int64_t fromId, Document &doc);
     void get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &doc);
     void get_exchange_infos(AccountUnitBinance& unit, Document &doc);
+    void get_exchange_time(AccountUnitBinance& unit, Document &doc);
     void get_account(AccountUnitBinance& unit, Document &doc);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& doc);
     void printResponse(const Document& d);
@@ -180,6 +184,8 @@ private:
     SendOrderFilter getSendOrderFilter(AccountUnitBinance& unit, const char *symbol);
 
 private:
+    inline int64_t getTimestamp();
+    int64_t getTimeDiffOfExchange(AccountUnitBinance& unit);
     void readWhiteLists(AccountUnitBinance& unit, const json& j_config);
     std::string getWhiteListCoinpairFrom(AccountUnitBinance& unit, const char_31 strategy_coinpair);
     bool hasSymbolInWhiteList(std::vector<SubscribeCoinBaseQuote> &sub, std::string symbol);
