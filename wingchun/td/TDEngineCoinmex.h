@@ -7,6 +7,7 @@
 #include <vector>
 #include <sstream>
 #include <map>
+#include <atomic>
 #include <mutex>
 #include "Timer.h"
 #include <document.h>
@@ -128,6 +129,11 @@ private:
     std::mutex* mutex_order_and_trade = nullptr;
 
     std::map<std::string, std::string> localOrderRefRemoteOrderId;
+
+    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
+    int sync_time_interval;
+    int64_t timeDiffOfExchange = 0;
+
 private:
     int HTTP_RESPONSE_OK = 200;
     void get_exchange_time(AccountUnitCoinmex& unit, Document& json);
@@ -151,6 +157,8 @@ private:
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
     SendOrderFilter getSendOrderFilter(AccountUnitCoinmex& unit, const char *symbol);
 private:
+    inline int64_t getTimestamp();
+    int64_t getTimeDiffOfExchange(AccountUnitCoinmex& unit);
     void readWhiteLists(AccountUnitCoinmex& unit, const json& j_config);
     std::string getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, const char_31 strategy_coinpair);
     bool hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote> &sub, std::string symbol);

@@ -85,6 +85,11 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     string baseUrl = j_config["baseUrl"].get<string>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
+    if(j_config.find("sync_time_interval") != j_config.end()) {
+        SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
+
     AccountUnitCoinmex& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
@@ -122,6 +127,7 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
             map_itr++;
         }
     }
+
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -265,6 +271,8 @@ void TDEngineCoinmex::connect(long timeout_nsec)
             unit.logged_in = true;
         }
     }
+    //sync time of exchange
+    timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
 
     KF_LOG_INFO(logger, "[connect] rest_thread start on TDEngineCoinmex::loop");
     rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineCoinmex::loop, this)));
@@ -770,6 +778,13 @@ void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
         moveNewtoPending(unit);
         retrieveOrderStatus(unit);
     }//end every account
+
+    sync_time_interval--;
+    if(sync_time_interval <= 0) {
+        //reset
+        sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
+        timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
+    }
 }
 
 
@@ -1540,14 +1555,58 @@ void TDEngineCoinmex::query_order(AccountUnitCoinmex& unit, std::string code, lo
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
+inline int64_t TDEngineCoinmex::getTimestamp()
+{
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return timestamp;
+}
+
 std::string TDEngineCoinmex::getTimestampString()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    timestamp =  timestamp - timeDiffOfExchange;
     std::string timestampStr;
     std::stringstream convertStream;
     convertStream <<std::fixed << std::setprecision(3) << (timestamp/1000.0);
     convertStream >> timestampStr;
     return timestampStr;
+}
+
+int64_t TDEngineCoinmex::getTimeDiffOfExchange(AccountUnitCoinmex& unit)
+{
+    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
+    //reset to 0
+    int64_t timeDiffOfExchange = 0;
+
+    int calculateTimes = 3;
+    int64_t accumulationDiffTime = 0;
+    bool hasResponse = false;
+    for(int i = 0 ; i < calculateTimes; i++)
+    {
+        Document d;
+        int64_t start_time = getTimestamp();
+        int64_t exchangeTime = start_time;
+        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
+        get_exchange_time(unit, d);
+        if(!d.HasParseError() && d.HasMember("timestamp")) {//coinmex timestamp
+            exchangeTime = d["timestamp"].GetInt64();
+            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
+            hasResponse = true;
+        }
+        int64_t finish_time = getTimestamp();
+        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
+        int64_t tripTime = (finish_time - start_time) / 2;
+        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
+        accumulationDiffTime += start_time + tripTime - exchangeTime;
+        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
+    }
+    //set the diff
+    if(hasResponse)
+    {
+        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
+    }
+    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
+    return timeDiffOfExchange;
 }
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
