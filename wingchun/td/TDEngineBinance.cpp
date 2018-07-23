@@ -568,7 +568,10 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
     {
         on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BINANCE, 1, requestId, errorId, errorMsg.c_str());
+    if(errorId != 0)
+    {
+        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BINANCE, 1, requestId, errorId, errorMsg.c_str());
+    }
 }
 
 void TDEngineBinance::req_qry_account(const LFQryAccountField *data, int account_index, int requestId)
@@ -600,6 +603,8 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
                                               << " (APIKey)" << unit.api_key
                                               << " (Tid)" << data->InstrumentID
                                               << " (OrderRef)" << data->OrderRef);
+    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1/*ISLAST*/, requestId);
+
     int errorId = 0;
     std::string errorMsg = "";
 
@@ -632,8 +637,6 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         stopPrice, icebergQty, d);
     KF_LOG_INFO(logger, "[req_order_insert] send_order");
     printResponse(d);
-
-    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1/*ISLAST*/, requestId);
 
     if(d.HasParseError() )
     {
@@ -870,6 +873,9 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
                                               << " (APIKey)" << unit.api_key
                                               << " (Iid)" << data->InvestorID
                                               << " (OrderRef)" << data->OrderRef);
+
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId);
+
     int errorId = 0;
     std::string errorMsg = "";
 
@@ -884,11 +890,8 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
-
     Document d;
 	cancel_order(unit, ticker.c_str(), 0, data->OrderRef, "", d);
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId);
-
     KF_LOG_INFO(logger, "[req_order_action] cancel_order");
     printResponse(d);
 

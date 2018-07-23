@@ -567,7 +567,10 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
         KF_LOG_INFO(logger, "[req_investor_position] (!findSymbolInResult) (requestId)" << requestId);
         on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+    if(errorId != 0)
+    {
+        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+    }
 }
 
 void TDEngineCoinmex::req_qry_account(const LFQryAccountField *data, int account_index, int requestId)
@@ -619,6 +622,8 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
                                               << " (Volume)" << data->Volume
                                               << " (LimitPrice)" << data->LimitPrice
                                               << " (OrderRef)" << data->OrderRef);
+    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1/*ISLAST*/, requestId);
+
     int errorId = 0;
     std::string errorMsg = "";
 
@@ -648,14 +653,18 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
             GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, d);
 
-    if(d.HasMember("orderId") && d.HasMember("result"))
+    if(d.HasParseError() )
     {
-        std::string remoteOrderId = std::to_string(d["orderId"].GetInt64());
-        localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
-        KF_LOG_INFO(logger, "[req_order_insert] after send (OrderRef) " << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+        errorId=100;
+        errorMsg= "send_order http response has parse error. please check the log";
+        KF_LOG_ERROR(logger, "[req_order_insert] send_order error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+    }
+    if(!d.HasParseError() && d.IsObject() && d.HasMember("orderId") && d.HasMember("result"))
+    {
         if(d.HasMember("result") && d["result"].IsBool())
         {
-            if(d["result"].GetBool()){
+            if(d["result"].GetBool())
+            {
                 /*
                  * # Response OK
                     {
@@ -664,6 +673,10 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
                     }
                  * */
                 //if send successful and the exchange has received ok, then add to  pending query order list
+                std::string remoteOrderId = std::to_string(d["orderId"].GetInt64());
+                localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
+                KF_LOG_INFO(logger, "[req_order_insert] after send (OrderRef) " << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+
                 char noneStatus = '\0';//none
                 addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
             } else {
@@ -683,8 +696,6 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
         }
     }
 
-    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1/*ISLAST*/, requestId);
-
     if (errorId == 0 && d.HasMember("code")) {
         //send error, examle: http timeout.
         {
@@ -702,7 +713,6 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
     }
-
 }
 
 
@@ -714,6 +724,9 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
                                               << " (Iid)" << data->InvestorID
                                               << " (OrderRef)" << data->OrderRef
                                               << " (KfOrderID)" << data->KfOrderID);
+
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId);
+
     int errorId = 0;
     std::string errorMsg = "";
 
@@ -747,7 +760,6 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
 
     Document d;
     cancel_order(unit, ticker, stod(remoteOrderId), d);
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId);
 
     if(!d.HasParseError() && d.HasMember("code") && d["code"].IsNumber())
     {
