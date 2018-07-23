@@ -98,7 +98,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     debug_print(unit.subscribeCoinBaseQuote);
     //display usage:
     if(unit.keyIsStrategyCoinpairWhiteList.size() == 0) {
-        KF_LOG_ERROR(logger, "TDEngineBinance::load_account: subscribeCoinmexBaseQuote is empty. please add whiteLists in kungfu.json like this :");
+        KF_LOG_ERROR(logger, "TDEngineBinance::load_account: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
         KF_LOG_ERROR(logger, "    \"btc_usdt\": \"BTCUSDT\",");
@@ -191,7 +191,7 @@ void TDEngineBinance::readWhiteLists(AccountUnitBinance& unit, const json& j_con
                 std::transform(coinpair.begin(), coinpair.end(), coinpair.begin(), ::toupper);
 
                 split(coinpair, "_", baseQuote);
-                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinmexBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
+                KF_LOG_INFO(logger, "[readWhiteLists] subscribeCoinBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
 
                 if(baseQuote.base.length() > 0)
                 {
@@ -609,7 +609,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
@@ -879,7 +879,7 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + "not in WhiteList, ignore it";
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);

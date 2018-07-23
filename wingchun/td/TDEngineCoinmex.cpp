@@ -951,7 +951,7 @@ volume 	订单委托数量
 
                     on_rtn_trade(&rtn_trade);
                     raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                            source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1, -1);
+                                            source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
                 }
                 //third, update last status for next query_order
                 orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
