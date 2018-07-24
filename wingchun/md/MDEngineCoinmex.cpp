@@ -321,9 +321,6 @@ void MDEngineCoinmex::login(long timeout_nsec)
 		return;
 	}
 	KF_LOG_INFO(logger, "MDEngineCoinmex::login: wsi create success.");
-
-	KF_LOG_INFO(logger, "MDEngineCoinmex::login:");
-
 	logged_in = true;
 }
 
@@ -352,6 +349,28 @@ void MDEngineCoinmex::subscribeMarketData(const vector<string>& instruments, con
 int MDEngineCoinmex::lws_write_subscribe(struct lws* conn)
 {
 	KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe: (subscribe_index)" << subscribe_index);
+	//sub tickers
+    if(!subscribe_trade)
+    {
+        unsigned char msg[512];
+        memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
+
+        std::string jsonString = createTickersJsonString();
+
+        KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe: " << jsonString.c_str());
+        int length = jsonString.length();
+
+        strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
+        int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+        //next to sub depth
+        lws_callback_on_writable( conn );
+
+        subscribe_trade = true;
+        return ret;
+    }
+
+    if(subscribeCoinBaseQuote.size() == 0) return 0;
+    //sub depth
     if(subscribe_index >= subscribeCoinBaseQuote.size())
     {
         subscribe_index = 0;
@@ -395,7 +414,7 @@ void MDEngineCoinmex::on_lws_data(struct lws* conn, const char* data, size_t len
 		if(json.HasMember("type") && json["type"].IsString() && strcmp(json["type"].GetString(), "tickers") == 0)
 		{
 			KF_LOG_INFO(logger, "MDEngineCoinmex::on_lws_data: is tickers");
-
+            onTickers(json);
 		}
 	} else {
 		KF_LOG_ERROR(logger, "MDEngineCoinmex::on_lws_data . parse json error: " << data);
@@ -413,6 +432,9 @@ void MDEngineCoinmex::on_lws_connection_error(struct lws* conn)
 	clearPriceBook();
 	//no use it
     long timeout_nsec = 0;
+    //reset sub
+    subscribe_index = 0;
+    subscribe_trade = false;
     login(timeout_nsec);
 }
 
@@ -434,16 +456,64 @@ void MDEngineCoinmex::clearPriceBook()
     }
 }
 
-// {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],"bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
-void MDEngineCoinmex::onDepth(Document& json)
+void MDEngineCoinmex::onTickers(Document& d)
 {
-    if(json.HasParseError()) return;
-    if(!json.HasMember("type") || strcmp(json["type"].GetString(), "depth") != 0)
+/*
+{
+    "type": "tickers",
+    "biz":"spot",
+    "data": [
+      [
+     "1520318917765", #创建时间
+     "0.02",#当日最高成交价
+     "0.01",#当日最低成交价
+     "0.01",#成交单价
+     "200",#基准货币成交量
+     "300",#报价货币成交量
+     "10",#变化量
+     "30",#涨幅百分比
+     "btc_usdt",#币对
+      9,   #币对ID
+     ]
+    ],
+    "zip":false
+}
+ * */
+
+    if(!d.HasMember("data") || !d["data"].IsArray())
     {
-        //not depth data
+        KF_LOG_ERROR(logger, "MDEngineCoinmex::[onTickers] invalid market trade message");
         return;
     }
 
+    int len = d["data"].Size();
+    for(int i = 0 ; i < len; i++) {
+
+        std::string symbol = d["data"].GetArray()[i].GetArray()[8].GetString();
+        std::string ticker = getWhiteListCoinpairFrom(symbol);
+        if(ticker.length() == 0) {
+            //KF_LOG_INFO(logger, "MDEngineCoinmex::[onTickers] not in WhiteList, ignore it:" << symbol);
+            continue;
+        }
+        LFL2TradeField trade;
+        memset(&trade, 0, sizeof(trade));
+        strcpy(trade.InstrumentID, ticker.c_str());
+        strcpy(trade.ExchangeID, "coinmex");
+
+        trade.Price = std::round(std::stod(d["data"].GetArray()[i].GetArray()[3].GetString()) * scale_offset);
+        trade.Volume = std::round(std::stod(d["data"].GetArray()[i].GetArray()[5].GetString()) * scale_offset);
+        trade.OrderBSFlag[0] = 'B';//no this field
+
+        KF_LOG_INFO(logger, "MDEngineCoinmex::[onTickers] (ticker)" << ticker <<
+                                                                    " (Price)" << trade.Price <<
+                                                                    " (trade.Volume)" << trade.Volume);
+        on_trade(&trade);
+    }
+}
+
+// {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],"bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
+void MDEngineCoinmex::onDepth(Document& json)
+{
     bool asks_update = false;
     bool bids_update = false;
 

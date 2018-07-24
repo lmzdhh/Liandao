@@ -80,6 +80,7 @@ public:
 
 private:
     void onDepth(Document& json);
+    void onTickers(Document& json);
 
     std::string parseJsonToString(const char* in);
     std::string createDepthJsonString(std::string base, std::string quote);
@@ -101,6 +102,7 @@ private:
     struct lws_context *context = nullptr;
 
     int subscribe_index = 0;
+    bool subscribe_trade = false;
     //<ticker, <price, volume>>
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
