@@ -1098,13 +1098,15 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 
     for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
     {
+        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 1 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
+
         std::string ticker = getWhiteListCoinpairFrom(unit, tradeStatusIterator->InstrumentID);
         if(ticker.length() == 0) {
             KF_LOG_ERROR(logger, "[retrieveTradeStatus]: not in WhiteList , ignore it:" << tradeStatusIterator->InstrumentID);
             continue;
         }
         KF_LOG_DEBUG(logger, "[retrieveTradeStatus] (exchange_ticker)" << ticker);
-
+        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 2 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
         get_my_trades(unit, ticker.c_str(), 500, tradeStatusIterator->last_trade_id, resultTrade);
         if(resultTrade.HasParseError()) {
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades HasParseError, call continue");
@@ -1162,12 +1164,13 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             }
             continue;
         }
-        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (last_trade_id)" << tradeStatusIterator->last_trade_id
-                                                                                  << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
+        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 3 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
         //must be Array
         int len = resultTrade.Size();
         for(int i = 0 ; i < len; i++)
         {
+            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
+
             LFRtnTradeField rtn_trade;
             memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
             strcpy(rtn_trade.ExchangeID, "binance");
@@ -1196,6 +1199,8 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                                         source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
             }
 
+            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 5 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
+
             int64_t newtradeId = resultTrade.GetArray()[i]["id"].GetInt64();
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (newtradeId)" << newtradeId);
             if(newtradeId >= tradeStatusIterator->last_trade_id) {
@@ -1218,6 +1223,8 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                 }
             }
         }
+
+        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 6 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
     }
 }
 
