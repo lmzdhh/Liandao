@@ -140,7 +140,7 @@ private:
     void retrieveTradeStatus(AccountUnitBinance& unit);
     void moveNewtoPending(AccountUnitBinance& unit);
     bool isExistSymbolInPendingTradeStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
-    bool isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
+    bool isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID, const char_21 OrderRef);
     bool removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId);
     static constexpr int scale_offset = 1e8;
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
