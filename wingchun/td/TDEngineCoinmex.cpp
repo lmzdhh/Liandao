@@ -796,7 +796,9 @@ void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
         //reset
         sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
         timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
+        KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
     }
+    KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
 }
 
 

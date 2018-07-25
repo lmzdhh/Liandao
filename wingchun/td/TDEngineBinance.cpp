@@ -85,6 +85,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     if(j_config.find("sync_time_interval") != j_config.end()) {
         SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
     }
+    KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
 
     AccountUnitBinance& unit = account_units[idx];
     unit.api_key = api_key;
@@ -940,7 +941,10 @@ void TDEngineBinance::GetAndHandleOrderTradeResponse()
         //reset
         sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
         timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
+        KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
     }
+
+    KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
 }
 
 
