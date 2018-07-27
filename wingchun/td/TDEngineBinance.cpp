@@ -85,6 +85,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     if(j_config.find("sync_time_interval") != j_config.end()) {
         SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
     }
+    KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
 
     AccountUnitBinance& unit = account_units[idx];
     unit.api_key = api_key;
@@ -940,7 +941,10 @@ void TDEngineBinance::GetAndHandleOrderTradeResponse()
         //reset
         sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
         timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
+        KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
     }
+
+    KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
 }
 
 
@@ -1165,17 +1169,16 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             continue;
         }
         KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 3 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
+        LFRtnTradeField rtn_trade;
+        memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+        strcpy(rtn_trade.ExchangeID, "binance");
+        strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+        strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
         //must be Array
         int len = resultTrade.Size();
         for(int i = 0 ; i < len; i++)
         {
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
-
-            LFRtnTradeField rtn_trade;
-            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-            strcpy(rtn_trade.ExchangeID, "binance");
-            strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
             rtn_trade.Volume = std::round(stod(resultTrade.GetArray()[i]["qty"].GetString()) * scale_offset);
             rtn_trade.Price = std::round(stod(resultTrade.GetArray()[i]["price"].GetString()) * scale_offset);
 
@@ -1214,7 +1217,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 
         for(int i = 0 ; i < len; i++)
         {
-            if(! isExistSymbolInPendingBinanceOrderStatus(unit, tradeStatusIterator->InstrumentID)) {
+            if(! isExistSymbolInPendingBinanceOrderStatus(unit, tradeStatusIterator->InstrumentID, rtn_trade.OrderRef)) {
                 //all the OnRtnOrder is finished.
                 int64_t binanceOrderId =  resultTrade.GetArray()[i]["orderId"].GetInt64();
                 if(removeBinanceOrderIdFromPendingOnRtnTrades(unit, binanceOrderId))
@@ -1289,12 +1292,12 @@ bool TDEngineBinance::isExistSymbolInPendingTradeStatus(AccountUnitBinance& unit
 }
 
 
-bool TDEngineBinance::isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID)
+bool TDEngineBinance::isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID, const char_21 OrderRef)
 {
     std::vector<PendingBinanceOrderStatus>::iterator orderStatusIterator;
 
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++) {
-        if (strcmp(orderStatusIterator->InstrumentID, InstrumentID) == 0) {
+        if (strcmp(orderStatusIterator->InstrumentID, InstrumentID) == 0 && strcmp(orderStatusIterator->OrderRef, OrderRef) == 0) {
             return true;
         }
     }
