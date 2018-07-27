@@ -748,6 +748,38 @@ MsgType2LFStruct = {
     lf.MsgTypes.ORDER_ACTION: LFOrderActionField,
     lf.MsgTypes.QRY_ACCOUNT: LFQryAccountField,
     lf.MsgTypes.RSP_ACCOUNT: LFRspAccountField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_BINANCE: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BINANCE: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BINANCE: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BINANCE: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BINANCE: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BINANCE: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BINANCE: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_INDODAX: LFMarketDataField,
+    # lf.MsgTypes.QRY_POS: LFQryPositionField,
+    # lf.MsgTypes.RSP_POS: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_INDODAX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_INDODAX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_INDODAX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_INDODAX: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_OKEX: LFMarketDataField,
+    # lf.MsgTypes.QRY_POS: LFQryPositionField,
+    # lf.MsgTypes.RSP_POS: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_OKEX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_OKEX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_OKEX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_OKEX: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_COINMEX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_COINMEX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_COINMEX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_COINMEX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_COINMEX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_COINMEX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_COINMEX: LFOrderActionField
 }
 
 MsgType2LFStruct.update(SnifferMsgType2Struct)

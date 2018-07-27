@@ -127,9 +127,9 @@ const short MSG_TYPE_LF_RTN_ORDER_XTP = 15205; // XTPOrderInfo from xtp/xoms_api
 const short MSG_TYPE_LF_RTN_TRADE_XTP = 15206; // XTPTradeReport from xtp/xoms_api_struct.h
 
 //binance, idx=16
-const short MSG_TYPE_LF_MD_BINANCE        = 16101; 
+const short MSG_TYPE_LF_MD_BINANCE        = 16101;
+const short MSG_TYPE_LF_QRY_POS_BINANCE   = 16201;
 const short MSG_TYPE_LF_RSP_POS_BINANCE   = 16202;
-const short MSG_TYPE_LF_QRY_POS_BINANCE   = 16203;
 const short MSG_TYPE_LF_ORDER_BINANCE     = 16204; 
 const short MSG_TYPE_LF_RTN_ORDER_BINANCE = 16205; 
 const short MSG_TYPE_LF_RTN_TRADE_BINANCE = 16206; 
@@ -151,8 +151,8 @@ const short MSG_TYPE_LF_ORDER_ACTION_OKEX = 18207;
 
 //coinmex, idx=19
 const short MSG_TYPE_LF_MD_COINMEX        = 19101;
+const short MSG_TYPE_LF_QRY_POS_COINMEX   = 19201;
 const short MSG_TYPE_LF_RSP_POS_COINMEX   = 19202;
-const short MSG_TYPE_LF_QRY_POS_COINMEX   = 19203;
 const short MSG_TYPE_LF_ORDER_COINMEX     = 19204;
 const short MSG_TYPE_LF_RTN_ORDER_COINMEX = 19205;
 const short MSG_TYPE_LF_RTN_TRADE_COINMEX = 19206;
