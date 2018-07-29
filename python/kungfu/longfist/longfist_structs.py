@@ -56,6 +56,17 @@ class LFMarketDataField(Structure):
 
 class LFPriceLevelField(Structure):
    _fields_ = [("price", c_int64), ("volume", c_uint64)]
+   def __repr__(self):
+      return "{}@{}".format(self.volume, self.price)
+
+class LFPriceLevel20Field(Structure):
+   _fields_ = [("levels", LFPriceLevelField * 20)]
+   def __repr__(self):
+      ret = ""
+      for l in self.levels:
+        ret += "{};".format(str(l))
+
+      return ret
 
 class LFPriceBook20Field(Structure):
    _fields_ = [
@@ -64,8 +75,8 @@ class LFPriceBook20Field(Structure):
         ("UpdateMicroSecond", c_uint64),
         ("BidLevelCount", c_int),
         ("AskLevelCount", c_int),
-        ("BidLevels", LFPriceLevelField * 20),	
-        ("AskLevels", LFPriceLevelField * 20),	
+        ("BidLevels", LFPriceLevel20Field),	
+        ("AskLevels", LFPriceLevel20Field),	
         ]
  
 
@@ -680,6 +691,15 @@ DataFieldMap = {
 		'SettlementPrice': 'd',
 		'ExchangeInstID': 'c64',
 		'LowestPrice': 'd',
+	},
+	'LFPriceBook20Field': {
+		'InstrumentID' : 'c31',	 
+        'ExchangeID' : 'c9',	 
+        'UpdateMicroSecond' : 'i',
+        'BidLevelCount' : 'i',
+        'AskLevelCount' : 'i',
+        'BidLevels' : [],	
+        'AskLevels' : [],	
 	},
 	'LFRspPositionField': {
 		'InstrumentID': 'c31',

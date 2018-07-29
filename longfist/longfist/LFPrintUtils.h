@@ -560,13 +560,13 @@ inline void printData(const void* data, short msg_type)
 		{
 			LFPriceBook20Field* ptr = (LFPriceBook20Field*)data;
 			std::cout << PRINT_PRICE_BOOK_20(ptr);
-			for(int i = 1; i <= ptr->BidLevelCount; ++i)
+			for(int i = 0; i < ptr->BidLevelCount; ++i)
 	 		{ 
 	 			std::cout << std::setw(20) << "BidLevel[" << i << "]:" << std::setw(6) 
 					<< "(i)" << " " << ptr->BidLevels[i].volume << "@" << ptr->BidLevels[i].price << std::endl;
 	 		}
 
-	 		for(int i = 1; i <= ptr->AskLevelCount; ++i)
+	 		for(int i = 0; i < ptr->AskLevelCount; ++i)
 	 		{
 	 			std::cout << std::setw(20) << "AskLevel[" << i << "]:" << std::setw(6) 
 					<< "(i)" << " " << ptr->AskLevels[i].volume << "@" << ptr->AskLevels[i].price << std::endl;
