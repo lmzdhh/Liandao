@@ -629,9 +629,10 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
 
     std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
     if(ticker.length() == 0) {
-        KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList , ignore it:" << data->InstrumentID);
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
+        KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList, ignore it  (rid)" << requestId <<
+                                                                                      " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
         return;
@@ -653,66 +654,65 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
             GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, d);
 
-    if(d.HasParseError() )
+    //not expected response
+    if(d.HasParseError() || !d.IsObject())
     {
-        errorId=100;
-        errorMsg= "send_order http response has parse error. please check the log";
-        KF_LOG_ERROR(logger, "[req_order_insert] send_order error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
-    }
-    if(!d.HasParseError() && d.IsObject() && d.HasMember("orderId") && d.HasMember("result"))
+        errorId = 100;
+        errorMsg = "send_order http response has parse error or is not json. please check the log";
+        KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
+                                                                           errorId << " (errorMsg) " << errorMsg);
+    } else  if(d.HasMember("orderId") && d.HasMember("result"))
     {
-        if(d.HasMember("result") && d["result"].IsBool())
+        if(d["result"].GetBool())
         {
-            if(d["result"].GetBool())
-            {
-                /*
-                 * # Response OK
-                    {
-                        "result": true,
-                        "order_id": 123456
-                    }
-                 * */
-                //if send successful and the exchange has received ok, then add to  pending query order list
-                std::string remoteOrderId = std::to_string(d["orderId"].GetInt64());
-                localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
-                KF_LOG_INFO(logger, "[req_order_insert] after send (OrderRef) " << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+            /*
+             * # Response OK
+                {
+                    "result": true,
+                    "order_id": 123456
+                }
+             * */
+            //if send successful and the exchange has received ok, then add to  pending query order list
+            std::string remoteOrderId = std::to_string(d["orderId"].GetInt64());
+            localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
+            KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
+                                                                       data->OrderRef << " (remoteOrderId) " << remoteOrderId);
 
-                char noneStatus = '\0';//none
-                addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
-            } else {
-                /*
-                 * # Response error
-                    {
-                        "result": false,
-                        "order_id": 123456
-                    }
-                 * */
-                //send successful BUT the exchange has received fail
-                errorId = 200;
-                errorMsg = "http.code is 200, but result is false";
-                on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-                raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
-            }
+            char noneStatus = '\0';//none
+            addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
+            //success, only record raw data
+            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+            return;
+        } else {
+            /*
+             * # Response error
+                {
+                    "result": false,
+                    "order_id": 123456
+                }
+             * */
+            //send successful BUT the exchange has received fail
+            errorId = 200;
+            errorMsg = "http.code is 200, but result is false";
+            KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
+                                                                               errorId << " (errorMsg) " << errorMsg);
         }
-    }
-
-    if (errorId == 0 && d.HasMember("code")) {
-        //send error, examle: http timeout.
+    } else if (d.HasMember("code") && d["code"].IsNumber()) {
+        //send error, example: http timeout.
+        errorId = d["code"].GetInt();
+        if(d.HasMember("message") && d["message"].IsString())
         {
-            errorId = d["code"].GetInt();
-            if(d.HasMember("message") && d["message"].IsString())
-            {
-                errorMsg = d["message"].GetString();
-            }
-            KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+            errorMsg = d["message"].GetString();
         }
+        KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (errorId)" <<
+                                                          errorId << " (errorMsg) " << errorMsg);
     }
 
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
     }
+    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
 }
 
 
@@ -732,9 +732,10 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
 
     std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
     if(ticker.length() == 0) {
-        KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it:" << data->InstrumentID);
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
+        KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
+                                                                                       errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
         return;
@@ -744,37 +745,46 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
     std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
     std::string remoteOrderId;
     if(itr == localOrderRefRemoteOrderId.end()) {
-        KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef);
         errorId = 1;
         std::stringstream ss;
         ss << "[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef;
         errorMsg = ss.str();
+        KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. "
+                             << " (rid)" << requestId << " (orderRef)" << data->OrderRef << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
         return;
     } else {
         remoteOrderId = itr->second;
-        KF_LOG_ERROR(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+        KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) "
+                             << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
     }
-
 
     Document d;
     cancel_order(unit, ticker, stod(remoteOrderId), d);
 
-    if(!d.HasParseError() && d.HasMember("code") && d["code"].IsNumber())
+    //not expected response
+    if(d.HasParseError() || !d.IsObject()) {
+        errorId = 100;
+        errorMsg = "cancel_order http response has parse error or is not json. please check the log";
+        KF_LOG_ERROR(logger, "[req_order_action] cancel_order error!  (rid)" << requestId << " (errorId)" <<
+                                                                           errorId << " (errorMsg) " << errorMsg);
+    } else if(d.HasMember("code") && d["code"].IsNumber())
     {
         errorId = d["code"].GetInt();
         if(d.HasMember("message") && d["message"].IsString())
         {
             errorMsg = d["message"].GetString();
         }
-        KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId
+                                                                       << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
+
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
     }
+    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
 }
 
 void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
