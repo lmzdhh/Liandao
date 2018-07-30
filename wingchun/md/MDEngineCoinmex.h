@@ -81,10 +81,12 @@ public:
 private:
     void onDepth(Document& json);
     void onTickers(Document& json);
+    void onFills(Document& json);
 
     std::string parseJsonToString(const char* in);
     std::string createDepthJsonString(std::string base, std::string quote);
     std::string createTickersJsonString();
+    std::string createFillsJsonString(std::string base, std::string quote);
     void clearPriceBook();
     void loop();
 
@@ -102,7 +104,7 @@ private:
     struct lws_context *context = nullptr;
 
     int subscribe_index = 0;
-    bool subscribe_trade = false;
+
     //<ticker, <price, volume>>
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
@@ -114,9 +116,11 @@ private:
     void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
     void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
     void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
-
+    void debug_print(std::vector<std::string> &subJsonString);
     //coinmex use base and quote to sub depth data, so make this vector for it
     std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
+
+    std::vector<std::string> websocketSubscribeJsonString;
 
     //in MD, lookup direction is:
     // incoming exchange coinpair ---> our strategy recognized coinpair
