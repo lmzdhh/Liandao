@@ -173,11 +173,11 @@ bool TDEngineCoinmex::hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote
 {
     KF_LOG_INFO(logger, "[hasSymbolInWhiteList]");
     int count = sub.size();
-    std::string t = symbol;
-    std::transform(t.begin(), t.end(), t.begin(), ::toupper);
-    for (int i = 0; i < count;i++)
+    std::string upperSymbol = symbol;
+    std::transform(upperSymbol.begin(), upperSymbol.end(), upperSymbol.begin(), ::toupper);
+    for (int i = 0; i < count; i++)
     {
-        if(sub[i].base == t) {
+        if(strcmp(sub[i].base.c_str(), upperSymbol.c_str()) == 0 || strcmp(sub[i].quote.c_str(), upperSymbol.c_str()) == 0) {
             KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (found) (symbol) " << symbol);
             return true;
         }
