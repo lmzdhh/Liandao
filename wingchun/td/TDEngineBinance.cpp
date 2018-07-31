@@ -208,11 +208,11 @@ bool TDEngineBinance::hasSymbolInWhiteList(std::vector<SubscribeCoinBaseQuote> &
 {
     KF_LOG_INFO(logger, "[hasSymbolInWhiteList]");
     int count = sub.size();
-//    std::string t = symbol;
-//    std::transform(t.begin(), t.end(), t.begin(), ::toupper);
+    std::string upperSymbol = symbol;
+    std::transform(upperSymbol.begin(), upperSymbol.end(), upperSymbol.begin(), ::toupper);
     for (int i = 0; i < count;i++)
     {
-        if(strcmp(sub[i].base.c_str(), symbol.c_str()) == 0) {
+        if(strcmp(sub[i].base.c_str(), upperSymbol.c_str()) == 0 || strcmp(sub[i].quote.c_str(), upperSymbol.c_str()) == 0) {
             KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (found) (symbol) " << symbol);
             return true;
         }
@@ -611,9 +611,10 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
 
     std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
     if(ticker.length() == 0) {
-        KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList , ignore it:" << data->InstrumentID);
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
+        KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
+                errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1, requestId, errorId, errorMsg.c_str());
         return;
@@ -637,30 +638,29 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         GetTimeInForce(data->TimeCondition).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef,
         stopPrice, icebergQty, d);
     KF_LOG_INFO(logger, "[req_order_insert] send_order");
-    printResponse(d);
+//    printResponse(d);
 
-    if(d.HasParseError() )
+    if(d.HasParseError() || !d.IsObject())
     {
-        errorId=100;
-        errorMsg= "send_order http response has parse error. please check the log";
-        KF_LOG_ERROR(logger, "[req_order_insert] send_order error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
-    }
-    if(!d.HasParseError() && d.IsObject() && d.HasMember("code") && d["code"].IsNumber())
+        errorId = 100;
+        errorMsg = "send_order http response has parse error or is not json. please check the log";
+        KF_LOG_ERROR(logger, "[req_order_insert] send_order error! (rid)" << requestId << " (errorId)" <<
+                                                                          errorId << " (errorMsg) " << errorMsg);
+    } else if(d.HasMember("code") && d["code"].IsNumber())
     {
         errorId = d["code"].GetInt();
         if(d.HasMember("msg") && d["msg"].IsString())
         {
             errorMsg = d["msg"].GetString();
         }
-
         KF_LOG_ERROR(logger, "[req_order_insert] send_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
 
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1, requestId, errorId, errorMsg.c_str());
     }
+    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 
     //paser the order/trade info in the response result
     if(!d.HasParseError() && d.IsObject() && !d.HasMember("code"))
@@ -882,9 +882,10 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
 
     std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
     if(ticker.length() == 0) {
-        KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it:" << data->InstrumentID);
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + "not in WhiteList, ignore it";
+        KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it. (rid)" << requestId << " (errorId)" <<
+                                                                                      errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
         return;
@@ -896,27 +897,25 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     KF_LOG_INFO(logger, "[req_order_action] cancel_order");
     printResponse(d);
 
-    if(d.HasParseError() )
+    if(d.HasParseError() || !d.IsObject() )
     {
-        errorId=100;
-        errorMsg= "cancel_order http response has parse error. please check the log";
-        KF_LOG_ERROR(logger, "[req_order_action] cancel_order error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
-    }
-    if(!d.HasParseError() && d.IsObject() && d.HasMember("code") && d["code"].IsNumber())
+        errorId = 100;
+        errorMsg = "cancel_order http response has parse error or is not json. please check the log";
+        KF_LOG_ERROR(logger, "[req_order_action] cancel_order error! (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+    } else if(d.HasMember("code") && d["code"].IsNumber())
     {
         errorId = d["code"].GetInt();
         if(d.HasMember("msg") && d["msg"].IsString())
         {
             errorMsg = d["msg"].GetString();
         }
-
         KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
     }
+    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 }
 
 void TDEngineBinance::GetAndHandleOrderTradeResponse()
