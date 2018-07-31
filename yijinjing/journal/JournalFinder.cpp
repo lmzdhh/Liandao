@@ -71,6 +71,8 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_XTP);
     loadJournalInfo(SOURCE_BINANCE);
     loadJournalInfo(SOURCE_COINMEX);
+    loadJournalInfo(SOURCE_MOCK);
+    loadJournalInfo(SOURCE_BITMAX);
 
     loadJournalInfo(0, getSystemJournalPair);
 

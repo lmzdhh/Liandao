@@ -17,6 +17,8 @@ enum exchange_source_index : short
     SOURCE_INDODAX = 17,
     SOURCE_OKEX = 18,
     SOURCE_COINMEX = 19,
+	SOURCE_MOCK = 20,
+	SOURCE_BITMAX = 21,
     SOURCE_UNKNOWN
 };
 
@@ -36,6 +38,10 @@ inline const char* get_str_from_source_index(exchange_source_index source)
 			return "okex";
 		case SOURCE_COINMEX:
 			return "coinmex";
+		case SOURCE_MOCK:
+			return "mock";
+		case SOURCE_BITMAX:
+			return "bitmax";
 		default:
 			return "unknown";
 	}
@@ -67,6 +73,14 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 	{
 		return SOURCE_COINMEX;
 	}
+	else if(exch_str == "mock")
+	{
+		return SOURCE_MOCK;
+	}
+	else if(exch_str == "bitmax")
+	{
+		return SOURCE_BITMAX;
+	}
     else
     {
 	return SOURCE_UNKNOWN;
@@ -81,6 +95,9 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_DCE "DCE" //大连商品交易所
 #define EXCHANGE_CZCE "CZCE" //郑州商品交易所
 #define EXCHANGE_BINANCE "BINANCE"
+#define EXCHANGE_COINMEX "COINMEX"
+#define EXCHANGE_MOCK "MOCK"
+#define EXCHANGE_BITMAX "BITMAX"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -157,6 +174,24 @@ const short MSG_TYPE_LF_ORDER_COINMEX     = 19204;
 const short MSG_TYPE_LF_RTN_ORDER_COINMEX = 19205;
 const short MSG_TYPE_LF_RTN_TRADE_COINMEX = 19206;
 const short MSG_TYPE_LF_ORDER_ACTION_COINMEX = 19207;
+
+//mock, idx=20
+const short MSG_TYPE_LF_MD_MOCK        = 20101;
+const short MSG_TYPE_LF_QRY_POS_MOCK   = 20201;
+const short MSG_TYPE_LF_RSP_POS_MOCK   = 20202;
+const short MSG_TYPE_LF_ORDER_MOCK     = 20204;
+const short MSG_TYPE_LF_RTN_ORDER_MOCK = 20205;
+const short MSG_TYPE_LF_RTN_TRADE_MOCK = 20206;
+const short MSG_TYPE_LF_ORDER_ACTION_MOCK = 20207;
+
+//bitmax, idx=21
+const short MSG_TYPE_LF_MD_BITMAX        = 21101;
+const short MSG_TYPE_LF_QRY_POS_BITMAX   = 21201;
+const short MSG_TYPE_LF_RSP_POS_BITMAX   = 21202;
+const short MSG_TYPE_LF_ORDER_BITMAX     = 21204;
+const short MSG_TYPE_LF_RTN_ORDER_BITMAX = 21205;
+const short MSG_TYPE_LF_RTN_TRADE_BITMAX = 21206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITMAX = 21207;
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志

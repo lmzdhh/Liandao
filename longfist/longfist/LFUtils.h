@@ -57,6 +57,10 @@ inline JournalPair getMdJournalPair(short source)
 			return {"/shared/kungfu/journal/MD/BINANCE/", "MD_BINANCE"};
 		case 19:
 			return {"/shared/kungfu/journal/MD/COINMEX/", "MD_COINMEX"};
+		case 20:
+			return {"/shared/kungfu/journal/MD/MOCK/", "MD_MOCK"};
+		case 21:
+			return {"/shared/kungfu/journal/MD/BITMAX/", "MD_BITMAX"};
 		default:
 			return {"", ""};
 	}
@@ -72,6 +76,10 @@ inline JournalPair getMdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/MD_RAW/XTP/", "MDRAW_XTP"};
 		case 19:
 			return {"/shared/kungfu/journal/MD_RAW/COINMEX/", "MDRAW_COINMEX"};
+		case 20:
+			return {"/shared/kungfu/journal/MD_RAW/MOCK/", "MDRAW_MOCK"};
+		case 21:
+			return {"/shared/kungfu/journal/MD_RAW/BITMAX/", "MDRAW_BITMAX"};
 		default:
 			return {"", ""};
 	}
@@ -89,6 +97,10 @@ inline JournalPair getTdJournalPair(short source)
 			return {"/shared/kungfu/journal/TD/BINANCE/", "TD_BINANCE"};
 		case 19:
 			return {"/shared/kungfu/journal/TD/COINMEX/", "TD_COINMEX"};
+		case 20:
+			return {"/shared/kungfu/journal/TD/MOCK/", "TD_MOCK"};
+		case 21:
+			return {"/shared/kungfu/journal/TD/BITMAX/", "TD_BITMAX"};
 		default:
 			return {"", ""};
 	}
@@ -106,6 +118,10 @@ inline JournalPair getTdSendJournalPair(short source)
             return {"/shared/kungfu/journal/TD_SEND/BINANCE/", "TD_SEND_BINANCE"};
 		case 19:
 			return {"/shared/kungfu/journal/TD_SEND/COINMEX/", "TD_SEND_COINMEX"};
+		case 20:
+			return {"/shared/kungfu/journal/TD_SEND/MOCK/", "TD_SEND_MOCK"};
+		case 21:
+			return {"/shared/kungfu/journal/TD_SEND/BITMAX/", "TD_SEND_BITMAX"};
 		default:
 			return {"", ""};
 	}
@@ -123,6 +139,10 @@ inline JournalPair getTdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_RAW/BINANCE/", "TD_RAW_BINANCE"};
 		case 19:
 			return {"/shared/kungfu/journal/TD_RAW/COINMEX/", "TD_RAW_COINMEX"};
+		case 20:
+			return {"/shared/kungfu/journal/TD_RAW/MOCK/", "TD_RAW_MOCK"};
+		case 21:
+			return {"/shared/kungfu/journal/TD_RAW/BITMAX/", "TD_RAW_BITMAX"};
 		default:
 			return {"", ""};
 	}
@@ -140,6 +160,10 @@ inline JournalPair getTdQJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_Q/BINANCE/", "TD_Q_BINANCE"};
 		case 19:
 			return {"/shared/kungfu/journal/TD_Q/COINMEX/", "TD_Q_COINMEX"};
+		case 20:
+			return {"/shared/kungfu/journal/TD_Q/MOCK/", "TD_Q_MOCK"};
+		case 21:
+			return {"/shared/kungfu/journal/TD_Q/BITMAX/", "TD_Q_BITMAX"};
 		default:
 			return {"", ""};
 	}

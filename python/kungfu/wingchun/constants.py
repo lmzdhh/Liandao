@@ -20,6 +20,8 @@ class SOURCE:
     XTP = 15
     BINANCE = 16
     COINMEX = 19
+    MOCK = 20
+    BITMAX = 21
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所

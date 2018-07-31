@@ -38,3 +38,15 @@ SET(COINMEX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineCoinmex.cpp TDEngineCoinmex.
 ADD_LIBRARY(coinmextd SHARED ${COINMEX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(coinmextd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
 INSTALL(TARGETS coinmextd DESTINATION "lib/wingchun")
+
+include_directories(${CMAKE_SOURCE_DIR}/utils/cpr/include ${CMAKE_SOURCE_DIR}/utils/rapidjson/include/)
+SET(MOCK_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineMock.cpp TDEngineMock.h)
+ADD_LIBRARY(mocktd SHARED ${MOCK_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(mocktd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
+INSTALL(TARGETS mocktd DESTINATION "lib/wingchun")
+
+include_directories(${CMAKE_SOURCE_DIR}/utils/cpr/include ${CMAKE_SOURCE_DIR}/utils/rapidjson/include/)
+SET(BITMAX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBitmax.cpp TDEngineBitmax.h)
+ADD_LIBRARY(bitmaxtd SHARED ${BITMAX_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(bitmaxtd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
+INSTALL(TARGETS bitmaxtd DESTINATION "lib/wingchun")
