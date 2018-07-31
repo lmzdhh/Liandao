@@ -1120,7 +1120,7 @@ void TDEngineCoinmex::getResponse(int http_status_code, std::string responseText
         json.SetObject();
         Document::AllocatorType& allocator = json.GetAllocator();
         json.AddMember("code", http_status_code, allocator);
-        if(d.IsObject()) {
+        if(!d.HasParseError() && d.IsObject()) {
             if( d.HasMember("message")) {
                 //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["message"].GetString());
                 std::string message = d["message"].GetString();
@@ -1135,6 +1135,10 @@ void TDEngineCoinmex::getResponse(int http_status_code, std::string responseText
                 val.SetString(message.c_str(), message.length(), allocator);
                 json.AddMember("message", val, allocator);
             }
+        } else {
+            rapidjson::Value val;
+            val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
+            json.AddMember("message", val, allocator);
         }
     }
 }
