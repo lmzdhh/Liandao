@@ -45,23 +45,36 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 	{
 		case LWS_CALLBACK_CLIENT_ESTABLISHED:
 		{
-			std::cout << "callback client established, reason = " << reason << std::endl;
+			std::cout << "3.1415926 LWS_CALLBACK_CLIENT_ESTABLISHED callback client established, reason = " << reason << std::endl;
 			lws_callback_on_writable( wsi );
 			break;
 		}
 		case LWS_CALLBACK_PROTOCOL_INIT:{
-			std::cout << "init, reason = " << reason << std::endl;
+			std::cout << "3.1415926 LWS_CALLBACK_PROTOCOL_INIT init, reason = " << reason << std::endl;
 			break;
 		}
 		case LWS_CALLBACK_CLIENT_RECEIVE:
 		{
-			std::cout << "on data, reason = " << reason << std::endl;
+			std::cout << "3.1415926  LWS_CALLBACK_CLIENT_RECEIVE on data, reason = " << reason << std::endl;
 			if(global_md)
 			{
 				global_md->on_lws_data(wsi, (const char*)in, len);
 			}
 			break;
 		}
+                case LWS_CALLBACK_CLIENT_CLOSED:
+		{
+			std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED, reason = " << reason << std::endl;
+             		if(global_md)
+                        {
+                                global_md->on_lws_connection_error(wsi);
+                        }
+                        break;
+		}
+        	case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
+        	{
+           		std::cout << "3.1415926 LWS_CALLBACK_CLIENT_RECEIVE_PONG, reason = " << reason << std::endl;
+        	}
 		case LWS_CALLBACK_CLIENT_WRITEABLE:
 		{
 			std::cout << "writeable, reason = " << reason << std::endl;
@@ -74,8 +87,17 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 			break;
 		}
 		case LWS_CALLBACK_CLOSED:
+		{
+			std::cout << "3.1415926 LWS_CALLBACK_CLOSED, reason = " << reason << std::endl;
+                        if(global_md)
+                        {
+                                global_md->on_lws_connection_error(wsi);
+                        }
+                        break;
+		}
 		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
 		{
+			std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CONNECTION_ERROR, reason = " << reason << std::endl;
 			if(global_md)
 			{
 				global_md->on_lws_connection_error(wsi);
@@ -258,8 +280,8 @@ void MDEngineCoinmex::login(long timeout_nsec)
 	int inputPort = 8443;
 	const char *urlProtocol, *urlTempPath;
 	char urlPath[300];
-	int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
-
+	int logs = LLL_ERR | LLL_DEBUG | LLL_WARN | LLL_PARSER | LLL_HEADER | LLL_LATENCY | LLL_CLIENT | LLL_EXT | LLL_NOTICE | LLL_USER;
+    	lws_set_log_level(logs, NULL);
 
 	struct lws_context_creation_info ctxCreationInfo;
 	struct lws_client_connect_info clientConnectInfo;
@@ -352,11 +374,17 @@ void MDEngineCoinmex::set_reader_thread()
 
 void MDEngineCoinmex::logout()
 {
+   if(context != NULL) {
+       lws_context_destroy(context);
+   }
    KF_LOG_INFO(logger, "MDEngineCoinmex::logout:");
 }
 
 void MDEngineCoinmex::release_api()
 {
+   if(context != NULL) {
+       lws_context_destroy(context);
+   }
    KF_LOG_INFO(logger, "MDEngineCoinmex::release_api:");
 }
 
@@ -812,6 +840,10 @@ void MDEngineCoinmex::loop()
 		{
 			lws_service( context, rest_get_interval_ms );
 		}
+        	if(0 < 0)
+        	{
+           	 	KF_LOG_ERROR(logger, "3.1415926 MDEngineCoinmex::lws_service: (n)" << n);
+        	}
 }
 
 BOOST_PYTHON_MODULE(libcoinmexmd)
