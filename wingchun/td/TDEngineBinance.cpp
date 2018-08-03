@@ -640,13 +640,14 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     KF_LOG_INFO(logger, "[req_order_insert] send_order");
 //    printResponse(d);
 
-    if(d.HasParseError() || !d.IsObject())
+    if(d.HasParseError() )
     {
-        errorId = 100;
-        errorMsg = "send_order http response has parse error or is not json. please check the log";
+        errorId=100;
+        errorMsg= "send_order http response has parse error. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error! (rid)" << requestId << " (errorId)" <<
                                                                           errorId << " (errorMsg) " << errorMsg);
-    } else if(d.HasMember("code") && d["code"].IsNumber())
+    }
+    if(!d.HasParseError() && d.IsObject() && d.HasMember("code") && d["code"].IsNumber())
     {
         errorId = d["code"].GetInt();
         if(d.HasMember("msg") && d["msg"].IsString())
@@ -897,12 +898,13 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     KF_LOG_INFO(logger, "[req_order_action] cancel_order");
     printResponse(d);
 
-    if(d.HasParseError() || !d.IsObject() )
+    if(d.HasParseError() )
     {
-        errorId = 100;
-        errorMsg = "cancel_order http response has parse error or is not json. please check the log";
+        errorId=100;
+        errorMsg= "cancel_order http response has parse error. please check the log";
         KF_LOG_ERROR(logger, "[req_order_action] cancel_order error! (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
-    } else if(d.HasMember("code") && d["code"].IsNumber())
+    }
+    if(!d.HasParseError() && d.IsObject() && d.HasMember("code") && d["code"].IsNumber())
     {
         errorId = d["code"].GetInt();
         if(d.HasMember("msg") && d["msg"].IsString())

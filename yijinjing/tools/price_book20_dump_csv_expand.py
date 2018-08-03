@@ -3,16 +3,16 @@
 
 import os
 import pandas as pd
-import matplotlib as mpl
+#import matplotlib as mpl
 import numpy as np
-from matplotlib import pyplot as plt
-from numba import *
+#from matplotlib import pyplot as plt
+#from numba import *
 
-mpl.style.use('seaborn-whitegrid')
+#mpl.style.use('seaborn-whitegrid')
 pd.set_option('display.width', 21250)
 pd.set_option('display.max_columns', 21250)
-mpl.rcParams['font.sans-serif'] = ['SimHei']
-mpl.rcParams['axes.unicode_minus'] = False
+#mpl.rcParams['font.sans-serif'] = ['SimHei']
+#mpl.rcParams['axes.unicode_minus'] = False
 
 columns_def = [
     'InstrumentID(c31)',
@@ -58,12 +58,12 @@ def expand_level20_price_volume(df, collapseFieldName, newFieldName):
     # print(columns_bids)
     df = pd.merge(df, df[collapseFieldName].str.split(';', n=-1, expand=True).rename(columns=columns_bids), left_index=True, right_index=True, how='left')
     # 会额外多出一个20的列，需要删掉
-    df.drop(columns=[20], inplace=True)
+    df.drop([20], axis=1, inplace=True)
     for i in range(0, 20, 1):
         columns_bid_price_volumes = {0: newFieldName + "_price_%s" % (str(i)), 1: newFieldName + "_volume_%s" % (str(i))}
         # print(columns_bid_price_volumes)
         df = pd.merge(df, df[newFieldName + "_%s" % (str(i))].str.split('@', n=-1, expand=True).rename(columns=columns_bid_price_volumes), left_index=True, right_index=True, how='left')
-        df.drop(columns=[newFieldName + "_%s" % (str(i))], inplace=True)
+        df.drop([newFieldName + "_%s" % (str(i))], axis=1, inplace=True)
         # print(df.head(3))
 
     return df
@@ -87,7 +87,7 @@ def expandCsv(inputCsvFileName, outputCsvFileName):
     df = expand_level20_price_volume(df, 'AskLevels([])', 'asks')
     df = expand_level20_price_volume(df, 'BidLevels([])', 'bids')
 
-    df.drop(columns=["BidLevels([])", "AskLevels([])"], inplace=True)
+    df.drop(["BidLevels([])", "AskLevels([])"], axis=1, inplace=True)
     # print(df.head(3))
     df.to_csv(outputCsvFileName, index=None, header = True, mode ='w',encoding="utf-8",chunksize = 1000000 )
     print("outputCsvFile create successfully:", outputCsvFileName)

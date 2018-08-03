@@ -763,14 +763,10 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
     Document d;
     cancel_order(unit, ticker, stod(remoteOrderId), d);
 
+    //cancel order response "" as resultText, it cause json.HasParseError() == true, and json.IsObject() == false.
+    //it is not an error, so dont check it.
     //not expected response
-    if(d.HasParseError() || !d.IsObject()) {
-        errorId = 100;
-        errorMsg = "cancel_order http response has parse error or is not json. please check the log";
-        KF_LOG_ERROR(logger, "[req_order_action] cancel_order error!  (rid)" << requestId << " (errorId)" <<
-                                                                           errorId << " (errorMsg) " << errorMsg);
-    } else if(d.HasMember("code") && d["code"].IsNumber())
-    {
+    if(!d.HasParseError() && d.HasMember("code") && d["code"].IsNumber()) {
         errorId = d["code"].GetInt();
         if(d.HasMember("message") && d["message"].IsString())
         {
