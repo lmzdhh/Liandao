@@ -1358,7 +1358,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
                 Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "POST";
     std::string requestPath = "https://api.binance.com/api/v3/order?";
@@ -1441,7 +1441,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json)
 {
     KF_LOG_INFO(logger, "[get_order]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/order?";
@@ -1490,7 +1490,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
                   long orderId, const char *origClientOrderId, const char *newClientOrderId, Document &json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "DELETE";
     std::string requestPath = "https://api.binance.com/api/v3/order?";
@@ -1543,7 +1543,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol, int limit, int64_t fromId, Document &json)
 {
     KF_LOG_INFO(logger, "[get_my_trades]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/myTrades?";
@@ -1590,7 +1590,7 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &json)
 {
     KF_LOG_INFO(logger, "[get_open_orders]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/openOrders?";
@@ -1666,7 +1666,7 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
 void TDEngineBinance::get_exchange_time(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_exchange_time]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v1/time";
@@ -1689,7 +1689,7 @@ void TDEngineBinance::get_exchange_time(AccountUnitBinance& unit, Document &json
 void TDEngineBinance::get_exchange_infos(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_exchange_infos]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v1/exchangeInfo";
@@ -1711,7 +1711,7 @@ void TDEngineBinance::get_exchange_infos(AccountUnitBinance& unit, Document &jso
 void TDEngineBinance::get_account(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_account]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/account?";
