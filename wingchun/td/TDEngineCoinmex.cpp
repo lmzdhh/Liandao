@@ -247,7 +247,7 @@ std::string TDEngineCoinmex::getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, 
 void TDEngineCoinmex::connect(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "[connect]");
-    for (int idx = 0; idx < account_units.size(); idx ++)
+    for (size_t idx = 0; idx < account_units.size(); idx++)
     {
         AccountUnitCoinmex& unit = account_units[idx];
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
@@ -373,6 +373,7 @@ bool TDEngineCoinmex::loadExchangeOrderFilters(AccountUnitCoinmex& unit, Documen
 //                                                                                       <<" (tickSize)" << afilter.ticksize);
 //        }
 //    }
+    return true;
 }
 
 void TDEngineCoinmex::debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters)
@@ -385,6 +386,7 @@ void TDEngineCoinmex::debug_print(std::map<std::string, SendOrderFilter> &sendOr
         map_itr++;
     }
 }
+
 
 SendOrderFilter TDEngineCoinmex::getSendOrderFilter(AccountUnitCoinmex& unit, const char *symbol)
 {
@@ -541,7 +543,7 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
     {
         size_t len = d.Size();
         KF_LOG_INFO(logger, "[req_investor_position] (asset.length)" << len);
-        for(int i = 0; i < len; i++)
+        for(size_t i = 0; i < len; i++)
         {
             std::string symbol = d.GetArray()[i]["currencyCode"].GetString();
             if(hasSymbolInWhiteList(unit.subscribeCoinmexBaseQuote, symbol))
@@ -791,7 +793,7 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
 void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
 {
     //every account
-    for (int idx = 0; idx < account_units.size(); idx ++)
+    for (size_t idx = 0; idx < account_units.size(); idx++)
     {
         AccountUnitCoinmex& unit = account_units[idx];
         if (!unit.logged_in)
@@ -811,7 +813,6 @@ void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
     }
     KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
 }
-
 
 void TDEngineCoinmex::moveNewtoPending(AccountUnitCoinmex& unit)
 {
@@ -847,7 +848,6 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
                                                                <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
                                                                <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
         );
-
 
         std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(orderStatusIterator->OrderRef);
         std::string remoteOrderId;
@@ -1012,7 +1012,6 @@ volume 	订单委托数量
         KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
     }
 }
-
 
 void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
                                                  const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded)

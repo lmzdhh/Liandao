@@ -103,7 +103,7 @@ private:
 
     struct lws_context *context = nullptr;
 
-    int subscribe_index = 0;
+    size_t subscribe_index = 0;
 
     //<ticker, <price, volume>>
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;

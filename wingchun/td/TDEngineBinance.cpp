@@ -40,7 +40,6 @@ using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
-
 USING_WC_NAMESPACE
 
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
@@ -129,7 +128,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
             if(!d.HasParseError() && d.IsArray()) { // expected success response is array
                 size_t len = d.Size();
                 KF_LOG_INFO(logger, "[load_account][get_open_orders] (length)" << len);
-                for (int i = 0; i < len; i++) {
+                for (size_t i = 0; i < len; i++) {
                     if(d.GetArray()[i].IsObject() && d.GetArray()[i].HasMember("symbol") && d.GetArray()[i].HasMember("clientOrderId"))
                     {
                         if(d.GetArray()[i]["symbol"].IsString() && d.GetArray()[i]["clientOrderId"].IsString())
@@ -212,10 +211,10 @@ void TDEngineBinance::readWhiteLists(AccountUnitBinance& unit, const json& j_con
 bool TDEngineBinance::hasSymbolInWhiteList(std::vector<SubscribeCoinBaseQuote> &sub, std::string symbol)
 {
     KF_LOG_INFO(logger, "[hasSymbolInWhiteList]");
-    int count = sub.size();
+    size_t count = sub.size();
     std::string upperSymbol = symbol;
     std::transform(upperSymbol.begin(), upperSymbol.end(), upperSymbol.begin(), ::toupper);
-    for (int i = 0; i < count;i++)
+    for (size_t i = 0; i < count; i++)
     {
         if(strcmp(sub[i].base.c_str(), upperSymbol.c_str()) == 0 || strcmp(sub[i].quote.c_str(), upperSymbol.c_str()) == 0) {
             KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (found) (symbol) " << symbol);
@@ -243,10 +242,10 @@ void TDEngineBinance::split(std::string str, std::string token, SubscribeCoinBas
 
 void TDEngineBinance::debug_print(std::vector<SubscribeCoinBaseQuote> &sub)
 {
-    int count = sub.size();
+    size_t count = sub.size();
     KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (count) " << count);
 
-    for (int i = 0; i < count;i++)
+    for (size_t i = 0; i < count; i++)
     {
         KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
     }
@@ -283,7 +282,7 @@ std::string TDEngineBinance::getWhiteListCoinpairFrom(AccountUnitBinance& unit, 
 void TDEngineBinance::connect(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "[connect]");
-    for (int idx = 0; idx < account_units.size(); idx ++)
+    for (size_t idx = 0; idx < account_units.size(); idx++)
     {
         AccountUnitBinance& unit = account_units[idx];
 
@@ -351,6 +350,7 @@ bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Documen
             }
         }
     }
+    return true;
 }
 
 void TDEngineBinance::debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters)
@@ -375,6 +375,10 @@ SendOrderFilter TDEngineBinance::getSendOrderFilter(AccountUnitBinance& unit, co
         }
         map_itr++;
     }
+    SendOrderFilter defaultFilter;
+    defaultFilter.ticksize = 8;
+    strcpy(defaultFilter.InstrumentID, "notfound");
+    return defaultFilter;
 }
 
 void TDEngineBinance::login(long timeout_nsec)
@@ -928,7 +932,7 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
 void TDEngineBinance::GetAndHandleOrderTradeResponse()
 {
     //every account
-    for (int idx = 0; idx < account_units.size(); idx ++)
+    for (size_t idx = 0; idx < account_units.size(); idx++)
     {
         AccountUnitBinance& unit = account_units[idx];
         KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (api_key)" << unit.api_key);
@@ -1239,16 +1243,19 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 
 bool TDEngineBinance::removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId)
 {
+    bool removedOne = false;
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
     for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); )
     {
         if(tradeIterator->binanceOrderId == binanceOrderId)
         {
             tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
+            removedOne = true;
         } else {
             ++tradeIterator;
         }
     }
+    return removedOne;
 }
 
 void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
@@ -1437,6 +1444,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
+
 
 void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json)
 {
