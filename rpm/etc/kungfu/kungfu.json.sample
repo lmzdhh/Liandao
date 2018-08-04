@@ -78,7 +78,9 @@
                 "etc_eth": "ETCETH",
                 "trx_btc": "TRXBTC"
               },
-              "rest_get_interval_ms": 2000
+              "exchange_shift_ms": -2000,
+              "rest_get_interval_ms": 2000,
+              "sync_time_interval": 10000
             },
             "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
             "is_default": true
@@ -121,7 +123,9 @@
                               "etc_eth": "ETC_ETH",
                               "mvp_btc": "MVP_BTC"
                             },
-              "rest_get_interval_ms": 2000
+              "exchange_shift_ms": 0,
+              "rest_get_interval_ms": 2000,
+              "sync_time_interval": 10000
             },
             "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
             "is_default": true

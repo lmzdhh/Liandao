@@ -90,6 +90,11 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
 
+    if(j_config.find("exchange_shift_ms") != j_config.end()) {
+        exchange_shift_ms = j_config["exchange_shift_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (exchange_shift_ms)" << exchange_shift_ms);
+
     AccountUnitCoinmex& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
@@ -1142,7 +1147,7 @@ void TDEngineCoinmex::getResponse(int http_status_code, std::string responseText
 void TDEngineCoinmex::get_exchange_time(AccountUnitCoinmex& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_exchange_time]");
-    std::string Timestamp = getTimestampString();
+    std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
     std::string requestPath = "/api/v1/spot/public/time";
     std::string queryString= "";
@@ -1588,7 +1593,9 @@ inline int64_t TDEngineCoinmex::getTimestamp()
 std::string TDEngineCoinmex::getTimestampString()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    timestamp =  timestamp - timeDiffOfExchange;
+    KF_LOG_DEBUG(logger, "[getTimestampString] (timestamp)" << timestamp << " (timeDiffOfExchange)" << timeDiffOfExchange << " (exchange_shift_ms)" << exchange_shift_ms);
+    timestamp =  timestamp - timeDiffOfExchange - exchange_shift_ms;
+    KF_LOG_INFO(logger, "[getTimestampString] (new timestamp)" << timestamp);
     std::string timestampStr;
     std::stringstream convertStream;
     convertStream <<std::fixed << std::setprecision(3) << (timestamp/1000.0);

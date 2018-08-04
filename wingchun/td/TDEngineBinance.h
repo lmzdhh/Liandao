@@ -154,6 +154,7 @@ private:
     int SYNC_TIME_DEFAULT_INTERVAL = 10000;
     int sync_time_interval;
     int64_t timeDiffOfExchange = 0;
+    int exchange_shift_ms = 0;
 private:
     int HTTP_RESPONSE_OK = 200;
     void send_order(AccountUnitBinance& unit, const char *symbol,

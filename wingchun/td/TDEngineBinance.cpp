@@ -87,6 +87,11 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
 
+    if(j_config.find("exchange_shift_ms") != j_config.end()) {
+        exchange_shift_ms = j_config["exchange_shift_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (exchange_shift_ms)" << exchange_shift_ms);
+
     AccountUnitBinance& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
@@ -1662,7 +1667,7 @@ void TDEngineBinance::get_exchange_time(AccountUnitBinance& unit, Document &json
 {
     KF_LOG_INFO(logger, "[get_exchange_time]");
     long recvWindow = 10000;
-    std::string Timestamp = getTimestampString();
+    std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v1/time";
     std::string queryString("");
@@ -1764,7 +1769,9 @@ inline int64_t TDEngineBinance::getTimestamp()
 std::string TDEngineBinance::getTimestampString()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    timestamp =  timestamp - timeDiffOfExchange;
+    KF_LOG_DEBUG(logger, "[getTimestampString] (timestamp)" << timestamp << " (timeDiffOfExchange)" << timeDiffOfExchange << " (exchange_shift_ms)" << exchange_shift_ms);
+    timestamp =  timestamp - timeDiffOfExchange + exchange_shift_ms;
+    KF_LOG_INFO(logger, "[getTimestampString] (new timestamp)" << timestamp);
     std::string timestampStr;
     std::stringstream convertStream;
     convertStream << timestamp;
