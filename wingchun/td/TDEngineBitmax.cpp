@@ -39,7 +39,7 @@ using std::stoi;
 using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
-
+using utils::crypto::base64_decode;
 
 USING_WC_NAMESPACE
 
@@ -81,19 +81,13 @@ TradeAccount TDEngineBitmax::load_account(int idx, const json& j_config)
     // internal load
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
-    string passphrase = j_config["passphrase"].get<string>();
+
     string baseUrl = j_config["baseUrl"].get<string>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
-
-    if(j_config.find("sync_time_interval") != j_config.end()) {
-        SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
-    }
-    KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
 
     AccountUnitCoinmex& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
-    unit.passphrase = passphrase;
     unit.baseUrl = baseUrl;
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
@@ -107,26 +101,62 @@ TradeAccount TDEngineBitmax::load_account(int idx, const json& j_config)
         KF_LOG_ERROR(logger, "TDEngineBitmax::load_account: subscribeCoinmexBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
-        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
-        KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
+        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"BTC/USDT\",");
+        KF_LOG_ERROR(logger, "     \"etc_eth\": \"ETC/ETH\"");
         KF_LOG_ERROR(logger, "},");
     }
 
     //cancel all openning orders on TD startup
-    if(unit.keyIsStrategyCoinpairWhiteList.size() > 0)
-    {
-        std::map<std::string, std::string>::iterator map_itr;
-        map_itr = unit.keyIsStrategyCoinpairWhiteList.begin();
-        while(map_itr != unit.keyIsStrategyCoinpairWhiteList.end())
-        {
-            KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID) of exchange coinpair: " << map_itr->second);
-            Document d;
-            cancel_all_orders(unit, map_itr->second, d);
-            printResponse(d);
 
-            map_itr++;
+    Document d;
+    query_orders(unit, d);
+    KF_LOG_INFO(logger, "[load_account] print get_open_orders");
+    printResponse(d);
+
+    if(!d.HasParseError() && d.IsObject() && d.HasMember("data") && d["data"].IsArray()) { // expected success response is array
+        size_t len = d["data"].Size();
+        KF_LOG_INFO(logger, "[load_account][get_open_orders] (length)" << len);
+        for (int i = 0; i < len; i++) {
+            if(d["data"].GetArray()[i].IsObject() && d["data"].GetArray()[i].HasMember("symbol") && d["data"].GetArray()[i].HasMember("coid"))
+            {
+                if(d.GetArray()[i]["symbol"].IsString() && d.GetArray()[i]["clientOrderId"].IsString())
+                {
+                    std::string symbol = d["data"].GetArray()[i]["symbol"].GetString();
+                    std::string orderRef = d["data"].GetArray()[i]["coid"].GetString();
+                    Document cancelResponse;
+                    cancel_order(unit, symbol.c_str(), 0, orderRef.c_str(), cancelResponse);
+
+                    KF_LOG_INFO(logger, "[load_account] cancel_order:");
+                    printResponse(cancelResponse);
+                    int errorId = 0;
+                    std::string errorMsg = "";
+                    if(d.HasParseError() )
+                    {
+                        errorId = 100;
+                        errorMsg = "cancel_order http response has parse error. please check the log";
+                        KF_LOG_ERROR(logger, "[load_account] cancel_order error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+                    }
+                    if(!cancelResponse.HasParseError() && cancelResponse.IsObject() && cancelResponse.HasMember("status") && strcmp("error", cancelResponse["status"].GetString() ) == 0)
+                    {
+                        errorId = 100;
+                        if(cancelResponse.HasMember("msg") && cancelResponse["msg"].IsString())
+                        {
+                            errorMsg = cancelResponse["msg"].GetString();
+                        }
+
+                        KF_LOG_ERROR(logger, "[load_account] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+                    }
+                }
+            }
         }
     }
+    
+    //test
+    Document accountJson;
+    get_account(unit, accountJson);
+    KF_LOG_INFO(logger, "[load_account] get_account:");
+    printResponse(accountJson);
+
 
     // set up
     TradeAccount account = {};
@@ -248,13 +278,6 @@ void TDEngineBitmax::connect(long timeout_nsec)
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
-//            Document d;
-//            get_exchange_time(unit, d);
-//            if(d.HasMember("timestamp")) {
-//                Value& s = d["timestamp"];
-//                KF_LOG_INFO(logger, "[connect] (response.timestamp.type) " << s.GetType() << " (response.timestamp) " << d["timestamp"].GetInt64());
-//                unit.logged_in = true;
-//            }
             //exchange infos
             Document doc;
             get_products(unit, doc);
@@ -271,8 +294,6 @@ void TDEngineBitmax::connect(long timeout_nsec)
             unit.logged_in = true;
         }
     }
-    //sync time of exchange
-    timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
 
     KF_LOG_INFO(logger, "[connect] rest_thread start on TDEngineBitmax::loop");
     rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBitmax::loop, this)));
@@ -281,93 +302,30 @@ void TDEngineBitmax::connect(long timeout_nsec)
 bool TDEngineBitmax::loadExchangeOrderFilters(AccountUnitCoinmex& unit, Document &doc)
 {
     KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
-    //changelog 2018-07-20. use hardcode mode
-    /*
-    BTC_USDT	0.0001		4
-    ETH_USDT	0.0001		4
-    LTC_USDT	0.0001		4
-    BCH_USDT	0.0001		4
-    ETC_USDT	0.0001		4
-    ETC_ETH	0.00000001		8
-    LTC_BTC	0.00000001		8
-    BCH_BTC	0.00000001		8
-    ETH_BTC	0.00000001		8
-    ETC_BTC	0.00000001		8
-     * */
-    SendOrderFilter afilter;
 
-    strncpy(afilter.InstrumentID, "BTC_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("BTC_USDT", afilter));
+    if(doc.HasParseError() || doc.IsObject())
+    {
+        return false;
+    }
+    if(doc.IsArray())
+    {
+        size_t productCount = doc.Size();
+        for (size_t i = 0; i < productCount; i++) {
+            const rapidjson::Value& prod = doc.GetArray()[i];
+            if(prod.IsObject() && prod.HasMember("product") && prod["product"].IsObject()) {
+                std::string symbol = prod["product"]["symbol"].GetString();
+                int tickSize = prod["product"]["pricePrecision"].GetInt();
 
-    strncpy(afilter.InstrumentID, "ETH_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("ETH_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "LTC_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("LTC_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "BCH_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("BCH_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "ETC_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("ETC_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "ETC_ETH", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("ETC_ETH", afilter));
-
-    strncpy(afilter.InstrumentID, "LTC_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("LTC_BTC", afilter));
-
-    strncpy(afilter.InstrumentID, "BCH_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("BCH_BTC", afilter));
-
-    strncpy(afilter.InstrumentID, "ETH_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("ETH_BTC", afilter));
-
-    strncpy(afilter.InstrumentID, "ETC_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("ETC_BTC", afilter));
-
-    //parse coinmex json
-    /*
-     [{"baseCurrency":"LTC","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"LTC_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     {"baseCurrency":"BCH","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"BCH_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     {"baseCurrency":"ETH","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"ETH_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     {"baseCurrency":"ETC","baseMaxSize":"100000.00","baseMinSize":"0.01","code":"ETC_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     ...
-     ]
-     * */
-//    if(doc.HasParseError() || doc.IsObject())
-//    {
-//        return false;
-//    }
-//    if(doc.IsArray())
-//    {
-//        int symbolsCount = doc.Size();
-//        for (int i = 0; i < symbolsCount; i++) {
-//            const rapidjson::Value& sym = doc.GetArray()[i];
-//            std::string symbol = sym["code"].GetString();
-//            std::string tickSizeStr =  sym["baseMinSize"].GetString();
-//            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
-//                                                                                       " (tickSizeStr)" << tickSizeStr);
-//            //0.0000100; 0.001;  1; 10
-//            SendOrderFilter afilter;
-//            strncpy(afilter.InstrumentID, symbol.c_str(), 31);
-//            afilter.ticksize = Round(tickSizeStr);
-//            unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
-//            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
-//                                                                                       " (tickSizeStr)" << tickSizeStr
-//                                                                                       <<" (tickSize)" << afilter.ticksize);
-//        }
-//    }
+                KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+                                                                                           " (tickSize)" << tickSize);
+                SendOrderFilter afilter;
+                strncpy(afilter.InstrumentID, symbol.c_str(), 31);
+                afilter.ticksize = tickSize;
+                unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
+            }
+        }
+    }
+    return true;
 }
 
 void TDEngineBitmax::debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters)
@@ -472,7 +430,7 @@ LfOrderPriceTypeType TDEngineBitmax::GetPriceType(std::string input) {
         return '0';
     }
 }
-//订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
+
 LfOrderStatusType TDEngineBitmax::GetOrderStatus(std::string input) {
     if ("open" == input) {
         return LF_CHAR_NotTouched;
@@ -503,14 +461,32 @@ void TDEngineBitmax::req_investor_position(const LFQryPositionField* data, int a
     std::string errorMsg = "";
     Document d;
     get_account(unit, d);
-
-    if(d.IsObject() && d.HasMember("code"))
+/*
+ {
+	"email": "spencer.fan@sino-danish.com",
+	"status": "success",
+	"data": [{
+		"assetCode": "LTC",
+		"assetName": "Litecoin",
+		"totalAmount": "0",
+		"availableAmount": "0",
+		"inOrderAmount": "0",
+		"maxWithdrawAmount": "0",
+		"btcValue": "0"
+	}, {
+		"assetCode": "BTC",
+		"assetName": "Bitcoin",
+		"totalAmount": "0",
+ * */
+    if(d.HasParseError() || !d.IsObject() )
     {
-        errorId = d["code"].GetInt();
-        if(d.HasMember("message") && d["message"].IsString())
-        {
-            errorMsg = d["message"].GetString();
-        }
+        errorId = 100;
+        errorMsg = " response HasParseError or is not a json";
+        KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+    } else if(d.HasMember("status") || strcmp("error", d["status"].GetString()) == 0 )
+    {
+        errorId = 100;
+        errorMsg = "response status error";
         KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
     send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BITMAX, 1, requestId);
@@ -526,27 +502,22 @@ void TDEngineBitmax::req_investor_position(const LFQryPositionField* data, int a
     pos.YdPosition = 0;
     pos.PositionCost = 0;
 
-
-/*
- # Response
-    [{"available":"0.099","balance":"0.099","currencyCode":"BTC","hold":"0","id":83906},{"available":"188","balance":"188","currencyCode":"MVP","hold":"0","id":83906}]
- * */
     std::vector<LFRspPositionField> tmp_vector;
-    if(d.IsArray())
+    if(!d.HasParseError() && d.HasMember("data") && d["data"].IsArray())
     {
-        size_t len = d.Size();
+        size_t len = d["data"].Size();
         KF_LOG_INFO(logger, "[req_investor_position] (asset.length)" << len);
         for(int i = 0; i < len; i++)
         {
-            std::string symbol = d.GetArray()[i]["currencyCode"].GetString();
+            std::string symbol = d["data"].GetArray()[i]["assetCode"].GetString();
             if(hasSymbolInWhiteList(unit.subscribeCoinmexBaseQuote, symbol))
             {
                 strncpy(pos.InstrumentID, symbol.c_str(), 31);
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
-                                                                          << " available:" << d.GetArray()[i]["available"].GetString()
-                                                                          << " balance: " << d.GetArray()[i]["balance"].GetString()
-                                                                          << " hold: " << d.GetArray()[i]["hold"].GetString());
-                pos.Position = std::round(std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset);
+                                                                          << " availableAmount:" << d["data"].GetArray()[i]["availableAmount"].GetString()
+                                                                          << " totalAmount: " << d["data"].GetArray()[i]["totalAmount"].GetString()
+                                                                          << " maxWithdrawAmount: " << d["data"].GetArray()[i]["maxWithdrawAmount"].GetString());
+                pos.Position = std::round(std::stod(d["data"].GetArray()[i]["availableAmount"].GetString()) * scale_offset);
                 tmp_vector.push_back(pos);
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
             }
@@ -600,18 +571,6 @@ int64_t TDEngineBitmax::fixPriceTickSize(int keepPrecision, int64_t price, bool 
     return ret_price;
 }
 
-int TDEngineBitmax::Round(std::string tickSizeStr) {
-    size_t docAt = tickSizeStr.find( ".", 0 );
-    size_t oneAt = tickSizeStr.find( "1", 0 );
-
-    if(docAt == string::npos) {
-        //not ".", it must be "1" or "10"..."100"
-        return -1 * (tickSizeStr.length() -  1);
-    }
-    //there must exist 1 in the string.
-    return oneAt - docAt;
-}
-
 
 void TDEngineBitmax::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
@@ -639,7 +598,6 @@ void TDEngineBitmax::req_order_insert(const LFInputOrderField* data, int account
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
 
-    double funds = 0;
     Document d;
 
     SendOrderFilter filter = getSendOrderFilter(unit, ticker.c_str());
@@ -650,9 +608,8 @@ void TDEngineBitmax::req_order_insert(const LFInputOrderField* data, int account
                                                                      " (LimitPrice)" << data->LimitPrice <<
                                                                      " (ticksize)" << filter.ticksize <<
                                                                      " (fixedPrice)" << fixedPrice);
-
-    send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
-            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, d);
+    send_order(unit, ticker.c_str(), data->OrderRef, GetSide(data->Direction).c_str(),
+               GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, d);
 
     //not expected response
     if(d.HasParseError() || !d.IsObject())
@@ -661,51 +618,15 @@ void TDEngineBitmax::req_order_insert(const LFInputOrderField* data, int account
         errorMsg = "send_order http response has parse error or is not json. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                            errorId << " (errorMsg) " << errorMsg);
-    } else  if(d.HasMember("orderId") && d.HasMember("result"))
+    } else if(d.HasMember("status") && strcmp("error", d["status"].GetString()) == 0)
     {
-        if(d["result"].GetBool())
-        {
-            /*
-             * # Response OK
-                {
-                    "result": true,
-                    "order_id": 123456
-                }
-             * */
-            //if send successful and the exchange has received ok, then add to  pending query order list
-            std::string remoteOrderId = std::to_string(d["orderId"].GetInt64());
-            localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
-            KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
-                                                                       data->OrderRef << " (remoteOrderId) " << remoteOrderId);
-
-            char noneStatus = '\0';//none
-            addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
-            //success, only record raw data
-            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMAX, 1, requestId, errorId, errorMsg.c_str());
-            return;
-        } else {
-            /*
-             * # Response error
-                {
-                    "result": false,
-                    "order_id": 123456
-                }
-             * */
-            //send successful BUT the exchange has received fail
-            errorId = 200;
-            errorMsg = "http.code is 200, but result is false";
-            KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
-                                                                               errorId << " (errorMsg) " << errorMsg);
-        }
-    } else if (d.HasMember("code") && d["code"].IsNumber()) {
-        //send error, example: http timeout.
-        errorId = d["code"].GetInt();
-        if(d.HasMember("message") && d["message"].IsString())
-        {
-            errorMsg = d["message"].GetString();
-        }
-        KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (errorId)" <<
-                                                          errorId << " (errorMsg) " << errorMsg);
+        errorId = 100;
+        errorMsg = d["msg"].GetString();
+        KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
+                                                                           errorId << " (errorMsg) " << errorMsg);
+    } else if(d.HasMember("status") && strcmp("success", d["status"].GetString()) == 0)
+    {
+        //success
     }
 
     if(errorId != 0)
@@ -742,26 +663,8 @@ void TDEngineBitmax::req_order_action(const LFOrderActionField* data, int accoun
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
-    std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
-    std::string remoteOrderId;
-    if(itr == localOrderRefRemoteOrderId.end()) {
-        errorId = 1;
-        std::stringstream ss;
-        ss << "[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef;
-        errorMsg = ss.str();
-        KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. "
-                             << " (rid)" << requestId << " (orderRef)" << data->OrderRef << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
-        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITMAX, 1, requestId, errorId, errorMsg.c_str());
-        return;
-    } else {
-        remoteOrderId = itr->second;
-        KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) "
-                             << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
-    }
-
     Document d;
-    cancel_order(unit, ticker, stod(remoteOrderId), d);
+    cancel_order(unit, ticker.c_str(), getTimestampString().c_str(), data->OrderRef, d);
 
     //not expected response
     if(d.HasParseError() || !d.IsObject()) {
@@ -769,15 +672,15 @@ void TDEngineBitmax::req_order_action(const LFOrderActionField* data, int accoun
         errorMsg = "cancel_order http response has parse error or is not json. please check the log";
         KF_LOG_ERROR(logger, "[req_order_action] cancel_order error!  (rid)" << requestId << " (errorId)" <<
                                                                            errorId << " (errorMsg) " << errorMsg);
-    } else if(d.HasMember("code") && d["code"].IsNumber())
+    } else if(d.HasMember("status") && strcmp("error", d["status"].GetString()) == 0)
     {
-        errorId = d["code"].GetInt();
-        if(d.HasMember("message") && d["message"].IsString())
-        {
-            errorMsg = d["message"].GetString();
-        }
-        KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId
-                                                                       << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        errorId = 100;
+        errorMsg = d["msg"].GetString();
+        KF_LOG_ERROR(logger, "[req_order_action] send_order error!  (rid)" << requestId << " (errorId)" <<
+                                                                           errorId << " (errorMsg) " << errorMsg);
+    } else if(d.HasMember("status") && strcmp("success", d["status"].GetString()) == 0)
+    {
+        //success
     }
 
     if(errorId != 0)
@@ -787,265 +690,11 @@ void TDEngineBitmax::req_order_action(const LFOrderActionField* data, int accoun
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITMAX, 1, requestId, errorId, errorMsg.c_str());
 }
 
-void TDEngineBitmax::GetAndHandleOrderTradeResponse()
-{
-    //every account
-    for (int idx = 0; idx < account_units.size(); idx ++)
-    {
-        AccountUnitCoinmex& unit = account_units[idx];
-        if (!unit.logged_in)
-        {
-            continue;
-        }
-        moveNewtoPending(unit);
-        retrieveOrderStatus(unit);
-    }//end every account
-
-    sync_time_interval--;
-    if(sync_time_interval <= 0) {
-        //reset
-        sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
-        timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
-        KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
-    }
-    KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
-}
-
-
-void TDEngineBitmax::moveNewtoPending(AccountUnitCoinmex& unit)
-{
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
-
-    std::vector<PendingCoinmexOrderStatus>::iterator newOrderStatusIterator;
-    for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
-    {
-        unit.pendingOrderStatus.push_back(*newOrderStatusIterator);
-        newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
-    }
-}
-
-void TDEngineBitmax::retrieveOrderStatus(AccountUnitCoinmex& unit)
-{
-    KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
-    std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator;
-//    int indexNum = 0;
-//    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
-//    {
-//        indexNum++;
-//        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    (account.api_key)"<< unit.api_key
-//                                                                << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
-//                                                                <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
-//                                                                <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
-//        );
-//    }
-
-    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
-    {
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "( account.api_key) "<< unit.api_key
-                                                               << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
-                                                               <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
-                                                               <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
-        );
-
-
-        std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(orderStatusIterator->OrderRef);
-        std::string remoteOrderId;
-        if(itr == localOrderRefRemoteOrderId.end()) {
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] not found in localOrderRefRemoteOrderId map (orderRef) " << orderStatusIterator->OrderRef);
-            continue;
-        } else {
-            remoteOrderId = itr->second;
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] found in localOrderRefRemoteOrderId map (orderRef) " << orderStatusIterator->OrderRef << " (remoteOrderId) " << remoteOrderId);
-        }
-
-        std::string ticker = getWhiteListCoinpairFrom(unit, orderStatusIterator->InstrumentID);
-        if(ticker.length() == 0) {
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
-            continue;
-        }
-        KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
-
-        Document d;
-        query_order(unit, ticker, stod(remoteOrderId), d);
-
-        /*
- # Response
-
-{
-	"averagePrice": "0",
-	"code": "MVP_BTC",
-	"createdDate": 1530417365000,
-	"filledVolume": "0",
-	"funds": "0",
-	"orderId": 20283535,
-	"orderType": "limit",
-	"price": "0.00000001",
-	"side": "buy",
-	"status": "open",
-	"volume": "1"
-}
-
-返回值说明
-返回字段 	字段说明
-averagePrice 	订单已成交部分均价，如果未成交则为0
-code 	币对如btc-usdt
-createDate 	创建订单的时间戳
-filledVolume 	订单已成交数量
-funds 	订单已成交金额
-orderId 	订单代码
-price 	订单委托价
-side 	订单交易方向
-status 	订单状态
-volume 	订单委托数量
-        */
-        //parse order status
-        //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-        if(d.HasParseError()) {
-            //HasParseError, skip
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order response HasParseError " << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                   << " (orderRef)" << orderStatusIterator->OrderRef
-                                                                   << " (remoteOrderId) " << remoteOrderId);
-            continue;
-        }
-        if(d.HasMember("status"))
-        {
-            /*
-             {
-                "averagePrice": "0.00000148",
-                "code": "MVP_BTC",
-                "createdDate": 1530439964000,
-                "filledVolume": "1",
-                "funds": "0",
-                "orderId": 20644648,
-                "orderType": "limit",
-                "price": "0.00001111",
-                "side": "buy",
-                "status": "filled",
-                "volume": "1"
-            }
-             * */
-            //parse success
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.OrderStatus = GetOrderStatus(d["status"].GetString());
-            rtn_order.VolumeTraded = std::round(std::stod(d["filledVolume"].GetString()) * scale_offset);
-
-            //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
-            if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
-               (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-                && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
-            {
-                //first send onRtnOrder about the status change or VolumeTraded change
-                strcpy(rtn_order.ExchangeID, "bitmax");
-                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                rtn_order.Direction = GetDirection(d["side"].GetString());
-                //No this setting on coinmex
-                rtn_order.TimeCondition = LF_CHAR_GFD;
-                rtn_order.OrderPriceType = GetPriceType(d["orderType"].GetString());
-                strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-                rtn_order.VolumeTotalOriginal = std::round(std::stod(d["volume"].GetString()) * scale_offset);
-                rtn_order.LimitPrice = std::round(std::stod(d["price"].GetString()) * scale_offset);
-                rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-
-                on_rtn_order(&rtn_order);
-                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                        source_id, MSG_TYPE_LF_RTN_ORDER_BITMAX,
-                                        1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-                uint64_t newAveragePrice = std::round(std::stod(d["averagePrice"].GetString()) * scale_offset);
-                //second, if the status is PartTraded/AllTraded, send OnRtnTrade
-                if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
-                    (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-                    && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
-                {
-                    LFRtnTradeField rtn_trade;
-                    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-                    strcpy(rtn_trade.ExchangeID, "bitmax");
-                    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-                    strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                    strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
-                    rtn_trade.Direction = rtn_order.Direction;
-                    uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
-                    uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
-
-                    //calculate the volumn and price (it is average too)
-                    rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-                    rtn_trade.Price = (newAmount - oldAmount)/(rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded);
-
-                    on_rtn_trade(&rtn_trade);
-                    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                            source_id, MSG_TYPE_LF_RTN_TRADE_BITMAX, 1, -1);
-                }
-                //third, update last status for next query_order
-                orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-                orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-                orderStatusIterator->averagePrice = newAveragePrice;
-            }
-        } else {
-            int errorId = 0;
-            std::string errorMsg = "";
-            //no status, it must be a Error response. see details in getResponse(...)
-            if(d.HasMember("code") && d["code"].IsInt()) {
-                errorId = d["code"].GetInt();
-            }
-            if(d.HasMember("message") && d["message"].IsString())
-            {
-                errorMsg = d["message"].GetString();
-            }
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                         << " (orderRef)" << orderStatusIterator->OrderRef
-                                                                         << " (errorId)" << errorId
-                                                                         << " (errorMsg)" << errorMsg);
-        }
-
-        //remove order when finish
-        if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
-           || orderStatusIterator->OrderStatus == LF_CHAR_Error)
-        {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
-            orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
-        } else {
-            ++orderStatusIterator;
-        }
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
-    }
-}
-
-
-void TDEngineBitmax::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
-                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded)
-{
-    //add new orderId for GetAndHandleOrderTradeResponse
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
-
-    PendingCoinmexOrderStatus status;
-    memset(&status, 0, sizeof(PendingCoinmexOrderStatus));
-    strncpy(status.InstrumentID, InstrumentID, 31);
-    strncpy(status.OrderRef, OrderRef, 21);
-    status.OrderStatus = OrderStatus;
-    status.VolumeTraded = VolumeTraded;
-    status.averagePrice = 0.0;
-    unit.newOrderStatus.push_back(status);
-    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << InstrumentID
-                                                                       << " (OrderRef) " << OrderRef
-                                                                       << "(VolumeTraded)" << VolumeTraded);
-}
-
 void TDEngineBitmax::loop()
 {
-    while(isRunning)
-    {
-        using namespace std::chrono;
-        auto current_ms = duration_cast< milliseconds>(system_clock::now().time_since_epoch()).count();
-        if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < rest_get_interval_ms)
-        {
-            continue;
-        }
-
-        last_rest_get_ts = current_ms;
-        GetAndHandleOrderTradeResponse();
+    while(isRunning) {
     }
+
 }
 
 
@@ -1079,104 +728,33 @@ void TDEngineBitmax::printResponse(const Document& d)
     }
 }
 
-/*
- * https://github.com/coinmex/coinmex-official-api-docs/blob/master/README_ZH_CN.md
- *
- *成功
-HTTP状态码200表示成功响应，并可能包含内容。如果响应含有内容，则将显示在相应的返回内容里面。
-常见错误码
-    400 Bad Request – Invalid request forma 请求格式无效
-    401 Unauthorized – Invalid API Key 无效的API Key
-    403 Forbidden – You do not have access to the requested resource 请求无权限
-    404 Not Found 没有找到请求
-    429 Too Many Requests 请求太频繁被系统限流
-    500 Internal Server Error – We had a problem with our server 服务器内部阻碍
- * */
-//当出错时，返回http error code和出错信息message
-//当不出错时，返回结果信息
+
 void TDEngineBitmax::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
 {
-    if(http_status_code == HTTP_RESPONSE_OK)
-    {
-        //KF_LOG_INFO(logger, "[getResponse] (http_status_code == 200) (responseText)" << responseText << " (errorMsg) " << errorMsg);
-        json.Parse(responseText.c_str());
-        //KF_LOG_INFO(logger, "[getResponse] (http_status_code == 200) (HasParseError)" << json.HasParseError());
-    } else if(http_status_code == 0 && responseText.length() == 0)
-    {
-        json.SetObject();
-        Document::AllocatorType& allocator = json.GetAllocator();
-        int errorId = 1;
-        json.AddMember("code", errorId, allocator);
-        //KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
-        rapidjson::Value val;
-        val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
-        json.AddMember("message", val, allocator);
-    } else
-    {
-        Document d;
-        d.Parse(responseText.c_str());
-        //KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
-
-        json.SetObject();
-        Document::AllocatorType& allocator = json.GetAllocator();
-        json.AddMember("code", http_status_code, allocator);
-        if(!d.HasParseError() && d.IsObject()) {
-            if( d.HasMember("message")) {
-                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["message"].GetString());
-                std::string message = d["message"].GetString();
-                rapidjson::Value val;
-                val.SetString(message.c_str(), message.length(), allocator);
-                json.AddMember("message", val, allocator);
-            }
-            if( d.HasMember("msg")) {
-                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["msg"].GetString());
-                std::string message = d["msg"].GetString();
-                rapidjson::Value val;
-                val.SetString(message.c_str(), message.length(), allocator);
-                json.AddMember("message", val, allocator);
-            }
-        } else {
-            rapidjson::Value val;
-            val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
-            json.AddMember("message", val, allocator);
-        }
-    }
+    json.Parse(responseText.c_str());
 }
 
-void TDEngineBitmax::get_exchange_time(AccountUnitCoinmex& unit, Document& json)
-{
-    KF_LOG_INFO(logger, "[get_exchange_time]");
-    std::string Timestamp = getTimestampString();
-    std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/public/time";
-    std::string queryString= "";
-    std::string body = "";
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    string url = unit.baseUrl + requestPath + queryString;
-    const auto response = Get(Url{url}, Parameters{}, Timeout{10000});
-    KF_LOG_INFO(logger, "[get_exchange_time] (url) " << url << " (response) " << response.text.c_str());
-    return getResponse(response.status_code, response.text, response.error.message, json);
-}
 
 void TDEngineBitmax::get_account(AccountUnitCoinmex& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/ccex/account/assets";
+    std::string requestPath = "balances";
     std::string queryString= "";
     std::string body = "";
-    string Message = Timestamp + Method + requestPath + queryString + body;
+    string Message = Timestamp + "+" + requestPath;
 
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
+    std::string secret_key_64decode = base64_decode(unit.secret_key);
+    unsigned char* signature = hmac_sha256_byte(secret_key_64decode.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath;
     std::string sign = base64_encode(signature, 32);
 
     const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+                              Header{{"x-auth-key", unit.api_key},
                                      {"Content-Type", "application/json"},
-                                     {"ACCESS-SIGN", sign},
-                                     {"ACCESS-TIMESTAMP",  Timestamp}}, Timeout{10000} );
+                                     {"x-auth-signature", sign},
+                                     {"x-auth-timestamp",  Timestamp}}, Timeout{10000} );
 
     KF_LOG_INFO(logger, "[get_account] (url) " << url << " (response) " << response.text.c_str());
     //[]
@@ -1185,108 +763,84 @@ void TDEngineBitmax::get_account(AccountUnitCoinmex& unit, Document& json)
 
 void TDEngineBitmax::get_products(AccountUnitCoinmex& unit, Document& json)
 {
- /*
-[{
-	"baseCurrency": "LTC",
-	"baseMaxSize": "100000.00",
-	"baseMinSize": "0.001",
-	"code": "LTC_BTC",
-	"quoteCurrency": "BTC",
-	"quoteIncrement": "8"
-}, {
-	"baseCurrency": "BCH",
-	"baseMaxSize": "100000.00",
-	"baseMinSize": "0.001",
-	"code": "BCH_BTC",
-	"quoteCurrency": "BTC",
-	"quoteIncrement": "8"
-}, {
-	"baseCurrency": "ETH",
-	"baseMaxSize": "100000.00",
-	"baseMinSize": "0.001",
-	"code": "ETH_BTC",
-	"quoteCurrency": "BTC",
-	"quoteIncrement": "8"
-}.......]
-  * */
-    KF_LOG_INFO(logger, "[get_products]");
-    std::string Timestamp = getTimestampString();
-    std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/public/products";
-    std::string queryString= "";
-    std::string body = "";
-    string Message = Timestamp + Method + requestPath + queryString + body;
+    /*
+  [
+     {
+    "product" : {
+      "symbol" : "BCH/BTC",
+      "baseAsset" : "BCH",
+      "quoteAsset" : "BTC",
+      "statusCode" : "Normal",
+      "statusMessage" : "",
+      "qtyScale" : 5,
+      "priceScale" : 6,
+      "pricePrecision" : 6,
+      "notionalScale" : 6,
+      "minQty" : "0.01",
+      "maxQty" : "10000.00",
+      "minNotional" : "0.001",
+      "maxNotional" : "1000.000"
+    },
+    "baseAsset" : {
+      "assetId" : "iYROwQmWeUxxpjaIFuc5UM3GMLhJLlnr",
+      "assetCode" : "BCH",
+      "assetName" : "Bitcoin Cash",
+      "unit" : "",
+      "website" : "",
+      "logoUrl" : "",
+      "precisionScale" : 5,
+      "numConfirmations" : 3,
+      "withdrawalFee" : 0.01,
+      "minWithdrawalAmt" : 0.01,
+      "statusCode" : "Normal",
+      "statusMessage" : ""
+    },
+    "quoteAsset" : {
+      "assetId" : "hEbYqvUNuKeYKVKIaFIdUNkSxGnL4wjz",
+      "assetCode" : "BTC",
+      "assetName" : "Bitcoin",
+      "unit" : "",
+      "website" : "",
+      "logoUrl" : "",
+      "precisionScale" : 6,
+      "numConfirmations" : 2,
+      "withdrawalFee" : 0.001,
+      "minWithdrawalAmt" : 0.01,
+      "statusCode" : "Normal",
+      "statusMessage" : ""
+    }
+  },
+  {
+    "product" : {
+      "symbol" : "LTC/BTC",
+      "baseAsset" : "LTC",
 
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
+
+
+     * */
+    KF_LOG_INFO(logger, "[get_products]");
+//    std::string Timestamp = getTimestampString();
+//    std::string Method = "GET";
+    std::string requestPath = "products";
+//    std::string queryString= "";
+//    std::string body = "";
+//    string Message = Timestamp + "+" + requestPath;
+
     string url = unit.baseUrl + requestPath;
-    std::string sign = base64_encode(signature, 32);
+
     const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+                              Header{
                                      {"Content-Type", "application/json"},
-                                     {"ACCESS-SIGN", sign},
-                                     {"ACCESS-TIMESTAMP",  Timestamp}}, Timeout{10000} );
+                                     }, Timeout{10000} );
 
     KF_LOG_INFO(logger, "[get_products] (url) " << url << " (response) " << response.text.c_str());
-    //
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-void TDEngineBitmax::send_order(AccountUnitCoinmex& unit, const char *code,
-                                     const char *side, const char *type, double size, double price, double funds, Document& json)
+void TDEngineBitmax::send_order(AccountUnitCoinmex& unit, const char *code, const char *coid,
+                                     const char *side, const char *type, double size, double price, Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
-
-    //check funds
-    if(strcmp("market", type) == 0 && strcmp("buy", side) == 0)
-    {
-/*
-    {
-        "asks": [
-            ["0.01304566", "0.51385531"],
-            ["0.01310131", "2.20822955"],
-* */
-        /*  DO NOT SUPPORT MARKET-BUY , for it required calculate funds.
-        Document d = get_depth(unit, code);
-        if(d.IsObject() && d.HasMember("asks"))
-        {
-            double currentPrice = 0;
-            if(strcmp("buy", side) == 0) {
-                currentPrice = std::round(std::stod(d["asks"].GetArray()[0][0].GetString());
-            } else {
-                currentPrice = std::round(std::stod(d["bids"].GetArray()[0][0].GetString());
-            }
-            KF_LOG_INFO(logger, "[send_order] (currentPrice) " << std::setprecision(8) << currentPrice);
-            funds = size * price /currentPrice;
-
-        } else {
-            //error, return getResponse(0, "", "get_depth error");  ???
-            return d;
-        }
-        */
-        getResponse(0, "", "market buy is not supported!", json);
-        return;
-    }
-
-    if(strcmp("limit", type) == 0)
-    {
-        if(price == 0 || size == 0) {
-            KF_LOG_ERROR(logger, "[send_order] limit order, price or size cannot be null");
-            getResponse(0, "", "price or size cannot be null", json);
-            return;
-        }
-
-    } else if(strcmp("market", type) == 0) {
-        if(strcmp("buy", side) == 0 &&  funds == 0) {
-            KF_LOG_ERROR(logger, "[send_order] market order, type is buy, the funds cannot be null");
-            getResponse(0, "", "market order, type is buy, the funds cannot be null", json);
-            return;
-        }
-        if(strcmp("sell", side) == 0 &&  size == 0) {
-            KF_LOG_ERROR(logger, "[send_order] market order, type is sell, the size cannot be null");
-            getResponse(0, "", "market order, type is sell, the size cannot be null", json);
-            return;
-        }
-    }
 
     std::string priceStr;
     std::stringstream convertPriceStream;
@@ -1298,45 +852,48 @@ void TDEngineBitmax::send_order(AccountUnitCoinmex& unit, const char *code,
     convertSizeStream <<std::fixed << std::setprecision(8) << size;
     convertSizeStream >> sizeStr;
 
-    std::string fundsStr;
-    std::stringstream convertFundsStream;
-    convertFundsStream <<std::fixed << std::setprecision(8) << funds;
-    convertFundsStream >> fundsStr;
-
     KF_LOG_INFO(logger, "[send_order] (code) " << code << " (side) "<< side << " (type) " <<
-                                               type << " (size) "<< sizeStr << " (price) "<< priceStr << " (funds) " << fundsStr);
+                                               type << " (size) "<< sizeStr << " (price) "<< priceStr << " (time) " << time);
+
+    std::string Timestamp = getTimestampString();
 
     Document document;
     document.SetObject();
     Document::AllocatorType& allocator = document.GetAllocator();
     //used inner this method only.so  can use reference
-    document.AddMember("code", StringRef(code), allocator);
+    document.AddMember("coid", StringRef(coid), allocator);
+
+    rapidjson::Value timeVal;
+    timeVal.SetString(Timestamp.c_str(), Timestamp.length(), allocator);
+    json.AddMember("time", timeVal, allocator);
+
+    document.AddMember("symbol", StringRef(code), allocator);
     document.AddMember("side", StringRef(side), allocator);
-    document.AddMember("type", StringRef(type), allocator);
-    document.AddMember("size", StringRef(sizeStr.c_str()), allocator);
-    document.AddMember("price", StringRef(priceStr.c_str()), allocator);
-    document.AddMember("funds", StringRef(fundsStr.c_str()), allocator);
+    document.AddMember("orderType", StringRef(type), allocator);
+    document.AddMember("orderQty", StringRef(sizeStr.c_str()), allocator);
+    document.AddMember("orderPrice", StringRef(priceStr.c_str()), allocator);
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
     document.Accept(writer);
 
-    std::string Timestamp = getTimestampString();
+
     std::string Method = "POST";
-    std::string requestPath = "/api/v1/spot/ccex/orders";
+    std::string requestPath = "order/new";
     std::string queryString= "";
     std::string body = jsonStr.GetString();
 
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
+    string Message = Timestamp + "+" + requestPath;
+    std::string secret_key_64decode = base64_decode(unit.secret_key);
+    unsigned char* signature = hmac_sha256_byte(secret_key_64decode.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
     std::string sign = base64_encode(signature, 32);
 
     const auto response = Post(Url{url},
-                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+                               Header{{"x-auth-key", unit.api_key},
                                       {"Content-Type", "application/json; charset=UTF-8"},
                                       {"Content-Length", to_string(body.size())},
-                                      {"ACCESS-SIGN", sign},
-                                      {"ACCESS-TIMESTAMP",  Timestamp}},
+                                      {"x-auth-signature", sign},
+                                      {"x-auth-timestamp",  Timestamp}},
                                Body{body}, Timeout{30000});
 
     //an error:
@@ -1348,148 +905,45 @@ void TDEngineBitmax::send_order(AccountUnitCoinmex& unit, const char *code,
 }
 
 
-void TDEngineBitmax::cancel_all_orders(AccountUnitCoinmex& unit, std::string code, Document& json)
-{
-    KF_LOG_INFO(logger, "[cancel_all_orders]");
-    rapidjson::Document document;
-    document.SetObject();
-    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    //used inner this method only.so  can use reference
-    document.AddMember("code", StringRef(code.c_str()), allocator);
-    StringBuffer jsonStr;
-    Writer<StringBuffer> writer(jsonStr);
-    document.Accept(writer);
-
-    std::string Timestamp = getTimestampString();
-    std::string Method = "DELETE";
-    std::string requestPath = "/api/v1/spot/ccex/orders";
-    std::string queryString= "";
-    std::string body = jsonStr.GetString();
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
-    string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, 32);
-    const auto response = Delete(Url{url},
-                                 Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
-                                        {"Content-Type", "application/json; charset=UTF-8"},
-                                        {"Content-Length", to_string(body.size())},
-                                        {"ACCESS-SIGN", sign},
-                                        {"ACCESS-TIMESTAMP",  Timestamp}},
-                                 Body{body}, Timeout{30000});
-
-    KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
-                                                     " (response.error.message) " << response.error.message <<
-                                                     " (response.text) " << response.text.c_str());
-    getResponse(response.status_code, response.text, response.error.message, json);
-}
-
-void TDEngineBitmax::get_depth(AccountUnitCoinmex& unit, std::string code, Document& json)
-{
-    KF_LOG_INFO(logger, "[get_depth]");
-/*
-返回字段 	字段说明
-asks 	卖方深度  AskPrice1/AskVolume1
-bids 	买方深度
- # Response
-    {
-	"asks": [
-		["0.01304566", "0.51385531"],
-		["0.01310131", "2.20822955"],
-		["0.01312757", "1.92059042"],
-		["0.01314095", "0.53782524"],
-		["0.01315399", "0.4179756"],
-		["0.01318462", "0.44793801"],
-		["0.01323127", "0.90336663"],
-		["0.01327756", "0.75954707"],
-		["0.01332584", "0.63969743"],
-		["0.01334785", "0.65168239"],
-		["0.01338953", "0.53782524"],
-		["0.0135845", "0.84943429"],
-		["0.01371617", "0.00653215"],
-		["0.0138774", "0.37602823"],
-		["0.01393799", "0.83744933"],
-		["0.01414", "0.51385531"],
-		["0.014645", "0.73557714"],
-		["0.0150692", "0.59775006"],
-		["0.01515", "0.38202071"],
-		["0.016059", "0.85542678"],
-		["0.016261", "0.81947188"]
-	],
-	"bids": [
-		["0.01276962", "0.67158993"],
-		["0.01275003", "1.9113995"],
-		["0.01272479", "2.26019503"],
-		["0.01272478", "0.69061514"],
-		["0.01272395", "0.63353951"],
-		["0.01270817", "0.43694567"],
-		["0.01266133", "0.9062342"],
-		["0.01266132", "0.34816135"],
-		["0.01261785", "0.57012214"],
-		["0.0125765", "0.93794288"],
-		["0.01257649", "0.93160115"],
-		["0.01254665", "0.35450309"],
-		["0.012375", "0.60183083"],
-		["0.011979", "0.77939946"],
-		["0.01188", "0.6145143"],
-		["0.011682", "0.70964035"],
-		["0.011385", "0.65890646"],
-		["0.01088999", "0.59548909"],
-		["0.0106623", "0.36084482"],
-		["0.010494", "0.53207172"],
-		["0.00000111", "0.07112221"]
-	]
-}
- * */
-    std::string Timestamp = getTimestampString();
-    std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/public/products/" + code + "/orderbook";
-    std::string queryString= "";
-    std::string body = "";
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
-    string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, 32);
-    const auto response = Get(Url{url},
-                                 Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
-                                        {"Content-Type", "application/json"},
-                                        {"ACCESS-SIGN", sign},
-                                        {"ACCESS-TIMESTAMP",  Timestamp}},
-                                 Body{body}, Timeout{10000});
-
-    KF_LOG_INFO(logger, "[get_depth] (url) " << url << " (response.status_code) " << response.status_code <<
-                                             " (response.error.message) " << response.error.message <<
-                                             " (response.text) " << response.text.c_str());
-    //{"asks":[],"bids":[]}
-    getResponse(response.status_code, response.text, response.error.message, json);
-}
-
-void TDEngineBitmax::cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json)
+void TDEngineBitmax::cancel_order(AccountUnitCoinmex& unit, const char *code, const char *coid, const char *origCoid, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
+    std::string Timestamp = getTimestampString();
+
     rapidjson::Document document;
     document.SetObject();
     rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
     //used inner this method only.so  can use reference
-    document.AddMember("code", StringRef(code.c_str()), allocator);
+    document.AddMember("coid", StringRef(coid), allocator);
+
+    rapidjson::Value timeVal;
+    timeVal.SetString(Timestamp.c_str(), Timestamp.length(), allocator);
+    json.AddMember("time", timeVal, allocator);
+
+    document.AddMember("origCoid", StringRef(origCoid), allocator);
+    document.AddMember("symbol", StringRef(code), allocator);
+
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
     document.Accept(writer);
 
-    std::string Timestamp = getTimestampString();
-    std::string Method = "DELETE";
-    std::string requestPath = "/api/v1/spot/ccex/orders/" + std::to_string(orderId);
+
+    std::string Method = "POST";
+    std::string requestPath = "order/cancel";
     std::string queryString= "";
     std::string body = jsonStr.GetString();
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
+    string Message = Timestamp + "+" + requestPath;
+
+    std::string secret_key_64decode = base64_decode(unit.secret_key);
+    unsigned char* signature = hmac_sha256_byte(secret_key_64decode.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
     std::string sign = base64_encode(signature, 32);
-    const auto response = Delete(Url{url},
-                                 Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+    const auto response = Post(Url{url},
+                                 Header{{"x-auth-key", unit.api_key},
                                         {"Content-Type", "application/json; charset=UTF-8"},
                                         {"Content-Length", to_string(body.size())},
-                                        {"ACCESS-SIGN", sign},
-                                        {"ACCESS-TIMESTAMP",  Timestamp}},
+                                        {"x-auth-signature", sign},
+                                        {"x-auth-timestamp",  Timestamp}},
                                  Body{body}, Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
@@ -1498,88 +952,34 @@ void TDEngineBitmax::cancel_order(AccountUnitCoinmex& unit, std::string code, lo
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-//订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-void TDEngineBitmax::query_orders(AccountUnitCoinmex& unit, std::string code, std::string status, Document& json)
+void TDEngineBitmax::query_orders(AccountUnitCoinmex& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[query_orders]");
-/*
- # Response
-    {
-        "averagePrice": "0",
-        "code": "chp-eth",
-        "createdDate": 1526299182000,
-        "filledVolume": "0",
-        "funds": "0",
-        "orderId": 9865872,
-        "orderType": "limit",
-        "price": "0.00001",
-        "side": "buy",
-        "status": "canceled",
-        "volume": "1"
-    }
- * */
+
 
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/ccex/orders";
-    std::string queryString= "?code=" + code + "&status=" + status;
+    std::string requestPath = "orders/open";
+    std::string queryString= "?page=1&pagesize=500";
     std::string body = "";
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
+    string Message = Timestamp + "+" + requestPath;
+
+    std::string secret_key_64decode = base64_decode(unit.secret_key);
+    unsigned char* signature = hmac_sha256_byte(secret_key_64decode.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
     std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
-                                     {"Content-Type", "application/json"},
-                                     {"ACCESS-SIGN", sign},
-                                     {"ACCESS-TIMESTAMP",  Timestamp}},
+                              Header{{"x-auth-key", unit.api_key},
+                                     //{"Content-Type", "application/json"},
+                                     {"x-auth-signature", sign},
+                                     {"x-auth-timestamp",  Timestamp}},
                               Body{body}, Timeout{10000});
+
+    KF_LOG_INFO(logger, "[query_orders] (x-auth-timestamp) " << Timestamp);
 
     KF_LOG_INFO(logger, "[query_orders] (url) " << url << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
-    getResponse(response.status_code, response.text, response.error.message, json);
-}
-
-void TDEngineBitmax::query_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json)
-{
-    KF_LOG_INFO(logger, "[query_order]");
-/*
- # Response
-    {
-        "averagePrice":"0",
-        "code":"chp-eth",
-        "createdDate":9887828,
-        "filledVolume":"0",
-        "funds":"0",
-        "orderId":9865872,
-        "orderType":"limit",
-        "price":"0.00001",
-        "side":"buy",
-        "status":"canceled",
-        "volume":"1"
-    }
-* */
-    std::string Timestamp = getTimestampString();
-    std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/ccex/orders/" + std::to_string(orderId);
-    std::string queryString= "?code=" + code;
-    std::string body = "";
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
-    string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, 32);
-    const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
-                                     {"Content-Type", "application/json"},
-                                     {"ACCESS-SIGN", sign},
-                                     {"ACCESS-TIMESTAMP",  Timestamp}},
-                              Body{body}, Timeout{10000});
-
-    KF_LOG_INFO(logger, "[query_order] (url) " << url << " (response.status_code) " << response.status_code <<
-                                               " (response.error.message) " << response.error.message <<
-                                               " (response.text) " << response.text.c_str());
-    //(response.status_code) 404 (response.error.message)  (response.text) {"message":"Order does not exist"}
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1592,49 +992,8 @@ inline int64_t TDEngineBitmax::getTimestamp()
 std::string TDEngineBitmax::getTimestampString()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    timestamp =  timestamp - timeDiffOfExchange;
-    std::string timestampStr;
-    std::stringstream convertStream;
-    convertStream <<std::fixed << std::setprecision(3) << (timestamp/1000.0);
-    convertStream >> timestampStr;
-    return timestampStr;
-}
-
-int64_t TDEngineBitmax::getTimeDiffOfExchange(AccountUnitCoinmex& unit)
-{
-    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
-    //reset to 0
-    int64_t timeDiffOfExchange = 0;
-
-    int calculateTimes = 3;
-    int64_t accumulationDiffTime = 0;
-    bool hasResponse = false;
-    for(int i = 0 ; i < calculateTimes; i++)
-    {
-        Document d;
-        int64_t start_time = getTimestamp();
-        int64_t exchangeTime = start_time;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
-        get_exchange_time(unit, d);
-        if(!d.HasParseError() && d.HasMember("timestamp")) {//coinmex timestamp
-            exchangeTime = d["timestamp"].GetInt64();
-            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
-            hasResponse = true;
-        }
-        int64_t finish_time = getTimestamp();
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
-        int64_t tripTime = (finish_time - start_time) / 2;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
-        accumulationDiffTime += start_time + tripTime - exchangeTime;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
-    }
-    //set the diff
-    if(hasResponse)
-    {
-        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
-    }
-    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
-    return timeDiffOfExchange;
+    //timestamp =  timestamp - timeDiffOfExchange;
+    return std::to_string(timestamp);
 }
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))

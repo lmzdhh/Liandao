@@ -55,11 +55,14 @@
       "book_depth_count": 5,
       "trade_count": 10,
       "whiteLists": {
-                      "strategy_coinpair(base_quote)": "exchange_coinpair",
-                      "btc_usdt": "BTC_USDT",
-                      "etc_eth": "ETC_ETH",
-                      "mvp_btc": "MVP_BTC"
-                    },
+        "strategy_coinpair(base_quote)": "exchange_coinpair",
+        "eth_btc": "ETH/BTC",
+        "bch_btc": "BCH/BTC",
+        "ltc_btc": "LTC/BTC",
+        "bch_eth": "BCH/ETH",
+        "eth_btc": "ETH/BTC",
+        "ltc_eth": "LTC/ETH"
+      },
       "rest_get_interval_ms": 500
     }
   },
@@ -201,11 +204,14 @@
               "passphrase": "your-passphrase",
               "baseUrl": "https://www.bitmax.io",
               "whiteLists": {
-                              "strategy_coinpair(base_quote)": "exchange_coinpair",
-                              "btc_usdt": "BTC_USDT",
-                              "etc_eth": "ETC_ETH",
-                              "mvp_btc": "MVP_BTC"
-                            },
+                "strategy_coinpair(base_quote)": "exchange_coinpair",
+                "eth_btc": "ETH/BTC",
+                "bch_btc": "BCH/BTC",
+                "ltc_btc": "LTC/BTC",
+                "bch_eth": "BCH/ETH",
+                "eth_btc": "ETH/BTC",
+                "ltc_eth": "LTC/ETH"
+              },
               "rest_get_interval_ms": 2000
             },
             "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
