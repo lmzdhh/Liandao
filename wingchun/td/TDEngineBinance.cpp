@@ -91,6 +91,16 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (exchange_shift_ms)" << exchange_shift_ms);
 
+    if(j_config.find("order_insert_recvwindow_ms") != j_config.end()) {
+        order_insert_recvwindow_ms = j_config["order_insert_recvwindow_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (order_insert_recvwindow_ms)" << order_insert_recvwindow_ms);
+
+    if(j_config.find("order_action_recvwindow_ms") != j_config.end()) {
+        order_action_recvwindow_ms = j_config["order_action_recvwindow_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (order_action_recvwindow_ms)" << order_action_recvwindow_ms);
+
     AccountUnitBinance& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
@@ -1365,7 +1375,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
                 Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;
     std::string Timestamp = getTimestampString();
     std::string Method = "POST";
     std::string requestPath = "https://api.binance.com/api/v3/order?";
@@ -1498,7 +1508,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
                   long orderId, const char *origClientOrderId, const char *newClientOrderId, Document &json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
-    long recvWindow = 5000;
+    long recvWindow = order_action_recvwindow_ms;
     std::string Timestamp = getTimestampString();
     std::string Method = "DELETE";
     std::string requestPath = "https://api.binance.com/api/v3/order?";

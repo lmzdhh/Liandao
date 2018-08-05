@@ -33,7 +33,6 @@ using std::to_string;
 using std::stod;
 using std::stoi;
 
-
 USING_WC_NAMESPACE
 
 static MDEngineCoinmex* global_md = nullptr;
@@ -49,7 +48,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             lws_callback_on_writable( wsi );
             break;
         }
-        case LWS_CALLBACK_PROTOCOL_INIT:{
+        case LWS_CALLBACK_PROTOCOL_INIT:
+        {
             std::cout << "3.1415926 LWS_CALLBACK_PROTOCOL_INIT init, reason = " << reason << std::endl;
             break;
         }
@@ -62,36 +62,34 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             }
             break;
         }
-	case LWS_CALLBACK_CLIENT_CLOSED:
-	{
-		std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED, reason = " << reason << std::endl;
-		int ret = 0;
-            if(global_md)
-            {
-		std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
-		global_md->on_lws_connection_error(wsi);
+        case LWS_CALLBACK_CLIENT_CLOSED:
+        {
+            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED, reason = " << reason << std::endl;
+            if(global_md) {
+                std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
+                global_md->on_lws_connection_error(wsi);
             }
-
             break;
-	}
+        }
         case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
         {
             std::cout << "3.1415926 LWS_CALLBACK_CLIENT_RECEIVE_PONG, reason = " << reason << std::endl;
+            break;
         }
         case LWS_CALLBACK_CLIENT_WRITEABLE:
         {
             std::cout << "3.1415926 LWS_CALLBACK_CLIENT_WRITEABLE writeable, reason = " << reason << std::endl;
-            int ret = 0;
             if(global_md)
             {
-                ret = global_md->lws_write_subscribe(wsi);
+                global_md->lws_write_subscribe(wsi);
             }
             break;
         }
-	case LWS_CALLBACK_TIMER:
+	    case LWS_CALLBACK_TIMER:
         {
             std::cout << "3.1415926 LWS_CALLBACK_TIMER, reason = " << reason << std::endl;
-	}
+            break;
+	    }
         case LWS_CALLBACK_CLOSED:
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
@@ -232,10 +230,10 @@ std::string MDEngineCoinmex::getWhiteListCoinpairFrom(std::string md_coinpair)
 
 void MDEngineCoinmex::debug_print(std::vector<SubscribeCoinBaseQuote> &sub)
 {
-    int count = sub.size();
+    size_t count = sub.size();
     KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (count) " << count);
 
-    for (int i = 0; i < count;i++)
+    for (size_t i = 0; i < count; i++)
     {
         KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
     }
@@ -254,10 +252,10 @@ void MDEngineCoinmex::debug_print(std::map<std::string, std::string> &keyIsStrat
 
 void MDEngineCoinmex::debug_print(std::vector<std::string> &subJsonString)
 {
-    int count = subJsonString.size();
+    size_t count = subJsonString.size();
     KF_LOG_INFO(logger, "[debug_print] websocketSubscribeJsonString (count) " << count);
 
-    for (int i = 0; i < count;i++)
+    for (size_t i = 0; i < count; i++)
     {
         KF_LOG_INFO(logger, "[debug_print] websocketSubscribeJsonString (subJsonString) " << subJsonString[i]);
     }
@@ -272,12 +270,11 @@ void MDEngineCoinmex::login(long timeout_nsec) {
     KF_LOG_INFO(logger, "MDEngineCoinmex::login:");
     global_md = this;
 
-
     char inputURL[300] = "wss://websocket.coinmex.com";
-    int inputPort = 8443;
+
     const char *urlProtocol, *urlTempPath;
     char urlPath[300];
-    int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
+    //int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
     struct lws_client_connect_info clientConnectInfo;
     memset(&clientConnectInfo, 0, sizeof(clientConnectInfo));
     clientConnectInfo.port = 8443;
@@ -342,7 +339,6 @@ void MDEngineCoinmex::login(long timeout_nsec) {
     clientConnectInfo.origin = clientConnectInfo.address;
     clientConnectInfo.ietf_version_or_minus_one = -1;
     clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
-    clientConnectInfo.pwsi = &wsi;
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::login:" << "Connecting to " << urlProtocol << ":" <<
                                                   clientConnectInfo.host << ":" <<
@@ -389,7 +385,7 @@ int MDEngineCoinmex::lws_write_subscribe(struct lws* conn)
     {
         //subscribe_index = 0;
         KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe: (none reset subscribe_index = 0, just return 0)");
-	return 0;
+	    return 0;
     }
 
     unsigned char msg[512];
@@ -555,7 +551,7 @@ void MDEngineCoinmex::onFills(Document& json)
 
         trade.Price = std::round(std::stod(json["data"].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
         trade.Volume = std::round(std::stod(json["data"].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
-        trade.OrderBSFlag[0] = "buy" == json["data"].GetArray()[i].GetArray()[2].GetString() ? 'B' : 'S';
+        trade.OrderBSFlag[0] = strcmp("buy", json["data"].GetArray()[i].GetArray()[2].GetString()) == 0 ? 'B' : 'S';
 
         KF_LOG_INFO(logger, "MDEngineCoinmex::[onFills] (ticker)" << ticker <<
                                                                   " (Price)" << trade.Price <<
