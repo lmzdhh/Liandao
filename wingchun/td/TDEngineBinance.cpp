@@ -1803,35 +1803,35 @@ int64_t TDEngineBinance::getTimeDiffOfExchange(AccountUnitBinance& unit)
     KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
     //reset to 0
     int64_t timeDiffOfExchange = 0;
-
-    int calculateTimes = 3;
-    int64_t accumulationDiffTime = 0;
-    bool hasResponse = false;
-    for(int i = 0 ; i < calculateTimes; i++)
-    {
-        Document d;
-        int64_t start_time = getTimestamp();
-        int64_t exchangeTime = start_time;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
-        get_exchange_time(unit, d);
-        if(!d.HasParseError() && d.HasMember("serverTime")) {//binance serverTime
-            exchangeTime = d["serverTime"].GetInt64();
-            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
-            hasResponse = true;
-        }
-        int64_t finish_time = getTimestamp();
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
-        int64_t tripTime = (finish_time - start_time) / 2;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
-        accumulationDiffTime += start_time + tripTime - exchangeTime;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
-    }
-    //set the diff
-    if(hasResponse)
-    {
-        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
-    }
-    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
+//
+//    int calculateTimes = 3;
+//    int64_t accumulationDiffTime = 0;
+//    bool hasResponse = false;
+//    for(int i = 0 ; i < calculateTimes; i++)
+//    {
+//        Document d;
+//        int64_t start_time = getTimestamp();
+//        int64_t exchangeTime = start_time;
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
+//        get_exchange_time(unit, d);
+//        if(!d.HasParseError() && d.HasMember("serverTime")) {//binance serverTime
+//            exchangeTime = d["serverTime"].GetInt64();
+//            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
+//            hasResponse = true;
+//        }
+//        int64_t finish_time = getTimestamp();
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
+//        int64_t tripTime = (finish_time - start_time) / 2;
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
+//        accumulationDiffTime += start_time + tripTime - exchangeTime;
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
+//    }
+//    //set the diff
+//    if(hasResponse)
+//    {
+//        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
+//    }
+//    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
     return timeDiffOfExchange;
 }
 
