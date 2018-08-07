@@ -27,13 +27,9 @@ struct PendingCoinmexOrderStatus
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
     uint64_t averagePrice;//coinmex given averagePrice on response of query_order
+    std::string remoteOrderId;//coinmex sender_order response order id://{"orderId":19319936159776,"result":true}
 };
 
-struct PendingCoinmexTradeStatus
-{
-    char_31 InstrumentID;   //合约代码
-    uint64_t last_trade_id; //for myTrade
-};
 
 struct SendOrderFilter
 {
@@ -117,7 +113,8 @@ private:
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
     void addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded);
+                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus,
+                                    const uint64_t VolumeTraded, std::string remoteOrderId);
 
     void retrieveOrderStatus(AccountUnitCoinmex& unit);
     void moveNewtoPending(AccountUnitCoinmex& unit);
@@ -145,7 +142,7 @@ private:
                         const char *side, const char *type, double size, double price, double funds, Document& json);
 
     void cancel_all_orders(AccountUnitCoinmex& unit, std::string code, Document& json);
-    void cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
+    void cancel_order(AccountUnitCoinmex& unit, std::string code, std::string orderId, Document& json);
     void query_orders(AccountUnitCoinmex& unit, std::string code, std::string status, Document& json);
     void query_order(AccountUnitCoinmex& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);

@@ -683,7 +683,7 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
                                                                        data->OrderRef << " (remoteOrderId) " << remoteOrderId);
 
             char noneStatus = '\0';//none
-            addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
+            addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
             //success, only record raw data
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
             return;
@@ -765,7 +765,7 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
     }
 
     Document d;
-    cancel_order(unit, ticker, stod(remoteOrderId), d);
+    cancel_order(unit, ticker, remoteOrderId, d);
 
     //cancel order response "" as resultText, it cause json.HasParseError() == true, and json.IsObject() == false.
     //it is not an error, so dont check it.
@@ -843,18 +843,9 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
         KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "( account.api_key) "<< unit.api_key
                                                                << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
                                                                <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
+                                                               <<"  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->remoteOrderId
                                                                <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
         );
-
-        std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(orderStatusIterator->OrderRef);
-        std::string remoteOrderId;
-        if(itr == localOrderRefRemoteOrderId.end()) {
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] not found in localOrderRefRemoteOrderId map (orderRef) " << orderStatusIterator->OrderRef);
-            continue;
-        } else {
-            remoteOrderId = itr->second;
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] found in localOrderRefRemoteOrderId map (orderRef) " << orderStatusIterator->OrderRef << " (remoteOrderId) " << remoteOrderId);
-        }
 
         std::string ticker = getWhiteListCoinpairFrom(unit, orderStatusIterator->InstrumentID);
         if(ticker.length() == 0) {
@@ -864,7 +855,7 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
         KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
 
         Document d;
-        query_order(unit, ticker, remoteOrderId, d);
+        query_order(unit, ticker, orderStatusIterator->remoteOrderId, d);
 
         /*
  # Response
@@ -902,7 +893,7 @@ volume 	订单委托数量
             //HasParseError, skip
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order response HasParseError " << " (symbol)" << orderStatusIterator->InstrumentID
                                                                    << " (orderRef)" << orderStatusIterator->OrderRef
-                                                                   << " (remoteOrderId) " << remoteOrderId);
+                                                                   << " (remoteOrderId) " << orderStatusIterator->remoteOrderId);
             continue;
         }
         if(d.HasMember("status"))
@@ -1011,7 +1002,8 @@ volume 	订单委托数量
 }
 
 void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
-                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded)
+                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus,
+                                                 const uint64_t VolumeTraded, std::string remoteOrderId)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
@@ -1023,9 +1015,11 @@ void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const
     status.OrderStatus = OrderStatus;
     status.VolumeTraded = VolumeTraded;
     status.averagePrice = 0.0;
+    status.remoteOrderId = remoteOrderId;
     unit.newOrderStatus.push_back(status);
-    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << InstrumentID
-                                                                       << " (OrderRef) " << OrderRef
+    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << status.InstrumentID
+                                                                       << " (OrderRef) " << status.OrderRef
+                                                                       << " (remoteOrderId) " << status.remoteOrderId
                                                                        << "(VolumeTraded)" << VolumeTraded);
 }
 
@@ -1469,7 +1463,7 @@ bids 	买方深度
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json)
+void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
     rapidjson::Document document;
@@ -1483,7 +1477,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, l
 
     std::string Timestamp = getTimestampString();
     std::string Method = "DELETE";
-    std::string requestPath = "/api/v1/spot/ccex/orders/" + std::to_string(orderId);
+    std::string requestPath = "/api/v1/spot/ccex/orders/" + orderId;
     std::string queryString= "";
     std::string body = jsonStr.GetString();
     string Message = Timestamp + Method + requestPath + queryString + body;
