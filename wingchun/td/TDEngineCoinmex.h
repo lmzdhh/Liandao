@@ -112,6 +112,7 @@ private:
     LfOrderPriceTypeType GetPriceType(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
 
+    virtual void set_reader_thread() override;
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
@@ -146,7 +147,7 @@ private:
     void cancel_all_orders(AccountUnitCoinmex& unit, std::string code, Document& json);
     void cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
     void query_orders(AccountUnitCoinmex& unit, std::string code, std::string status, Document& json);
-    void query_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
+    void query_order(AccountUnitCoinmex& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
     inline std::string getTimestampString();

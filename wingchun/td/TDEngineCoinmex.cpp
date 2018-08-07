@@ -278,9 +278,6 @@ void TDEngineCoinmex::connect(long timeout_nsec)
     }
     //sync time of exchange
     timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
-
-    KF_LOG_INFO(logger, "[connect] rest_thread start on TDEngineCoinmex::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineCoinmex::loop, this)));
 }
 
 bool TDEngineCoinmex::loadExchangeOrderFilters(AccountUnitCoinmex& unit, Document &doc)
@@ -867,7 +864,7 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
         KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
 
         Document d;
-        query_order(unit, ticker, stod(remoteOrderId), d);
+        query_order(unit, ticker, remoteOrderId, d);
 
         /*
  # Response
@@ -1032,8 +1029,17 @@ void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const
                                                                        << "(VolumeTraded)" << VolumeTraded);
 }
 
+void TDEngineCoinmex::set_reader_thread()
+{
+    ITDEngine::set_reader_thread();
+
+    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on AccountUnitCoinmex::loop");
+    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineCoinmex::loop, this)));
+}
+
 void TDEngineCoinmex::loop()
 {
+    KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
     while(isRunning)
     {
         using namespace std::chrono;
@@ -1541,7 +1547,7 @@ void TDEngineCoinmex::query_orders(AccountUnitCoinmex& unit, std::string code, s
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-void TDEngineCoinmex::query_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json)
+void TDEngineCoinmex::query_order(AccountUnitCoinmex& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[query_order]");
 /*
@@ -1562,7 +1568,7 @@ void TDEngineCoinmex::query_order(AccountUnitCoinmex& unit, std::string code, lo
 * */
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/ccex/orders/" + std::to_string(orderId);
+    std::string requestPath = "/api/v1/spot/ccex/orders/" + orderId;
     std::string queryString= "?code=" + code;
     std::string body = "";
     string Message = Timestamp + Method + requestPath + queryString + body;
@@ -1608,34 +1614,34 @@ int64_t TDEngineCoinmex::getTimeDiffOfExchange(AccountUnitCoinmex& unit)
     //reset to 0
     int64_t timeDiffOfExchange = 0;
 
-    int calculateTimes = 3;
-    int64_t accumulationDiffTime = 0;
-    bool hasResponse = false;
-    for(int i = 0 ; i < calculateTimes; i++)
-    {
-        Document d;
-        int64_t start_time = getTimestamp();
-        int64_t exchangeTime = start_time;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
-        get_exchange_time(unit, d);
-        if(!d.HasParseError() && d.HasMember("timestamp")) {//coinmex timestamp
-            exchangeTime = d["timestamp"].GetInt64();
-            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
-            hasResponse = true;
-        }
-        int64_t finish_time = getTimestamp();
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
-        int64_t tripTime = (finish_time - start_time) / 2;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
-        accumulationDiffTime += start_time + tripTime - exchangeTime;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
-    }
-    //set the diff
-    if(hasResponse)
-    {
-        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
-    }
-    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
+//    int calculateTimes = 3;
+//    int64_t accumulationDiffTime = 0;
+//    bool hasResponse = false;
+//    for(int i = 0 ; i < calculateTimes; i++)
+//    {
+//        Document d;
+//        int64_t start_time = getTimestamp();
+//        int64_t exchangeTime = start_time;
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
+//        get_exchange_time(unit, d);
+//        if(!d.HasParseError() && d.HasMember("timestamp")) {//coinmex timestamp
+//            exchangeTime = d["timestamp"].GetInt64();
+//            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
+//            hasResponse = true;
+//        }
+//        int64_t finish_time = getTimestamp();
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
+//        int64_t tripTime = (finish_time - start_time) / 2;
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
+//        accumulationDiffTime += start_time + tripTime - exchangeTime;
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
+//    }
+//    //set the diff
+//    if(hasResponse)
+//    {
+//        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
+//    }
+//    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
     return timeDiffOfExchange;
 }
 
