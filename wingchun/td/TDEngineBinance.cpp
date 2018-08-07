@@ -316,9 +316,6 @@ void TDEngineBinance::connect(long timeout_nsec)
     }
     //sync time of exchange
     timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
-
-    KF_LOG_INFO(logger, "[connect] rest_thread start on AccountUnitBinance::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::loop, this)));
 }
 
 bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc)
@@ -1327,9 +1324,17 @@ bool TDEngineBinance::isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinanc
     return false;
 }
 
+void TDEngineBinance::set_reader_thread()
+{
+    ITDEngine::set_reader_thread();
+
+    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on AccountUnitBinance::loop");
+    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::loop, this)));
+}
 
 void TDEngineBinance::loop()
 {
+    KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
     while(isRunning)
     {
         using namespace std::chrono;
