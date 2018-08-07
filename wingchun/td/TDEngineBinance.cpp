@@ -846,19 +846,9 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     rtn_order.TimeCondition = data->TimeCondition;
     rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, result["clientOrderId"].GetString(), 13);
-    rtn_order.VolumeTraded = std::round(stod(result["executedQty"].GetString()) * scale_offset);
-    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
-    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-    rtn_order.LimitPrice = std::round(stod(result["price"].GetString()) * scale_offset);
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus = GetOrderStatus(result["status"].GetString());
-    on_rtn_order(&rtn_order);
-    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                            source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
-                            1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-    //we have strike price, emit OnRtnTrade
-    int fills_size = result["fills"].Size();
+    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
 
     LFRtnTradeField rtn_trade;
     memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
@@ -868,10 +858,20 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     strncpy(rtn_trade.OrderRef, result["clientOrderId"].GetString(), 13);
     rtn_trade.Direction = data->Direction;
 
+    //we have strike price, emit OnRtnTrade
+    int fills_size = result["fills"].Size();
     for(int i = 0; i < fills_size; ++i)
     {
-        rtn_trade.Volume = std::round(stod(result["executedQty"].GetString()) * scale_offset);
-        rtn_trade.Price = std::round(stod(result["price"].GetString()) * scale_offset);
+        rtn_order.VolumeTraded = std::round(stod(result["fills"].GetArray()[i]["qty"].GetString()) * scale_offset);
+        rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
+        rtn_order.LimitPrice = std::round(stod(result["fills"].GetArray()[i]["price"].GetString()) * scale_offset);
+        on_rtn_order(&rtn_order);
+        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
+                                1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+        rtn_trade.Volume = std::round(stod(result["fills"].GetArray()[i]["qty"].GetString()) * scale_offset);
+        rtn_trade.Price = std::round(stod(result["fills"].GetArray()[i]["price"].GetString()) * scale_offset);
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
