@@ -657,7 +657,7 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
 
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
             GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, d);
-
+    //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
     //not expected response
     if(d.HasParseError() || !d.IsObject())
     {
@@ -1015,7 +1015,7 @@ void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const
     status.OrderStatus = OrderStatus;
     status.VolumeTraded = VolumeTraded;
     status.averagePrice = 0.0;
-    status.remoteOrderId = remoteOrderId;
+    strncpy(status.remoteOrderId, remoteOrderId.c_str(), 21);
     unit.newOrderStatus.push_back(status);
     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << status.InstrumentID
                                                                        << " (OrderRef) " << status.OrderRef

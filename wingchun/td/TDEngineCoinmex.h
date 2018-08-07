@@ -27,7 +27,7 @@ struct PendingCoinmexOrderStatus
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
     uint64_t averagePrice;//coinmex given averagePrice on response of query_order
-    std::string remoteOrderId;//coinmex sender_order response order id://{"orderId":19319936159776,"result":true}
+    char_21 remoteOrderId;//coinmex sender_order response order id://{"orderId":19319936159776,"result":true}
 };
 
 
