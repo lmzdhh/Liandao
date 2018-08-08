@@ -80,6 +80,9 @@ struct AccountUnitBinance
     std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
 
     std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
+    // the trade id that has been called on_rtn_trade. Do not send it again.
+    std::vector<int64_t> newSentTradeIds;
+    std::vector<int64_t> sentTradeIds;
 };
 
 /**
@@ -130,6 +133,7 @@ private:
     std::vector<std::string> split(std::string str, std::string token);
     bool loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc);
     void GetAndHandleOrderTradeResponse();
+    void addNewSentTradeIds(AccountUnitBinance& unit, int64_t newSentTradeIds);
     void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
                                         const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, int64_t binanceOrderId);
 

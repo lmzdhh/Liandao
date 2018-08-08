@@ -772,6 +772,9 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
+
+        //this trade id has been send on_rtn_trade
+        //TODO ?? unit.newSentTradeIds.push_back(result["tradeId"].GetInt64());
     }
 
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
@@ -787,50 +790,32 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
 {
     /*Response FULL:
                 {
-                  "symbol": "BTCUSDT",
-                  "orderId": 28,
-                  "clientOrderId": "6gCrw2kRUAF9CvJDGP16IP",
-                  "transactTime": 1507725176595,
-                  "price": "0.00000000",
-                  "origQty": "10.00000000",
-                  "executedQty": "10.00000000",
-                  "status": "FILLED",
-                  "timeInForce": "GTC",
-                  "type": "MARKET",
-                  "side": "SELL",
-                  "fills": [
-                    {
-                      "price": "4000.00000000",
-                      "qty": "1.00000000",
-                      "commission": "4.00000000",
-                      "commissionAsset": "USDT"
-                    },
-                    {
-                      "price": "3999.00000000",
-                      "qty": "5.00000000",
-                      "commission": "19.99500000",
-                      "commissionAsset": "USDT"
-                    },
-                    {
-                      "price": "3998.00000000",
-                      "qty": "2.00000000",
-                      "commission": "7.99600000",
-                      "commissionAsset": "USDT"
-                    },
-                    {
-                      "price": "3997.00000000",
-                      "qty": "1.00000000",
-                      "commission": "3.99700000",
-                      "commissionAsset": "USDT"
-                    },
-                    {
-                      "price": "3995.00000000",
-                      "qty": "1.00000000",
-                      "commission": "3.99500000",
-                      "commissionAsset": "USDT"
-                    }
-                  ]
-                }
+	"symbol": "BTCUSDT",
+	"orderId": 144678401,
+	"clientOrderId": "25",
+	"transactTime": 1533717358045,
+	"price": "0.00000000",
+	"origQty": "0.01512200",
+	"executedQty": "0.01512200",
+	"cummulativeQuoteQty": "97.90379616",
+	"status": "FILLED",
+	"timeInForce": "GTC",
+	"type": "MARKET",
+	"side": "SELL",
+	"fills": [{
+		"price": "6474.49000000",
+		"qty": "0.00957100",
+		"commission": "0.00372804",
+		"commissionAsset": "BNB",
+		"tradeId": 61800504
+	}, {
+		"price": "6473.87000000",
+		"qty": "0.00555100",
+		"commission": "0.00216198",
+		"commissionAsset": "BNB",
+		"tradeId": 61800505
+	}]
+}
 
     */
 
@@ -872,6 +857,10 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
+
+        //this trade id has been send on_rtn_trade
+        int64_t newTradeid = result["fills"].GetArray()[i]["tradeId"].GetInt64();
+        addNewSentTradeIds(unit, newTradeid);
     }
 
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
@@ -987,6 +976,12 @@ void TDEngineBinance::moveNewtoPending(AccountUnitBinance& unit)
     for(newTradeStatusIterator = unit.newTradeStatus.begin(); newTradeStatusIterator != unit.newTradeStatus.end();) {
         unit.pendingTradeStatus.push_back(*newTradeStatusIterator);
         newTradeStatusIterator = unit.newTradeStatus.erase(newTradeStatusIterator);
+    }
+
+    std::vector<int64_t>::iterator newSentTradeIdsIterator;
+    for(newSentTradeIdsIterator = unit.newSentTradeIds.begin(); newSentTradeIdsIterator != unit.newSentTradeIds.end();) {
+        unit.sentTradeIds.push_back(*newSentTradeIdsIterator);
+        newSentTradeIdsIterator = unit.newSentTradeIds.erase(newSentTradeIdsIterator);
     }
 }
 
@@ -1195,6 +1190,19 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
         int len = resultTrade.Size();
         for(int i = 0 ; i < len; i++)
         {
+            int64_t newtradeId = resultTrade.GetArray()[i]["id"].GetInt64();
+            bool hasSendThisTradeId = false;
+            std::vector<int64_t>::iterator sentTradeIdsIterator;
+            for(sentTradeIdsIterator = unit.sentTradeIds.begin(); sentTradeIdsIterator != unit.sentTradeIds.end(); sentTradeIdsIterator++) {
+                if((*sentTradeIdsIterator) == newtradeId) {
+                    hasSendThisTradeId= true;
+                }
+            }
+            if(hasSendThisTradeId) {
+                KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (hasSendThisTradeId)" << hasSendThisTradeId << " (newtradeId)" << newtradeId);
+                continue;
+            }
+
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
             rtn_trade.Volume = std::round(stod(resultTrade.GetArray()[i]["qty"].GetString()) * scale_offset);
             rtn_trade.Price = std::round(stod(resultTrade.GetArray()[i]["price"].GetString()) * scale_offset);
@@ -1221,7 +1229,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 5 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
 
-            int64_t newtradeId = resultTrade.GetArray()[i]["id"].GetInt64();
+
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (newtradeId)" << newtradeId);
             if(newtradeId >= tradeStatusIterator->last_trade_id) {
                 tradeStatusIterator->last_trade_id = newtradeId + 1;// for new trade
@@ -1263,6 +1271,15 @@ bool TDEngineBinance::removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBina
         }
     }
     return removedOne;
+}
+
+
+void TDEngineBinance::addNewSentTradeIds(AccountUnitBinance& unit, int64_t newSentTradeIds)
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+
+    unit.newSentTradeIds.push_back(newSentTradeIds);
+    KF_LOG_DEBUG(logger, "[addNewSentTradeIds]" << " (newSentTradeIds)" << newSentTradeIds);
 }
 
 void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
