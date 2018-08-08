@@ -930,7 +930,7 @@ volume 	订单委托数量
                 strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
                 rtn_order.Direction = GetDirection(d["side"].GetString());
                 //No this setting on coinmex
-                rtn_order.TimeCondition = LF_CHAR_GFD;
+                rtn_order.TimeCondition = LF_CHAR_GTC;
                 rtn_order.OrderPriceType = GetPriceType(d["orderType"].GetString());
                 strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
                 rtn_order.VolumeTotalOriginal = std::round(std::stod(d["volume"].GetString()) * scale_offset);
@@ -960,7 +960,7 @@ volume 	订单委托数量
 
                     //calculate the volumn and price (it is average too)
                     rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-                    rtn_trade.Price = (newAmount - oldAmount)/(rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded);
+                    rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
 
                     on_rtn_trade(&rtn_trade);
                     raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),

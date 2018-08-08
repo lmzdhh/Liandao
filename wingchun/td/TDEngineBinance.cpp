@@ -735,6 +735,9 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
                     }
 
     */
+    KF_LOG_DEBUG(logger, "TDEngineBinance::onRspNewOrderRESULT:");
+    printResponse(result);
+
     // no strike price, dont emit OnRtnTrade
     LFRtnOrderField rtn_order;
     memset(&rtn_order, 0, sizeof(LFRtnOrderField));
@@ -830,7 +833,16 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     strncpy(rtn_order.OrderRef, result["clientOrderId"].GetString(), 13);
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus = GetOrderStatus(result["status"].GetString());
-    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
+
+    uint64_t volumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
+    //数量
+    rtn_order.VolumeTotalOriginal = volumeTotalOriginal;
+
+    bool isAllTraded = false;
+    if (rtn_order.OrderStatus == LF_CHAR_AllTraded)
+    {
+        isAllTraded = true;
+    }
 
     LFRtnTradeField rtn_trade;
     memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
@@ -842,18 +854,34 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
 
     //we have strike price, emit OnRtnTrade
     int fills_size = result["fills"].Size();
+
     for(int i = 0; i < fills_size; ++i)
     {
-        rtn_order.VolumeTraded = std::round(stod(result["fills"].GetArray()[i]["qty"].GetString()) * scale_offset);
-        rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-        rtn_order.LimitPrice = std::round(stod(result["fills"].GetArray()[i]["price"].GetString()) * scale_offset);
+        uint64_t volume = std::round(stod(result["fills"].GetArray()[i]["qty"].GetString()) * scale_offset);
+        int64_t price = std::round(stod(result["fills"].GetArray()[i]["price"].GetString()) * scale_offset);
+        //今成交数量
+        rtn_order.VolumeTraded = volume;
+        rtn_order.LimitPrice = price;
+        //剩余数量
+        volumeTotalOriginal = volumeTotalOriginal - volume;
+        rtn_order.VolumeTotal = volumeTotalOriginal;
+
+        if(isAllTraded)
+        {
+            if(i == fills_size - 1) {
+                //the last one
+                rtn_order.OrderStatus == LF_CHAR_AllTraded;
+            } else {
+                rtn_order.OrderStatus == LF_CHAR_PartTradedQueueing;
+            }
+        }
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                                 source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
                                 1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
-        rtn_trade.Volume = std::round(stod(result["fills"].GetArray()[i]["qty"].GetString()) * scale_offset);
-        rtn_trade.Price = std::round(stod(result["fills"].GetArray()[i]["price"].GetString()) * scale_offset);
+        rtn_trade.Volume = volume;
+        rtn_trade.Price = price;
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
@@ -1016,22 +1044,24 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
             continue;
         }
         /*
-            {
-                "symbol": "LTCBTC",
-                "orderId": 1,
-                "clientOrderId": "myOrder1",
-                "price": "0.1",
-                "origQty": "1.0",
-                "executedQty": "0.0",
-                "status": "NEW",
-                "timeInForce": "GTC",
-                "type": "LIMIT",
-                "side": "BUY",
-                "stopPrice": "0.0",
-                "icebergQty": "0.0",
-                "time": 1499827319559,
-                "isWorking": true
-            }
+           {
+            "symbol": "BTCUSDT",
+            "orderId": 144674450,
+            "clientOrderId": "1",
+            "price": "0.00000000",
+            "origQty": "0.00370000",
+            "executedQty": "0.00370000",
+            "cummulativeQuoteQty": "24.02137156",
+            "status": "FILLED",
+            "timeInForce": "GTC",
+            "type": "MARKET",
+            "side": "SELL",
+            "stopPrice": "0.00000000",
+            "icebergQty": "0.00000000",
+            "time": 1533716765364,
+            "updateTime": 1533716765364,
+            "isWorking": true
+        }
         */
         //parse order status
         if(orderResult.IsObject() && !orderResult.HasMember("code"))
@@ -1195,7 +1225,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             std::vector<int64_t>::iterator sentTradeIdsIterator;
             for(sentTradeIdsIterator = unit.sentTradeIds.begin(); sentTradeIdsIterator != unit.sentTradeIds.end(); sentTradeIdsIterator++) {
                 if((*sentTradeIdsIterator) == newtradeId) {
-                    hasSendThisTradeId= true;
+                    hasSendThisTradeId = true;
                 }
             }
             if(hasSendThisTradeId) {
