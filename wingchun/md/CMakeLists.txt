@@ -42,7 +42,7 @@ ADD_LIBRARY(mockmd SHARED ${MOCK_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(mockmd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS mockmd DESTINATION "lib/wingchun")
 
-SET(BITMAX_SOURCE_FILES MDEngineBitmax.cpp MDEngineBitmax.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h)
+SET(BITMAX_SOURCE_FILES MDEngineBitmax.cpp MDEngineBitmax.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h CoinPairWhiteList.cpp CoinPairWhiteList.h)
 ADD_LIBRARY(bitmaxmd SHARED ${BITMAX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(bitmaxmd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS bitmaxmd DESTINATION "lib/wingchun")

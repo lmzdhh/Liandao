@@ -3,7 +3,12 @@
 
 #include "IMDEngine.h"
 #include "longfist/LFConstants.h"
+#include "CoinPairWhiteList.h"
+
 #include <libwebsockets.h>
+#include <map>
+#include <unordered_map>
+
 #include <document.h>
 #include <map>
 #include <vector>
@@ -27,7 +32,7 @@ struct PriceAndVolume
     }
 };
 
-//coinmex use base and quote to sub depth data
+//use base and quote to sub depth data
 struct SubscribeCoinBaseQuote
 {
     std::string base;
@@ -60,6 +65,13 @@ static void sortMapByKey(std::map<int64_t, uint64_t> &t_map, std::vector<PriceAn
 class MDEngineBitmax: public IMDEngine
 {
 public:
+
+    enum lws_event
+    {
+        depth20
+    };
+
+public:
     /** load internal information from config json */
     virtual void load(const json& j_config);
     virtual void connect(long timeout_nsec);
@@ -75,58 +87,42 @@ public:
     MDEngineBitmax();
 
     void on_lws_data(struct lws* conn, const char* data, size_t len);
-    void on_lws_connection_error(struct lws* conn);
     int lws_write_subscribe(struct lws* conn);
-
-private:
+    void on_lws_connection_error(struct lws* conn);
     void onDepth(Document& json);
-    void onTickers(Document& json);
-    void onFills(Document& json);
+    void onMarketTrades(Document& json);
 
     std::string parseJsonToString(const char* in);
-    std::string createDepthJsonString(std::string base, std::string quote);
-    std::string createTickersJsonString();
-    std::string createFillsJsonString(std::string base, std::string quote);
-    void clearPriceBook();
+private:
+    std::string bitmaxSubscribeSymbol(std::string coinpair);
+    void connect_lws(std::string t, lws_event e);
     void loop();
 
-
     virtual void set_reader_thread() override;
+
+    CoinPairWhiteList whiteList;
+
+
 private:
     ThreadPtr rest_thread;
     bool connected = false;
     bool logged_in = false;
 
+    int book_depth_count = 20;
+    int trade_count = 20;
     int rest_get_interval_ms = 500;
 
+    uint64_t last_rest_get_ts = 0;
     static constexpr int scale_offset = 1e8;
 
     struct lws_context *context = nullptr;
+    string api_key;
+    string secret_key;
 
-    int subscribe_index = 0;
-
+    std::unordered_map<struct lws *,std::pair<std::string, lws_event> > lws_handle_map;
     //<ticker, <price, volume>>
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
-
-private:
-    void readWhiteLists(const json& j_config);
-    std::string getWhiteListCoinpairFrom(std::string md_coinpair);
-
-    void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
-    void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
-    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
-    void debug_print(std::vector<std::string> &subJsonString);
-    //coinmex use base and quote to sub depth data, so make this vector for it
-    std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
-
-    std::vector<std::string> websocketSubscribeJsonString;
-
-    //in MD, lookup direction is:
-    // incoming exchange coinpair ---> our strategy recognized coinpair
-    //if coming data 's coinpair is not in this map ,ignore it
-    //"strategy_coinpair(base_quote)":"exchange_coinpair",
-    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
 };
 
 DECLARE_PTR(MDEngineBitmax);

@@ -52,7 +52,6 @@ struct AccountUnitCoinmex
 {
     string api_key;
     string secret_key;
-    string passphrase;
     //coinmex and bitmore use the same api, use this parameter for them
     string baseUrl;
     // internal flags
@@ -114,12 +113,6 @@ private:
 
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
-    void GetAndHandleOrderTradeResponse();
-    void addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded);
-
-    void retrieveOrderStatus(AccountUnitCoinmex& unit);
-    void moveNewtoPending(AccountUnitCoinmex& unit);
     static constexpr int scale_offset = 1e8;
 
     ThreadPtr rest_thread;
@@ -128,37 +121,29 @@ private:
 
     std::mutex* mutex_order_and_trade = nullptr;
 
-    std::map<std::string, std::string> localOrderRefRemoteOrderId;
-
-    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
-    int sync_time_interval;
-    int64_t timeDiffOfExchange = 0;
 
 private:
     int HTTP_RESPONSE_OK = 200;
-    void get_exchange_time(AccountUnitCoinmex& unit, Document& json);
-    void get_account(AccountUnitCoinmex& unit, Document& json);
-    void get_depth(AccountUnitCoinmex& unit, std::string code, Document& json);
-    void get_products(AccountUnitCoinmex& unit, Document& json);
-    void send_order(AccountUnitCoinmex& unit, const char *code,
-                        const char *side, const char *type, double size, double price, double funds, Document& json);
 
-    void cancel_all_orders(AccountUnitCoinmex& unit, std::string code, Document& json);
-    void cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
-    void query_orders(AccountUnitCoinmex& unit, std::string code, std::string status, Document& json);
-    void query_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
+    void get_account(AccountUnitCoinmex& unit, Document& json);
+    void get_products(AccountUnitCoinmex& unit, Document& json);
+    void send_order(AccountUnitCoinmex& unit, const char *code, const char *coid,
+                        const char *side, const char *type, double size, double price, Document& json);
+
+    void cancel_order(AccountUnitCoinmex& unit, const char *code, const char *coid, const char *origCoid, Document& json);
+    void query_orders(AccountUnitCoinmex& unit, Document& json);
+
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
     inline std::string getTimestampString();
 
-    int Round(std::string tickSizeStr);
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
     bool loadExchangeOrderFilters(AccountUnitCoinmex& unit, Document &doc);
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
     SendOrderFilter getSendOrderFilter(AccountUnitCoinmex& unit, const char *symbol);
 private:
     inline int64_t getTimestamp();
-    int64_t getTimeDiffOfExchange(AccountUnitCoinmex& unit);
+
     void readWhiteLists(AccountUnitCoinmex& unit, const json& j_config);
     std::string getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, const char_31 strategy_coinpair);
     bool hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote> &sub, std::string symbol);
