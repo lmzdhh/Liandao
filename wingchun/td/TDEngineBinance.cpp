@@ -870,9 +870,9 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
         {
             if(i == fills_size - 1) {
                 //the last one
-                rtn_order.OrderStatus == LF_CHAR_AllTraded;
+                rtn_order.OrderStatus = LF_CHAR_AllTraded;
             } else {
-                rtn_order.OrderStatus == LF_CHAR_PartTradedQueueing;
+                rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
             }
         }
         on_rtn_order(&rtn_order);
