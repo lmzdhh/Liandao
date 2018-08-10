@@ -4,8 +4,10 @@
 
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
+#include "CoinPairWhiteList.h"
 #include <vector>
 #include <sstream>
+#include <unordered_map>
 #include <map>
 #include <atomic>
 #include <mutex>
@@ -42,12 +44,6 @@ struct SendOrderFilter
     //...other
 };
 
-struct SubscribeCoinmexBaseQuote
-{
-    std::string base;
-    std::string quote;
-};
-
 struct AccountUnitCoinmex
 {
     string api_key;
@@ -60,13 +56,7 @@ struct AccountUnitCoinmex
     std::vector<PendingCoinmexOrderStatus> pendingOrderStatus;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 
-    //in TD, lookup direction is:
-    // our strategy recognized coinpair ---> outcoming exchange coinpair
-    //if strategy's coinpair is not in this map ,ignore it
-    //"strategy_coinpair(base_quote)":"exchange_coinpair",
-    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
-
-    std::vector<SubscribeCoinmexBaseQuote> subscribeCoinmexBaseQuote;
+    CoinPairWhiteList whiteList;
 };
 
 
@@ -141,15 +131,8 @@ private:
     bool loadExchangeOrderFilters(AccountUnitCoinmex& unit, Document &doc);
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
     SendOrderFilter getSendOrderFilter(AccountUnitCoinmex& unit, const char *symbol);
-private:
-    inline int64_t getTimestamp();
 
-    void readWhiteLists(AccountUnitCoinmex& unit, const json& j_config);
-    std::string getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, const char_31 strategy_coinpair);
-    bool hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote> &sub, std::string symbol);
-    void split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub);
-    void debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub);
-    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
+    inline int64_t getTimestamp();
 };
 
 WC_NAMESPACE_END
