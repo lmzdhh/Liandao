@@ -102,13 +102,14 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     unit.baseUrl = baseUrl;
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
-    //keyIsStrategySideWhiteList
-    readWhiteLists(unit, j_config);
 
-    debug_print(unit.keyIsStrategyCoinpairWhiteList);
-    debug_print(unit.subscribeCoinmexBaseQuote);
+    unit.whiteList.ReadWhiteLists(j_config);
+    unit.whiteList.GetBaseQuoteFromWhiteListStrategyCoinPair();
+
+    unit.whiteList.Debug_print();
+
     //display usage:
-    if(unit.keyIsStrategyCoinpairWhiteList.size() == 0) {
+    if(unit.whiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "TDEngineCoinmex::load_account: subscribeCoinmexBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
@@ -118,11 +119,11 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     }
 
     //cancel all openning orders on TD startup
-    if(unit.keyIsStrategyCoinpairWhiteList.size() > 0)
+    if(unit.whiteList.GetKeyIsStrategyCoinpairWhiteList().size() > 0)
     {
-        std::map<std::string, std::string>::iterator map_itr;
-        map_itr = unit.keyIsStrategyCoinpairWhiteList.begin();
-        while(map_itr != unit.keyIsStrategyCoinpairWhiteList.end())
+        std::unordered_map<std::string, std::string>::iterator map_itr;
+        map_itr = unit.whiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+        while(map_itr != unit.whiteList.GetKeyIsStrategyCoinpairWhiteList().end())
         {
             KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID) of exchange coinpair: " << map_itr->second);
             Document d;
@@ -139,109 +140,6 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     strncpy(account.UserID, api_key.c_str(), 16);
     strncpy(account.Password, secret_key.c_str(), 21);
     return account;
-}
-
-void TDEngineCoinmex::readWhiteLists(AccountUnitCoinmex& unit, const json& j_config)
-{
-    KF_LOG_INFO(logger, "[readWhiteLists]");
-    if(j_config.find("whiteLists") != j_config.end()) {
-        KF_LOG_INFO(logger, "[readWhiteLists] found whiteLists");
-        //has whiteLists
-        json whiteLists = j_config["whiteLists"].get<json>();
-        if(whiteLists.is_object())
-        {
-            for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
-                std::string strategy_coinpair = it.key();
-                std::string exchange_coinpair = it.value();
-                KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
-                unit.keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
-
-                //use strategy_coinpair
-                std::string coinpair = strategy_coinpair;
-                std::transform(coinpair.begin(), coinpair.end(), coinpair.begin(), ::toupper);
-
-                SubscribeCoinmexBaseQuote baseQuote;
-                split(coinpair, "_", baseQuote);
-                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinmexBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
-
-                if(baseQuote.base.length() > 0)
-                {
-                    //get correct base_quote config
-                    unit.subscribeCoinmexBaseQuote.push_back(baseQuote);
-                }
-            }
-        }
-    }
-}
-
-bool TDEngineCoinmex::hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote> &sub, std::string symbol)
-{
-    KF_LOG_INFO(logger, "[hasSymbolInWhiteList]");
-    int count = sub.size();
-    std::string upperSymbol = symbol;
-    std::transform(upperSymbol.begin(), upperSymbol.end(), upperSymbol.begin(), ::toupper);
-    for (int i = 0; i < count; i++)
-    {
-        if(strcmp(sub[i].base.c_str(), upperSymbol.c_str()) == 0 || strcmp(sub[i].quote.c_str(), upperSymbol.c_str()) == 0) {
-            KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (found) (symbol) " << symbol);
-            return true;
-        }
-    }
-    KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (not found) (symbol) " << symbol);
-    return false;
-}
-
-//example: btc_usdt
-void TDEngineCoinmex::split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub)
-{
-    if (str.size() > 0) {
-        size_t index = str.find(token);
-        if (index != std::string::npos) {
-            sub.base = str.substr(0, index);
-            sub.quote = str.substr(index + token.size());
-        }
-        else {
-            //not found, do nothing
-        }
-    }
-}
-
-void TDEngineCoinmex::debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub)
-{
-    int count = sub.size();
-    KF_LOG_INFO(logger, "[debug_print] SubscribeCoinmexBaseQuote (count) " << count);
-
-    for (int i = 0; i < count;i++)
-    {
-        KF_LOG_INFO(logger, "[debug_print] SubscribeCoinmexBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
-    }
-}
-
-void TDEngineCoinmex::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
-{
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-        KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
-        map_itr++;
-    }
-}
-
-std::string TDEngineCoinmex::getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, const char_31 strategy_coinpair)
-{
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find strategy_coinpair (strategy_coinpair) " << strategy_coinpair);
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = unit.keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != unit.keyIsStrategyCoinpairWhiteList.end()) {
-        if(strcmp(strategy_coinpair, map_itr->first.c_str()) == 0)
-        {
-            KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
-            return map_itr->second;
-        }
-        map_itr++;
-    }
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] not found strategy_coinpair (strategy_coinpair) " << strategy_coinpair);
-    return "";
 }
 
 void TDEngineCoinmex::connect(long timeout_nsec)
@@ -543,7 +441,7 @@ void TDEngineCoinmex::req_investor_position(const LFQryPositionField* data, int 
         for(size_t i = 0; i < len; i++)
         {
             std::string symbol = d.GetArray()[i]["currencyCode"].GetString();
-            if(hasSymbolInWhiteList(unit.subscribeCoinmexBaseQuote, symbol))
+            if(unit.whiteList.HasSymbolInWhiteList(symbol))
             {
                 strncpy(pos.InstrumentID, symbol.c_str(), 31);
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
@@ -631,7 +529,7 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
     int errorId = 0;
     std::string errorMsg = "";
 
-    std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
+    std::string ticker = unit.whiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
@@ -734,7 +632,7 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
     int errorId = 0;
     std::string errorMsg = "";
 
-    std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
+    std::string ticker = unit.whiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
@@ -847,7 +745,7 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
                                                                <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
         );
 
-        std::string ticker = getWhiteListCoinpairFrom(unit, orderStatusIterator->InstrumentID);
+        std::string ticker = unit.whiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
         if(ticker.length() == 0) {
             KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
             continue;
