@@ -93,7 +93,6 @@ TradeAccount TDEngineBitmax::load_account(int idx, const json& j_config)
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
     unit.whiteList.ReadWhiteLists(j_config);
-    unit.whiteList.GetBaseQuoteFromWhiteListStrategyCoinPair();
 
     unit.whiteList.Debug_print();
 

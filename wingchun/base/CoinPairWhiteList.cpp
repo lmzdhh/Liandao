@@ -27,6 +27,8 @@ WC_NAMESPACE_START
                     }
                 }
             }
+
+            getBaseQuoteFromWhiteListStrategyCoinPair();
         }
 
         int CoinPairWhiteList::Size()
@@ -108,7 +110,7 @@ WC_NAMESPACE_START
         }
 
 
-        void CoinPairWhiteList::GetBaseQuoteFromWhiteListStrategyCoinPair()
+        void CoinPairWhiteList::getBaseQuoteFromWhiteListStrategyCoinPair()
         {
             std::unordered_map<std::string, std::string>::iterator map_itr;
             map_itr = keyIsStrategyCoinpairWhiteList.begin();

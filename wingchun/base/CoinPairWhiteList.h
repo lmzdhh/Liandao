@@ -39,12 +39,13 @@ public:
     //void foreach( callback());  // TODO
     std::unordered_map<std::string, std::string>& GetKeyIsStrategyCoinpairWhiteList();
     std::vector<CoinBaseQuote>& GetCoinBaseQuotes();
-    //从白名单的策略定义中提取出币种的名称，可以用于在查询position的时候，过滤那些定义在白名单中的币种
-    void GetBaseQuoteFromWhiteListStrategyCoinPair();
+
     //可以用于在查询position的时候，过滤那些定义在白名单中的币种
     bool HasSymbolInWhiteList(std::string symbol);
 
 private:
+    //从白名单的策略定义中提取出币种的名称，可以用于在查询position的时候，过滤那些定义在白名单中的币种
+    void getBaseQuoteFromWhiteListStrategyCoinPair();
     void split(std::string str, std::string token, CoinBaseQuote& sub);
     void debug_print(std::unordered_map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
     void debug_print(std::vector<CoinBaseQuote> &sub);
