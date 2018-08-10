@@ -139,13 +139,15 @@ void MDEngineCoinmex::load(const json& j_config)
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineCoinmex:: rest_get_interval_ms: " << rest_get_interval_ms);
 
-    readWhiteLists(j_config);
 
-    debug_print(subscribeCoinBaseQuote);
-    debug_print(keyIsStrategyCoinpairWhiteList);
+    whiteList.ReadWhiteLists(j_config);
+    whiteList.Debug_print();
+
+    makeWebsocketSubscribeJsonString();
     debug_print(websocketSubscribeJsonString);
+
     //display usage:
-    if(keyIsStrategyCoinpairWhiteList.size() == 0) {
+    if(whiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "MDEngineCoinmex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
@@ -155,100 +157,18 @@ void MDEngineCoinmex::load(const json& j_config)
     }
 }
 
-void MDEngineCoinmex::readWhiteLists(const json& j_config)
+void MDEngineCoinmex::makeWebsocketSubscribeJsonString()
 {
-    KF_LOG_INFO(logger, "[readWhiteLists]");
-
-    if(j_config.find("whiteLists") != j_config.end()) {
-        KF_LOG_INFO(logger, "[readWhiteLists] found whiteLists");
-        //has whiteLists
-        json whiteLists = j_config["whiteLists"].get<json>();
-        if(whiteLists.is_object())
-        {
-            for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
-                std::string strategy_coinpair = it.key();
-                std::string exchange_coinpair = it.value();
-                KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
-                keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
-                //make subscribeCoinBaseQuote
-
-                //coinmex MD must has base and quote, please see this->createDepthJsonString.
-                SubscribeCoinBaseQuote baseQuote;
-                split(it.key(), "_", baseQuote);
-                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
-
-                if(baseQuote.base.length() > 0)
-                {
-                    //get correct base_quote config
-                    subscribeCoinBaseQuote.push_back(baseQuote);
-                    //get ready websocket subscrube json strings
-                    std::string jsonDepthString = createDepthJsonString(baseQuote.base, baseQuote.quote);
-                    websocketSubscribeJsonString.push_back(jsonDepthString);
-                    std::string jsonFillsString = createFillsJsonString(baseQuote.base, baseQuote.quote);
-                    websocketSubscribeJsonString.push_back(jsonFillsString);
-
-                }
-            }
-        }
-    }
-}
-
-//example: btc_usdt
-void MDEngineCoinmex::split(std::string str, std::string token, SubscribeCoinBaseQuote& sub)
-{
-    if (str.size() > 0) {
-        size_t index = str.find(token);
-        if (index != std::string::npos) {
-            sub.base = str.substr(0, index);
-            sub.quote = str.substr(index + token.size());
-        }
-        else {
-            //not found, do nothing
-        }
-    }
-}
-
-std::string MDEngineCoinmex::getWhiteListCoinpairFrom(std::string md_coinpair)
-{
-    std::string ticker = md_coinpair;
-    std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
-
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find md_coinpair (md_coinpair) " << md_coinpair << " (toupper(ticker)) " << ticker);
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-        if(ticker == map_itr->second)
-        {
-            KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
-            return map_itr->first;
-        }
-        map_itr++;
-    }
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] not found md_coinpair (md_coinpair) " << md_coinpair);
-    return "";
-}
-
-void MDEngineCoinmex::debug_print(std::vector<SubscribeCoinBaseQuote> &sub)
-{
-    size_t count = sub.size();
-    KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (count) " << count);
-
-    for (size_t i = 0; i < count; i++)
+    int count = whiteList.GetCoinBaseQuotes().size();
+    for (int i = 0; i < count; i++)
     {
-        KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
+        //get ready websocket subscrube json strings
+        std::string jsonDepthString = createDepthJsonString(whiteList.GetCoinBaseQuotes()[i].base, whiteList.GetCoinBaseQuotes()[i].quote);
+        websocketSubscribeJsonString.push_back(jsonDepthString);
+        std::string jsonFillsString = createFillsJsonString(whiteList.GetCoinBaseQuotes()[i].base, whiteList.GetCoinBaseQuotes()[i].quote);
+        websocketSubscribeJsonString.push_back(jsonFillsString);
     }
 }
-
-void MDEngineCoinmex::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
-{
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-        KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
-        map_itr++;
-    }
-}
-
 
 void MDEngineCoinmex::debug_print(std::vector<std::string> &subJsonString)
 {
@@ -536,7 +456,7 @@ void MDEngineCoinmex::onFills(Document& json)
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onFills:" << "base : " << base << "  quote: " << quote);
 
-    std::string ticker = getWhiteListCoinpairFrom(base + "_" +  quote);
+    std::string ticker = whiteList.GetKeyByValue(base + "_" +  quote);
     if(ticker.length() == 0) {
         return;
     }
@@ -577,7 +497,7 @@ void MDEngineCoinmex::onDepth(Document& json)
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "base : " << base << "  quote: " << quote);
 
-    std::string ticker = getWhiteListCoinpairFrom(base + "_" +  quote);
+    std::string ticker = whiteList.GetKeyByValue(base + "_" +  quote);
     if(ticker.length() == 0) {
         KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: not in WhiteList , ignore it:" << "base : " << base << "  quote: " << quote);
         return;

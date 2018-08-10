@@ -32,12 +32,6 @@ struct PriceAndVolume
     }
 };
 
-//use base and quote to sub depth data
-struct SubscribeCoinBaseQuote
-{
-    std::string base;
-    std::string quote;
-};
 
 static int sort_price_asc(const PriceAndVolume &p1,const PriceAndVolume &p2)
 {
@@ -94,7 +88,7 @@ public:
 
     std::string parseJsonToString(const char* in);
 private:
-    std::string bitmaxSubscribeSymbol(std::string coinpair);
+    inline std::string bitmaxSubscribeSymbol(std::string coinpair);
     void connect_lws(std::string t, lws_event e);
     void loop();
 

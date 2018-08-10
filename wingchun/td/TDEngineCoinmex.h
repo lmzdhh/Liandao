@@ -4,6 +4,7 @@
 
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
+#include "CoinPairWhiteList.h"
 #include <vector>
 #include <sstream>
 #include <map>
@@ -38,12 +39,6 @@ struct SendOrderFilter
     //...other
 };
 
-struct SubscribeCoinmexBaseQuote
-{
-    std::string base;
-    std::string quote;
-};
-
 struct AccountUnitCoinmex
 {
     string api_key;
@@ -57,13 +52,7 @@ struct AccountUnitCoinmex
     std::vector<PendingCoinmexOrderStatus> pendingOrderStatus;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 
-    //in TD, lookup direction is:
-    // our strategy recognized coinpair ---> outcoming exchange coinpair
-    //if strategy's coinpair is not in this map ,ignore it
-    //"strategy_coinpair(base_quote)":"exchange_coinpair",
-    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
-
-    std::vector<SubscribeCoinmexBaseQuote> subscribeCoinmexBaseQuote;
+    CoinPairWhiteList whiteList;
 };
 
 
@@ -118,22 +107,11 @@ private:
 
     void retrieveOrderStatus(AccountUnitCoinmex& unit);
     void moveNewtoPending(AccountUnitCoinmex& unit);
-    static constexpr int scale_offset = 1e8;
 
-    ThreadPtr rest_thread;
-    uint64_t last_rest_get_ts = 0;
-    uint64_t rest_get_interval_ms = 500;
+    inline int64_t getTimestamp();
+    int64_t getTimeDiffOfExchange(AccountUnitCoinmex& unit);
 
-    std::mutex* mutex_order_and_trade = nullptr;
-
-    std::map<std::string, std::string> localOrderRefRemoteOrderId;
-
-    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
-    int sync_time_interval;
-    int64_t timeDiffOfExchange = 0;
-    int exchange_shift_ms = 0;
 private:
-    int HTTP_RESPONSE_OK = 200;
     void get_exchange_time(AccountUnitCoinmex& unit, Document& json);
     void get_account(AccountUnitCoinmex& unit, Document& json);
     void get_depth(AccountUnitCoinmex& unit, std::string code, Document& json);
@@ -154,15 +132,23 @@ private:
     bool loadExchangeOrderFilters(AccountUnitCoinmex& unit, Document &doc);
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
     SendOrderFilter getSendOrderFilter(AccountUnitCoinmex& unit, const char *symbol);
+
 private:
-    inline int64_t getTimestamp();
-    int64_t getTimeDiffOfExchange(AccountUnitCoinmex& unit);
-    void readWhiteLists(AccountUnitCoinmex& unit, const json& j_config);
-    std::string getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, const char_31 strategy_coinpair);
-    bool hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote> &sub, std::string symbol);
-    void split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub);
-    void debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub);
-    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
+    int HTTP_RESPONSE_OK = 200;
+    static constexpr int scale_offset = 1e8;
+
+    ThreadPtr rest_thread;
+    uint64_t last_rest_get_ts = 0;
+    uint64_t rest_get_interval_ms = 500;
+
+    std::mutex* mutex_order_and_trade = nullptr;
+
+    std::map<std::string, std::string> localOrderRefRemoteOrderId;
+
+    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
+    int sync_time_interval;
+    int64_t timeDiffOfExchange = 0;
+    int exchange_shift_ms = 0;
 };
 
 WC_NAMESPACE_END

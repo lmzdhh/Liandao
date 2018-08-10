@@ -3,6 +3,7 @@
 
 #include "IMDEngine.h"
 #include "longfist/LFConstants.h"
+#include "CoinPairWhiteList.h"
 #include <libwebsockets.h>
 #include <document.h>
 #include <map>
@@ -27,12 +28,6 @@ struct PriceAndVolume
     }
 };
 
-//coinmex use base and quote to sub depth data
-struct SubscribeCoinBaseQuote
-{
-    std::string base;
-    std::string quote;
-};
 
 static int sort_price_asc(const PriceAndVolume &p1,const PriceAndVolume &p2)
 {
@@ -92,6 +87,9 @@ private:
 
 
     virtual void set_reader_thread() override;
+    void debug_print(std::vector<std::string> &subJsonString);
+
+    void makeWebsocketSubscribeJsonString();
 private:
     ThreadPtr rest_thread;
     bool connected = false;
@@ -109,24 +107,9 @@ private:
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
 
-private:
-    void readWhiteLists(const json& j_config);
-    std::string getWhiteListCoinpairFrom(std::string md_coinpair);
-
-    void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
-    void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
-    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
-    void debug_print(std::vector<std::string> &subJsonString);
-    //coinmex use base and quote to sub depth data, so make this vector for it
-    std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
-
     std::vector<std::string> websocketSubscribeJsonString;
 
-    //in MD, lookup direction is:
-    // incoming exchange coinpair ---> our strategy recognized coinpair
-    //if coming data 's coinpair is not in this map ,ignore it
-    //"strategy_coinpair(base_quote)":"exchange_coinpair",
-    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
+    CoinPairWhiteList whiteList;
 };
 
 DECLARE_PTR(MDEngineCoinmex);
