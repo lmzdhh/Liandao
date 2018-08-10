@@ -341,7 +341,7 @@ void MDEngineBitmax::onMarketTrades(Document& json)
 
 	std::string symbol = json["s"].GetString();
 	KF_LOG_DEBUG(logger, "MDEngineBitmax::onMarketTrades: (symbol)" << symbol);
-	std::string ticker = whiteList.GetWhiteListCoinpairByExchangeCoinPair(symbol);
+	std::string ticker = whiteList.GetKeyByValue(symbol);
 	if(ticker.length() == 0) {
 		return;
 	}
@@ -390,7 +390,7 @@ void MDEngineBitmax::onDepth(Document& json)
 	bool asks_update = false;
 	bool bids_update = false;
 
-	std::string ticker = whiteList.GetWhiteListCoinpairByExchangeCoinPair(symbol);
+	std::string ticker = whiteList.GetKeyByValue(symbol);
 	if(ticker.length() == 0) {
         KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth: not in WhiteList , ignore it: (symbol) " << symbol);
 		return;

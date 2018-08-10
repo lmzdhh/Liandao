@@ -4,8 +4,8 @@
 #include <iostream>
 #include <unordered_map>
 #include <document.h>
-#include <json.hpp>
-#include <KfLog.h>
+#include "../../yijinjing/utils/json.hpp"
+#include "../../yijinjing/log/KfLog.h"
 
 WC_NAMESPACE_START
 
