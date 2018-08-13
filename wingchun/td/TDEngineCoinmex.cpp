@@ -1236,6 +1236,7 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
                                       {"ACCESS-TIMESTAMP",  Timestamp}},
                                Body{body}, Timeout{30000});
 
+    KF_LOG_INFO(logger, "[send_order] (url) " << url << "(Message)"<< Message << " (ACCESS-SIGN) "<< sign << " (ACCESS-TIMESTAMP) " << Timestamp);
     //an error:
     //(response.status_code) 0 (response.error.message) Failed to connect to www.bitmore.top port 443: Connection refused (response.text)
     KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
@@ -1388,7 +1389,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, s
                                         {"ACCESS-SIGN", sign},
                                         {"ACCESS-TIMESTAMP",  Timestamp}},
                                  Body{body}, Timeout{30000});
-
+    KF_LOG_INFO(logger, "[cancel_order] (url) " << url << "(Message)"<< Message << " (ACCESS-SIGN) "<< sign << " (ACCESS-TIMESTAMP) " << Timestamp);
     KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
@@ -1432,6 +1433,7 @@ void TDEngineCoinmex::query_orders(AccountUnitCoinmex& unit, std::string code, s
                                      {"ACCESS-TIMESTAMP",  Timestamp}},
                               Body{body}, Timeout{10000});
 
+    KF_LOG_INFO(logger, "[query_orders] (url) " << url << "(Message)"<< Message << " (ACCESS-SIGN) "<< sign << " (ACCESS-TIMESTAMP) " << Timestamp);
     KF_LOG_INFO(logger, "[query_orders] (url) " << url << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
@@ -1472,7 +1474,7 @@ void TDEngineCoinmex::query_order(AccountUnitCoinmex& unit, std::string code, st
                                      {"ACCESS-SIGN", sign},
                                      {"ACCESS-TIMESTAMP",  Timestamp}},
                               Body{body}, Timeout{10000});
-
+    KF_LOG_INFO(logger, "[query_order] (url) " << url << "(Message)"<< Message << " (ACCESS-SIGN) "<< sign << " (ACCESS-TIMESTAMP) " << Timestamp);
     KF_LOG_INFO(logger, "[query_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                " (response.error.message) " << response.error.message <<
                                                " (response.text) " << response.text.c_str());
