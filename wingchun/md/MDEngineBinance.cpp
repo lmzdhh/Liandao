@@ -252,6 +252,7 @@ void MDEngineBinance::on_lws_market_trade(const char* data, size_t len)
 
 	trade.Price = std::round(std::stod(d["p"].GetString()) * scale_offset);
 	trade.Volume = std::round(std::stod(d["q"].GetString()) * scale_offset);
+	//"m": true,        // Is the buyer the market maker?
 	trade.OrderBSFlag[0] = d["m"].GetBool() ? 'B' : 'S';
 	on_trade(&trade);
 }
