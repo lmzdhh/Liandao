@@ -575,7 +575,8 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
              * */
             //if send successful and the exchange has received ok, then add to  pending query order list
             std::string remoteOrderId = std::to_string(d["orderId"].GetInt64());
-            localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
+            //fix defect of use the old value
+            localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data->OrderRef << " (remoteOrderId) " << remoteOrderId);
 
