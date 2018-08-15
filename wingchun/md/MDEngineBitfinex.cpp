@@ -151,22 +151,26 @@ void MDEngineBitfinex::load(const json& j_config)
         KF_LOG_ERROR(logger, "MDEngineBitfinex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
-        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
-        KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
+        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"tBTCUSDT\",");
+        KF_LOG_ERROR(logger, "     \"etc_eth\": \"tETCETH\"");
         KF_LOG_ERROR(logger, "},");
     }
 }
 
 void MDEngineBitfinex::makeWebsocketSubscribeJsonString()
 {
-    int count = whiteList.GetCoinBaseQuotes().size();
-    for (int i = 0; i < count; i++)
-    {
-        //get ready websocket subscrube json strings
-        std::string jsonDepthString = createDepthJsonString(whiteList.GetCoinBaseQuotes()[i].base, whiteList.GetCoinBaseQuotes()[i].quote);
-        websocketSubscribeJsonString.push_back(jsonDepthString);
-        std::string jsonFillsString = createFillsJsonString(whiteList.GetCoinBaseQuotes()[i].base, whiteList.GetCoinBaseQuotes()[i].quote);
-        websocketSubscribeJsonString.push_back(jsonFillsString);
+    std::unordered_map<std::string, std::string>::iterator map_itr;
+    map_itr = whiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+    while(map_itr != whiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
+        KF_LOG_DEBUG(logger, "[makeWebsocketSubscribeJsonString] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) "<< map_itr->second);
+
+        std::string jsonBookString = createBookJsonString(map_itr->second);
+        websocketSubscribeJsonString.push_back(jsonBookString);
+
+        std::string jsonTradeString = createTradeJsonString(map_itr->second);
+        websocketSubscribeJsonString.push_back(jsonTradeString);
+
+        map_itr++;
     }
 }
 
@@ -190,58 +194,27 @@ void MDEngineBitfinex::login(long timeout_nsec) {
     KF_LOG_INFO(logger, "MDEngineBitfinex::login:");
     global_md = this;
 
-    char inputURL[300] = "wss://websocket.bitfinex.com";
-
-    const char *urlProtocol, *urlTempPath;
-    char urlPath[300];
-    //int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
-    struct lws_client_connect_info clientConnectInfo;
-    memset(&clientConnectInfo, 0, sizeof(clientConnectInfo));
-    clientConnectInfo.port = 8443;
-    if (lws_parse_uri(inputURL, &urlProtocol, &clientConnectInfo.address, &clientConnectInfo.port, &urlTempPath)) {
-        KF_LOG_ERROR(logger,
-                     "MDEngineBitfinex::connect: Couldn't parse URL. Please check the URL and retry: " << inputURL);
-        return;
-    }
-
-    // Fix up the urlPath by adding a / at the beginning, copy the temp path, and add a \0     at the end
-    urlPath[0] = '/';
-    strncpy(urlPath + 1, urlTempPath, sizeof(urlPath) - 2);
-    urlPath[sizeof(urlPath) - 1] = '\0';
-    clientConnectInfo.path = urlPath; // Set the info's path to the fixed up url path
-
-    KF_LOG_INFO(logger, "MDEngineBitfinex::login:" << "urlProtocol=" << urlProtocol <<
-                                                  "address=" << clientConnectInfo.address <<
-                                                  "urlTempPath=" << urlTempPath <<
-                                                  "urlPath=" << urlPath);
     if (context == NULL) {
-        struct lws_protocols protocol;
-        protocol.name = protocols[PROTOCOL_TEST].name;
-        protocol.callback = &ws_service_cb;
-        protocol.per_session_data_size = sizeof(struct session_data);
-        protocol.rx_buffer_size = 0;
-        protocol.id = 0;
-        protocol.user = NULL;
+        struct lws_context_creation_info info;
+        memset( &info, 0, sizeof(info) );
 
-        struct lws_context_creation_info ctxCreationInfo;
-        memset(&ctxCreationInfo, 0, sizeof(ctxCreationInfo));
-        ctxCreationInfo.port = CONTEXT_PORT_NO_LISTEN;
-        ctxCreationInfo.iface = NULL;
-        ctxCreationInfo.protocols = &protocol;
-        ctxCreationInfo.ssl_cert_filepath = NULL;
-        ctxCreationInfo.ssl_private_key_filepath = NULL;
-        ctxCreationInfo.extensions = NULL;
-        ctxCreationInfo.gid = -1;
-        ctxCreationInfo.uid = -1;
-        ctxCreationInfo.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-        ctxCreationInfo.fd_limit_per_thread = 1024;
-        ctxCreationInfo.max_http_header_pool = 1024;
-        ctxCreationInfo.ws_ping_pong_interval = 1;
-        ctxCreationInfo.ka_time = 10;
-        ctxCreationInfo.ka_probes = 10;
-        ctxCreationInfo.ka_interval = 10;
+        info.port = CONTEXT_PORT_NO_LISTEN;
+        info.protocols = protocols;
+        info.iface = NULL;
+        info.ssl_cert_filepath = NULL;
+        info.ssl_private_key_filepath = NULL;
+        info.extensions = NULL;
+        info.gid = -1;
+        info.uid = -1;
+        info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+        info.max_http_header_pool = 1024;
+        info.fd_limit_per_thread = 1024;
+        info.ws_ping_pong_interval = 10;
+        info.ka_time = 10;
+        info.ka_probes = 10;
+        info.ka_interval = 10;
 
-        context = lws_create_context(&ctxCreationInfo);
+        context = lws_create_context( &info );
         KF_LOG_INFO(logger, "MDEngineBitfinex::login: context created.");
     }
 
@@ -250,26 +223,34 @@ void MDEngineBitfinex::login(long timeout_nsec) {
         return;
     }
 
-    struct lws *wsi = NULL;
-    // Set up the client creation info
-    clientConnectInfo.context = context;
-    clientConnectInfo.port = 8443;
-    clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-    clientConnectInfo.host = clientConnectInfo.address;
-    clientConnectInfo.origin = clientConnectInfo.address;
-    clientConnectInfo.ietf_version_or_minus_one = -1;
-    clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
+    int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
+    lws_set_log_level(logs, NULL);
 
-    KF_LOG_INFO(logger, "MDEngineBitfinex::login:" << "Connecting to " << urlProtocol << ":" <<
-                                                  clientConnectInfo.host << ":" <<
-                                                  clientConnectInfo.port << ":" << urlPath);
+    struct lws_client_connect_info ccinfo = {0};
 
-    wsi = lws_client_connect_via_info(&clientConnectInfo);
+    static std::string host  = "api.bitfinex.com";
+    static std::string path = "/ws/2";
+    static int port = 443;
+
+    ccinfo.context 	= context;
+    ccinfo.address 	= host.c_str();
+    ccinfo.port 	= port;
+    ccinfo.path 	= path.c_str();
+    ccinfo.host 	= host.c_str();
+    ccinfo.origin 	= host.c_str();
+    ccinfo.ietf_version_or_minus_one = -1;
+    ccinfo.protocol = protocols[0].name;
+    ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+
+    struct lws* wsi = lws_client_connect_via_info(&ccinfo);
+    KF_LOG_INFO(logger, "MDEngineBitfinex::login: Connecting to " <<  ccinfo.host << ":" << ccinfo.port << ":" << ccinfo.path);
+
     if (wsi == NULL) {
         KF_LOG_ERROR(logger, "MDEngineBitfinex::login: wsi create error.");
         return;
     }
     KF_LOG_INFO(logger, "MDEngineBitfinex::login: wsi create success.");
+
     logged_in = true;
 }
 
@@ -298,6 +279,27 @@ void MDEngineBitfinex::subscribeMarketData(const vector<string>& instruments, co
 int MDEngineBitfinex::lws_write_subscribe(struct lws* conn)
 {
     KF_LOG_INFO(logger, "MDEngineBitfinex::lws_write_subscribe: (subscribe_index)" << subscribe_index);
+
+    //有待发送的数据，先把待发送的发完，在继续订阅逻辑。  ping?
+    if(websocketPendingSendMsg.size() > 0) {
+        unsigned char msg[512];
+        memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
+
+        std::string jsonString = websocketPendingSendMsg[websocketPendingSendMsg.size() - 1];
+
+        KF_LOG_INFO(logger, "MDEngineBitfinex::lws_write_subscribe: websocketPendingSendMsg" << jsonString.c_str());
+        int length = jsonString.length();
+
+        strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
+        int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+
+        if(websocketPendingSendMsg.size() > 0)
+        {    //still has pending send data, emit a lws_callback_on_writable()
+            lws_callback_on_writable( conn );
+            KF_LOG_INFO(logger, "MDEngineBitfinex::lws_write_subscribe: (websocketPendingSendMsg,size)" << websocketPendingSendMsg.size());
+        }
+        return ret;
+    }
 
     if(websocketSubscribeJsonString.size() == 0) return 0;
     //sub depth
@@ -334,27 +336,43 @@ void MDEngineBitfinex::on_lws_data(struct lws* conn, const char* data, size_t le
     Document json;
     json.Parse(data);
 
-    if(!json.HasParseError() && json.IsObject() && json.HasMember("type") && json["type"].IsString())
-    {
+    if(json.HasParseError()) {
+        KF_LOG_ERROR(logger, "MDEngineBitfinex::on_lws_data. parse json error: " << data);
+        return;
+    }
 
-        if(strcmp(json["type"].GetString(), "depth") == 0)
-        {
-            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is depth");
-            onDepth(json);
+    if(json.IsObject() && json.HasMember("event")) {
+        if (strcmp(json["event"].GetString(), "info") == 0) {
+            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is info");
+            onInfo(json);
         }
 
-        if(strcmp(json["type"].GetString(), "fills") == 0)
-        {
-            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is fills");
-            onFills(json);
+        if (strcmp(json["event"].GetString(), "ping") == 0) {
+            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is ping");
+            onPing(conn, json);
         }
-        if(strcmp(json["type"].GetString(), "tickers") == 0)
-        {
-            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is tickers");
-            onTickers(json);
+
+        if (strcmp(json["event"].GetString(), "subscribed") == 0) {
+            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is subscribed");
+            onSubscribed(json);
         }
-    } else {
-        KF_LOG_ERROR(logger, "MDEngineBitfinex::on_lws_data . parse json error: " << data);
+    }
+
+    //data
+    if(json.IsArray()) {
+        int chanId = json.GetArray()[0].GetInt();
+        KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: (chanId)" << chanId);
+        //find book or trade by chanId
+//TODO
+//        {
+//            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is book");
+//            onBook(json);
+//        }
+//
+//        {
+//            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is trade");
+//            onTrade(json);
+//        }
     }
 }
 
@@ -375,70 +393,97 @@ void MDEngineBitfinex::on_lws_connection_error(struct lws* conn)
     login(timeout_nsec);
 }
 
-void MDEngineBitfinex::clearPriceBook()
+
+int64_t MDEngineBitfinex::getTimestamp()
 {
-    //clear price and volumes of tickers
-    std::map<std::string, std::map<int64_t, uint64_t>*> ::iterator map_itr;
-
-    map_itr = tickerAskPriceMap.begin();
-    while(map_itr != tickerAskPriceMap.end()){
-        map_itr->second->clear();
-        map_itr++;
-    }
-
-    map_itr = tickerBidPriceMap.begin();
-    while(map_itr != tickerBidPriceMap.end()){
-        map_itr->second->clear();
-        map_itr++;
-    }
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return timestamp;
 }
 
-void MDEngineBitfinex::onTickers(Document& d)
-{
 /*
+ * // request
 {
-    "type": "tickers",
-    "biz":"spot",
-    "data": [
-      [
-     "1520318917765", #创建时间
-     "0.02",#当日最高成交价
-     "0.01",#当日最低成交价
-     "0.01",#成交单价
-     "200",#基准货币成交量
-     "300",#报价货币成交量
-     "10",#变化量
-     "30",#涨幅百分比
-     "btc_usdt",#币对
-      9,   #币对ID
-     ]
-    ],
-    "zip":false
+   "event":"ping",
+   "cid": 1234
+}
+
+// response
+{
+   "event":"pong",
+   "ts": 1511545528111,
+   "cid": 1234
 }
  * */
-
-
-}
-
-void MDEngineBitfinex::onFills(Document& json)
+void MDEngineBitfinex::onPing(struct lws* conn, Document& json)
 {
-    /*
-     {
-  "base": "cel",
-  "zip": false,
-  "data": [[
-    "0.02"# 价格
-    "200"# 数量
-    "buy"#交易方向（buy:买|sell:卖）
-    1520318917765 #创建时间
-  ]],
-  "biz": "spot",
-  "quote": "btc",
-  "type": "fills"
+    KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: " << parseJsonToString(json));
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("event");
+    writer.String("pong");
+
+    writer.Key("ts");
+    writer.Int64(getTimestamp());
+
+    writer.Key("cid");
+    writer.Int(json["cid"].GetInt());
+
+    writer.EndObject();
+
+    std::string result = s.GetString();
+    KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: (Pong)" << result);
+    websocketPendingSendMsg.push_back(result);
+
+    //emit a callback
+    lws_callback_on_writable( conn );
 }
 
-     * */
+/*
+ * #1
+ * {
+   "event":"info",
+   "code": CODE,
+   "msg": MSG
+}
+#2
+ {
+   "event": "info",
+   "version":  VERSION,
+   "platform": {
+      "status": 1
+   }
+}
+ * */
+void MDEngineBitfinex::onInfo(Document& json)
+{
+    KF_LOG_INFO(logger, "MDEngineBitfinex::onInfo: " << parseJsonToString(json));
+}
 
+
+//{\event\:\subscribed\,\channel\:\book\,\chanId\:56,\symbol\:\tETCBTC\,\prec\:\P0\,\freq\:\F0\,\len\:\25\,\pair\:\ETCBTC\}
+//{\event\:\subscribed\,\channel\:\trades\,\chanId\:2337,\symbol\:\tETHBTC\,\pair\:\ETHBTC\}
+
+//{\event\:\subscribed\,\channel\:\trades\,\chanId\:1,\symbol\:\tBTCUSD\,\pair\:\BTCUSD\}
+void MDEngineBitfinex::onSubscribed(Document& json)
+{
+    KF_LOG_INFO(logger, "MDEngineBitfinex::onSubscribed: " << parseJsonToString(json));
+
+    if(json.HasMember("chanId") && json.HasMember("symbol") && json.HasMember("channel")) {
+        int chanId = json["chanId"].GetInt();
+        std::string symbol = json["symbol"].GetString();
+        if(strcmp(json["channel"].GetString(), "trades") == 0) {
+//TODO
+        }
+
+        if(strcmp(json["channel"].GetString(), "book") == 0) {
+//TODO
+        }
+    }
+}
+
+void MDEngineBitfinex::onTrade(Document& json)
+{
     if(!json.HasMember("data") || !json["data"].IsArray())
     {
         KF_LOG_ERROR(logger, "MDEngineBitfinex::[onFills] invalid market trade message");
@@ -480,8 +525,8 @@ void MDEngineBitfinex::onFills(Document& json)
     }
 }
 
-// {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],"bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
-void MDEngineBitfinex::onDepth(Document& json)
+
+void MDEngineBitfinex::onBook(Document& json)
 {
     bool asks_update = false;
     bool bids_update = false;
@@ -623,11 +668,26 @@ void MDEngineBitfinex::onDepth(Document& json)
     }
 }
 
-std::string MDEngineBitfinex::parseJsonToString(const char* in)
+void MDEngineBitfinex::clearPriceBook()
 {
-    Document d;
-    d.Parse(reinterpret_cast<const char*>(in));
+    //clear price and volumes of tickers
+    std::map<std::string, std::map<int64_t, uint64_t>*> ::iterator map_itr;
 
+    map_itr = tickerAskPriceMap.begin();
+    while(map_itr != tickerAskPriceMap.end()){
+        map_itr->second->clear();
+        map_itr++;
+    }
+
+    map_itr = tickerBidPriceMap.begin();
+    while(map_itr != tickerBidPriceMap.end()){
+        map_itr->second->clear();
+        map_itr++;
+    }
+}
+
+std::string MDEngineBitfinex::parseJsonToString(Document &d)
+{
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     d.Accept(writer);
@@ -635,106 +695,41 @@ std::string MDEngineBitfinex::parseJsonToString(const char* in)
     return buffer.GetString();
 }
 
-/*
-Name    Type    Required    Description
-event   String    true    事件类型，订阅:subscribe
-biz     String    true    产品类型: spot
-type    String    true    业务类型: depth
-base    String    true    基准货币
-quote   String    true    交易货币
-zip     String    false    默认false,不压缩
 
- * */
-std::string MDEngineBitfinex::createDepthJsonString(std::string base, std::string quote)
+//{ "event": "subscribe", "channel": "book",  "symbol": "tBTCUSD" }
+std::string MDEngineBitfinex::createBookJsonString(std::string exchange_coinpair)
 {
-    /*
-{
-    "event":"subscribe",
-    "params":{
-        "biz":"spot",
-        "type":"depth",
-        "base":"btc",
-        "quote":"usdt",
-        "zip":false
-    }
-}
-
-     * */
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
     writer.Key("event");
     writer.String("subscribe");
-    writer.Key("params");
-    writer.StartObject();
-    writer.Key("biz");
-    writer.String("spot");
-    writer.Key("type");
-    writer.String("depth");
-    writer.Key("base");
-    writer.String(base.c_str());
-    writer.Key("quote");
-    writer.String(quote.c_str());
-    writer.Key("zip");
-    writer.Bool(false);
-    writer.EndObject();
+
+    writer.Key("channel");
+    writer.String("book");
+
+    writer.Key("symbol");
+    writer.String(exchange_coinpair.c_str());
+
     writer.EndObject();
     return s.GetString();
 }
 
-std::string MDEngineBitfinex::createFillsJsonString(std::string base, std::string quote)
-{
-    /*
- {
-"event": "subscribe",
-"params": {
-    "biz": "spot",
-    "type": "fills",
-    "base": "cel",
-    "quote": "btc",
-    "zip": false
-}
-}
-
-     * */
-    StringBuffer s;
-    Writer<StringBuffer> writer(s);
-    writer.StartObject();
-    writer.Key("event");
-    writer.String("subscribe");
-    writer.Key("params");
-    writer.StartObject();
-    writer.Key("biz");
-    writer.String("spot");
-    writer.Key("type");
-    writer.String("fills");
-    writer.Key("base");
-    writer.String(base.c_str());
-    writer.Key("quote");
-    writer.String(quote.c_str());
-    writer.Key("zip");
-    writer.Bool(false);
-    writer.EndObject();
-    writer.EndObject();
-    return s.GetString();
-}
-
-std::string MDEngineBitfinex::createTickersJsonString()
+//{ "event": "subscribe", "channel": "trades",  "symbol": "tETHBTC" }
+std::string MDEngineBitfinex::createTradeJsonString(std::string exchange_coinpair)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
     writer.Key("event");
     writer.String("subscribe");
-    writer.Key("params");
-    writer.StartObject();
-    writer.Key("biz");
-    writer.String("spot");
-    writer.Key("type");
-    writer.String("tickers");
-    writer.Key("zip");
-    writer.Bool(false);
-    writer.EndObject();
+
+    writer.Key("channel");
+    writer.String("trades");
+
+    writer.Key("symbol");
+    writer.String(exchange_coinpair.c_str());
+
     writer.EndObject();
     return s.GetString();
 }

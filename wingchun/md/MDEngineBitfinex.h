@@ -74,14 +74,17 @@ public:
     int lws_write_subscribe(struct lws* conn);
 
 private:
-    void onDepth(Document& json);
-    void onTickers(Document& json);
-    void onFills(Document& json);
+    inline int64_t getTimestamp();
 
-    std::string parseJsonToString(const char* in);
-    std::string createDepthJsonString(std::string base, std::string quote);
-    std::string createTickersJsonString();
-    std::string createFillsJsonString(std::string base, std::string quote);
+    void onPing(struct lws* conn, Document& json);
+    void onInfo(Document& json);
+    void onSubscribed(Document& json);
+    void onBook(Document& json);
+    void onTrade(Document& json);
+
+    std::string parseJsonToString(Document &d);
+    std::string createBookJsonString(std::string exchange_coinpair);
+    std::string createTradeJsonString(std::string exchange_coinpair);
     void clearPriceBook();
     void loop();
 
@@ -108,6 +111,9 @@ private:
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
 
     std::vector<std::string> websocketSubscribeJsonString;
+
+    std::vector<std::string> websocketPendingSendMsg;
+
 
     CoinPairWhiteList whiteList;
 };

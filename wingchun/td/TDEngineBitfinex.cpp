@@ -112,8 +112,8 @@ TradeAccount TDEngineBitfinex::load_account(int idx, const json& j_config)
         KF_LOG_ERROR(logger, "TDEngineBitfinex::load_account: subscribeBitfinexBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
-        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
-        KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
+        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"tBTCUSDT\",");
+        KF_LOG_ERROR(logger, "     \"etc_eth\": \"tETCETH\"");
         KF_LOG_ERROR(logger, "},");
     }
 
