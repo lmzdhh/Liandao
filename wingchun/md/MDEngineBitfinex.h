@@ -14,6 +14,14 @@ WC_NAMESPACE_START
 using rapidjson::Document;
 
 
+struct SubscribeChannel
+{
+    int channelId;
+    string exchange_coinpair;
+    //book or trade or ...
+    string subType;
+};
+
 struct PriceAndVolume
 {
     int64_t price;
@@ -79,8 +87,11 @@ private:
     void onPing(struct lws* conn, Document& json);
     void onInfo(Document& json);
     void onSubscribed(Document& json);
-    void onBook(Document& json);
-    void onTrade(Document& json);
+
+    void onBook(SubscribeChannel& channel, Document& json);
+    void onTrade(SubscribeChannel& channel, Document& json);
+
+    SubscribeChannel findByChannelID(int channelId);
 
     std::string parseJsonToString(Document &d);
     std::string createBookJsonString(std::string exchange_coinpair);
@@ -91,6 +102,8 @@ private:
 
     virtual void set_reader_thread() override;
     void debug_print(std::vector<std::string> &subJsonString);
+    void debug_print(std::vector<SubscribeChannel> &websocketSubscribeChannel);
+
 
     void makeWebsocketSubscribeJsonString();
 private:
@@ -105,6 +118,13 @@ private:
     struct lws_context *context = nullptr;
 
     size_t subscribe_index = 0;
+
+    //subscribe_channel
+    std::vector<SubscribeChannel> websocketSubscribeChannel;
+    SubscribeChannel EMPTY_CHANNEL = {0};
+
+    std::string trade_channel = "trades";
+    std::string book_channel = "book";
 
     //<ticker, <price, volume>>
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;

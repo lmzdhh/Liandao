@@ -190,6 +190,7 @@ void MDEngineBitfinex::connect(long timeout_nsec)
     KF_LOG_INFO(logger, "MDEngineBitfinex::connect:");
     connected = true;
 }
+
 void MDEngineBitfinex::login(long timeout_nsec) {
     KF_LOG_INFO(logger, "MDEngineBitfinex::login:");
     global_md = this;
@@ -345,34 +346,36 @@ void MDEngineBitfinex::on_lws_data(struct lws* conn, const char* data, size_t le
         if (strcmp(json["event"].GetString(), "info") == 0) {
             KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is info");
             onInfo(json);
-        }
-
-        if (strcmp(json["event"].GetString(), "ping") == 0) {
+        } else if (strcmp(json["event"].GetString(), "ping") == 0) {
             KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is ping");
             onPing(conn, json);
-        }
-
-        if (strcmp(json["event"].GetString(), "subscribed") == 0) {
+        } else if (strcmp(json["event"].GetString(), "subscribed") == 0) {
             KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is subscribed");
             onSubscribed(json);
-        }
+        } else {
+            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: unknown event: " << data);
+        };
     }
 
     //data
     if(json.IsArray()) {
         int chanId = json.GetArray()[0].GetInt();
         KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: (chanId)" << chanId);
-        //find book or trade by chanId
-//TODO
-//        {
-//            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is book");
-//            onBook(json);
-//        }
-//
-//        {
-//            KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is trade");
-//            onTrade(json);
-//        }
+
+        SubscribeChannel channel = findByChannelID( chanId );
+        if (channel.channelId == 0) {
+            KF_LOG_ERROR(logger, "MDEngineBitfinex::on_lws_data: EMPTY_CHANNEL (chanId)" << chanId);
+        } else {
+            if (channel.subType == book_channel) {
+                KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is book");
+                onBook(channel, json);
+            } else if (channel.subType == trade_channel) {
+                KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is trade");
+                onTrade(channel, json);
+            } else {
+                KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: unknown array data: " << data);
+            }
+        }
     }
 }
 
@@ -463,7 +466,6 @@ void MDEngineBitfinex::onInfo(Document& json)
 
 //{\event\:\subscribed\,\channel\:\book\,\chanId\:56,\symbol\:\tETCBTC\,\prec\:\P0\,\freq\:\F0\,\len\:\25\,\pair\:\ETCBTC\}
 //{\event\:\subscribed\,\channel\:\trades\,\chanId\:2337,\symbol\:\tETHBTC\,\pair\:\ETHBTC\}
-
 //{\event\:\subscribed\,\channel\:\trades\,\chanId\:1,\symbol\:\tBTCUSD\,\pair\:\BTCUSD\}
 void MDEngineBitfinex::onSubscribed(Document& json)
 {
@@ -472,83 +474,167 @@ void MDEngineBitfinex::onSubscribed(Document& json)
     if(json.HasMember("chanId") && json.HasMember("symbol") && json.HasMember("channel")) {
         int chanId = json["chanId"].GetInt();
         std::string symbol = json["symbol"].GetString();
+
         if(strcmp(json["channel"].GetString(), "trades") == 0) {
-//TODO
+            SubscribeChannel newChannel;
+            newChannel.channelId = chanId;
+            newChannel.subType = trade_channel;
+            newChannel.exchange_coinpair = symbol;
+            websocketSubscribeChannel.push_back(newChannel);
         }
 
         if(strcmp(json["channel"].GetString(), "book") == 0) {
-//TODO
+            SubscribeChannel newChannel;
+            newChannel.channelId = chanId;
+            newChannel.subType = book_channel;
+            newChannel.exchange_coinpair = symbol;
+            websocketSubscribeChannel.push_back(newChannel);
+        }
+    }
+
+    debug_print(websocketSubscribeChannel);
+}
+
+
+void MDEngineBitfinex::debug_print(std::vector<SubscribeChannel> &websocketSubscribeChannel)
+{
+    size_t count = websocketSubscribeChannel.size();
+    KF_LOG_INFO(logger, "[debug_print] websocketSubscribeChannel (count) " << count);
+
+    for (size_t i = 0; i < count; i++)
+    {
+        KF_LOG_INFO(logger, "[debug_print] websocketSubscribeChannel (subType) "
+                            << websocketSubscribeChannel[i].subType <<
+                            " (exchange_coinpair)" << websocketSubscribeChannel[i].exchange_coinpair <<
+                            " (channelId)" << websocketSubscribeChannel[i].channelId);
+    }
+}
+
+SubscribeChannel MDEngineBitfinex::findByChannelID(int channelId)
+{
+    size_t count = websocketSubscribeChannel.size();
+
+    for (size_t i = 0; i < count; i++)
+    {
+        if(channelId == websocketSubscribeChannel[i].channelId) {
+            return websocketSubscribeChannel[i];
+        }
+    }
+    return EMPTY_CHANNEL;
+}
+
+
+//[1,[[279619183,1534151022575,0.05404775,6485.1],[279619171,1534151022010,-1.04,6485],[279619170,1534151021847,-0.02211732,6485],......]
+//[1,"te",[279619192,1534151024181,-0.05678467,6485]]
+void MDEngineBitfinex::onTrade(SubscribeChannel &channel, Document& json)
+{
+    KF_LOG_INFO(logger, "MDEngineBitfinex::onTrade: (symbol) " << channel.exchange_coinpair);
+
+    std::string ticker = whiteList.GetKeyByValue(channel.exchange_coinpair);
+    if(ticker.length() == 0) {
+        return;
+    }
+
+    int size = json.GetArray().Size();
+    if(size < 2) return;
+
+    int last_element = size - 1;
+    if (json.GetArray()[last_element].IsArray()) {
+        int len = json.GetArray()[last_element].Size();
+        if (len == 0) return;
+
+        if(json.GetArray()[last_element].GetArray()[0].IsArray())
+        {
+            /* snapshot
+             * [
+                  CHANNEL_ID,
+                  [
+                    [
+                      ID,
+                      MTS,
+                      AMOUNT,
+                      PRICE
+                    ],
+                    ...
+                  ]
+                ]
+                //±AMOUNT	float	How much was bought (positive) or sold (negative).
+                //正的是: S     (maker is buyer )
+                //负的是: B
+                //[1,[[279619183,1534151022575,0.05404775,6485.1],[279619171,1534151022010,-1.04,6485],[279619170,1534151021847,-0.02211732,6485],[279619167,1534151021199,-0.61188115,6485.1],[279619166,1534151019315,-0.22695,6485.1],[279619156,1534151014908,-0.05675262,6485.1],[279619153,1534151013760,0.04885593,6485.2],[279619149,1534151013009,-0.03700977,6485.1],[279619140,1534151009718,-0.3416722,6485.1],[279619135,1534151009007,-0.0099409,6485.1],[279619134,1534151008682,-0.28963734,6485.1],[279619129,1534151007656,-0.00695966,6485.1],[279619128,1534151007443,0.003855,6485.2],[279619123,1534151005539,-0.05533626,6485.1],[279619121,1534151005326,0.05081637,6485.2],[279619102,1534151004043,-0.00737768,6485.1],[279619100,1534151003819,-0.05475973,6485.1],[279619096,1534151002811,-0.05475973,6485.1],[279619080,1534151001414,-0.01828309,6485.1],[279619077,1534151000660,-0.0147,6485.1],[279619066,1534150998307,-0.09175605,6485.1],[279619065,1534150998206,-0.0522174,6485.1],[279619020,1534150994733,0.05436071,6485.2],[279618991,1534150990781,0.0101821,6485.2],[279618946,1534150986977,0.24390946,6485.2],[279618918,1534150986112,0.0203,6485.2],[279618917,1534150986109,0.05562306,6485.2],[279618838,1534150977454,0.03,6485.2],[279618828,1534150976649,0.05351248,6485.2],[279618827,1534150975684,0.02853241,6485.2]]]
+             * */
+            for (int i = 0; i < len; i++) {
+                KF_LOG_INFO(logger, " (0)" << json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetInt64() );
+                KF_LOG_INFO(logger, " (1)" << json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetInt64() );
+                KF_LOG_INFO(logger, " (2)" << json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble() );
+                KF_LOG_INFO(logger, " (3)" << json.GetArray()[last_element].GetArray()[i].GetArray()[3].GetDouble() );
+
+                LFL2TradeField trade;
+                memset(&trade, 0, sizeof(trade));
+                strcpy(trade.InstrumentID, ticker.c_str());
+                strcpy(trade.ExchangeID, "bitfinex");
+
+                trade.Price = std::round(json.GetArray()[last_element].GetArray()[i].GetArray()[3].GetDouble() * scale_offset);
+                double amount = json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble();
+                trade.Volume = std::round( abs(amount * scale_offset));
+                trade.OrderBSFlag[0] = amount < 0 ? 'B' : 'S';
+                KF_LOG_INFO(logger, "MDEngineBitfinex::[onTrade] (ticker)" << ticker <<
+                                                                           " (Price)" << trade.Price <<
+                                                                           " (trade.Volume)" << trade.Volume);
+                on_trade(&trade);
+
+            }
+        } else {
+            /*update
+             * [
+              CHANNEL_ID,
+              <"te", "tu">,
+              [
+                ID,
+                MTS,
+                AMOUNT,
+                PRICE
+              ]
+            ]
+            //±AMOUNT	float	How much was bought (positive) or sold (negative).
+            //正的是: S     (maker is buyer )
+            //负的是: B
+            //[1,"te",[279619192,1534151024181,-0.05678467,6485.1]]
+             * */
+            KF_LOG_INFO(logger, " update(0)" << json.GetArray()[last_element].GetArray()[0].GetInt64());
+            KF_LOG_INFO(logger, " update(1)" << json.GetArray()[last_element].GetArray()[1].GetInt64());
+            KF_LOG_INFO(logger, " update(2)"<< json.GetArray()[last_element].GetArray()[2].GetDouble());
+            KF_LOG_INFO(logger, " update(3)"<< json.GetArray()[last_element].GetArray()[3].GetDouble());
+
+            LFL2TradeField trade;
+            memset(&trade, 0, sizeof(trade));
+            strcpy(trade.InstrumentID, ticker.c_str());
+            strcpy(trade.ExchangeID, "bitfinex");
+
+            trade.Price = std::round(json.GetArray()[last_element].GetArray()[3].GetDouble() * scale_offset);
+            double amount = json.GetArray()[last_element].GetArray()[2].GetDouble();
+            trade.Volume = std::round( abs(amount * scale_offset) );
+            trade.OrderBSFlag[0] = amount < 0 ? 'B' : 'S';
+            KF_LOG_INFO(logger, "MDEngineBitfinex::[onTrade] (ticker)" << ticker <<
+                                                                       " (Price)" << trade.Price <<
+                                                                       " (trade.Volume)" << trade.Volume);
+            on_trade(&trade);
         }
     }
 }
 
-void MDEngineBitfinex::onTrade(Document& json)
+
+void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 {
-    if(!json.HasMember("data") || !json["data"].IsArray())
-    {
-        KF_LOG_ERROR(logger, "MDEngineBitfinex::[onFills] invalid market trade message");
-        return;
-    }
+    KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (symbol) " << channel.exchange_coinpair);
 
-    std::string base="";
-    if(json.HasMember("base") && json["base"].IsString()) {
-        base = json["base"].GetString();
-    }
-    std::string quote="";
-    if(json.HasMember("quote") && json["quote"].IsString()) {
-        quote = json["quote"].GetString();
-    }
-
-    KF_LOG_INFO(logger, "MDEngineBitfinex::onFills:" << "base : " << base << "  quote: " << quote);
-
-    std::string ticker = whiteList.GetKeyByValue(base + "_" +  quote);
+    std::string ticker = whiteList.GetKeyByValue(channel.exchange_coinpair);
     if(ticker.length() == 0) {
         return;
     }
 
-    int len = json["data"].Size();
-
-    for(int i = 0 ; i < len; i++) {
-        LFL2TradeField trade;
-        memset(&trade, 0, sizeof(trade));
-        strcpy(trade.InstrumentID, ticker.c_str());
-        strcpy(trade.ExchangeID, "bitfinex");
-
-        trade.Price = std::round(std::stod(json["data"].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
-        trade.Volume = std::round(std::stod(json["data"].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
-        trade.OrderBSFlag[0] = strcmp("buy", json["data"].GetArray()[i].GetArray()[2].GetString()) == 0 ? 'B' : 'S';
-
-        KF_LOG_INFO(logger, "MDEngineBitfinex::[onFills] (ticker)" << ticker <<
-                                                                  " (Price)" << trade.Price <<
-                                                                  " (trade.Volume)" << trade.Volume);
-        on_trade(&trade);
-    }
-}
-
-
-void MDEngineBitfinex::onBook(Document& json)
-{
     bool asks_update = false;
     bool bids_update = false;
-
-    std::string base="";
-    if(json.HasMember("base") && json["base"].IsString()) {
-        base = json["base"].GetString();
-    }
-    std::string quote="";
-    if(json.HasMember("quote") && json["quote"].IsString()) {
-        quote = json["quote"].GetString();
-    }
-
-    KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth:" << "base : " << base << "  quote: " << quote);
-
-    std::string ticker = whiteList.GetKeyByValue(base + "_" +  quote);
-    if(ticker.length() == 0) {
-        KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: not in WhiteList , ignore it:" << "base : " << base << "  quote: " << quote);
-        return;
-    }
-
-    KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth:" << "(ticker) " << ticker);
     std::map<int64_t, uint64_t>*  asksPriceAndVolume;
     std::map<int64_t, uint64_t>*  bidsPriceAndVolume;
 
@@ -572,46 +658,119 @@ void MDEngineBitfinex::onBook(Document& json)
 //        KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth:" << "ticker : " << ticker << "  insert into map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
     }
 
-    //make depth map
-    if(json.HasMember("data") && json["data"].IsObject()) {
-        if(json["data"].HasMember("asks") && json["data"]["asks"].IsArray()) {
-            int len = json["data"]["asks"].Size();
-            auto& asks = json["data"]["asks"];
-            for(int i = 0 ; i < len; i++)
-            {
-                int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
-                uint64_t volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
-                //if volume is 0, remove it
-                if(volume == 0) {
-                    asksPriceAndVolume->erase(price);
-                    KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
-                } else {
-                    asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
-                }
-//                KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: asks price:" << price<<  "  volume:"<< volume);
-                asks_update = true;
-            }
-        }
 
-        if(json["data"].HasMember("bids") && json["data"]["bids"].IsArray()) {
-            int len = json["data"]["bids"].Size();
-            auto& bids = json["data"]["bids"];
-            for(int i = 0 ; i < len; i++)
-            {
-                int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
-                uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
-                if(volume == 0) {
+
+    int size = json.GetArray().Size();
+
+    int last_element = size - 1;
+    if (json.GetArray()[last_element].IsArray()) {
+        int len = json.GetArray()[last_element].Size();
+        if (len == 0) return;
+
+        if(json.GetArray()[last_element].GetArray()[0].IsArray())
+        {
+            /* snapshot
+             * [
+              CHANNEL_ID,
+              [
+                [
+                  PRICE,
+                  COUNT,
+                  AMOUNT
+                ],
+                ...
+              ]
+            ]
+            //±AMOUNT	float	Total amount available at that price level. Trading: if AMOUNT > 0 then bid else ask; Funding: if AMOUNT < 0 then bid else ask;
+            //[1436,[[6462.1,1,0.44900651],[6462,1,0.47744492],[6461.8,1,0.37530027],[6460.9,1,0.02333184],[6460.2,1,0.22609269],[6460,3,56.42399791],[6458,1,0.03622],[6457,1,1.54],[6456.6,1,0.4],[6456.1,2,0.8],[6455.5,1,2.313],[6454.9,1,0.4],[6453.6,1,0.2],[6452,2,1.2],[6451.8,2,0.6],[6451.7,1,1.5],[6450.1,1,3],[6450,1,0.5],[6449,1,0.15],[6448.7,2,0.00708406],[6448.6,3,1.53750584],[6448.5,2,64.00891964],[6448.3,1,0.028],[6448.2,1,1.55],[6447.8,1,7.98930678],[6462.2,28,-18.24119121],[6462.3,2,-0.26],[6462.4,1,-2.01620248],[6462.7,1,-0.19283279],[6462.8,1,-1.4],[6462.9,1,-1.5],[6463.1,1,-5.835],[6463.2,2,-1.373],[6463.4,1,-0.35391244],[6463.7,1,-0.30874569],[6463.8,1,-2.5],[6463.9,2,-2.54],[6464,1,-20],[6464.1,1,-0.5],[6464.2,1,-0.02217419],[6464.4,1,-0.31008094],[6464.6,1,-1],[6464.7,2,-0.22977],[6464.8,1,-1.85],[6465,1,-1],[6465.1,1,-2],[6465.7,2,-1.079],[6466.1,2,-1.544342],[6466.4,1,-1.3],[6467.2,1,-1.7]]]
+             *
+             *
+            Algorithm to create and keep a book instance updated
+
+            subscribe to channel
+            receive the book snapshot and create your in-memory book structure
+            when count > 0 then you have to add or update the price level
+            3.1 if amount > 0 then add/update bids
+            3.2 if amount < 0 then add/update asks
+            when count = 0 then you have to delete the price level.
+            4.1 if amount = 1 then remove from bids
+            4.2 if amount = -1 then remove from asks
+             * */
+            for (int i = 0; i < len; i++) {
+                int64_t price = std::round(json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetDouble() * scale_offset);
+                int count = json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetInt();
+                uint64_t amount = std::round(json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble() * scale_offset);
+
+                if (count == 0) {
+                    if(amount == scale_offset ) {
+                        bidsPriceAndVolume->erase(price);
+                        bids_update = true;
+                    }
+                    if(amount == -1 * scale_offset ) {
+                        asksPriceAndVolume->erase(price);
+                        asks_update = true;
+                    }
+                } else if (count > 0) {
+                    if(amount > 0) {
+                        bidsPriceAndVolume->erase(price);
+                        bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, amount));
+                        bids_update = true;
+                    } else if(amount <= 0 ) {
+                        asksPriceAndVolume->erase(price);
+                        asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, abs(amount)));
+                        asks_update = true;
+                    }
+                }
+                KF_LOG_INFO(logger, " (0)" << json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetDouble() );
+                KF_LOG_INFO(logger, " (1)" << json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetInt() );
+                KF_LOG_INFO(logger, " (2)" << json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble() );
+            }
+        } else {
+            /*update
+             * [
+                  CHANNEL_ID,
+                  [
+                    PRICE,
+                    COUNT,
+                    AMOUNT
+                  ]
+                ]
+            //±AMOUNT	float	Total amount available at that price level. Trading: if AMOUNT > 0 then bid else ask; Funding: if AMOUNT < 0 then bid else ask;
+             //[1436,[6462.7,0,-1]]
+             //[5,[6464.8,2,-1.90818689]]
+             * */
+
+            int64_t price = std::round(json.GetArray()[last_element].GetArray()[0].GetDouble() * scale_offset);
+            int count = json.GetArray()[last_element].GetArray()[1].GetInt() ;
+            uint64_t amount = std::round(json.GetArray()[last_element].GetArray()[2].GetDouble() * scale_offset);
+
+            if (count == 0) {
+                if(amount == scale_offset ) {
                     bidsPriceAndVolume->erase(price);
-                    KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
-
-                } else {
-                    bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+                    bids_update = true;
                 }
-//                KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: bids price:" << price<<  "  volume:"<< volume);
-                bids_update = true;
+                if(amount == -1 * scale_offset ) {
+                    asksPriceAndVolume->erase(price);
+                    asks_update = true;
+                }
+            } else if (count > 0) {
+                if(amount > 0) {
+                    bidsPriceAndVolume->erase(price);
+                    bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, amount));
+                    bids_update = true;
+                } else if(amount <= 0 ) {
+                    asksPriceAndVolume->erase(price);
+                    asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, abs(amount)));
+                    asks_update = true;
+                }
             }
+            KF_LOG_INFO(logger, " update(0)" << json.GetArray()[last_element].GetArray()[0].GetDouble() );
+            KF_LOG_INFO(logger, " update(1)" << json.GetArray()[last_element].GetArray()[1].GetInt() );
+            KF_LOG_INFO(logger, std::cout << " update(2)"<< json.GetArray()[last_element].GetArray()[2].GetDouble() );
         }
     }
+
+
     // has any update
     if(asks_update || bids_update)
     {
@@ -711,6 +870,9 @@ std::string MDEngineBitfinex::createBookJsonString(std::string exchange_coinpair
     writer.Key("symbol");
     writer.String(exchange_coinpair.c_str());
 
+    writer.Key("len");
+    writer.Int(100);
+
     writer.EndObject();
     return s.GetString();
 }
@@ -738,10 +900,9 @@ void MDEngineBitfinex::loop()
 {
     while(isRunning)
     {
-            int n = lws_service( context, rest_get_interval_ms );
-            std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
+        int n = lws_service( context, rest_get_interval_ms );
+        std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
     }
-
 }
 
 BOOST_PYTHON_MODULE(libbitfinexmd)
