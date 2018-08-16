@@ -434,6 +434,7 @@ void MDEngineBitmax::onDepth(Document& json)
                 asksPriceAndVolume->erase(price);
                 KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
             } else {
+                asksPriceAndVolume->erase(price);
                 asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
             }
 //                KF_LOG_DEBUG(logger, "MDEngineCoinmex::onDepth: asks price:" << price<<  "  volume:"<< volume);
@@ -453,6 +454,7 @@ void MDEngineBitmax::onDepth(Document& json)
                 KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
 
             } else {
+                bidsPriceAndVolume->erase(price);
                 bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
             }
 //                KF_LOG_DEBUG(logger, "MDEngineCoinmex::onDepth: bids price:" << price<<  "  volume:"<< volume);
