@@ -564,10 +564,10 @@ void MDEngineBitfinex::onTrade(SubscribeChannel &channel, Document& json)
                 //[1,[[279619183,1534151022575,0.05404775,6485.1],[279619171,1534151022010,-1.04,6485],[279619170,1534151021847,-0.02211732,6485],[279619167,1534151021199,-0.61188115,6485.1],[279619166,1534151019315,-0.22695,6485.1],[279619156,1534151014908,-0.05675262,6485.1],[279619153,1534151013760,0.04885593,6485.2],[279619149,1534151013009,-0.03700977,6485.1],[279619140,1534151009718,-0.3416722,6485.1],[279619135,1534151009007,-0.0099409,6485.1],[279619134,1534151008682,-0.28963734,6485.1],[279619129,1534151007656,-0.00695966,6485.1],[279619128,1534151007443,0.003855,6485.2],[279619123,1534151005539,-0.05533626,6485.1],[279619121,1534151005326,0.05081637,6485.2],[279619102,1534151004043,-0.00737768,6485.1],[279619100,1534151003819,-0.05475973,6485.1],[279619096,1534151002811,-0.05475973,6485.1],[279619080,1534151001414,-0.01828309,6485.1],[279619077,1534151000660,-0.0147,6485.1],[279619066,1534150998307,-0.09175605,6485.1],[279619065,1534150998206,-0.0522174,6485.1],[279619020,1534150994733,0.05436071,6485.2],[279618991,1534150990781,0.0101821,6485.2],[279618946,1534150986977,0.24390946,6485.2],[279618918,1534150986112,0.0203,6485.2],[279618917,1534150986109,0.05562306,6485.2],[279618838,1534150977454,0.03,6485.2],[279618828,1534150976649,0.05351248,6485.2],[279618827,1534150975684,0.02853241,6485.2]]]
              * */
             for (int i = 0; i < len; i++) {
-                KF_LOG_INFO(logger, " (0)" << json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetInt64() );
-                KF_LOG_INFO(logger, " (1)" << json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetInt64() );
-                KF_LOG_INFO(logger, " (2)" << json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble() );
-                KF_LOG_INFO(logger, " (3)" << json.GetArray()[last_element].GetArray()[i].GetArray()[3].GetDouble() );
+//                KF_LOG_INFO(logger, " (0)" << json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetInt64() );
+//                KF_LOG_INFO(logger, " (1)" << json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetInt64() );
+//                KF_LOG_INFO(logger, " (2)" << json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble() );
+//                KF_LOG_INFO(logger, " (3)" << json.GetArray()[last_element].GetArray()[i].GetArray()[3].GetDouble() );
 
                 LFL2TradeField trade;
                 memset(&trade, 0, sizeof(trade));
@@ -576,7 +576,14 @@ void MDEngineBitfinex::onTrade(SubscribeChannel &channel, Document& json)
 
                 trade.Price = std::round(json.GetArray()[last_element].GetArray()[i].GetArray()[3].GetDouble() * scale_offset);
                 double amount = json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble();
-                trade.Volume = std::round( abs(amount * scale_offset));
+                uint64_t volume = 0;
+                if(amount < 0) {
+                    volume = std::round(-1 * amount * scale_offset);
+                } else {
+                    volume = std::round( amount * scale_offset);
+                }
+
+                trade.Volume = volume;
                 trade.OrderBSFlag[0] = amount < 0 ? 'B' : 'S';
                 KF_LOG_INFO(logger, "MDEngineBitfinex::[onTrade] (ticker)" << ticker <<
                                                                            " (Price)" << trade.Price <<
@@ -601,10 +608,10 @@ void MDEngineBitfinex::onTrade(SubscribeChannel &channel, Document& json)
             //负的是: B
             //[1,"te",[279619192,1534151024181,-0.05678467,6485.1]]
              * */
-            KF_LOG_INFO(logger, " update(0)" << json.GetArray()[last_element].GetArray()[0].GetInt64());
-            KF_LOG_INFO(logger, " update(1)" << json.GetArray()[last_element].GetArray()[1].GetInt64());
-            KF_LOG_INFO(logger, " update(2)"<< json.GetArray()[last_element].GetArray()[2].GetDouble());
-            KF_LOG_INFO(logger, " update(3)"<< json.GetArray()[last_element].GetArray()[3].GetDouble());
+//            KF_LOG_INFO(logger, " update(0)" << json.GetArray()[last_element].GetArray()[0].GetInt64());
+//            KF_LOG_INFO(logger, " update(1)" << json.GetArray()[last_element].GetArray()[1].GetInt64());
+//            KF_LOG_INFO(logger, " update(2)"<< json.GetArray()[last_element].GetArray()[2].GetDouble());
+//            KF_LOG_INFO(logger, " update(3)"<< json.GetArray()[last_element].GetArray()[3].GetDouble());
 
             LFL2TradeField trade;
             memset(&trade, 0, sizeof(trade));
@@ -613,7 +620,13 @@ void MDEngineBitfinex::onTrade(SubscribeChannel &channel, Document& json)
 
             trade.Price = std::round(json.GetArray()[last_element].GetArray()[3].GetDouble() * scale_offset);
             double amount = json.GetArray()[last_element].GetArray()[2].GetDouble();
-            trade.Volume = std::round( abs(amount * scale_offset) );
+            uint64_t volume = 0;
+            if(amount < 0) {
+                volume = std::round(-1 * amount * scale_offset);
+            } else {
+                volume = std::round( amount * scale_offset);
+            }
+            trade.Volume = volume;
             trade.OrderBSFlag[0] = amount < 0 ? 'B' : 'S';
             KF_LOG_INFO(logger, "MDEngineBitfinex::[onTrade] (ticker)" << ticker <<
                                                                        " (Price)" << trade.Price <<
@@ -632,6 +645,8 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
     if(ticker.length() == 0) {
         return;
     }
+
+    KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (ticker) " << ticker);
 
     bool asks_update = false;
     bool bids_update = false;
@@ -674,29 +689,37 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
             for (int i = 0; i < len; i++) {
                 int64_t price = std::round(json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetDouble() * scale_offset);
                 int count = json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetInt();
-                uint64_t amount = std::round(json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble() * scale_offset);
+                double dAmount = json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble();
+                uint64_t amount = 0;
+                if(dAmount < 0) {
+                    amount = std::round(-1 * dAmount * scale_offset);
+                } else {
+                    amount = std::round( dAmount * scale_offset);
+                }
+
+                KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (ticker) " << ticker << " (price)" << price << " (amount)" << amount);
 
                 if (count == 0) {
-                    if(amount == scale_offset ) {
+                    if(dAmount == 1 ) {
                         priceBook20Assembler.EraseBidPrice(ticker, price);
                         bids_update = true;
                     }
-                    if(amount == -1 * scale_offset ) {
+                    if(dAmount == -1 ) {
                         priceBook20Assembler.EraseAskPrice(ticker, price);
                         asks_update = true;
                     }
                 } else if (count > 0) {
-                    if(amount > 0) {
+                    if(dAmount > 0) {
                         priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
                         bids_update = true;
-                    } else if(amount <= 0 ) {
+                    } else if(dAmount <= 0 ) {
                         priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
                         asks_update = true;
                     }
                 }
-                KF_LOG_INFO(logger, " (0)" << json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetDouble() );
-                KF_LOG_INFO(logger, " (1)" << json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetInt() );
-                KF_LOG_INFO(logger, " (2)" << json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble() );
+//                KF_LOG_INFO(logger, " (0)" << json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetDouble() );
+//                KF_LOG_INFO(logger, " (1)" << json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetInt() );
+//                KF_LOG_INFO(logger, " (2)" << json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble() );
             }
         } else {
             /*update
@@ -712,32 +735,39 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
              //[1436,[6462.7,0,-1]]
              //[5,[6464.8,2,-1.90818689]]
              * */
-
             int64_t price = std::round(json.GetArray()[last_element].GetArray()[0].GetDouble() * scale_offset);
             int count = json.GetArray()[last_element].GetArray()[1].GetInt() ;
-            uint64_t amount = std::round(json.GetArray()[last_element].GetArray()[2].GetDouble() * scale_offset);
+            double dAmount = json.GetArray()[last_element].GetArray()[2].GetDouble();
+            uint64_t amount = 0;
+            if(dAmount < 0) {
+                amount = std::round(-1 * dAmount * scale_offset);
+            } else {
+                amount = std::round( dAmount * scale_offset);
+            }
+
+            KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (ticker) " << ticker << " (price)" << price << " (amount)" << amount);
 
             if (count == 0) {
-                if(amount == scale_offset ) {
+                if(dAmount == 1 ) {
                     priceBook20Assembler.EraseBidPrice(ticker, price);
                     bids_update = true;
                 }
-                if(amount == -1 * scale_offset ) {
+                if(dAmount == -1 ) {
                     priceBook20Assembler.EraseAskPrice(ticker, price);
                     asks_update = true;
                 }
             } else if (count > 0) {
-                if(amount > 0) {
+                if(dAmount > 0) {
                     priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
                     bids_update = true;
-                } else if(amount <= 0 ) {
+                } else if(dAmount <= 0 ) {
                     priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
                     asks_update = true;
                 }
             }
-            KF_LOG_INFO(logger, " update(0)" << json.GetArray()[last_element].GetArray()[0].GetDouble() );
-            KF_LOG_INFO(logger, " update(1)" << json.GetArray()[last_element].GetArray()[1].GetInt() );
-            KF_LOG_INFO(logger, std::cout << " update(2)"<< json.GetArray()[last_element].GetArray()[2].GetDouble() );
+//            KF_LOG_INFO(logger, " update(0)" << json.GetArray()[last_element].GetArray()[0].GetDouble() );
+//            KF_LOG_INFO(logger, " update(1)" << json.GetArray()[last_element].GetArray()[1].GetInt() );
+//            KF_LOG_INFO(logger, " update(2)"<< json.GetArray()[last_element].GetArray()[2].GetDouble() );
         }
     }
 
