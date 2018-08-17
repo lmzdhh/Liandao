@@ -1,5 +1,5 @@
-#ifndef WINGCHUN_MDENGINECOINMEX_H
-#define WINGCHUN_MDENGINECOINMEX_H
+#ifndef WINGCHUN_MDENGINEBITFINEX_H
+#define WINGCHUN_MDENGINEBITFINEX_H
 
 #include "IMDEngine.h"
 #include "longfist/LFConstants.h"
@@ -15,7 +15,16 @@ WC_NAMESPACE_START
 using rapidjson::Document;
 
 
-class MDEngineCoinmex: public IMDEngine
+struct SubscribeChannel
+{
+    int channelId;
+    string exchange_coinpair;
+    //book or trade or ...
+    string subType;
+};
+
+
+class MDEngineBitfinex: public IMDEngine
 {
 public:
     /** load internal information from config json */
@@ -27,29 +36,38 @@ public:
     virtual void subscribeMarketData(const vector<string>& instruments, const vector<string>& markets);
     virtual bool is_connected() const { return connected; };
     virtual bool is_logged_in() const { return logged_in; };
-    virtual string name() const { return "MDEngineCoinmex"; };
+    virtual string name() const { return "MDEngineBitfinex"; };
 
 public:
-    MDEngineCoinmex();
+    MDEngineBitfinex();
 
     void on_lws_data(struct lws* conn, const char* data, size_t len);
     void on_lws_connection_error(struct lws* conn);
     int lws_write_subscribe(struct lws* conn);
 
 private:
-    void onDepth(Document& json);
-    void onTickers(Document& json);
-    void onFills(Document& json);
+    inline int64_t getTimestamp();
 
-    std::string parseJsonToString(const char* in);
-    std::string createDepthJsonString(std::string base, std::string quote);
-    std::string createTickersJsonString();
-    std::string createFillsJsonString(std::string base, std::string quote);
+    void onPing(struct lws* conn, Document& json);
+    void onInfo(Document& json);
+    void onSubscribed(Document& json);
+
+    void onBook(SubscribeChannel& channel, Document& json);
+    void onTrade(SubscribeChannel& channel, Document& json);
+
+    SubscribeChannel findByChannelID(int channelId);
+
+    std::string parseJsonToString(Document &d);
+    std::string createBookJsonString(std::string exchange_coinpair);
+    std::string createTradeJsonString(std::string exchange_coinpair);
+
     void loop();
 
 
     virtual void set_reader_thread() override;
     void debug_print(std::vector<std::string> &subJsonString);
+    void debug_print(std::vector<SubscribeChannel> &websocketSubscribeChannel);
+
 
     void makeWebsocketSubscribeJsonString();
 private:
@@ -65,14 +83,24 @@ private:
 
     size_t subscribe_index = 0;
 
+    //subscribe_channel
+    std::vector<SubscribeChannel> websocketSubscribeChannel;
+    SubscribeChannel EMPTY_CHANNEL = {0};
+
+    std::string trade_channel = "trades";
+    std::string book_channel = "book";
+
     PriceBook20Assembler priceBook20Assembler;
 
     std::vector<std::string> websocketSubscribeJsonString;
 
+    std::vector<std::string> websocketPendingSendMsg;
+
+
     CoinPairWhiteList whiteList;
 };
 
-DECLARE_PTR(MDEngineCoinmex);
+DECLARE_PTR(MDEngineBitfinex);
 
 WC_NAMESPACE_END
 

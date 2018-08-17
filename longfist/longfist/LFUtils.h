@@ -61,6 +61,8 @@ inline JournalPair getMdJournalPair(short source)
 			return {"/shared/kungfu/journal/MD/MOCK/", "MD_MOCK"};
 		case 21:
 			return {"/shared/kungfu/journal/MD/BITMAX/", "MD_BITMAX"};
+		case 22:
+			return {"/shared/kungfu/journal/MD/BITFINEX/", "MD_BITFINEX"};
 		default:
 			return {"", ""};
 	}
@@ -80,6 +82,8 @@ inline JournalPair getMdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/MD_RAW/MOCK/", "MDRAW_MOCK"};
 		case 21:
 			return {"/shared/kungfu/journal/MD_RAW/BITMAX/", "MDRAW_BITMAX"};
+		case 22:
+			return {"/shared/kungfu/journal/MD_RAW/BITFINEX/", "MDRAW_BITFINEX"};
 		default:
 			return {"", ""};
 	}
@@ -101,6 +105,8 @@ inline JournalPair getTdJournalPair(short source)
 			return {"/shared/kungfu/journal/TD/MOCK/", "TD_MOCK"};
 		case 21:
 			return {"/shared/kungfu/journal/TD/BITMAX/", "TD_BITMAX"};
+		case 22:
+			return {"/shared/kungfu/journal/TD/BITFINEX/", "TD_BITFINEX"};
 		default:
 			return {"", ""};
 	}
@@ -122,6 +128,8 @@ inline JournalPair getTdSendJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_SEND/MOCK/", "TD_SEND_MOCK"};
 		case 21:
 			return {"/shared/kungfu/journal/TD_SEND/BITMAX/", "TD_SEND_BITMAX"};
+		case 22:
+			return {"/shared/kungfu/journal/TD_SEND/BITFINEX/", "TD_SEND_BITFINEX"};
 		default:
 			return {"", ""};
 	}
@@ -143,6 +151,8 @@ inline JournalPair getTdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_RAW/MOCK/", "TD_RAW_MOCK"};
 		case 21:
 			return {"/shared/kungfu/journal/TD_RAW/BITMAX/", "TD_RAW_BITMAX"};
+		case 22:
+			return {"/shared/kungfu/journal/TD_RAW/BITFINEX/", "TD_RAW_BITFINEX"};
 		default:
 			return {"", ""};
 	}
@@ -164,6 +174,8 @@ inline JournalPair getTdQJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_Q/MOCK/", "TD_Q_MOCK"};
 		case 21:
 			return {"/shared/kungfu/journal/TD_Q/BITMAX/", "TD_Q_BITMAX"};
+		case 22:
+			return {"/shared/kungfu/journal/TD_Q/BITFINEX/", "TD_Q_BITFINEX"};
 		default:
 			return {"", ""};
 	}

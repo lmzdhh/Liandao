@@ -22,6 +22,7 @@ class SOURCE:
     COINMEX = 19
     MOCK = 20
     BITMAX = 21
+    BITFINEX = 22
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所

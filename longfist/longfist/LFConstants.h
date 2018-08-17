@@ -19,6 +19,7 @@ enum exchange_source_index : short
     SOURCE_COINMEX = 19,
 	SOURCE_MOCK = 20,
 	SOURCE_BITMAX = 21,
+	SOURCE_BITFINEX = 22,
     SOURCE_UNKNOWN
 };
 
@@ -42,6 +43,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
 			return "mock";
 		case SOURCE_BITMAX:
 			return "bitmax";
+        case SOURCE_BITFINEX:
+            return "bitfinex";
 		default:
 			return "unknown";
 	}
@@ -81,6 +84,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 	{
 		return SOURCE_BITMAX;
 	}
+    else if(exch_str == "bitfinex")
+    {
+        return SOURCE_BITFINEX;
+    }
     else
     {
 	return SOURCE_UNKNOWN;
@@ -98,6 +105,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_COINMEX "COINMEX"
 #define EXCHANGE_MOCK "MOCK"
 #define EXCHANGE_BITMAX "BITMAX"
+#define EXCHANGE_BITFINEX "bitfinex"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -192,6 +200,16 @@ const short MSG_TYPE_LF_ORDER_BITMAX     = 21204;
 const short MSG_TYPE_LF_RTN_ORDER_BITMAX = 21205;
 const short MSG_TYPE_LF_RTN_TRADE_BITMAX = 21206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITMAX = 21207;
+
+//bitfinex, idx=22
+const short MSG_TYPE_LF_MD_BITFINEX        = 22101;
+const short MSG_TYPE_LF_QRY_POS_BITFINEX   = 22201;
+const short MSG_TYPE_LF_RSP_POS_BITFINEX   = 22202;
+const short MSG_TYPE_LF_ORDER_BITFINEX     = 22204;
+const short MSG_TYPE_LF_RTN_ORDER_BITFINEX = 22205;
+const short MSG_TYPE_LF_RTN_TRADE_BITFINEX = 22206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITFINEX = 22207;
+
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志

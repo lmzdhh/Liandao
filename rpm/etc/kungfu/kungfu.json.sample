@@ -64,6 +64,21 @@
         "ltc_eth": "LTC/ETH"
       },
       "rest_get_interval_ms": 500
+    },
+    "bitfinex":
+    {
+      "book_depth_count": 5,
+      "trade_count": 10,
+      "whiteLists": {
+        "strategy_coinpair(base_quote)": "exchange_coinpair",
+        "eth_btc": "tETHBTC",
+        "bch_btc": "tBCHBTC",
+        "ltc_btc": "tLTCBTC",
+        "bch_eth": "tBCHETH",
+        "eth_btc": "tETHBTC",
+        "ltc_eth": "tLTCETH"
+      },
+      "rest_get_interval_ms": 500
     }
   },
   "td":
@@ -217,6 +232,51 @@
                 "bch_eth": "BCH/ETH",
                 "eth_btc": "ETH/BTC",
                 "ltc_eth": "LTC/ETH"
+              },
+              "rest_get_interval_ms": 2000
+            },
+            "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
+            "is_default": true
+          }
+        ],
+        "FeeSetup":
+        {
+          "stock":
+          {
+            "type": "amount",
+            "fee_multi": 0.0003,
+            "ctr_multi": 1,
+            "min_fee": 0
+          },
+          "future":
+          {
+            "type": "amount",
+            "fee_multi": [0.000023, 0.00069, 0.000023],
+            "ctr_multi": 200,
+            "min_fee": 0
+          },
+          "future_exotic": null
+        }
+    },
+    "bitfinex":
+        {
+          "accounts":
+        [
+          {
+            "info":
+            {
+              "APIKey": "your-api-key",
+              "SecretKey": "your-secret-key",
+              "passphrase": "your-passphrase",
+              "baseUrl": "https://api.bitfinex.com",
+              "whiteLists": {
+                "strategy_coinpair(base_quote)": "exchange_coinpair",
+                "eth_btc": "tETHBTC",
+                "bch_btc": "tBCHBTC",
+                "ltc_btc": "tLTCBTC",
+                "bch_eth": "tBCHETH",
+                "eth_btc": "tETHBTC",
+                "ltc_eth": "tLTCETH"
               },
               "rest_get_interval_ms": 2000
             },

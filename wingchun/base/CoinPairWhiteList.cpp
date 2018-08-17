@@ -56,16 +56,12 @@ WC_NAMESPACE_START
 
         std::string CoinPairWhiteList::GetKeyByValue(std::string exchange_coinpair)
         {
-            //TODO 交易所来的币值对 都是大写的，需要转成大写进行比较，如果保存的数据已经是大写的了，就可以省去这个转换过程
-            std::string ticker = exchange_coinpair;
-            std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
-
             std::unordered_map<std::string, std::string>::iterator map_itr;
             map_itr = keyIsStrategyCoinpairWhiteList.begin();
             while(map_itr != keyIsStrategyCoinpairWhiteList.end())
             {
                 //TODO  std::string == std::string 与 strcmp(str.c_str, s.c_str()) == 0 谁更快
-                if(ticker == map_itr->second)
+                if(exchange_coinpair == map_itr->second)
                 {
                     std::cout << "[GetKeyByValue] found (strategy_coinpair) " <<
                               map_itr->first << " (exchange_coinpair) " << map_itr->second << std::endl;
@@ -119,7 +115,7 @@ WC_NAMESPACE_START
                 std::cout << "[getBaseQuoteFromWhiteListStrategyCoinPair] keyIsExchangeSideWhiteList (strategy_coinpair) "
                              << map_itr->first << " (exchange_coinpair) "<< map_itr->second << std::endl;
 
-                // strategy_coinpair 转换成大写字母
+                // strategy_coinpair 转换成大写字母, 因为比较时区分大小写: HasSymbolInWhiteList
                 std::string coinpair = map_itr->first;
                 std::transform(coinpair.begin(), coinpair.end(), coinpair.begin(), ::toupper);
 
