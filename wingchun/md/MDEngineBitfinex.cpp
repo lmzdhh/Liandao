@@ -387,7 +387,7 @@ void MDEngineBitfinex::on_lws_connection_error(struct lws* conn)
     logged_in = false;
     KF_LOG_ERROR(logger, "MDEngineBitfinex::on_lws_connection_error. login again.");
     //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
-    clearPriceBook();
+    priceBook20Assembler.clearPriceBook();
     //no use it
     long timeout_nsec = 0;
     //reset sub
@@ -635,33 +635,8 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 
     bool asks_update = false;
     bool bids_update = false;
-    std::map<int64_t, uint64_t>*  asksPriceAndVolume;
-    std::map<int64_t, uint64_t>*  bidsPriceAndVolume;
-
-    auto iter = tickerAskPriceMap.find(ticker);
-    if(iter != tickerAskPriceMap.end()) {
-        asksPriceAndVolume = iter->second;
-//        KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth:" << "ticker : " << ticker << "  get from map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
-    } else {
-        asksPriceAndVolume = new std::map<int64_t, uint64_t>();
-        tickerAskPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, asksPriceAndVolume));
-//        KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth:" << "ticker : " << ticker << "  insert into map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
-    }
-
-    iter = tickerBidPriceMap.find(ticker);
-    if(iter != tickerBidPriceMap.end()) {
-        bidsPriceAndVolume = iter->second;
-//        KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth:" << "ticker : " << ticker << "  get from map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
-    } else {
-        bidsPriceAndVolume = new std::map<int64_t, uint64_t>();
-        tickerBidPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, bidsPriceAndVolume));
-//        KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth:" << "ticker : " << ticker << "  insert into map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
-    }
-
-
 
     int size = json.GetArray().Size();
-
     int last_element = size - 1;
     if (json.GetArray()[last_element].IsArray()) {
         int len = json.GetArray()[last_element].Size();
@@ -703,21 +678,19 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 
                 if (count == 0) {
                     if(amount == scale_offset ) {
-                        bidsPriceAndVolume->erase(price);
+                        priceBook20Assembler.EraseBidPrice(ticker, price);
                         bids_update = true;
                     }
                     if(amount == -1 * scale_offset ) {
-                        asksPriceAndVolume->erase(price);
+                        priceBook20Assembler.EraseAskPrice(ticker, price);
                         asks_update = true;
                     }
                 } else if (count > 0) {
                     if(amount > 0) {
-                        bidsPriceAndVolume->erase(price);
-                        bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, amount));
+                        priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
                         bids_update = true;
                     } else if(amount <= 0 ) {
-                        asksPriceAndVolume->erase(price);
-                        asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, abs(amount)));
+                        priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
                         asks_update = true;
                     }
                 }
@@ -746,21 +719,19 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 
             if (count == 0) {
                 if(amount == scale_offset ) {
-                    bidsPriceAndVolume->erase(price);
+                    priceBook20Assembler.EraseBidPrice(ticker, price);
                     bids_update = true;
                 }
                 if(amount == -1 * scale_offset ) {
-                    asksPriceAndVolume->erase(price);
+                    priceBook20Assembler.EraseAskPrice(ticker, price);
                     asks_update = true;
                 }
             } else if (count > 0) {
                 if(amount > 0) {
-                    bidsPriceAndVolume->erase(price);
-                    bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, amount));
+                    priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
                     bids_update = true;
                 } else if(amount <= 0 ) {
-                    asksPriceAndVolume->erase(price);
-                    asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, abs(amount)));
+                    priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
                     asks_update = true;
                 }
             }
@@ -774,74 +745,13 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
     // has any update
     if(asks_update || bids_update)
     {
-        //create book update
-        std::vector<PriceAndVolume> sort_result;
         LFPriceBook20Field md;
         memset(&md, 0, sizeof(md));
-
-        sortMapByKey(*asksPriceAndVolume, sort_result, sort_price_desc);
-//        std::cout<<"asksPriceAndVolume sorted desc:"<< std::endl;
-//        for(int i=0; i<sort_result.size(); i++)
-//        {
-//            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-//        }
-        //asks 	卖方深度 from big to little
-        int askTotalSize = (int)sort_result.size();
-        auto size = std::min(askTotalSize, 20);
-
-        for(int i = 0; i < size; ++i)
-        {
-            md.AskLevels[i].price = sort_result[askTotalSize - i - 1].price;
-            md.AskLevels[i].volume = sort_result[askTotalSize - i - 1].volume;
-//            KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth:  LFPriceBook20Field AskLevels: (i)" << i << "(price)" << md.AskLevels[i].price<<  "  (volume)"<< md.AskLevels[i].volume);
-        }
-        md.AskLevelCount = size;
-
-
-        sort_result.clear();
-        sortMapByKey(*bidsPriceAndVolume, sort_result, sort_price_asc);
-//        std::cout<<"bidsPriceAndVolume sorted asc:"<< std::endl;
-//        for(int i=0; i<sort_result.size(); i++)
-//        {
-//            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-//        }
-        //bids 	买方深度 from big to little
-        int bidTotalSize = (int)sort_result.size();
-        size = std::min(bidTotalSize, 20);
-
-        for(int i = 0; i < size; ++i)
-        {
-            md.BidLevels[i].price = sort_result[bidTotalSize - i - 1].price;
-            md.BidLevels[i].volume = sort_result[bidTotalSize - i - 1].volume;
-//            KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth:  LFPriceBook20Field BidLevels: (i) " << i << "(price)" << md.BidLevels[i].price<<  "  (volume)"<< md.BidLevels[i].volume);
-        }
-        md.BidLevelCount = size;
-        sort_result.clear();
-
-
-        strcpy(md.InstrumentID, ticker.c_str());
+        priceBook20Assembler.Assembler(ticker, md);
         strcpy(md.ExchangeID, "bitfinex");
 
         KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: on_price_book_update");
         on_price_book_update(&md);
-    }
-}
-
-void MDEngineBitfinex::clearPriceBook()
-{
-    //clear price and volumes of tickers
-    std::map<std::string, std::map<int64_t, uint64_t>*> ::iterator map_itr;
-
-    map_itr = tickerAskPriceMap.begin();
-    while(map_itr != tickerAskPriceMap.end()){
-        map_itr->second->clear();
-        map_itr++;
-    }
-
-    map_itr = tickerBidPriceMap.begin();
-    while(map_itr != tickerBidPriceMap.end()){
-        map_itr->second->clear();
-        map_itr++;
     }
 }
 

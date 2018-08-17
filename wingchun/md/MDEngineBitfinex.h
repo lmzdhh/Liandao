@@ -4,6 +4,7 @@
 #include "IMDEngine.h"
 #include "longfist/LFConstants.h"
 #include "CoinPairWhiteList.h"
+#include "PriceBook20Assembler.h"
 #include <libwebsockets.h>
 #include <document.h>
 #include <map>
@@ -22,43 +23,6 @@ struct SubscribeChannel
     string subType;
 };
 
-struct PriceAndVolume
-{
-    int64_t price;
-    uint64_t volume;
-    bool operator < (const PriceAndVolume &other) const
-    {
-        if (price<other.price)
-        {
-            return true;
-        }
-        return false;
-    }
-};
-
-
-static int sort_price_asc(const PriceAndVolume &p1,const PriceAndVolume &p2)
-{
-    return p1.price < p2.price;
-};
-
-static int sort_price_desc(const PriceAndVolume &p1,const PriceAndVolume &p2)
-{
-    return p1.price > p2.price;
-};
-
-template<typename T>
-static void sortMapByKey(std::map<int64_t, uint64_t> &t_map, std::vector<PriceAndVolume> &t_vec, T& sort_by)
-{
-    for(std::map<int64_t, uint64_t>::iterator iter = t_map.begin();iter != t_map.end(); iter ++)
-    {
-        PriceAndVolume pv;
-        pv.price = iter->first;
-        pv.volume = iter->second;
-        t_vec.push_back(pv);
-    }
-    sort(t_vec.begin(), t_vec.end(), sort_by);
-};
 
 class MDEngineBitfinex: public IMDEngine
 {
@@ -96,7 +60,7 @@ private:
     std::string parseJsonToString(Document &d);
     std::string createBookJsonString(std::string exchange_coinpair);
     std::string createTradeJsonString(std::string exchange_coinpair);
-    void clearPriceBook();
+
     void loop();
 
 
@@ -126,9 +90,7 @@ private:
     std::string trade_channel = "trades";
     std::string book_channel = "book";
 
-    //<ticker, <price, volume>>
-    std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;
-    std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
+    PriceBook20Assembler priceBook20Assembler;
 
     std::vector<std::string> websocketSubscribeJsonString;
 

@@ -397,29 +397,6 @@ void MDEngineBitmax::onDepth(Document& json)
 	}
 
     KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth:" << "(ticker) " << ticker);
-	std::map<int64_t, uint64_t>*  asksPriceAndVolume;
-	std::map<int64_t, uint64_t>*  bidsPriceAndVolume;
-
-	auto iter = tickerAskPriceMap.find(ticker);
-	if(iter != tickerAskPriceMap.end()) {
-		asksPriceAndVolume = iter->second;
-//        KF_LOG_DEBUG(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  get from map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
-	} else {
-		asksPriceAndVolume = new std::map<int64_t, uint64_t>();
-		tickerAskPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, asksPriceAndVolume));
-//        KF_LOG_DEBUG(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  insert into map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
-	}
-
-	iter = tickerBidPriceMap.find(ticker);
-	if(iter != tickerBidPriceMap.end()) {
-		bidsPriceAndVolume = iter->second;
-//        KF_LOG_DEBUG(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  get from map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
-	} else {
-		bidsPriceAndVolume = new std::map<int64_t, uint64_t>();
-		tickerBidPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, bidsPriceAndVolume));
-//        KF_LOG_DEBUG(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  insert into map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
-	}
-
 	//make depth map
 
     if(json.HasMember("asks") && json["asks"].IsArray()) {
@@ -431,11 +408,10 @@ void MDEngineBitmax::onDepth(Document& json)
             uint64_t volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
             //if volume is 0, remove it
             if(volume == 0) {
-                asksPriceAndVolume->erase(price);
+				priceBook20Assembler.EraseAskPrice(ticker, price);
                 KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
             } else {
-                asksPriceAndVolume->erase(price);
-                asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+				priceBook20Assembler.UpdateAskPrice(ticker, price, volume);
             }
 //                KF_LOG_DEBUG(logger, "MDEngineCoinmex::onDepth: asks price:" << price<<  "  volume:"<< volume);
             asks_update = true;
@@ -450,12 +426,11 @@ void MDEngineBitmax::onDepth(Document& json)
             int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
             uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
             if(volume == 0) {
-                bidsPriceAndVolume->erase(price);
+				priceBook20Assembler.EraseBidPrice(ticker, price);
                 KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
 
             } else {
-                bidsPriceAndVolume->erase(price);
-                bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+				priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
             }
 //                KF_LOG_DEBUG(logger, "MDEngineCoinmex::onDepth: bids price:" << price<<  "  volume:"<< volume);
             bids_update = true;
@@ -465,51 +440,9 @@ void MDEngineBitmax::onDepth(Document& json)
 	// has any update
 	if(asks_update || bids_update)
 	{
-		//create book update
-		std::vector<PriceAndVolume> sort_result;
 		LFPriceBook20Field md;
 		memset(&md, 0, sizeof(md));
-
-		sortMapByKey(*asksPriceAndVolume, sort_result, sort_price_desc);
-//        std::cout<<"asksPriceAndVolume sorted desc:"<< std::endl;
-//        for(int i=0; i<sort_result.size(); i++)
-//        {
-//            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-//        }
-		//asks 	卖方深度 from big to little
-		int askTotalSize = (int)sort_result.size();
-		auto size = std::min(askTotalSize, 20);
-
-		for(int i = 0; i < size; ++i)
-		{
-			md.AskLevels[i].price = sort_result[askTotalSize - i - 1].price;
-			md.AskLevels[i].volume = sort_result[askTotalSize - i - 1].volume;
-//            KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth:  LFPriceBook20Field AskLevels: (i)" << i << "(price)" << md.AskLevels[i].price<<  "  (volume)"<< md.AskLevels[i].volume);
-		}
-		md.AskLevelCount = size;
-
-		sort_result.clear();
-		sortMapByKey(*bidsPriceAndVolume, sort_result, sort_price_asc);
-//        std::cout<<"bidsPriceAndVolume sorted asc:"<< std::endl;
-//        for(int i=0; i<sort_result.size(); i++)
-//        {
-//            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-//        }
-		//bids 	买方深度 from big to little
-		int bidTotalSize = (int)sort_result.size();
-		size = std::min(bidTotalSize, 20);
-
-		for(int i = 0; i < size; ++i)
-		{
-			md.BidLevels[i].price = sort_result[bidTotalSize - i - 1].price;
-			md.BidLevels[i].volume = sort_result[bidTotalSize - i - 1].volume;
-//            KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth:  LFPriceBook20Field BidLevels: (i) " << i << "(price)" << md.BidLevels[i].price<<  "  (volume)"<< md.BidLevels[i].volume);
-		}
-		md.BidLevelCount = size;
-		sort_result.clear();
-
-
-		strcpy(md.InstrumentID, ticker.c_str());
+		priceBook20Assembler.Assembler(ticker, md);
 		strcpy(md.ExchangeID, "bitmax");
 
 		KF_LOG_INFO(logger, "MDEngineBitmax::onDepth: on_price_book_update");
@@ -538,6 +471,7 @@ void MDEngineBitmax::on_lws_connection_error(struct lws* conn)
 		KF_LOG_ERROR_FMT(logger, "lws connection broken for %s %d %lu, ",
 						 iter->second.first.c_str(), static_cast<int>(iter->second.second), reinterpret_cast<uint64_t>(conn));
 
+		priceBook20Assembler.clearPriceBook(iter->second.first);
 		connect_lws(iter->second.first, iter->second.second);
 		lws_handle_map.erase(iter);
 	}
