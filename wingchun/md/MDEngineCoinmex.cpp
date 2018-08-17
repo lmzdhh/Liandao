@@ -455,8 +455,9 @@ void MDEngineCoinmex::onFills(Document& json)
     }
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onFills:" << "base : " << base << "  quote: " << quote);
-
-    std::string ticker = whiteList.GetKeyByValue(base + "_" +  quote);
+    std::string base_quote = base + "_" +  quote;
+    std::transform(base_quote.begin(), base_quote.end(), base_quote.begin(), ::toupper);
+    std::string ticker = whiteList.GetKeyByValue(base_quote);
     if(ticker.length() == 0) {
         return;
     }
@@ -496,8 +497,9 @@ void MDEngineCoinmex::onDepth(Document& json)
     }
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "base : " << base << "  quote: " << quote);
-
-    std::string ticker = whiteList.GetKeyByValue(base + "_" +  quote);
+    std::string base_quote = base + "_" +  quote;
+    std::transform(base_quote.begin(), base_quote.end(), base_quote.begin(), ::toupper);
+    std::string ticker = whiteList.GetKeyByValue(base_quote);
     if(ticker.length() == 0) {
         KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: not in WhiteList , ignore it:" << "base : " << base << "  quote: " << quote);
         return;
