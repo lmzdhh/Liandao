@@ -73,6 +73,7 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_COINMEX);
     loadJournalInfo(SOURCE_MOCK);
     loadJournalInfo(SOURCE_BITMAX);
+    loadJournalInfo(SOURCE_BITFINEX);
 
     loadJournalInfo(0, getSystemJournalPair);
 
