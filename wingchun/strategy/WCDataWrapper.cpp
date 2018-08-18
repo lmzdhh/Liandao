@@ -188,12 +188,6 @@ void WCDataWrapper::run()
             short msg_source = frame->getSource();
             int request_id = frame->getRequestId();
 
-            std::stringstream ss;
-            ss << "[DataWrapper]1 signal received: " << processor->signal_received <<
-               " (cur_time)" << cur_time << " (msg_type)" << msg_type <<
-               " (msg_source)" << msg_source << " (request_id)" << request_id;
-            processor->debug(ss.str().c_str());
-
             if (msg_type < 100)
             {   // system msgs
                 if (msg_type == MSG_TYPE_SWITCH_TRADING_DAY)
@@ -260,13 +254,6 @@ void WCDataWrapper::run()
                 }
                 if (rid_start <= request_id && request_id < rid_end)
                 {
-                    std::stringstream ss;
-                    ss << "[DataWrapper]2 signal received: " << processor->signal_received <<
-                       " (cur_time)" << cur_time << " (msg_type)" << msg_type <<
-                       " (msg_source)" << msg_source << " (request_id)" << request_id <<
-                       " (rid_start)" << rid_start << " (rid_end)" << rid_end;
-                    processor->debug(ss.str().c_str());
-
                     switch (msg_type)
                     {
                         case MSG_TYPE_LF_RSP_POS:
@@ -292,12 +279,6 @@ void WCDataWrapper::run()
                             order_statuses[request_id] = rtn_order->OrderStatus;
                             processor->on_rtn_order(rtn_order, request_id, msg_source, cur_time);
 
-                            std::stringstream ss;
-                            ss << "[DataWrapper]3 signal received: " << processor->signal_received <<
-                               " (cur_time)" << cur_time << " (msg_type)" << msg_type <<
-                               " (msg_source)" << msg_source << " (request_id)" << request_id <<
-                               " (rid_start)" << rid_start << " (rid_end)" << rid_end << " MSG_TYPE_LF_RTN_ORDER";
-                            processor->debug(ss.str().c_str());
                             break;
                         }
                         case MSG_TYPE_LF_RTN_TRADE:
