@@ -140,14 +140,14 @@ void MDEngineBitfinex::load(const json& j_config)
     KF_LOG_INFO(logger, "MDEngineBitfinex:: rest_get_interval_ms: " << rest_get_interval_ms);
 
 
-    whiteList.ReadWhiteLists(j_config);
-    whiteList.Debug_print();
+    coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
+    coinPairWhiteList.Debug_print();
 
     makeWebsocketSubscribeJsonString();
     debug_print(websocketSubscribeJsonString);
 
     //display usage:
-    if(whiteList.Size() == 0) {
+    if(coinPairWhiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "MDEngineBitfinex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
@@ -160,8 +160,8 @@ void MDEngineBitfinex::load(const json& j_config)
 void MDEngineBitfinex::makeWebsocketSubscribeJsonString()
 {
     std::unordered_map<std::string, std::string>::iterator map_itr;
-    map_itr = whiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
-    while(map_itr != whiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
+    map_itr = coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+    while(map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
         KF_LOG_DEBUG(logger, "[makeWebsocketSubscribeJsonString] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) "<< map_itr->second);
 
         std::string jsonBookString = createBookJsonString(map_itr->second);
@@ -530,7 +530,7 @@ void MDEngineBitfinex::onTrade(SubscribeChannel &channel, Document& json)
 {
     KF_LOG_INFO(logger, "MDEngineBitfinex::onTrade: (symbol) " << channel.exchange_coinpair);
 
-    std::string ticker = whiteList.GetKeyByValue(channel.exchange_coinpair);
+    std::string ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
     if(ticker.length() == 0) {
         return;
     }
@@ -641,7 +641,7 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 {
     KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (symbol) " << channel.exchange_coinpair);
 
-    std::string ticker = whiteList.GetKeyByValue(channel.exchange_coinpair);
+    std::string ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
     if(ticker.length() == 0) {
         return;
     }

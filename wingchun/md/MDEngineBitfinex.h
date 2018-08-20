@@ -97,7 +97,7 @@ private:
     std::vector<std::string> websocketPendingSendMsg;
 
 
-    CoinPairWhiteList whiteList;
+    CoinPairWhiteList coinPairWhiteList;
 };
 
 DECLARE_PTR(MDEngineBitfinex);

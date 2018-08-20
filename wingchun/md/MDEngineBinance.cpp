@@ -95,11 +95,11 @@ void MDEngineBinance::load(const json& j_config)
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
-    whiteList.ReadWhiteLists(j_config);
-    whiteList.Debug_print();
+    coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
+    coinPairWhiteList.Debug_print();
 
     //display usage:
-    if(whiteList.Size() == 0) {
+    if(coinPairWhiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "MDEngineBinance::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
@@ -138,8 +138,8 @@ void MDEngineBinance::login(long timeout_nsec)
 	context = lws_create_context( &info );
 
     std::unordered_map<std::string, std::string>::iterator map_itr;
-    map_itr = whiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
-    while(map_itr != whiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
+    map_itr = coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+    while(map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
         KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) "<< map_itr->second);
         connect_lws(map_itr->second, lws_event::trade);
         //connect_lws(map_itr->second, lws_event::depth5);
@@ -241,7 +241,7 @@ void MDEngineBinance::on_lws_market_trade(const char* data, size_t len)
 	}
 
 	std::string symbol = d["s"].GetString();
-	std::string ticker = whiteList.GetKeyByValue(symbol);
+	std::string ticker = coinPairWhiteList.GetKeyByValue(symbol);
     if(ticker.length() == 0) {
         KF_LOG_INFO(logger, "MDEngineBinance::on_lws_market_trade: not in WhiteList , ignore it:" << symbol);
         return;
@@ -307,7 +307,7 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
     
     if(has_update)
     {
-        std::string strategy_ticker = whiteList.GetKeyByValue(ticker);
+        std::string strategy_ticker = coinPairWhiteList.GetKeyByValue(ticker);
         if(strategy_ticker.length() == 0) {
             KF_LOG_INFO(logger, "MDEngineBinance::on_lws_market_trade: not in WhiteList , ignore it:" << strategy_ticker);
             return;

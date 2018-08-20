@@ -15,6 +15,13 @@ WC_NAMESPACE_START
 using rapidjson::Document;
 
 
+struct CoinBaseQuote
+{
+    std::string base;
+    std::string quote;
+};
+
+
 class MDEngineCoinmex: public IMDEngine
 {
 public:
@@ -51,6 +58,10 @@ private:
     virtual void set_reader_thread() override;
     void debug_print(std::vector<std::string> &subJsonString);
 
+    void split(std::string str, std::string token, CoinBaseQuote& sub);
+    //从白名单的策略定义中提取出币种的名称
+    void getBaseQuoteFromWhiteListStrategyCoinPair();
+
     void makeWebsocketSubscribeJsonString();
 private:
     ThreadPtr rest_thread;
@@ -69,8 +80,13 @@ private:
 
     std::vector<std::string> websocketSubscribeJsonString;
 
-    CoinPairWhiteList whiteList;
+    CoinPairWhiteList coinPairWhiteList;
+
+    //订阅的币种的base和quote, 全是大写字母
+    std::vector<CoinBaseQuote> coinBaseQuotes;
 };
+
+
 
 DECLARE_PTR(MDEngineCoinmex);
 

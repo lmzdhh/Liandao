@@ -72,7 +72,8 @@ struct AccountUnitBinance
     std::vector<int64_t> newSentTradeIds;
     std::vector<int64_t> sentTradeIds;
 
-    CoinPairWhiteList whiteList;
+    CoinPairWhiteList coinPairWhiteList;
+    CoinPairWhiteList positionWhiteList;
 };
 
 /**

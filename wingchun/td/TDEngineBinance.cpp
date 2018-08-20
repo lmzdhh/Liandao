@@ -107,12 +107,14 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key);
 
-    unit.whiteList.ReadWhiteLists(j_config);
+    unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
+    unit.coinPairWhiteList.Debug_print();
 
-    unit.whiteList.Debug_print();
+    unit.positionWhiteList.ReadWhiteLists(j_config, "positionWhiteLists");
+    unit.positionWhiteList.Debug_print();
 
     //display usage:
-    if(unit.whiteList.Size() == 0) {
+    if(unit.coinPairWhiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "TDEngineBinance::load_account: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
@@ -122,11 +124,11 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     }
 
     //cancel all openning orders on TD startup
-    if(unit.whiteList.GetKeyIsStrategyCoinpairWhiteList().size() > 0)
+    if(unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().size() > 0)
     {
         std::unordered_map<std::string, std::string>::iterator map_itr;
-        map_itr = unit.whiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
-        while(map_itr != unit.whiteList.GetKeyIsStrategyCoinpairWhiteList().end())
+        map_itr = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+        while(map_itr != unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end())
         {
             KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID) of exchange coinpair: " << map_itr->second);
 
@@ -456,14 +458,13 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
         int len = d["balances"].Size();
         for ( int i  = 0 ; i < len ; i++ ) {
             std::string symbol = d["balances"].GetArray()[i]["asset"].GetString();
-            if(unit.whiteList.HasSymbolInWhiteList(symbol))
-            {
-                std::string free = d["balances"].GetArray()[i]["free"].GetString();
-                std::string locked = d["balances"].GetArray()[i]["locked"].GetString();
-                KF_LOG_INFO(logger,  "[connect] (symbol)" << symbol << " (free)" <<  free << " (locked)" << locked);
-                strncpy(pos.InstrumentID, symbol.c_str(), 31);
+            std::string ticker = unit.positionWhiteList.GetKeyByValue(symbol);
+            if(ticker.length() > 0) {
+                strncpy(pos.InstrumentID, ticker.c_str(), 31);
                 pos.Position = std::round(stod(d["balances"].GetArray()[i]["free"].GetString()) * scale_offset);
                 tmp_vector.push_back(pos);
+                KF_LOG_INFO(logger,  "[connect] (symbol)" << symbol << " (free)" <<  d["balances"].GetArray()[i]["free"].GetString()
+                                                          << " (locked)" << d["balances"].GetArray()[i]["locked"].GetString());
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
             }
         }
@@ -522,7 +523,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     int errorId = 0;
     std::string errorMsg = "";
 
-    std::string ticker = unit.whiteList.GetValueByKey(std::string(data->InstrumentID));
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
@@ -811,7 +812,7 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     int errorId = 0;
     std::string errorMsg = "";
 
-    std::string ticker = unit.whiteList.GetValueByKey(std::string(data->InstrumentID));
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + "not in WhiteList, ignore it";
@@ -923,7 +924,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
                                                                           <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
         );
 
-        std::string ticker = unit.whiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
+        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
         if(ticker.length() == 0) {
             KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
             continue;
@@ -1043,9 +1044,9 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
     {
         KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 1 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
 
-        std::string ticker = unit.whiteList.GetValueByKey(std::string(tradeStatusIterator->InstrumentID));
+        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(tradeStatusIterator->InstrumentID));
         if(ticker.length() == 0) {
-            KF_LOG_ERROR(logger, "[retrieveTradeStatus]: not in WhiteList , ignore it:" << tradeStatusIterator->InstrumentID);
+            KF_LOG_INFO(logger, "[retrieveTradeStatus]: not in WhiteList , ignore it:" << tradeStatusIterator->InstrumentID);
             continue;
         }
         KF_LOG_DEBUG(logger, "[retrieveTradeStatus] (exchange_ticker)" << ticker);
@@ -1152,6 +1153,8 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                 on_rtn_trade(&rtn_trade);
                 raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                         source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
+            } else {
+                //this order is not me sent out, maybe other strategy's order or manuelly open orders.
             }
 
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 5 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);

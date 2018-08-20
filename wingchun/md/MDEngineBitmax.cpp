@@ -149,11 +149,11 @@ void MDEngineBitmax::load(const json& j_config)
     secret_key = j_config["SecretKey"].get<string>();
     KF_LOG_INFO(logger, "MDEngineBitmax::load:  api_key: " << api_key);
 
-	whiteList.ReadWhiteLists(j_config);
+	coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
+	coinPairWhiteList.Debug_print();
 
-	whiteList.Debug_print();
 	//display usage:
-	if(whiteList.Size() == 0) {
+	if(coinPairWhiteList.Size() == 0) {
 		KF_LOG_ERROR(logger, "MDEngineBitmax::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
 		KF_LOG_ERROR(logger, "\"whiteLists\":{");
 		KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
@@ -200,8 +200,8 @@ void MDEngineBitmax::login(long timeout_nsec)
 	context = lws_create_context( &info );
 
 	std::unordered_map<std::string, std::string>::iterator map_itr;
-	map_itr = whiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
-	while(map_itr != whiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
+	map_itr = coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+	while(map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
         KF_LOG_DEBUG(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) "<< map_itr->second);
 		connect_lws(map_itr->second, lws_event::depth20);
 
@@ -341,7 +341,7 @@ void MDEngineBitmax::onMarketTrades(Document& json)
 
 	std::string symbol = json["s"].GetString();
 	KF_LOG_DEBUG(logger, "MDEngineBitmax::onMarketTrades: (symbol)" << symbol);
-	std::string ticker = whiteList.GetKeyByValue(symbol);
+	std::string ticker = coinPairWhiteList.GetKeyByValue(symbol);
 	if(ticker.length() == 0) {
 		return;
 	}
@@ -390,7 +390,7 @@ void MDEngineBitmax::onDepth(Document& json)
 	bool asks_update = false;
 	bool bids_update = false;
 
-	std::string ticker = whiteList.GetKeyByValue(symbol);
+	std::string ticker = coinPairWhiteList.GetKeyByValue(symbol);
 	if(ticker.length() == 0) {
         KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth: not in WhiteList , ignore it: (symbol) " << symbol);
 		return;

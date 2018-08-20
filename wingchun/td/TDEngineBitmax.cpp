@@ -92,12 +92,14 @@ TradeAccount TDEngineBitmax::load_account(int idx, const json& j_config)
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
-    unit.whiteList.ReadWhiteLists(j_config);
+    unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
+    unit.coinPairWhiteList.Debug_print();
 
-    unit.whiteList.Debug_print();
+    unit.positionWhiteList.ReadWhiteLists(j_config, "positionWhiteLists");
+    unit.positionWhiteList.Debug_print();
 
     //display usage:
-    if(unit.whiteList.Size() == 0) {
+    if(unit.coinPairWhiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "TDEngineBitmax::load_account: subscribeCoinmexBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
@@ -408,15 +410,15 @@ void TDEngineBitmax::req_investor_position(const LFQryPositionField* data, int a
         for(int i = 0; i < len; i++)
         {
             std::string symbol = d["data"].GetArray()[i]["assetCode"].GetString();
-            if(unit.whiteList.HasSymbolInWhiteList(symbol))
-            {
-                strncpy(pos.InstrumentID, symbol.c_str(), 31);
+            std::string ticker = unit.positionWhiteList.GetKeyByValue(symbol);
+            if(ticker.length() > 0) {
+                strncpy(pos.InstrumentID, ticker.c_str(), 31);
+                pos.Position = std::round(std::stod(d["data"].GetArray()[i]["availableAmount"].GetString()) * scale_offset);
+                tmp_vector.push_back(pos);
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
                                                                           << " availableAmount:" << d["data"].GetArray()[i]["availableAmount"].GetString()
                                                                           << " totalAmount: " << d["data"].GetArray()[i]["totalAmount"].GetString()
                                                                           << " maxWithdrawAmount: " << d["data"].GetArray()[i]["maxWithdrawAmount"].GetString());
-                pos.Position = std::round(std::stod(d["data"].GetArray()[i]["availableAmount"].GetString()) * scale_offset);
-                tmp_vector.push_back(pos);
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
             }
         }
@@ -484,7 +486,7 @@ void TDEngineBitmax::req_order_insert(const LFInputOrderField* data, int account
     int errorId = 0;
     std::string errorMsg = "";
 
-    std::string ticker = unit.whiteList.GetValueByKey(std::string(data->InstrumentID));
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
@@ -549,7 +551,7 @@ void TDEngineBitmax::req_order_action(const LFOrderActionField* data, int accoun
     int errorId = 0;
     std::string errorMsg = "";
 
-    std::string ticker = unit.whiteList.GetValueByKey(std::string(data->InstrumentID));
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
