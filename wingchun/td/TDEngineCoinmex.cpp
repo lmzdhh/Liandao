@@ -747,7 +747,7 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
 
         std::string ticker = unit.whiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
         if(ticker.length() == 0) {
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
+            KF_LOG_INFO(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
             continue;
         }
         KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
@@ -812,16 +812,108 @@ volume 	订单委托数量
             }
              * */
             //parse success
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.OrderStatus = GetOrderStatus(d["status"].GetString());
-            rtn_order.VolumeTraded = std::round(std::stod(d["filledVolume"].GetString()) * scale_offset);
+            //报单状态
+            LfOrderStatusType OrderStatus = GetOrderStatus(d["status"].GetString());
+            //今成交数量
+            uint64_t VolumeTraded = std::round(std::stod(d["filledVolume"].GetString()) * scale_offset);//coinmex订单已成交数量
+            uint64_t newAveragePrice = std::round(std::stod(d["averagePrice"].GetString()) * scale_offset);
+            //cancel 需要特殊处理
+            if(LF_CHAR_Canceled == OrderStatus) {
+                /*
+                 * 因为restful查询有间隔时间，订单可能会先经历过部分成交，然后才达到的cancnel，所以得到cancel不能只认为是cancel，还需要判断有没有部分成交过。
+                这时候需要补状态，补一个on rtn order，一个on rtn trade。
+                这种情况仅cancel才有, 部分成交和全成交没有此问题。
+                当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
+                */
 
-            //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
-            if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
-               (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-                && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
+                //虽然是撤单状态，但是已经成交的数量和上一次记录的数量不一样，期间一定发生了部分成交. 要补发 LF_CHAR_PartTradedQueueing
+                if(VolumeTraded != orderStatusIterator->VolumeTraded) {
+                    //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
+                    LFRtnOrderField rtn_order;
+                    memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+                    rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
+                    rtn_order.VolumeTraded = VolumeTraded;
+
+                    //first send onRtnOrder about the status change or VolumeTraded change
+                    strcpy(rtn_order.ExchangeID, "coinmex");
+                    strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+                    strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+                    rtn_order.Direction = GetDirection(d["side"].GetString());
+                    //No this setting on coinmex
+                    rtn_order.TimeCondition = LF_CHAR_GTC;
+                    rtn_order.OrderPriceType = GetPriceType(d["orderType"].GetString());
+                    strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
+                    rtn_order.VolumeTotalOriginal = std::round(std::stod(d["volume"].GetString()) * scale_offset);
+                    rtn_order.LimitPrice = std::round(std::stod(d["price"].GetString()) * scale_offset);
+                    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
+
+                    on_rtn_order(&rtn_order);
+                    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                            source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
+                                            1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+
+                    //send OnRtnTrade
+                    LFRtnTradeField rtn_trade;
+                    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+                    strcpy(rtn_trade.ExchangeID, "coinmex");
+                    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+                    strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
+                    strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
+                    rtn_trade.Direction = rtn_order.Direction;
+                    uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
+                    uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
+
+                    //calculate the volumn and price (it is average too)
+                    rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
+                    rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
+
+                    on_rtn_trade(&rtn_trade);
+                    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                            source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
+
+                }
+
+                //emit the LF_CHAR_Canceled status
+                LFRtnOrderField rtn_order;
+                memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+                rtn_order.OrderStatus = LF_CHAR_Canceled;
+                rtn_order.VolumeTraded = VolumeTraded;
+
+                //first send onRtnOrder about the status change or VolumeTraded change
+                strcpy(rtn_order.ExchangeID, "coinmex");
+                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+                rtn_order.Direction = GetDirection(d["side"].GetString());
+                //No this setting on coinmex
+                rtn_order.TimeCondition = LF_CHAR_GTC;
+                rtn_order.OrderPriceType = GetPriceType(d["orderType"].GetString());
+                strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
+                rtn_order.VolumeTotalOriginal = std::round(std::stod(d["volume"].GetString()) * scale_offset);
+                rtn_order.LimitPrice = std::round(std::stod(d["price"].GetString()) * scale_offset);
+                rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
+
+                on_rtn_order(&rtn_order);
+                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                        source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
+                                        1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+
+                //third, update last status for next query_order
+                orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
+                orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
+                orderStatusIterator->averagePrice = newAveragePrice;
+
+            } else if(orderStatusIterator->OrderStatus != OrderStatus ||
+               (LF_CHAR_PartTradedQueueing == OrderStatus
+                && VolumeTraded != orderStatusIterator->VolumeTraded))
             {
+                //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
+                LFRtnOrderField rtn_order;
+                memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+                rtn_order.OrderStatus = OrderStatus;
+                rtn_order.VolumeTraded = VolumeTraded;
+
                 //first send onRtnOrder about the status change or VolumeTraded change
                 strcpy(rtn_order.ExchangeID, "coinmex");
                 strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
