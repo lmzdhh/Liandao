@@ -849,7 +849,8 @@ volume 	订单委托数量
                     rtn_order.LimitPrice = std::round(std::stod(d["price"].GetString()) * scale_offset);
                     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
 
-                    on_rtn_order(&rtn_order);
+                    //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
+                    //on_rtn_order(&rtn_order);
                     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                                             source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
                                             1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
