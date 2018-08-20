@@ -52,7 +52,8 @@ struct AccountUnitCoinmex
     std::vector<PendingCoinmexOrderStatus> pendingOrderStatus;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 
-    CoinPairWhiteList whiteList;
+    CoinPairWhiteList coinPairWhiteList;
+    CoinPairWhiteList positionWhiteList;
 };
 
 

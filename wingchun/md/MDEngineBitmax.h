@@ -56,7 +56,7 @@ private:
 
     virtual void set_reader_thread() override;
 
-    CoinPairWhiteList whiteList;
+    CoinPairWhiteList coinPairWhiteList;
 
 
 private:

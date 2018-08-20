@@ -52,7 +52,8 @@ struct AccountUnitBitfinex
     std::vector<PendingBitfinexOrderStatus> pendingOrderStatus;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 
-    CoinPairWhiteList whiteList;
+    CoinPairWhiteList coinPairWhiteList;
+    CoinPairWhiteList positionWhiteList;
 };
 
 
