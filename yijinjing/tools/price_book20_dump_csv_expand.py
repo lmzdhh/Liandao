@@ -83,6 +83,10 @@ def expandCsv(inputCsvFileName, outputCsvFileName):
                                                 warn_bad_lines=True, chunksize=1000000, iterator=True)
     df = pd.concat(df_days_instrument_one_by_one, ignore_index=True)
     # print(df)
+    if len(df) < 1:
+        print("seems no data in the file:", outputCsvFileName)
+        pd.DataFrame().to_csv(outputCsvFileName, index=None, header=True, mode='w', encoding="utf-8", chunksize=1000000)
+        return
 
     df = expand_level20_price_volume(df, 'AskLevels([])', 'asks')
     df = expand_level20_price_volume(df, 'BidLevels([])', 'bids')
