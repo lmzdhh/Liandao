@@ -27,6 +27,16 @@ inline unsigned char* hmac_sha256_byte( const char *key, const char *data) {
     return HMAC(EVP_sha256(), key, strlen(key), (unsigned char*)(data), strlen(data), NULL, NULL);
 }
 
+inline std::string hmac_sha384( const char *key, const char *data) {
+    unsigned char* digest;
+    digest = HMAC(EVP_sha384(), key, strlen(key), (unsigned char*)(data), strlen(data), NULL, NULL);
+    return b2a_hex((char *)digest, 48);
+}
+
+inline unsigned char* hmac_sha384_byte( const char *key, const char *data) {
+    return HMAC(EVP_sha384(), key, strlen(key), (unsigned char*)(data), strlen(data), NULL, NULL);
+}
+
 inline std::string hmac_sha512( const char *key, const char *data) {
     unsigned char* digest;
     digest = HMAC(EVP_sha256(), key, strlen(key), (unsigned char*)(data), strlen(data), NULL, NULL);

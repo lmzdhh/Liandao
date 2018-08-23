@@ -136,6 +136,8 @@ MDEngineBitfinex::MDEngineBitfinex(): IMDEngine(SOURCE_BITFINEX)
 
 void MDEngineBitfinex::load(const json& j_config)
 {
+    book_depth_count = j_config["book_depth_count"].get<int>();
+    trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineBitfinex:: rest_get_interval_ms: " << rest_get_interval_ms);
 
@@ -155,6 +157,9 @@ void MDEngineBitfinex::load(const json& j_config)
         KF_LOG_ERROR(logger, "     \"etc_eth\": \"tETCETH\"");
         KF_LOG_ERROR(logger, "},");
     }
+
+    KF_LOG_INFO(logger, "MDEngineBitfinex::load:  book_depth_count: "
+            << book_depth_count << " trade_count: " << trade_count << " rest_get_interval_ms: " << rest_get_interval_ms);
 }
 
 void MDEngineBitfinex::makeWebsocketSubscribeJsonString()
@@ -287,7 +292,7 @@ int MDEngineBitfinex::lws_write_subscribe(struct lws* conn)
         memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
 
         std::string jsonString = websocketPendingSendMsg[websocketPendingSendMsg.size() - 1];
-
+        websocketPendingSendMsg.pop_back();
         KF_LOG_INFO(logger, "MDEngineBitfinex::lws_write_subscribe: websocketPendingSendMsg" << jsonString.c_str());
         int length = jsonString.length();
 

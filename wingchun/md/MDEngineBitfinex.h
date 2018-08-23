@@ -75,6 +75,8 @@ private:
     bool connected = false;
     bool logged_in = false;
 
+    int book_depth_count = 100;
+    int trade_count = 10;
     int rest_get_interval_ms = 500;
 
     static constexpr int scale_offset = 1e8;
