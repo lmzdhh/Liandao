@@ -17,9 +17,10 @@ enum exchange_source_index : short
     SOURCE_INDODAX = 17,
     SOURCE_OKEX = 18,
     SOURCE_COINMEX = 19,
-	SOURCE_MOCK = 20,
-	SOURCE_BITMAX = 21,
-	SOURCE_BITFINEX = 22,
+    SOURCE_MOCK = 20,
+    SOURCE_BITMAX = 21,
+    SOURCE_BITFINEX = 22,
+    SOURCE_BITMEX = 23,
     SOURCE_UNKNOWN
 };
 
@@ -44,7 +45,9 @@ inline const char* get_str_from_source_index(exchange_source_index source)
 		case SOURCE_BITMAX:
 			return "bitmax";
         case SOURCE_BITFINEX:
-            return "bitfinex";
+                return "bitfinex";
+        case SOURCE_BITMEX:
+                return "bitmex";
 		default:
 			return "unknown";
 	}
@@ -72,21 +75,25 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
 	return SOURCE_OKEX;
     }
-	else if(exch_str == "coinmex")
-	{
-		return SOURCE_COINMEX;
-	}
-	else if(exch_str == "mock")
-	{
-		return SOURCE_MOCK;
-	}
-	else if(exch_str == "bitmax")
-	{
-		return SOURCE_BITMAX;
-	}
+    else if(exch_str == "coinmex")
+    {
+	return SOURCE_COINMEX;
+    }
+    else if(exch_str == "mock")
+    {
+        return SOURCE_MOCK;
+    }
+    else if(exch_str == "bitmax")
+    {
+	return SOURCE_BITMAX;
+    }
     else if(exch_str == "bitfinex")
     {
         return SOURCE_BITFINEX;
+    }
+    else if(exch_str == "bitmex")
+    {
+	return SOURCE_BITMEX;
     }
     else
     {
@@ -105,7 +112,8 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_COINMEX "COINMEX"
 #define EXCHANGE_MOCK "MOCK"
 #define EXCHANGE_BITMAX "BITMAX"
-#define EXCHANGE_BITFINEX "bitfinex"
+#define EXCHANGE_BITFINEX "BITFINEX"
+#define EXCHANGE_BITMEX "BITMEX"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -210,6 +218,14 @@ const short MSG_TYPE_LF_RTN_ORDER_BITFINEX = 22205;
 const short MSG_TYPE_LF_RTN_TRADE_BITFINEX = 22206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITFINEX = 22207;
 
+//bitmex, idx=23
+const short MSG_TYPE_LF_MD_BITMEX        = 23101;
+const short MSG_TYPE_LF_QRY_POS_BITMEX   = 23201;
+const short MSG_TYPE_LF_RSP_POS_BITMEX   = 23202;
+const short MSG_TYPE_LF_ORDER_BITMEX     = 23204;
+const short MSG_TYPE_LF_RTN_ORDER_BITMEX = 23205;
+const short MSG_TYPE_LF_RTN_TRADE_BITMEX = 23206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITMEX = 23207;
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
