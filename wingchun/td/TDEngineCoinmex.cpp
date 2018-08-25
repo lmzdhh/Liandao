@@ -487,16 +487,13 @@ int64_t TDEngineCoinmex::fixPriceTickSize(int keepPrecision, int64_t price, bool
     int removePrecisions = (8 - keepPrecision);
     double cutter = pow(10, removePrecisions);
 
-    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 1(price)" << std::fixed  << std::setprecision(9) << price);
     double new_price = price/cutter;
-    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 2(price/cutter)" << std::fixed  << std::setprecision(9) << new_price);
+
     if(isBuy){
         new_price += 0.9;
         new_price = std::floor(new_price);
-        KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 3(price is buy)" << std::fixed  << std::setprecision(9) << new_price);
     } else {
         new_price = std::floor(new_price);
-        KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 3(price is sell)" << std::fixed  << std::setprecision(9) << new_price);
     }
     int64_t  ret_price = new_price * cutter;
     KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 4(new_price * cutter)" << std::fixed  << std::setprecision(9) << new_price);
@@ -1299,45 +1296,61 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
     KF_LOG_INFO(logger, "[send_order] (code) " << code << " (side) "<< side << " (type) " <<
                                                type << " (size) "<< sizeStr << " (price) "<< priceStr << " (funds) " << fundsStr);
 
-    Document document;
-    document.SetObject();
-    Document::AllocatorType& allocator = document.GetAllocator();
-    //used inner this method only.so  can use reference
-    document.AddMember("code", StringRef(code), allocator);
-    document.AddMember("side", StringRef(side), allocator);
-    document.AddMember("type", StringRef(type), allocator);
-    document.AddMember("size", StringRef(sizeStr.c_str()), allocator);
-    document.AddMember("price", StringRef(priceStr.c_str()), allocator);
-    document.AddMember("funds", StringRef(fundsStr.c_str()), allocator);
-    StringBuffer jsonStr;
-    Writer<StringBuffer> writer(jsonStr);
-    document.Accept(writer);
+    int MAX_RETRY_TIMES = 3;
+    int retry_times = 0;
+    cpr::Response response;
+    bool should_retry = false;
+    do {
+        should_retry = false;
 
-    std::string Timestamp = getTimestampString();
-    std::string Method = "POST";
-    std::string requestPath = "/api/v1/spot/ccex/orders";
-    std::string queryString= "";
-    std::string body = jsonStr.GetString();
+        Document document;
+        document.SetObject();
+        Document::AllocatorType& allocator = document.GetAllocator();
+        //used inner this method only.so  can use reference
+        document.AddMember("code", StringRef(code), allocator);
+        document.AddMember("side", StringRef(side), allocator);
+        document.AddMember("type", StringRef(type), allocator);
+        document.AddMember("size", StringRef(sizeStr.c_str()), allocator);
+        document.AddMember("price", StringRef(priceStr.c_str()), allocator);
+        document.AddMember("funds", StringRef(fundsStr.c_str()), allocator);
+        StringBuffer jsonStr;
+        Writer<StringBuffer> writer(jsonStr);
+        document.Accept(writer);
 
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
-    string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, 32);
+        std::string Timestamp = getTimestampString();
+        std::string Method = "POST";
+        std::string requestPath = "/api/v1/spot/ccex/orders";
+        std::string queryString= "";
+        std::string body = jsonStr.GetString();
 
-    const auto response = Post(Url{url},
-                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
-                                      {"Content-Type", "application/json; charset=UTF-8"},
-                                      {"Content-Length", to_string(body.size())},
-                                      {"ACCESS-SIGN", sign},
-                                      {"ACCESS-TIMESTAMP",  Timestamp}},
-                               Body{body}, Timeout{30000});
+        string Message = Timestamp + Method + requestPath + queryString + body;
+        unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
+        string url = unit.baseUrl + requestPath + queryString;
+        std::string sign = base64_encode(signature, 32);
 
-    KF_LOG_INFO(logger, "[send_order] (url) " << url << "(Message)"<< Message << " (ACCESS-SIGN) "<< sign << " (ACCESS-TIMESTAMP) " << Timestamp);
-    //an error:
-    //(response.status_code) 0 (response.error.message) Failed to connect to www.bitmore.top port 443: Connection refused (response.text)
-    KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
-                                              " (response.error.message) " << response.error.message <<
-                                              " (response.text) " << response.text.c_str());
+        response = Post(Url{url},
+                                   Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+                                          {"Content-Type", "application/json; charset=UTF-8"},
+                                          {"Content-Length", to_string(body.size())},
+                                          {"ACCESS-SIGN", sign},
+                                          {"ACCESS-TIMESTAMP",  Timestamp}},
+                                   Body{body}, Timeout{30000});
+
+        KF_LOG_INFO(logger, "[send_order] (url) " << url << "(Message)"<< Message << " (ACCESS-SIGN) "<< sign << " (ACCESS-TIMESTAMP) " << Timestamp);
+        //an error:
+        //(response.status_code) 0 (response.error.message) Failed to connect to www.bitmore.top port 443: Connection refused (response.text)
+        KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
+                                                  " (response.error.message) " << response.error.message <<
+                                                  " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
+
+        //has error and find the 'error setting certificate verify locations' error, should retry
+        if(response.error.message.size() > 0 && response.error.message.find("error setting certificate verify locations") >= 0) {
+            should_retry = true;
+            retry_times++;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    } while(should_retry && retry_times < MAX_RETRY_TIMES);
+
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1460,35 +1473,52 @@ bids 	买方深度
 void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
-    rapidjson::Document document;
-    document.SetObject();
-    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    //used inner this method only.so  can use reference
-    document.AddMember("code", StringRef(code.c_str()), allocator);
-    StringBuffer jsonStr;
-    Writer<StringBuffer> writer(jsonStr);
-    document.Accept(writer);
 
-    std::string Timestamp = getTimestampString();
-    std::string Method = "DELETE";
-    std::string requestPath = "/api/v1/spot/ccex/orders/" + orderId;
-    std::string queryString= "";
-    std::string body = jsonStr.GetString();
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
-    string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, 32);
-    const auto response = Delete(Url{url},
-                                 Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
-                                        {"Content-Type", "application/json; charset=UTF-8"},
-                                        {"Content-Length", to_string(body.size())},
-                                        {"ACCESS-SIGN", sign},
-                                        {"ACCESS-TIMESTAMP",  Timestamp}},
-                                 Body{body}, Timeout{30000});
-    KF_LOG_INFO(logger, "[cancel_order] (url) " << url << "(Message)"<< Message << " (ACCESS-SIGN) "<< sign << " (ACCESS-TIMESTAMP) " << Timestamp);
-    KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
-                                                " (response.error.message) " << response.error.message <<
-                                                " (response.text) " << response.text.c_str());
+    int MAX_RETRY_TIMES = 3;
+    int retry_times = 0;
+    cpr::Response response;
+    bool should_retry = false;
+    do {
+        should_retry = false;
+
+        rapidjson::Document document;
+        document.SetObject();
+        rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+        //used inner this method only.so  can use reference
+        document.AddMember("code", StringRef(code.c_str()), allocator);
+        StringBuffer jsonStr;
+        Writer<StringBuffer> writer(jsonStr);
+        document.Accept(writer);
+
+        std::string Timestamp = getTimestampString();
+        std::string Method = "DELETE";
+        std::string requestPath = "/api/v1/spot/ccex/orders/" + orderId;
+        std::string queryString= "";
+        std::string body = jsonStr.GetString();
+        string Message = Timestamp + Method + requestPath + queryString + body;
+        unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
+        string url = unit.baseUrl + requestPath + queryString;
+        std::string sign = base64_encode(signature, 32);
+        response = Delete(Url{url},
+                                     Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+                                            {"Content-Type", "application/json; charset=UTF-8"},
+                                            {"Content-Length", to_string(body.size())},
+                                            {"ACCESS-SIGN", sign},
+                                            {"ACCESS-TIMESTAMP",  Timestamp}},
+                                     Body{body}, Timeout{30000});
+        KF_LOG_INFO(logger, "[cancel_order] (url) " << url << "(Message)"<< Message << " (ACCESS-SIGN) "<< sign << " (ACCESS-TIMESTAMP) " << Timestamp);
+        KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
+                                                    " (response.error.message) " << response.error.message <<
+                                                    " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
+
+        //has error and find the 'error setting certificate verify locations' error, should retry
+        if(response.error.message.size() > 0 && response.error.message.find("error setting certificate verify locations") >= 0) {
+            should_retry = true;
+            retry_times++;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    } while(should_retry && retry_times < MAX_RETRY_TIMES);
+
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
