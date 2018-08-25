@@ -60,14 +60,14 @@ WC_NAMESPACE_START
                 //TODO  std::string == std::string 与 strcmp(str.c_str, s.c_str()) == 0 谁更快
                 if(exchange_coinpair == map_itr->second)
                 {
-                    std::cout << "[GetKeyByValue] found (strategy_coinpair) " <<
-                              map_itr->first << " (exchange_coinpair) " << map_itr->second << std::endl;
+//                    std::cout << "[GetKeyByValue] found (strategy_coinpair) " <<
+//                              map_itr->first << " (exchange_coinpair) " << map_itr->second << std::endl;
 
                     return map_itr->first;
                 }
                 map_itr++;
             }
-            std::cout << "[getWhiteListCoinpairFrom] not found (exchange_coinpair) " << exchange_coinpair << std::endl;
+//            std::cout << "[getWhiteListCoinpairFrom] not found (exchange_coinpair) " << exchange_coinpair << std::endl;
             return "";
         }
 
@@ -80,14 +80,14 @@ WC_NAMESPACE_START
             {
                 if(strategy_coinpair == map_itr->first)
                 {
-                    std::cout << "[GetValueByKey] found (strategy_coinpair) " <<
-                              map_itr->first << " (exchange_coinpair) " << map_itr->second << std::endl;
+//                    std::cout << "[GetValueByKey] found (strategy_coinpair) " <<
+//                              map_itr->first << " (exchange_coinpair) " << map_itr->second << std::endl;
 
                     return map_itr->second;
                 }
                 map_itr++;
             }
-            std::cout <<  "[GetValueByKey] not found (strategy_coinpair) " << strategy_coinpair << std::endl;
+//            std::cout <<  "[GetValueByKey] not found (strategy_coinpair) " << strategy_coinpair << std::endl;
             return "";
         }
 

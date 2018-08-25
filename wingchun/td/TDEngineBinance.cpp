@@ -551,7 +551,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(), GetType(data->OrderPriceType).c_str(),
         GetTimeInForce(data->TimeCondition).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef,
         stopPrice, icebergQty, d);
-    KF_LOG_INFO(logger, "[req_order_insert] send_order");
+//    KF_LOG_INFO(logger, "[req_order_insert] send_order");
 //    printResponse(d);
 
     if(d.HasParseError() )
@@ -674,8 +674,7 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
 
-        //this trade id has been send on_rtn_trade
-        //TODO ?? unit.newSentTradeIds.push_back(result["tradeId"].GetInt64());
+        //this response has no tradeId, so dont call unit.newSentTradeIds.push_back(tradeid)
     }
 
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
@@ -805,7 +804,7 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Iid)" << data->InvestorID
-                                              << " (OrderRef)" << data->OrderRef);
+                                              << " (OrderRef)" << data->OrderRef << " (KfOrderID)" << data->KfOrderID);
 
     send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId);
 
@@ -826,8 +825,8 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
 
     Document d;
 	cancel_order(unit, ticker.c_str(), 0, data->OrderRef, "", d);
-    KF_LOG_INFO(logger, "[req_order_action] cancel_order");
-    printResponse(d);
+//    KF_LOG_INFO(logger, "[req_order_action] cancel_order");
+//    printResponse(d);
 
     if(d.HasParseError() )
     {
@@ -929,7 +928,6 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
             KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
             continue;
         }
-        KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
 
 
         Document orderResult;
@@ -1024,7 +1022,8 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 
 void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 {
-    KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())" << unit.pendingOrderStatus.size() << " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size());
+    KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())"
+                        << unit.pendingOrderStatus.size() << " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size());
     //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
     if(unit.pendingOrderStatus.size() == 0 && unit.pendingOnRtnTrades.size() == 0) return;
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
