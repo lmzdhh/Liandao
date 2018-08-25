@@ -582,7 +582,7 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data->OrderRef << " (remoteOrderId) " << remoteOrderId);
 
-            char noneStatus = '\0';//none
+            char noneStatus = LF_CHAR_NotTouched;
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
             //success, only record raw data
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
