@@ -190,7 +190,7 @@ The most commonly used kungfu commands are:
         task_temppage = libpaged.TempPage(engine)
         engine.addTask(task_temppage)
         task_control = libpaged.Controller(engine)
-        #task_control.set_switch_day_time('17:00:00')
+        task_control.set_switch_day_time('17:00:00')
         #task_control.add_engine_start_time('09:15:00')
         #task_control.add_engine_end_time('16:30:00')
         engine.addTask(task_control)
