@@ -1351,6 +1351,12 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
         }
     } while(should_retry && retry_times < MAX_RETRY_TIMES);
 
+
+
+    KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
+                                                                           " (response.error.message) " << response.error.message <<
+                                                                           " (response.text) " << response.text.c_str() );
+
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1518,6 +1524,12 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, s
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     } while(should_retry && retry_times < MAX_RETRY_TIMES);
+
+
+
+    KF_LOG_INFO(logger, "[cancel_order] out_retry (response.status_code) " << response.status_code <<
+                                                " (response.error.message) " << response.error.message <<
+                                                " (response.text) " << response.text.c_str() );
 
     getResponse(response.status_code, response.text, response.error.message, json);
 }
