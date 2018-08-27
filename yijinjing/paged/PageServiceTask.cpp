@@ -134,16 +134,19 @@ void PstKfController::go()
             switch(tp)
             {
                 case CONTROLLER_SWITCH_DAY:
-                    engine->switch_trading_day();
-                    engine->set_last_switch_nano(l);
+                    KF_LOG_INFO(engine->get_logger(), "PstKfController::go() :CONTROLLER_SWITCH_DAY: ignore! (l)" << l << " (nano)" << nano);
+//                    engine->switch_trading_day();
+//                    engine->set_last_switch_nano(l);
                     break;
                 case CONTROLLER_ENGINE_STARTS:
-                    engine->write("", MSG_TYPE_MD_ENGINE_OPEN);
-                    engine->write("", MSG_TYPE_TRADE_ENGINE_OPEN);
+                    KF_LOG_INFO(engine->get_logger(), "PstKfController::go() :CONTROLLER_ENGINE_STARTS: ignore! (l)" << l << " (nano)" << nano);
+//                    engine->write("", MSG_TYPE_MD_ENGINE_OPEN);
+//                    engine->write("", MSG_TYPE_TRADE_ENGINE_OPEN);
                     break;
                 case CONTROLLER_ENGINE_ENDS:
-                    engine->write("", MSG_TYPE_MD_ENGINE_CLOSE);
-                    engine->write("", MSG_TYPE_TRADE_ENGINE_CLOSE);
+                    KF_LOG_INFO(engine->get_logger(), "PstKfController::go() :CONTROLLER_ENGINE_ENDS: ignore! (l)" << l << " (nano)" << nano);
+//                    engine->write("", MSG_TYPE_MD_ENGINE_CLOSE);
+//                    engine->write("", MSG_TYPE_TRADE_ENGINE_CLOSE);
                     break;
             }
             l += NANOSECONDS_PER_DAY;
