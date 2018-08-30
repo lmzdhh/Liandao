@@ -19,3 +19,8 @@ include_directories(../utils/cpr/include)
 add_executable(binance_test binance_test/binance_test.cpp)
 target_link_libraries(binance_test ${CORELIBS})
 target_link_libraries(binance_test ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
+
+include_directories(../utils/cpr/include)
+add_executable(bitmex_test bitmex_test/bitmex_test.cpp)
+target_link_libraries(bitmex_test ${CORELIBS})
+target_link_libraries(bitmex_test ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)

@@ -323,7 +323,8 @@ wingchun_constants = [
                        ('BINANCE', 16, ''),
                        ('COINMEX', 19, ''),
                        ('MOCK', 20, ''),
-                       ('BITMAX', 21, '')
+                       ('BITMAX', 21, ''),
+                       ('BITMEX', 22, '')
                        ],
      'source index'),
     ('DIRECTION', 'char', [('Buy', '0', '买'),
