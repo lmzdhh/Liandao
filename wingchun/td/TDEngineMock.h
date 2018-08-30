@@ -11,7 +11,7 @@
 #include <mutex>
 #include "Timer.h"
 #include <document.h>
-
+#include "CoinPairWhiteList.h"
 using rapidjson::Document;
 
 WC_NAMESPACE_START
@@ -57,17 +57,9 @@ struct AccountUnitCoinmex
     string baseUrl;
     // internal flags
     bool    logged_in;
-    std::vector<PendingCoinmexOrderStatus> newOrderStatus;
-    std::vector<PendingCoinmexOrderStatus> pendingOrderStatus;
-    std::map<std::string, SendOrderFilter> sendOrderFilters;
 
-    //in TD, lookup direction is:
-    // our strategy recognized coinpair ---> outcoming exchange coinpair
-    //if strategy's coinpair is not in this map ,ignore it
-    //"strategy_coinpair(base_quote)":"exchange_coinpair",
-    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
-
-    std::vector<SubscribeCoinmexBaseQuote> subscribeCoinmexBaseQuote;
+    CoinPairWhiteList coinPairWhiteList;
+    CoinPairWhiteList positionWhiteList;
 };
 
 
@@ -113,13 +105,7 @@ private:
     LfOrderStatusType GetOrderStatus(std::string input);
 
     void loop();
-    std::vector<std::string> split(std::string str, std::string token);
-    void GetAndHandleOrderTradeResponse();
-    void addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded);
 
-    void retrieveOrderStatus(AccountUnitCoinmex& unit);
-    void moveNewtoPending(AccountUnitCoinmex& unit);
     static constexpr int scale_offset = 1e8;
 
     ThreadPtr rest_thread;
@@ -136,35 +122,10 @@ private:
 
 private:
     int HTTP_RESPONSE_OK = 200;
-    void get_exchange_time(AccountUnitCoinmex& unit, Document& json);
-    void get_account(AccountUnitCoinmex& unit, Document& json);
-    void get_depth(AccountUnitCoinmex& unit, std::string code, Document& json);
-    void get_products(AccountUnitCoinmex& unit, Document& json);
-    void send_order(AccountUnitCoinmex& unit, const char *code,
-                        const char *side, const char *type, double size, double price, double funds, Document& json);
-
-    void cancel_all_orders(AccountUnitCoinmex& unit, std::string code, Document& json);
-    void cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
-    void query_orders(AccountUnitCoinmex& unit, std::string code, std::string status, Document& json);
-    void query_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
     inline std::string getTimestampString();
 
-    int Round(std::string tickSizeStr);
-    int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
-    bool loadExchangeOrderFilters(AccountUnitCoinmex& unit, Document &doc);
-    void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
-    SendOrderFilter getSendOrderFilter(AccountUnitCoinmex& unit, const char *symbol);
-private:
-    inline int64_t getTimestamp();
-    int64_t getTimeDiffOfExchange(AccountUnitCoinmex& unit);
-    void readWhiteLists(AccountUnitCoinmex& unit, const json& j_config);
-    std::string getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, const char_31 strategy_coinpair);
-    bool hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote> &sub, std::string symbol);
-    void split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub);
-    void debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub);
-    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
 };
 
 WC_NAMESPACE_END

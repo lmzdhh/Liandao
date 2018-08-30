@@ -52,6 +52,15 @@ void TDUserInfoHelper::load(const string& user_name, bool need_write)
             address->start_time = getNanoTime();
             strncpy(address->name, user_name.c_str(), JOURNAL_SHORT_NAME_MAX_LENGTH);
         }
+//        std::cout << "load()" << user_name << std::endl;
+//
+//        for(int i = 0; i < AVAILABLE_ORDER_LIMIT; i ++) {
+//
+//            std::cout<< i << " (address->orders[i].ticker)"<<address->orders[i].ticker
+//                    << " (address->orders[i].local_id)"<<address->orders[i].local_id
+//                    << " (address->orders[i].order_id)"<<address->orders[i].order_id
+//                    << " (address->orders[i].status)"<<address->orders[i].status << std::endl;
+//        }
         address_book[user_name] = address;
     }
 }
@@ -92,6 +101,7 @@ void TDUserInfoHelper::switch_day()
 void TDUserInfoHelper::clean_up(TDUserInfo* info)
 {
     info->last_order_index = -1;
+//    std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY   clean_up  info->orders"<<std::endl;
     memset(info->orders, '\0', AVAILABLE_ORDER_LIMIT * sizeof(TDOrderInfo));
 }
 
@@ -165,10 +175,12 @@ bool TDUserInfoHelper::get_order(const string& user_name, int order_id, int &loc
     {
         local_id = order_info->local_id;
         strncpy(ticker, order_info->ticker, ORDER_INFO_TICKER_LIMIT);
+//        std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY  [true] get_order  (order_id)" << order_id << " (local_id)" << local_id  << " (order_info->ticker)" << order_info->ticker<< std::endl;
         return true;
     }
     else
     {
+//        std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY  [false]  get_order  (order_id)" << order_id << " (local_id)" << local_id << "(ticker)" << ticker << std::endl;
         return false;
     }
 }

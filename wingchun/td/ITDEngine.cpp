@@ -157,6 +157,7 @@ void ITDEngine::listening()
                 }
                 else if (msg_type == MSG_TYPE_SWITCH_TRADING_DAY)
                 {
+//                    std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY"<<std::endl;
                     user_helper->switch_day();
                     for (auto iter: clients)
                     {
@@ -164,6 +165,7 @@ void ITDEngine::listening()
                             iter.second.pos_handler->switch_day();
                     }
                     local_id = 1;
+//                    std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY (local_id)" << local_id <<std::endl;
                     on_switch_day();
                 }
             }
@@ -214,6 +216,7 @@ void ITDEngine::listening()
                         strcpy(order->InvestorID, accounts[idx].InvestorID);
                         int order_id = order->KfOrderID;
                         int local_id;
+//                        std::cout << "MSG_TYPE_LF_ORDER_ACTION: (name)"<<name  <<" (order_id)" << order_id << " (local_id)" << local_id <<std::endl;
                         if (user_helper->get_order(name, order_id, local_id, order->InstrumentID))
                         {
                             string order_ref = std::to_string(local_id);
