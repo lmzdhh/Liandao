@@ -609,7 +609,7 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
     */
 
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
-    char noneStatus = LF_CHAR_NotTouched;
+    char noneStatus = '\0';
     int64_t binanceOrderId =  result["orderId"].GetInt64();
     addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction, binanceOrderId);
 }
