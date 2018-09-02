@@ -1,69 +1,71 @@
-# -*- coding:utf-8 -*-
-import os
+import os, sys
 import datetime
 
 
-# 本程序用于每天将收到的md数据导出journal, 展开平日车博欧克0，并压缩后，放入特定的目录
 if __name__ == "__main__":
-    now = datetime.datetime.now()
-    last_day_time = now + datetime.timedelta(days=-1)
+	
+    if len(sys.argv) != 4:
+	    print("usage: {} exchange date output_dir\n".format(sys.argv[0]))
+	    exit(1)
+	
+    exchange_str = sys.argv[1]
+    md_exchange_str = "MD_{}".format(exchange_str.upper())
+   	
+    date = int(sys.argv[2])
+    year = date / 10000
+    month = (date - year * 10000) / 100
+    day = date - year * 10000 - month * 100
+	
+    last_day_time = datetime.datetime(year, month, day) 
+    next_day_time = last_day_time + datetime.timedelta(days=1)
 
-    yesterday_str = last_day_time.strftime('%Y%m%d')
-    print("yesterday_str", yesterday_str)
-    yesterday_morning_str = last_day_time.strftime('%Y%m%d') + "-00:00:00"
+    last_date_str = last_day_time.strftime('%Y%m%d')
+    next_date_str = next_day_time.strftime('%Y%m%d')
 
-    print("yesterday_morning_str", yesterday_morning_str)
-    today_morning_str = now.strftime('%Y%m%d') + "-00:00:00"
-    print("today_morning_str", today_morning_str)
+    target_folder = sys.argv[3]
 
-    # 今天的临时文件存放目录
-    temp_folder = "/tmp/coin_kungfu/"+ yesterday_str
+    temp_folder = "/tmp/coin_kungfu/" + last_date_str
 
     commands_lines = "#!/bin/sh\n"
-    # 清空目录重建
     commands_lines += "rm -rf %s\n" % (temp_folder)
     commands_lines += "mkdir -p %s\n" % (temp_folder)
-    # 导出文件
-    dump_scripts = [
-    "yjj dump -n MD_BINANCE -s %s -e %s -m 106 -o %s/binance_pricebook20_tmp.csv",
-    "yjj dump -n MD_BINANCE -s %s -e %s -m 105 -o %s/binance_trade.csv",
 
-    "yjj dump -n MD_COINMEX -s %s -e %s -m 106 -o %s/coinmex_pricebook20_tmp.csv",
-    "yjj dump -n MD_COINMEX -s %s -e %s -m 105 -o %s/coinmex_trade.csv",
+    start_time = 0;
 
-    "yjj dump -n MD_BITFINEX -s %s -e %s -m 106 -o %s/bitfinex_pricebook20_tmp.csv",
-    "yjj dump -n MD_BITFINEX -s %s -e %s -m 105 -o %s/bitfinex_trade.csv"
-    ]
-    for dump_template in dump_scripts:
-        commands_lines += (dump_template % (yesterday_morning_str, today_morning_str, temp_folder)) + "\n"
+    while True:
+        if start_time >= 24:
+            break
+		
+        next_start_time = start_time + 2	
+        yesterday_morning_str = last_date_str + "-{0:02d}:00:00".format(start_time)
+        today_morning_str = (last_date_str + "-{0:02d}:00:00".format(next_start_time)) if next_start_time < 24 else next_date_str + "-00:00:00"
+        start_time = next_start_time	
 
-    # price_book20_dump_csv_expand.py 展开文件
-    commands_lines += ("python /root/liandao/yijinjing/tools/price_book20_dump_csv_expand.py -f %s/binance_pricebook20_tmp.csv -o %s/binance_pricebook20.csv" % (temp_folder, temp_folder)) + "\n"
-    commands_lines += ("python /root/liandao/yijinjing/tools/price_book20_dump_csv_expand.py -f %s/coinmex_pricebook20_tmp.csv -o %s/coinmex_pricebook20.csv" % (temp_folder, temp_folder)) + "\n"
-    commands_lines += ("python /root/liandao/yijinjing/tools/price_book20_dump_csv_expand.py -f %s/bitfinex_pricebook20_tmp.csv -o %s/bitfinex_pricebook20.csv" % (temp_folder, temp_folder)) + "\n"
+        pricebook_csv_file_name = "{}_pricebook20_{}.csv".format(md_exchange_str, yesterday_morning_str)
+        pricebook_csv_temp_file_name = "{}_pricebook20_tmp_{}.csv".format(md_exchange_str, yesterday_morning_str)
+        trade_csv_file_name = "{}_trade_{}.csv".format(md_exchange_str, yesterday_morning_str)
 
-    # gzip 原地压缩文件
-    gzip_rm_tmp_scripts = [
-    "gzip %s/binance_pricebook20.csv",
-    "rm -rf %s/binance_pricebook20_tmp.csv",
-    "gzip %s/binance_trade.csv",
+        dump_scripts = [
+             "yjj dump -n {} -s %s -e %s -m 106 -o %s/{}".format(md_exchange_str, pricebook_csv_temp_file_name),
+             "yjj dump -n {} -s %s -e %s -m 105 -o %s/{}".format(md_exchange_str, trade_csv_file_name),
+        ]
+        
+        for dump_template in dump_scripts:
+             commands_lines += (dump_template % (yesterday_morning_str, today_morning_str, temp_folder)) + "\n"
 
-    "gzip %s/coinmex_pricebook20.csv",
-    "rm -rf %s/coinmex_pricebook20_tmp.csv",
-    "gzip %s/coinmex_trade.csv",
+        commands_lines += ("python /root/liandao/yijinjing/tools/price_book20_dump_csv_expand.py -f {0}/{1} -o {0}/{2}".format(temp_folder, pricebook_csv_temp_file_name, pricebook_csv_file_name)) + "\n"
 
-    "gzip %s/bitfinex_pricebook20.csv",
-    "rm -rf %s/bitfinex_pricebook20_tmp.csv",
-    "gzip %s/bitfinex_trade.csv"
-    ]
-    for gzip_script in gzip_rm_tmp_scripts:
-        commands_lines += (gzip_script % (temp_folder)) + "\n"
+        gzip_rm_tmp_scripts = [
+            "gzip %s/{}".format(pricebook_csv_file_name),
+            "rm -rf %s/{}".format(pricebook_csv_temp_file_name),
+            "gzip %s/{}".format(trade_csv_file_name),
+        ]
+        
+        for gzip_script in gzip_rm_tmp_scripts:
+            commands_lines += (gzip_script % (temp_folder)) + "\n"
 
-    # 移动到docker共享目录
-    target_folder = "/share/coin_kungfu/"
     commands_lines += "rm -rf %s\n" % (target_folder)
     commands_lines += "mkdir -p %s\n" % (target_folder)
-
     commands_lines += ("mv %s %s" % (temp_folder, target_folder)) + "\n"
 
     with open(os.path.join("/tmp/export_kungfu_csv.sh"), 'w') as shell_file:
@@ -72,6 +74,5 @@ if __name__ == "__main__":
         shell_file.close()
     os.chmod("/tmp/export_kungfu_csv.sh",  0o755)
 
-    # print(commands_lines)
     print("shell file create successful:", "/tmp/export_kungfu_csv.sh")
 
