@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, subprocess
 import datetime
 
 
@@ -71,12 +71,16 @@ if __name__ == "__main__":
     last_date_str2 = last_day_time.strftime('%Y-%m-%d')
     next_date_str2 = next_day_time.strftime('%Y-%m-%d')
     commands_lines += ("for f in `find /shared/kungfu/journal/MD/{}/* -newermt \"{} 00:00:00\" ! -newermt \"{} 00:00:00\"`; do rm -rf $f; done".format(exchange_str.upper(), last_date_str2, next_date_str2))
-
-    with open(os.path.join("/tmp/export_kungfu_csv.sh"), 'w') as shell_file:
+	
+    script_name = "/tmp/export_kungfu_csv_{}.sh".format(exchange_str)
+    with open(os.path.join(script_name), 'w') as shell_file:
         shell_file.write(commands_lines)
         shell_file.flush()
         shell_file.close()
-    os.chmod("/tmp/export_kungfu_csv.sh",  0o755)
+    os.chmod(script_name,  0o755)
 
-    print("shell file create successful:", "/tmp/export_kungfu_csv.sh")
+    print("shell file create successful: {}, running it now...".format(script_name))
 
+    subprocess.Popen("bash {}".format(script_name), shell=True)
+
+	
