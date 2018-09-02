@@ -46,8 +46,8 @@ if __name__ == "__main__":
         trade_csv_file_name = "{}_trade_{}.csv".format(md_exchange_str, yesterday_morning_str)
 
         dump_scripts = [
-             "yjj dump -n {} -s %s -e %s -m 106 -o %s/{}".format(md_exchange_str, pricebook_csv_temp_file_name),
-             "yjj dump -n {} -s %s -e %s -m 105 -o %s/{}".format(md_exchange_str, trade_csv_file_name),
+              "yjj dump -c yjj_dump_{} -n {} -s %s -e %s -m 106 -o %s/{}".format(exchange_str, md_exchange_str, pricebook_csv_temp_file_name),
+              "yjj dump -c yjj_dump_{} -n {} -s %s -e %s -m 105 -o %s/{}".format(exchange_str, md_exchange_str, trade_csv_file_name),
         ]
         
         for dump_template in dump_scripts:
@@ -67,6 +67,10 @@ if __name__ == "__main__":
     commands_lines += "rm -rf %s\n" % (target_folder)
     commands_lines += "mkdir -p %s\n" % (target_folder)
     commands_lines += ("mv %s %s" % (temp_folder, target_folder)) + "\n"
+
+    last_date_str2 = last_day_time.strftime('%Y-%m-%d')
+    next_date_str2 = next_day_time.strftime('%Y-%m-%d')
+    commands_lines += ("for f in `find /shared/kungfu/journal/MD/{}/* -newermt \"{} 00:00:00\" ! -newermt \"{} 00:00:00\"`; do rm -rf $f; done".format(exchange_str.upper(), last_date_str2, next_date_str2))
 
     with open(os.path.join("/tmp/export_kungfu_csv.sh"), 'w') as shell_file:
         shell_file.write(commands_lines)
