@@ -36,7 +36,7 @@ if __name__ == "__main__":
         if start_time >= 24:
             break
 		
-        next_start_time = start_time + 2	
+        next_start_time = start_time + 1	
         yesterday_morning_str = last_date_str + "-{0:02d}:00:00".format(start_time)
         today_morning_str = (last_date_str + "-{0:02d}:00:00".format(next_start_time)) if next_start_time < 24 else next_date_str + "-00:00:00"
         start_time = next_start_time	
