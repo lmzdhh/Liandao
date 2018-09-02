@@ -4,8 +4,8 @@ import datetime
 
 if __name__ == "__main__":
 	
-    if len(sys.argv) != 4:
-	    print("usage: {} exchange date output_dir\n".format(sys.argv[0]))
+    if len(sys.argv) < 4:
+	    print("usage: {} exchange date output_dir (no_delete)\n".format(sys.argv[0]))
 	    exit(1)
 	
     exchange_str = sys.argv[1]
@@ -22,9 +22,9 @@ if __name__ == "__main__":
     last_date_str = last_day_time.strftime('%Y%m%d')
     next_date_str = next_day_time.strftime('%Y%m%d')
 
-    target_folder = sys.argv[3]
+    target_folder = sys.argv[3] + "/" + last_date_str + "/" + exchange_str
 
-    temp_folder = "/tmp/coin_kungfu/" + last_date_str
+    temp_folder = "/tmp/coin_kungfu/" + last_date_str + "/" + exchange_str
 
     commands_lines = "#!/bin/sh\n"
     commands_lines += "rm -rf %s\n" % (temp_folder)
@@ -64,13 +64,14 @@ if __name__ == "__main__":
         for gzip_script in gzip_rm_tmp_scripts:
             commands_lines += (gzip_script % (temp_folder)) + "\n"
 
-    commands_lines += "rm -rf %s\n" % (target_folder)
+    commands_lines += "rm -rf %s/*\n" % (target_folder)
     commands_lines += "mkdir -p %s\n" % (target_folder)
-    commands_lines += ("mv %s %s" % (temp_folder, target_folder)) + "\n"
-
-    last_date_str2 = last_day_time.strftime('%Y-%m-%d')
-    next_date_str2 = next_day_time.strftime('%Y-%m-%d')
-    commands_lines += ("for f in `find /shared/kungfu/journal/MD/{}/* -newermt \"{} 00:00:00\" ! -newermt \"{} 00:00:00\"`; do rm -rf $f; done".format(exchange_str.upper(), last_date_str2, next_date_str2))
+    commands_lines += ("mv %s/* %s/" % (temp_folder, target_folder)) + "\n"
+	
+    if not (len(sys.argv) == 5 and sys.argv[4] == "no_delete"):
+        last_date_str2 = last_day_time.strftime('%Y-%m-%d')
+        next_date_str2 = next_day_time.strftime('%Y-%m-%d')
+        commands_lines += ("for f in `find /shared/kungfu/journal/MD/{}/* -newermt \"{} 00:00:00\" ! -newermt \"{} 00:00:00\"`; do rm -rf $f; done".format(exchange_str.upper(), last_date_str2, next_date_str2))
 	
     script_name = "/tmp/export_kungfu_csv_{}.sh".format(exchange_str)
     with open(os.path.join(script_name), 'w') as shell_file:
@@ -81,6 +82,8 @@ if __name__ == "__main__":
 
     print("shell file create successful: {}, running it now...".format(script_name))
 
-    subprocess.Popen("bash {}".format(script_name), shell=True)
-
-	
+    proc = subprocess.Popen("bash {}".format(script_name), shell=True)
+    try:
+        proc.wait() 
+    except:
+        proc.terminate()
