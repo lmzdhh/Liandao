@@ -67,7 +67,7 @@
     },
     "bitfinex":
     {
-      "book_depth_count": 5,
+      "book_depth_count": 25,
       "trade_count": 10,
       "whiteLists": {
         "strategy_coinpair(base_quote)": "exchange_coinpair",
