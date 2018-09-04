@@ -103,7 +103,7 @@ def insert_order_and_cancel_order(context, source):
     #send 50 order
     order_ids = []
     count = 0
-    while count < 50:
+    while count < 100000:
         count += 1
         context.order_rid = context.insert_limit_order(source=SOURCE.MOCK,
             ticker=context.ticker,
@@ -112,6 +112,7 @@ def insert_order_and_cancel_order(context, source):
             volume=123,
             direction=DIRECTION.Buy,
             offset=OFFSET.Open)
+        time.sleep(0.001)
         order_ids.append(context.order_rid)
         print("context.order_rid:", context.order_rid, count)
 
@@ -120,7 +121,7 @@ def insert_order_and_cancel_order(context, source):
 
     count = 0
     while count < len(order_ids):
-        time.sleep(5)
+        time.sleep(0.001)
 
         context.cancel_id = context.cancel_order(source=source, order_id=order_ids[count])
         print 'cancel (order_id)', order_ids[count], ' (request_id)', context.cancel_id

@@ -374,6 +374,8 @@ bool ITDEngine::add_client(const string& client_name, const json& j_request)
     int rid_s = j_request["rid_s"].get<int>();
     int rid_e = j_request["rid_e"].get<int>();
     long last_switch_day = j_request["last_switch_nano"].get<long>();
+
+    KF_LOG_DEBUG(logger, "[add_client]" << "(rid_s)" << rid_s << " (rid_e)" << rid_e << " (last_switch_day)" << last_switch_day);
     rid_manager.set(rid_s, client_name);
     user_helper->load(client_name);
     auto iter = clients.find(client_name);
@@ -386,6 +388,9 @@ bool ITDEngine::add_client(const string& client_name, const json& j_request)
         else
         {
             int idx = reader->addJournal(folder, client_name);
+
+            KF_LOG_DEBUG(logger, "[add_client]" << "(rid_s)" << rid_s << " (rid_e)" << rid_e << " (last_switch_day)" << last_switch_day << " (addJournal.idx)" << idx);
+
             reader->seekTimeJournal(idx, cur_time);
             ClientInfoUnit& status = clients[client_name];
             status.is_alive = true;

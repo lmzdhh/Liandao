@@ -45,11 +45,13 @@ void PstPidCheck::go()
             struct stat sts;
             std::stringstream ss;
             ss << "/proc/" << item.first;
+
             if (stat(ss.str().c_str(), &sts) == -1 && errno == ENOENT)
             {
                 for (auto const &name: item.second)
                 {
                     clientsToRemove.push_back(name);
+                    KF_LOG_INFO(engine->get_logger(), "[PstPidCheck0clientsToRemove]  push_back()" << name);
                 }
             }
         }

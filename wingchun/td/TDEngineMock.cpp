@@ -302,6 +302,31 @@ void TDEngineMock::req_order_insert(const LFInputOrderField* data, int account_i
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
     }
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_MOCK, 1, requestId, errorId, errorMsg.c_str());
+
+
+    LFRtnOrderField rtn_order;
+    memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+    rtn_order.OrderStatus = LF_CHAR_OrderInserted;
+    rtn_order.VolumeTraded = 0;
+
+    //first send onRtnOrder about the status change or VolumeTraded change
+    strcpy(rtn_order.ExchangeID, "mock");
+    strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+    strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
+    rtn_order.Direction = LF_CHAR_Buy;
+    //No this setting on coinmex
+    rtn_order.TimeCondition = LF_CHAR_GTC;
+    rtn_order.OrderPriceType = LF_CHAR_AnyPrice;
+    strncpy(rtn_order.OrderRef, data->OrderRef, 13);
+    rtn_order.VolumeTotalOriginal = data->Volume;
+    rtn_order.LimitPrice = std::round(data->LimitPrice);
+    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
+
+    on_rtn_order(&rtn_order);
+    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                            source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
+                            1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
 }
 
 

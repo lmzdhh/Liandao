@@ -222,8 +222,11 @@ int PageEngine::reg_journal(const string& clientName)
         KF_LOG_ERROR(logger, "cannot allocate idx in commFile");
         return -1;
     }
-    if (idx > maxIdx)
+    if (idx > maxIdx) {
+        KF_LOG_INFO(logger, "[reg_journal] idx > maxIdx (reg_journal) (maxIdx)" << maxIdx << " (idx)" << idx);
         maxIdx = idx;
+    }
+
 
     PageCommMsg* msg = GET_COMM_MSG(commBuffer, idx);
     msg->status = PAGED_COMM_OCCUPIED;
@@ -318,6 +321,8 @@ void PageEngine::release_page(const PageCommMsg& msg)
             }
         }
     }
+
+    KF_LOG_INFO(logger, "[RmPage-release_page] done");
 }
 
 byte PageEngine::initiate_page(const PageCommMsg& msg)
@@ -419,7 +424,7 @@ void  PageEngine::exit_client(const string& clientName, int hashCode, bool needH
     PageClientInfo& info = it->second;
     if (needHashCheck && hashCode != info.hash_code)
     {
-        KF_LOG_INFO(logger, "[RmClient] HASH FAILED.. (name)" << clientName << " (serverHash)" << info.hash_code << " (clientHash)" << hashCode);
+        KF_LOG_INFO(logger, "[RmClient-exit_client] HASH FAILED.. (name)" << clientName << " (serverHash)" << info.hash_code << " (clientHash)" << hashCode);
         return;
     }
     if (info.is_strategy)
@@ -439,16 +444,23 @@ void  PageEngine::exit_client(const string& clientName, int hashCode, bool needH
     for (auto idx: info.user_index_vec)
     {
         PageCommMsg* msg = GET_COMM_MSG(commBuffer, idx);
-        if (msg->status == PAGED_COMM_ALLOCATED)
+        if (msg->status == PAGED_COMM_ALLOCATED) {
             release_page(*msg);
+            KF_LOG_INFO(logger, "[RmClient-exit_client] (name)" << clientName << " PAGED_COMM_ALLOCATED(release_page)");
+        }
         msg->status = PAGED_COMM_RAW;
     }
-    KF_LOG_INFO(logger, "[RmClient] (name)" << clientName << " (start)" << info.reg_nano << " (end)" << getNanoTime());
+    KF_LOG_INFO(logger, "[RmClient-exit_client] (name)" << clientName << " (start)" << info.reg_nano << " (end)" << getNanoTime());
     vector<string>& clients = pidClient[info.pid];
     clients.erase(remove(clients.begin(), clients.end(), clientName), clients.end());
-    if (clients.size() == 0)
+    if (clients.size() == 0) {
         pidClient.erase(info.pid);
+        KF_LOG_INFO(logger, "[RmClient-exit_client] (name)" << clientName << " (clients.size() == 0) pidClient.erase(info.pid)" << info.pid);
+    }
+
     clientJournals.erase(it);
+
+    KF_LOG_INFO(logger, "[RmClient-exit_client] clientJournals.erase(it) done");
 }
 
 IntPair PageEngine::register_strategy(const string& strategyName)
@@ -499,10 +511,12 @@ void PageEngine::start_comm()
         {
             acquire_mutex();
             KF_LOG_INFO(logger, "[Demand] (idx)" << idx);
+            KF_LOG_INFO(logger, "[Demand-start_comm] (idx)" << idx << " (msg->last_page_num )" << msg->last_page_num << " (msg->page_num)" << msg->page_num);
             if (msg->last_page_num > 0 && msg->last_page_num != msg->page_num)
             {
                 short curPage = msg->page_num;
                 msg->page_num = msg->last_page_num;
+                KF_LOG_INFO(logger, "[Demand-start_comm] release_page(idx)" << idx);
                 release_page(*msg);
                 msg->page_num = curPage;
             }
