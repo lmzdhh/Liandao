@@ -1344,7 +1344,7 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
                                                   " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
 
         //has error and find the 'error setting certificate verify locations' error, should retry
-        if(response.error.message.size() > 0 && response.error.message.find("error setting certificate verify locations") >= 0) {
+        if(502 == response.status_code || (response.error.message.size() > 0 && response.error.message.find("error setting certificate verify locations") >= 0) ) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -1518,7 +1518,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, s
                                                     " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
 
         //has error and find the 'error setting certificate verify locations' error, should retry
-        if(response.error.message.size() > 0 && response.error.message.find("error setting certificate verify locations") >= 0) {
+        if(502 == response.status_code || (response.error.message.size() > 0 && response.error.message.find("error setting certificate verify locations") >= 0) ) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::seconds(1));
