@@ -387,9 +387,6 @@ void MDEngineBitmax::onDepth(Document& json)
     std::string symbol = json["s"].GetString();
     KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth: (symbol)" << symbol);
 
-	bool asks_update = false;
-	bool bids_update = false;
-
 	std::string ticker = coinPairWhiteList.GetKeyByValue(symbol);
 	if(ticker.length() == 0) {
         KF_LOG_DEBUG(logger, "MDEngineBitmax::onDepth: not in WhiteList , ignore it: (symbol) " << symbol);
@@ -414,7 +411,6 @@ void MDEngineBitmax::onDepth(Document& json)
 				priceBook20Assembler.UpdateAskPrice(ticker, price, volume);
             }
 //                KF_LOG_DEBUG(logger, "MDEngineCoinmex::onDepth: asks price:" << price<<  "  volume:"<< volume);
-            asks_update = true;
         }
     }
 
@@ -433,21 +429,18 @@ void MDEngineBitmax::onDepth(Document& json)
 				priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
             }
 //                KF_LOG_DEBUG(logger, "MDEngineCoinmex::onDepth: bids price:" << price<<  "  volume:"<< volume);
-            bids_update = true;
         }
     }
 
 	// has any update
-	if(asks_update || bids_update)
-	{
-		LFPriceBook20Field md;
-		memset(&md, 0, sizeof(md));
-		priceBook20Assembler.Assembler(ticker, md);
-		strcpy(md.ExchangeID, "bitmax");
+    LFPriceBook20Field md;
+    memset(&md, 0, sizeof(md));
+    if(priceBook20Assembler.Assembler(ticker, md)) {
+        strcpy(md.ExchangeID, "bitmax");
 
-		KF_LOG_INFO(logger, "MDEngineBitmax::onDepth: on_price_book_update");
-		on_price_book_update(&md);
-	}
+        KF_LOG_INFO(logger, "MDEngineBitmax::onDepth: on_price_book_update");
+        on_price_book_update(&md);
+    }
 }
 
 std::string MDEngineBitmax::parseJsonToString(const char* in)

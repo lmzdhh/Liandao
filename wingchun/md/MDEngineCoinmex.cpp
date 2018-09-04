@@ -534,8 +534,6 @@ void MDEngineCoinmex::onDepth(Document& json)
     }
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "(ticker) " << ticker);
-    bool asks_update = false;
-    bool bids_update = false;
 
     //make depth map
     if(json.HasMember("data") && json["data"].IsObject()) {
@@ -554,7 +552,6 @@ void MDEngineCoinmex::onDepth(Document& json)
                     priceBook20Assembler.UpdateAskPrice(ticker, price, volume);
                 }
 //                KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: asks price:" << price<<  "  volume:"<< volume);
-                asks_update = true;
             }
         }
 
@@ -573,21 +570,20 @@ void MDEngineCoinmex::onDepth(Document& json)
                     priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
                 }
 //                KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: bids price:" << price<<  "  volume:"<< volume);
-                bids_update = true;
             }
         }
     }
+
     // has any update
-    if(asks_update || bids_update)
-    {
-        LFPriceBook20Field md;
-        memset(&md, 0, sizeof(md));
-        priceBook20Assembler.Assembler(ticker, md);
+    LFPriceBook20Field md;
+    memset(&md, 0, sizeof(md));
+    if(priceBook20Assembler.Assembler(ticker, md)) {
         strcpy(md.ExchangeID, "coinmex");
 
         KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: on_price_book_update");
         on_price_book_update(&md);
     }
+
 }
 
 std::string MDEngineCoinmex::parseJsonToString(const char* in)

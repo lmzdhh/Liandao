@@ -653,9 +653,6 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 
     KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (ticker) " << ticker);
 
-    bool asks_update = false;
-    bool bids_update = false;
-
     int size = json.GetArray().Size();
     int last_element = size - 1;
     if (json.GetArray()[last_element].IsArray()) {
@@ -707,19 +704,15 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
                 if (count == 0) {
                     if(dAmount == 1 ) {
                         priceBook20Assembler.EraseBidPrice(ticker, price);
-                        bids_update = true;
                     }
                     if(dAmount == -1 ) {
                         priceBook20Assembler.EraseAskPrice(ticker, price);
-                        asks_update = true;
                     }
                 } else if (count > 0) {
                     if(dAmount > 0) {
                         priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
-                        bids_update = true;
                     } else if(dAmount <= 0 ) {
                         priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
-                        asks_update = true;
                     }
                 }
 //                KF_LOG_INFO(logger, " (0)" << json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetDouble() );
@@ -755,19 +748,15 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
             if (count == 0) {
                 if(dAmount == 1 ) {
                     priceBook20Assembler.EraseBidPrice(ticker, price);
-                    bids_update = true;
                 }
                 if(dAmount == -1 ) {
                     priceBook20Assembler.EraseAskPrice(ticker, price);
-                    asks_update = true;
                 }
             } else if (count > 0) {
                 if(dAmount > 0) {
                     priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
-                    bids_update = true;
                 } else if(dAmount <= 0 ) {
                     priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
-                    asks_update = true;
                 }
             }
 //            KF_LOG_INFO(logger, " update(0)" << json.GetArray()[last_element].GetArray()[0].GetDouble() );
@@ -776,13 +765,10 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
         }
     }
 
-
     // has any update
-    if(asks_update || bids_update)
-    {
-        LFPriceBook20Field md;
-        memset(&md, 0, sizeof(md));
-        priceBook20Assembler.Assembler(ticker, md);
+    LFPriceBook20Field md;
+    memset(&md, 0, sizeof(md));
+    if(priceBook20Assembler.Assembler(ticker, md)) {
         strcpy(md.ExchangeID, "bitfinex");
 
         KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: on_price_book_update");

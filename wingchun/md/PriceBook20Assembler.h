@@ -14,44 +14,21 @@
 #include "longfist/LFDataStruct.h"
 
 
-
+//本类并非多线程安全的，请在单线程环境使用
 
 struct PriceAndVolume
 {
     int64_t price;
     uint64_t volume;
-    bool operator < (const PriceAndVolume &other) const
-    {
-        if (price<other.price)
-        {
-            return true;
-        }
-        return false;
-    }
 };
 
 
-static int sort_price_asc(const PriceAndVolume &p1,const PriceAndVolume &p2)
+struct PriceLevelBooks
 {
-    return p1.price < p2.price;
-};
-
-static int sort_price_desc(const PriceAndVolume &p1,const PriceAndVolume &p2)
-{
-    return p1.price > p2.price;
-};
-
-template<typename T>
-static void sortMapByKey(std::map<int64_t, uint64_t> &t_map, std::vector<PriceAndVolume> &t_vec, T& sort_by)
-{
-    for(std::map<int64_t, uint64_t>::iterator iter = t_map.begin();iter != t_map.end(); iter ++)
-    {
-        PriceAndVolume pv;
-        pv.price = iter->first;
-        pv.volume = iter->second;
-        t_vec.push_back(pv);
-    }
-    sort(t_vec.begin(), t_vec.end(), sort_by);
+    std::vector<PriceAndVolume>* asksPriceAndVolumes;
+    std::vector<PriceAndVolume>* bidsPriceAndVolumes;
+    bool hasLevel20AskChanged;
+    bool hasLevel20BidChanged;
 };
 
 
@@ -64,17 +41,33 @@ public:
     void UpdateAskPrice(std::string ticker, int64_t price, uint64_t volume);
     void EraseBidPrice(std::string ticker, int64_t price);
     void UpdateBidPrice(std::string ticker, int64_t price, uint64_t volume);
-
+    //返回true是有效的更新; false是无效的更新,应该忽略这个LFPriceBook20Field
     bool Assembler(std::string ticker, LFPriceBook20Field &md);
 
     void clearPriceBook(std::string ticker);
     void clearPriceBook();
 private:
-    //<ticker, <price, volume>>
-    std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;
-    std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
 
+    /*Vector follows this order: (from Binance MD)
+     {
+	"bids": [
+		["0.00000702", "17966.00000000", []],
+		["0.00000701", "111276.00000000", []],
+		["0.00000700", "11730816.00000000", []],
+		["0.00000699", "304119.00000000", []],
+		["0.00000698", "337397.00000000", []]
+	],
+	"asks": [
+		["0.00000703", "65956.00000000", []],
+		["0.00000704", "213919.00000000", []],
+		["0.00000705", "463226.00000000", []],
+		["0.00000706", "709268.00000000", []],
+		["0.00000707", "78529.00000000", []]
+	]
+}
+ * */
 
+    std::unordered_map<std::string, PriceLevelBooks*> tickerPriceMap;
 };
 
 
