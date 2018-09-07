@@ -36,7 +36,7 @@ class PriceBook20Assembler {
 
 
 public:
-
+    ~PriceBook20Assembler();
     void EraseAskPrice(std::string ticker, int64_t price);
     void UpdateAskPrice(std::string ticker, int64_t price, uint64_t volume);
     void EraseBidPrice(std::string ticker, int64_t price);
@@ -47,7 +47,7 @@ public:
     void clearPriceBook(std::string ticker);
     void clearPriceBook();
 private:
-
+    void testPriceBook20Assembler();
     /*Vector follows this order: (from Binance MD)
      {
 	"bids": [

@@ -4,6 +4,10 @@
 
 #include "PriceBook20Assembler.h"
 
+PriceBook20Assembler::~PriceBook20Assembler()
+{
+    clearPriceBook();
+}
 
 void PriceBook20Assembler::EraseAskPrice(std::string ticker, int64_t price)
 {
@@ -72,7 +76,6 @@ void PriceBook20Assembler::UpdateAskPrice(std::string ticker, int64_t price, uin
     }
 
     std::vector<PriceAndVolume>::iterator itr;
-    bool existPrice = false;
     int idx = -1;
     for(itr = asksPriceAndVolume->begin(); itr != asksPriceAndVolume->end(); itr++)
     {
@@ -82,18 +85,12 @@ void PriceBook20Assembler::UpdateAskPrice(std::string ticker, int64_t price, uin
         }
         //exist price replace volume
         if(price == itr.base()->price) {
-            existPrice = true;
             itr.base()->volume = volume;
-            break;
+            if (idx < 20) {
+                priceLevelBook->hasLevel20AskChanged = true;
+            }
+            return;
         }
-
-    }
-
-    if(existPrice) {
-        if (idx < 20) {
-            priceLevelBook->hasLevel20AskChanged = true;
-        }
-        return;
     }
 
     PriceAndVolume pv;
@@ -123,7 +120,6 @@ void PriceBook20Assembler::UpdateBidPrice(std::string ticker, int64_t price, uin
     }
 
     std::vector<PriceAndVolume>::iterator itr;
-    bool existPrice = false;
     int idx = -1;
     for(itr = bidsPriceAndVolume->begin(); itr != bidsPriceAndVolume->end(); itr++)
     {
@@ -133,17 +129,12 @@ void PriceBook20Assembler::UpdateBidPrice(std::string ticker, int64_t price, uin
         }
         //exist price replace volume
         if(price == itr.base()->price) {
-            existPrice = true;
             itr.base()->volume = volume;
-            break;
+            if (idx < 20) {
+                priceLevelBook->hasLevel20BidChanged = true;
+            }
+            return;
         }
-    }
-
-    if(existPrice) {
-        if (idx < 20) {
-            priceLevelBook->hasLevel20BidChanged = true;
-        }
-        return;
     }
 
     PriceAndVolume pv;
@@ -195,25 +186,99 @@ bool PriceBook20Assembler::Assembler(std::string ticker, LFPriceBook20Field &md)
     md.BidLevelCount = size;
 
     strcpy(md.InstrumentID, ticker.c_str());
+    iter->second->hasLevel20AskChanged = false;
+    iter->second->hasLevel20BidChanged = false;
+
     return true;
 }
 
 void PriceBook20Assembler::clearPriceBook(std::string ticker)
 {
     auto iter = tickerPriceMap.find(ticker);
-    if(iter != tickerPriceMap.end()) {
-        iter->second->asksPriceAndVolumes->clear();
-        iter->second->bidsPriceAndVolumes->clear();
+    if(iter != tickerPriceMap.end())
+    {
+        if (iter->second->asksPriceAndVolumes != nullptr) {
+            iter->second->asksPriceAndVolumes->clear();
+            delete iter->second->asksPriceAndVolumes;
+        }
+
+        if (iter->second->bidsPriceAndVolumes != nullptr) {
+            iter->second->bidsPriceAndVolumes->clear();
+            delete iter->second->bidsPriceAndVolumes;
+        }
+        delete iter->second;
+        iter = tickerPriceMap.erase(iter);
     }
-    tickerPriceMap.erase(ticker);
 }
 
 void PriceBook20Assembler::clearPriceBook()
 {
-    auto map_itr = tickerPriceMap.begin();
-    while(map_itr != tickerPriceMap.end()){
-        map_itr->second->asksPriceAndVolumes->clear();
-        map_itr->second->bidsPriceAndVolumes->clear();
-        map_itr++;
+    auto iter = tickerPriceMap.begin();
+    while(iter != tickerPriceMap.end())
+    {
+        if (iter->second->asksPriceAndVolumes != nullptr) {
+            iter->second->asksPriceAndVolumes->clear();
+            delete iter->second->asksPriceAndVolumes;
+        }
+
+        if (iter->second->bidsPriceAndVolumes != nullptr) {
+            iter->second->bidsPriceAndVolumes->clear();
+            delete iter->second->bidsPriceAndVolumes;
+        }
+        delete iter->second;
+        iter = tickerPriceMap.erase(iter);
     }
+}
+
+void PriceBook20Assembler::testPriceBook20Assembler() {
+
+    //test clear
+    PriceBook20Assembler priceBook20Assembler;
+    std::string ticker = "BTCUSDT";
+    priceBook20Assembler.EraseAskPrice(ticker, (int64_t)1);
+    priceBook20Assembler.clearPriceBook();
+    priceBook20Assembler.EraseBidPrice(ticker, (int64_t)1);
+    priceBook20Assembler.clearPriceBook(ticker);
+    priceBook20Assembler.clearPriceBook(ticker);
+    priceBook20Assembler.clearPriceBook();
+
+
+    LFPriceBook20Field md = {0};
+    //test data
+    for(int i=0; i < 25; i++) {
+        priceBook20Assembler.UpdateAskPrice(ticker, (int64_t) (i * 10), (uint64_t)99);
+    }
+    std::cout << "debug print " << std::endl;
+    priceBook20Assembler.Assembler(ticker, md);
+
+    //test insert
+    priceBook20Assembler.UpdateAskPrice(ticker, (int64_t) 12, (uint64_t)99);
+    std::cout << "debug print ,after 12 " << std::endl;
+    priceBook20Assembler.Assembler(ticker, md);
+
+    //test erase
+    priceBook20Assembler.EraseAskPrice(ticker, (int64_t) 12);
+    std::cout << "debug print " << std::endl;
+    priceBook20Assembler.Assembler(ticker, md);
+
+
+    //more then 20
+    priceBook20Assembler.UpdateAskPrice(ticker, (int64_t) 191, (uint64_t)91);
+    std::cout << "debug print ,after 21 " << std::endl;
+    priceBook20Assembler.Assembler(ticker, md);
+
+
+    priceBook20Assembler.UpdateAskPrice(ticker, (int64_t) 181, (uint64_t)81);
+    std::cout << "debug print ,after 19 " << std::endl;
+    priceBook20Assembler.Assembler(ticker, md);
+    std::cout << "debug print again should no change " << std::endl;
+    priceBook20Assembler.Assembler(ticker, md);
+
+    //test update
+    priceBook20Assembler.UpdateAskPrice(ticker, (int64_t) 170, (uint64_t)70);
+    priceBook20Assembler.UpdateAskPrice(ticker, (int64_t) 190, (uint64_t)90);
+    std::cout << "debug print ,after 190 " << std::endl;
+    priceBook20Assembler.Assembler(ticker, md);
+
+    std::cout << "done" << std::endl;
 }
