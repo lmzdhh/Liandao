@@ -9,6 +9,7 @@ class SOURCE:
     MOCK = 20
     BITMAX = 21
     BITFINEX = 22
+    BITMEX = 23
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
@@ -95,6 +96,13 @@ class MsgTypes:
     MSG_TYPE_LF_RTN_TRADE_BITFINEX = 22206
     MSG_TYPE_LF_ORDER_ACTION_BITFINEX = 22207
 
+    MSG_TYPE_LF_MD_BITMEX        = 23101
+    MSG_TYPE_LF_QRY_POS_BITMEX   = 23201
+    MSG_TYPE_LF_RSP_POS_BITMEX   = 23202
+    MSG_TYPE_LF_ORDER_BITMEX     = 23204
+    MSG_TYPE_LF_RTN_ORDER_BITMEX = 23205
+    MSG_TYPE_LF_RTN_TRADE_BITMEX = 23206
+    MSG_TYPE_LF_ORDER_ACTION_BITMEX = 23207
 ###################################
 # LfActionFlagType: 报单操作标志
 ###################################
