@@ -128,6 +128,8 @@ private:
     void printResponse(const Document& d);
     inline std::string getTimestampString();
 
+    bool shouldRetry(int http_status_code, std::string errorMsg);
+
     int Round(std::string tickSizeStr);
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
     bool loadExchangeOrderFilters(AccountUnitCoinmex& unit, Document &doc);

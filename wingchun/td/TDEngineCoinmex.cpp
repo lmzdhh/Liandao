@@ -1344,7 +1344,7 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
                                                   " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
 
         //has error and find the 'error setting certificate verify locations' error, should retry
-        if(502 == response.status_code || (response.error.message.size() > 0 && response.error.message.find("error setting certificate verify locations") >= 0) ) {
+        if(shouldRetry(response.status_code, response.error.message)) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -1360,6 +1360,16 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
+bool TDEngineCoinmex::shouldRetry(int http_status_code, std::string errorMsg)
+{
+    if( 502 == http_status_code
+       || (errorMsg.size() > 0 && errorMsg.find("error setting certificate verify locations") >= 0)
+       || (401 == http_status_code && errorMsg.size() > 0 && errorMsg.find("Auth error") >= 0) )
+    {
+        return true;
+    }
+    return false;
+}
 
 void TDEngineCoinmex::cancel_all_orders(AccountUnitCoinmex& unit, std::string code, Document& json)
 {
@@ -1518,7 +1528,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, s
                                                     " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
 
         //has error and find the 'error setting certificate verify locations' error, should retry
-        if(502 == response.status_code || (response.error.message.size() > 0 && response.error.message.find("error setting certificate verify locations") >= 0) ) {
+        if(shouldRetry(response.status_code, response.error.message)) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::seconds(1));
