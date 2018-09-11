@@ -13,10 +13,10 @@ find_package(crypto)
 set(CORELIBS crypto)
 
 set(SOURCE_FILES
-        bitfinexmdWSTest.cpp
+        bitfinextdWSTest.cpp
 )
 
 
 add_executable(websocket_test ${SOURCE_FILES})
 
-TARGET_LINK_LIBRARIES(websocket_test -lwebsockets)
+TARGET_LINK_LIBRARIES(websocket_test -lwebsockets ${CMAKE_SOURCE_DIR}/../../utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/../../utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/../../utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/../../utils/cpr/lib/libssl.so)

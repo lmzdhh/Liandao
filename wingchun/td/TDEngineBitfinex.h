@@ -12,6 +12,8 @@
 #include <mutex>
 #include "Timer.h"
 #include <document.h>
+#include <libwebsockets.h>
+
 
 using rapidjson::Document;
 
@@ -20,42 +22,48 @@ WC_NAMESPACE_START
 /**
  * account information unit extra is here.
  */
-
-struct PendingBitfinexOrderStatus
+struct PositionSetting
 {
-    char_31 InstrumentID;   //合约代码
-    char_21 OrderRef;       //报单引用
-    LfOrderStatusType OrderStatus;  //报单状态
-    uint64_t VolumeTraded;  //今成交数量
-    uint64_t averagePrice;//bitfinex given averagePrice on response of query_order
-    char_21 remoteOrderId;//bitfinex sender_order response order id://{"orderId":19319936159776,"result":true}
-};
 
+    string ticker;
+    bool isLong;
+    uint64_t amount;
 
-struct SendOrderFilter
-{
-    char_31 InstrumentID;   //合约代码
-    int ticksize; //for price round.
-    //...other
 };
 
 struct AccountUnitBitfinex
 {
     string api_key;
     string secret_key;
-    string passphrase;
-    //bitfinex and bitmore use the same api, use this parameter for them
     string baseUrl;
     // internal flags
     bool    logged_in;
-    std::vector<PendingBitfinexOrderStatus> newOrderStatus;
-    std::vector<PendingBitfinexOrderStatus> pendingOrderStatus;
-    std::map<std::string, SendOrderFilter> sendOrderFilters;
 
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
+    std::vector<std::string> newPendingSendMsg;
+    std::vector<std::string> pendingSendMsg;
+    struct lws * websocketConn;
 };
 
+struct OrderInsertData
+{
+    LFInputOrderField data;
+    int requestId;
+    //交易所反馈的orderId,在通知消息on_req能得到这个数据, findOrderRefByOrderid() will use this, for the trade info only has orderId
+    int64_t remoteOrderId;
+
+    //    撤单有两种，一种是用orderid 另一种是用clientid + date ,所以在发单时候记录一下当前日期，留待撤单时使用
+    //            如果撤单时发现有orderid  会优先使用orderid ，没有orderid 的时候，才会使用clientid + date
+    //            这种情况可能发生在 我们发单以后， on-req还没有来得及返回orderid，我们就发送撤单指令了
+    std::string dateStr;
+};
+
+struct OrderActionData
+{
+    LFOrderActionField data;
+    int requestId;
+};
 
 /**
  * CTP trade engine
@@ -87,69 +95,79 @@ public:
 public:
     TDEngineBitfinex();
     ~TDEngineBitfinex();
+
+
+    void on_lws_data(struct lws* conn, const char* data, size_t len);
+    void on_lws_connection_error(struct lws* conn);
+    int lws_write_subscribe(struct lws* conn);
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
     vector<AccountUnitBitfinex> account_units;
 
-    std::string GetSide(const LfDirectionType& input);
-    LfDirectionType GetDirection(std::string input);
+
     std::string GetType(const LfOrderPriceTypeType& input);
     LfOrderPriceTypeType GetPriceType(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
 
     virtual void set_reader_thread() override;
     void loop();
-    std::vector<std::string> split(std::string str, std::string token);
-    void GetAndHandleOrderTradeResponse();
-    void addNewQueryOrdersAndTrades(AccountUnitBitfinex& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                    const uint64_t VolumeTraded, std::string remoteOrderId);
-
-    void retrieveOrderStatus(AccountUnitBitfinex& unit);
-    void moveNewtoPending(AccountUnitBitfinex& unit);
 
     inline int64_t getTimestamp();
-    int64_t getTimeDiffOfExchange(AccountUnitBitfinex& unit);
 
+    std::string createAuthJsonString(AccountUnitBitfinex& unit );
+    std::string parseJsonToString(Document &d);
+    std::string createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr);
+    std::string createCancelOrderIdJsonString(int64_t orderId);
+    std::string createCancelOrderCIdJsonString(int cid, std::string dateStr);
+    std::string getDateStr();
+
+    void lws_login(AccountUnitBitfinex& unit, long timeout_nsec);
+    void onInfo(Document& json);
+    void onAuth(struct lws * websocketConn, Document& json);
+    void onPing(Document& json);
+    void onPosition(struct lws * websocketConn, Document& json);
+    void onTradeExecuted(struct lws * websocketConn, Document& json);
+    void onTradeExecutionUpdate(struct lws * websocketConn, Document& json);
+    void onOrderSnapshot(struct lws * websocketConn, Document& json);
+    void onOrderNewUpdateCancel(struct lws * websocketConn, Document& json);
+    void onNotification(struct lws * websocketConn, Document& json);
+
+
+    void onOrder(struct lws * websocketConn, rapidjson::Value& json);
+
+
+    AccountUnitBitfinex& findAccountUnitBitfinexByWebsocketConn(struct lws * websocketConn);
+
+    void addPendingSendMsg(AccountUnitBitfinex& unit, std::string msg);
+    void moveNewtoPending(AccountUnitBitfinex& unit);
+
+    OrderInsertData findOrderInsertDataByOrderId(int64_t orderId);
+    OrderInsertData findOrderInsertDataByOrderRef(const char_21 orderRef);
+
+
+    bool startWith(const string &str, const string &head) {
+        return str.compare(0, head.size(), head) == 0;
+    }
 private:
-    void get_exchange_time(AccountUnitBitfinex& unit, Document& json);
-    void get_account(AccountUnitBitfinex& unit, Document& json);
-    void get_depth(AccountUnitBitfinex& unit, std::string code, Document& json);
-    void get_products(AccountUnitBitfinex& unit, Document& json);
-    void send_order(AccountUnitBitfinex& unit, const char *code,
-                        const char *side, const char *type, double size, double price, double funds, Document& json);
 
-    void cancel_all_orders(AccountUnitBitfinex& unit, std::string code, Document& json);
-    void cancel_order(AccountUnitBitfinex& unit, std::string code, std::string orderId, Document& json);
-    void query_orders(AccountUnitBitfinex& unit, std::string code, std::string status, Document& json);
-    void query_order(AccountUnitBitfinex& unit, std::string code, std::string orderId, Document& json);
-    void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
-    void printResponse(const Document& d);
-    inline std::string getTimestampString();
-
-    int Round(std::string tickSizeStr);
-    int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
-    bool loadExchangeOrderFilters(AccountUnitBitfinex& unit, Document &doc);
-    void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
-    SendOrderFilter getSendOrderFilter(AccountUnitBitfinex& unit, const char *symbol);
-
-private:
-    int HTTP_RESPONSE_OK = 200;
     static constexpr int scale_offset = 1e8;
+    struct lws_context *context = nullptr;
 
     ThreadPtr rest_thread;
-    uint64_t last_rest_get_ts = 0;
+
+    std::vector<PositionSetting> positionHolder;
+
     uint64_t rest_get_interval_ms = 500;
 
     std::mutex* mutex_order_and_trade = nullptr;
 
-    std::map<std::string, std::string> localOrderRefRemoteOrderId;
-
-    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
-    int sync_time_interval;
     int64_t timeDiffOfExchange = 0;
     int exchange_shift_ms = 0;
+
+    std::unordered_map<int, OrderInsertData> CIDorderInsertData;
+    std::unordered_map<int, OrderActionData> CIDorderActionData;
+    std::unordered_map<int64_t, OrderActionData> RemoteOrderIDorderActionData;
 };
 
 WC_NAMESPACE_END
