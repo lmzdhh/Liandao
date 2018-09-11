@@ -41,7 +41,38 @@ using utils::crypto::hmac_sha384;
 
 USING_WC_NAMESPACE
 
+/*
+ an example of insert order and order action , all successful.
 
+[0,"n",[1536659719199,"on-req",null,null,[16662905539,null,4,"tLTCBTC",null,null,0.2001,0.2001,"EXCHANGE LIMIT",null,null,null,null,null,null,null,0.0085489,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null],null,"SUCCESS","Submitting exchange limit buy order for 0.2001 LTC."]]
+
+[0,"on",[16662905539,0,4,"tLTCBTC",1536659719189,1536659719212,0.2001,0.2001,"EXCHANGE LIMIT",null,null,null,0,"ACTIVE",null,null,0.0085489,0,null,null,null,null,null,0,0,0,null,null,"API>BFX",null,null,null]]
+
+[0,"n",[1536659721156,"oc-req",null,null,[16662905539,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null],null,"SUCCESS","Submitted for cancellation; waiting for confirmation (ID: 16662905539)."]]
+
+[0,"oc",[16662905539,0,4,"tLTCBTC",1536659719189,1536659721181,0.2001,0.2001,"EXCHANGE LIMIT",null,null,null,0,"CANCELED",null,null,0.0085489,0,null,null,null,null,null,0,0,0,null,null,"API>BFX",null,null,null]]
+
+
+ check journal:
+
+
+order insert
+yjj journal -n TD_SEND_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 22204
+yjj journal -n TD_RAW_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 22204
+
+order action
+yjj journal -n TD_SEND_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -m 22207
+yjj journal -n TD_RAW_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 22207
+
+order
+yjj journal -n TD_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 205
+yjj journal -n TD_RAW_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 22205
+
+trade
+
+yjj journal -n TD_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 206
+yjj journal -n TD_RAW_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 22206
+ * */
 static TDEngineBitfinex* global_md = nullptr;
 
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
@@ -261,20 +292,30 @@ bool TDEngineBitfinex::is_connected() const
 
 
 //type	string	MARKET, EXCHANGE MARKET, LIMIT, EXCHANGE LIMIT, STOP, EXCHANGE STOP, TRAILING STOP, EXCHANGE TRAILING STOP, FOK, EXCHANGE FOK, STOP LIMIT, EXCHANGE STOP LIMIT
+//std::string TDEngineBitfinex::GetType(const LfOrderPriceTypeType& input) {
+//    if (LF_CHAR_LimitPrice == input) {
+//        return "LIMIT";
+//    } else if (LF_CHAR_AnyPrice == input) {
+//        return "MARKET";
+//    } else {
+//        return "";
+//    }
+//}
+
 std::string TDEngineBitfinex::GetType(const LfOrderPriceTypeType& input) {
     if (LF_CHAR_LimitPrice == input) {
-        return "LIMIT";
+        return "EXCHANGE LIMIT";
     } else if (LF_CHAR_AnyPrice == input) {
-        return "MARKET";
+        return "EXCHANGE MARKET";
     } else {
         return "";
     }
 }
 
 LfOrderPriceTypeType TDEngineBitfinex::GetPriceType(std::string input) {
-    if ("LIMIT" == input) {
+    if ("LIMIT" == input || "EXCHANGE LIMIT" == input) {
         return LF_CHAR_LimitPrice;
-    } else if ("MARKET" == input) {
+    } else if ("MARKET" == input || "EXCHANGE MARKET" == input) {
         return LF_CHAR_AnyPrice;
     } else {
         return '0';
@@ -1322,7 +1363,7 @@ void TDEngineBitfinex::req_order_insert(const LFInputOrderField* data, int accou
     if(data->VolumeCondition == LF_CHAR_CV) {
         //WCStrategyUtil.cpp
         //insert_fok_order: order.VolumeCondition = LF_CHAR_CV;
-        type = "FOK";
+        type = "EXCHANGE FOK";
     } else {
         //WCStrategyUtil.cpp
         //insert_fak_order/insert_limit_order/insert_market_order:  order.VolumeCondition = LF_CHAR_AV;
