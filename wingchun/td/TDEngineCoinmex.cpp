@@ -43,6 +43,98 @@ using utils::crypto::base64_encode;
 
 USING_WC_NAMESPACE
 
+
+static TDEngineCoinmex* global_td = nullptr;
+
+static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
+{
+
+    switch( reason )
+    {
+        case LWS_CALLBACK_CLIENT_ESTABLISHED:
+        {
+            lws_callback_on_writable( wsi );
+            break;
+        }
+        case LWS_CALLBACK_PROTOCOL_INIT:
+        {
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_RECEIVE:
+        {
+            if(global_td)
+            {
+                global_td->on_lws_data(wsi, (const char*)in, len);
+            }
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_CLOSED:
+        {
+            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED, reason = " << reason << std::endl;
+            if(global_td) {
+                std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
+                global_td->on_lws_connection_error(wsi);
+            }
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
+        {
+            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_RECEIVE_PONG, reason = " << reason << std::endl;
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_WRITEABLE:
+        {
+            if(global_td)
+            {
+                global_td->lws_write_subscribe(wsi);
+            }
+            break;
+        }
+        case LWS_CALLBACK_TIMER:
+        {
+            break;
+        }
+        case LWS_CALLBACK_CLOSED:
+        case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+        {
+            std::cout << "3.1415926 LWS_CALLBACK_CLOSED/LWS_CALLBACK_CLIENT_CONNECTION_ERROR writeable, reason = " << reason << std::endl;
+            if(global_td)
+            {
+                global_td->on_lws_connection_error(wsi);
+            }
+            break;
+        }
+        default:
+            break;
+    }
+
+    return 0;
+}
+
+static struct lws_protocols protocols[] =
+        {
+                {
+                        "md-protocol",
+                        ws_service_cb,
+                              0,
+                                 65536,
+                },
+                { NULL, NULL, 0, 0 } /* terminator */
+        };
+
+
+enum protocolList {
+    PROTOCOL_TEST,
+
+    PROTOCOL_LIST_COUNT
+};
+
+struct session_data {
+    int fd;
+};
+
+
+
 TDEngineCoinmex::TDEngineCoinmex(): ITDEngine(SOURCE_COINMEX)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.Coinmex");
@@ -94,6 +186,20 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
         exchange_shift_ms = j_config["exchange_shift_ms"].get<int>();
     }
     KF_LOG_INFO(logger, "[load_account] (exchange_shift_ms)" << exchange_shift_ms);
+
+    if(j_config.find("use_restful_to_receive_status") != j_config.end()) {
+        int use_restful = j_config["use_restful_to_receive_status"].get<int>();
+        if(use_restful > 0) {
+            use_restful_to_receive_status = true;
+            KF_LOG_INFO(logger, "[load_account] (use_restful_to_receive_status)" << use_restful << " (use_restful_to_receive_status)" << use_restful_to_receive_status);
+        } else {
+            use_restful_to_receive_status = false;
+            KF_LOG_INFO(logger, "[load_account] (use_restful_to_receive_status)" << use_restful << " (use_restful_to_receive_status)" << use_restful_to_receive_status);
+        }
+    } else {
+        use_restful_to_receive_status = false;
+        KF_LOG_INFO(logger, "[load_account] kungfu.json could not found key[use_restful_to_receive_status], (use_restful_to_receive_status)" << use_restful_to_receive_status);
+    }
 
     AccountUnitCoinmex& unit = account_units[idx];
     unit.api_key = api_key;
@@ -167,11 +273,16 @@ void TDEngineCoinmex::connect(long timeout_nsec)
 
             if(loadExchangeOrderFilters(unit, doc))
             {
-                unit.logged_in = true;
-            } else {
-                KF_LOG_ERROR(logger, "[connect] logged_in = false for loadExchangeOrderFilters return false");
+                KF_LOG_ERROR(logger, "[connect] loadExchangeOrderFilters return false");
             }
             debug_print(unit.sendOrderFilters);
+
+            //ws login
+            if(false == use_restful_to_receive_status) {
+                unit.newPendingSendMsg.push_back(createAuthJsonString(unit));
+                lws_login(unit, 0);
+            }
+
             unit.logged_in = true;
         }
     }
@@ -694,7 +805,7 @@ void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
         {
             continue;
         }
-        moveNewtoPending(unit);
+        moveOrderNewtoPending(unit);
         retrieveOrderStatus(unit);
     }//end every account
 
@@ -708,7 +819,7 @@ void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
     KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
 }
 
-void TDEngineCoinmex::moveNewtoPending(AccountUnitCoinmex& unit)
+void TDEngineCoinmex::moveOrderNewtoPending(AccountUnitCoinmex& unit)
 {
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
@@ -1016,10 +1127,26 @@ void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const
 void TDEngineCoinmex::set_reader_thread()
 {
     ITDEngine::set_reader_thread();
-
-    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on AccountUnitCoinmex::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineCoinmex::loop, this)));
+    if(use_restful_to_receive_status) {
+        KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on AccountUnitCoinmex::loop");
+        rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineCoinmex::loop, this)));
+    } else {
+        KF_LOG_INFO(logger, "[set_reader_thread] ws_thread start on AccountUnitCoinmex::wsloop");
+        ws_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineCoinmex::wsloop, this)));
+    }
 }
+
+
+void TDEngineCoinmex::wsloop()
+{
+    KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
+    while(isRunning)
+    {
+        int n = lws_service( context, rest_get_interval_ms );
+        std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
+    }
+}
+
 
 void TDEngineCoinmex::loop()
 {
@@ -1685,6 +1812,531 @@ int64_t TDEngineCoinmex::getTimeDiffOfExchange(AccountUnitCoinmex& unit)
 //    }
 //    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
     return timeDiffOfExchange;
+}
+
+
+
+
+
+//wss://websocket.coinmex.com:8443/
+
+void TDEngineCoinmex::on_lws_connection_error(struct lws* conn)
+{
+    KF_LOG_ERROR(logger, "TDEngineCoinmex::on_lws_connection_error.");
+    //market logged_in false;
+    AccountUnitCoinmex& unit = findAccountUnitByWebsocketConn(conn);
+    unit.logged_in = false;
+    KF_LOG_ERROR(logger, "TDEngineCoinmex::on_lws_connection_error. login again.");
+
+    long timeout_nsec = 0;
+    unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
+    lws_login(unit, timeout_nsec);
+}
+
+void TDEngineCoinmex::lws_login(AccountUnitCoinmex& unit, long timeout_nsec) {
+    KF_LOG_INFO(logger, "TDEngineCoinmex::lws_login:");
+    global_td = this;
+
+    if (context == NULL) {
+        struct lws_context_creation_info info;
+        memset( &info, 0, sizeof(info) );
+
+        info.port = CONTEXT_PORT_NO_LISTEN;
+        info.protocols = protocols;
+        info.iface = NULL;
+        info.ssl_cert_filepath = NULL;
+        info.ssl_private_key_filepath = NULL;
+        info.extensions = NULL;
+        info.gid = -1;
+        info.uid = -1;
+        info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+        info.max_http_header_pool = 1024;
+        info.fd_limit_per_thread = 1024;
+        info.ws_ping_pong_interval = 10;
+        info.ka_time = 10;
+        info.ka_probes = 10;
+        info.ka_interval = 10;
+
+        context = lws_create_context( &info );
+        KF_LOG_INFO(logger, "TDEngineCoinmex::lws_login: context created.");
+    }
+
+    if (context == NULL) {
+        KF_LOG_ERROR(logger, "TDEngineCoinmex::lws_login: context is NULL. return");
+        return;
+    }
+
+    int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
+    lws_set_log_level(logs, NULL);
+
+    struct lws_client_connect_info ccinfo = {0};
+
+    static std::string host  = "websocket.coinmex.com";
+    static std::string path = "/";
+    static int port = 8443;
+
+    ccinfo.context 	= context;
+    ccinfo.address 	= host.c_str();
+    ccinfo.port 	= port;
+    ccinfo.path 	= path.c_str();
+    ccinfo.host 	= host.c_str();
+    ccinfo.origin 	= host.c_str();
+    ccinfo.ietf_version_or_minus_one = -1;
+    ccinfo.protocol = protocols[0].name;
+    ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+
+    unit.websocketConn = lws_client_connect_via_info(&ccinfo);
+    KF_LOG_INFO(logger, "TDEngineCoinmex::lws_login: Connecting to " <<  ccinfo.host << ":" << ccinfo.port << ":" << ccinfo.path);
+
+    if (unit.websocketConn == NULL) {
+        KF_LOG_ERROR(logger, "TDEngineCoinmex::lws_login: wsi create error.");
+        return;
+    }
+    KF_LOG_INFO(logger, "TDEngineCoinmex::lws_login: wsi create success.");
+}
+
+
+/*
+ Response:
+{
+    "channel": "signin",
+    "data": {
+        "result": true
+    },
+    "zip": false
+}
+
+
+ * */
+void TDEngineCoinmex::on_lws_data(struct lws* conn, const char* data, size_t len)
+{
+    AccountUnitCoinmex& unit = findAccountUnitByWebsocketConn(conn);
+    KF_LOG_INFO(logger, "TDEngineCoinmex::on_lws_data: " << data);
+    Document json;
+    json.Parse(data);
+
+    if(json.HasParseError()) {
+        KF_LOG_ERROR(logger, "AccountUnitCoinmex::on_lws_data. parse json error: " << data);
+        return;
+    }
+
+    if(json.IsObject()) {
+        if (json.HasMember("channel") && strcmp(json["channel"].GetString(), "signin") == 0) {
+            KF_LOG_INFO(logger, "AccountUnitCoinmex::on_lws_data: is info");
+
+            if(json.HasMember("data") && json["data"].IsObject()) {
+                if(json["data"]["result"].IsBool()) {
+                    bool signinResult = json["data"]["result"].GetBool();
+                    KF_LOG_INFO(logger, "AccountUnitCoinmex::on_lws_data: is signin (result)" << signinResult);
+                    if(!signinResult) {
+                        KF_LOG_ERROR(logger, "AccountUnitCoinmex::on_lws_data: is signin (result)" << signinResult);
+                        exit(9);//TODO use exit no.9
+                    }
+
+                    KF_LOG_INFO(logger, "AccountUnitCoinmex::on_lws_data: send order status subscribe after signin");
+                    unit.newPendingSendMsg.push_back(createOrderJsonString());
+                    lws_callback_on_writable( conn );
+                }
+            }
+        } else if (!json.HasMember("channel") && json.HasMember("type") && strcmp(json["type"].GetString(), "orders") == 0) {
+            onOrder(conn, json);
+        } else {
+            KF_LOG_INFO(logger, "TDEngineCoinmex::on_lws_data: unknown event: " << data);
+        };
+    }
+}
+
+
+/*
+Response:
+ {
+    "biz": "spot",
+    "type": "orders",
+    "data": {
+        "averagePrice": "0.09888900",#平均价
+        "code": "ltc_btc",           #币对名称
+        "createdDate": 1526471077000,#创建时间
+        "executedVolume": "0.08900010",#实际成交的计价
+        "filledVolume": "0.90000000", #已成交的数量
+        "id": -1,                     #币对ID
+        "openVolume": "0.00000000",   #尚未成交的数量
+        "orderId": 5872322,           #订单id
+        "orderType": "limit",         #订单种类（limit:限价单|market:市价单）
+        "price": "0.09888900",        #价格
+        "side": "buy",                #交易方向（buy:买|sell:卖）
+        "source": "web",              #来源（web|app|android|ios）
+        "status": "filled",           #成交状态（open:未成交|partially-filled:部分成交|filled:完全成交|cancel:撤单中|canceled:已撤单）
+        "trunoverVolume": "0.0801000900000000", #实际成交的金额
+        "userId": 2,                  #用户ID
+        "volume": "0.90000000"        #数量
+    },
+    "zip": false
+}
+
+ * */
+
+void TDEngineCoinmex::onOrder(struct lws* conn, Document& json)
+{
+    KF_LOG_INFO(logger, "TDEngineCoinmex::onOrder: " << parseJsonToString(json));
+
+    if(json.HasMember("data") && json["data"].IsObject()) {
+        AccountUnitCoinmex& unit = findAccountUnitByWebsocketConn(conn);
+
+        moveOrderNewtoPending(unit);
+
+        auto& data = json["data"];
+        int64_t averagePrice = std::round(std::stod(data["averagePrice"].GetString()) * scale_offset);
+        std::string symbol = data["code"].GetString();
+        //it is lower from order
+        std::transform(symbol.begin(), symbol.end(), symbol.begin(), ::toupper);
+
+        //chek ticker
+        std::string ticker = unit.coinPairWhiteList.GetKeyByValue(symbol);
+        if (ticker.length() == 0) {
+            KF_LOG_INFO(logger, "[onOrder]: not in WhiteList , ignore it:" << symbol);
+            return;
+        }
+        KF_LOG_DEBUG(logger, "[onOrder] (exchange_ticker)" << ticker);
+
+
+        int64_t createdDate = data["createdDate"].GetInt64();
+        uint64_t executedVolume = std::round(std::stod(data["executedVolume"].GetString()) * scale_offset);
+        uint64_t filledVolume = std::round(std::stod(data["filledVolume"].GetString()) * scale_offset);
+        int id = data["id"].GetInt();
+
+        uint64_t openVolume = std::round(std::stod(data["openVolume"].GetString()) * scale_offset);
+        int64_t orderId = data["orderId"].GetInt64();
+        std::string orderType = data["orderType"].GetString();
+        int64_t price = std::round(std::stod(data["price"].GetString()) * scale_offset);
+        std::string side = data["side"].GetString();
+        std::string status = data["status"].GetString();
+        uint64_t trunoverVolume = std::round(std::stod(data["trunoverVolume"].GetString()) * scale_offset);
+        uint64_t volume = std::round(std::stod(data["volume"].GetString()) * scale_offset);
+
+
+        KF_LOG_INFO(logger, "TDEngineCoinmex::onOrder: (id): " << id << " (symbol)" << symbol << " (averagePrice)" << averagePrice << " (executedVolume)" << executedVolume
+                << " (symbol)" << symbol << " (averagePrice)" << averagePrice << " (executedVolume)" << executedVolume
+                << " (filledVolume)" << filledVolume << " (openVolume)" << openVolume << " (orderId)" << orderId
+                << " (orderType)" << orderType << " (price)" << price << " (side)" << side
+                << " (status)" << status << " (trunoverVolume)" << trunoverVolume << " (volume)" << volume);
+
+
+
+        std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator;
+        std::string orderIdStr = std::to_string(orderId);
+
+        for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
+        {
+            KF_LOG_INFO(logger, "[onOrder] (orderStatusIterator->remoteOrderId)"<< orderStatusIterator->remoteOrderId << " (orderIdStr)" << orderIdStr);
+            if(strcmp(orderStatusIterator->remoteOrderId, orderIdStr.c_str()) == 0)
+            {
+                break;
+            }
+        }
+
+        if(orderStatusIterator == unit.pendingOrderStatus.end()) {
+            KF_LOG_INFO(logger, "[onOrder] not find this remote order id, ignore (orderId)"<< orderId);
+            return;
+        }
+
+        KF_LOG_INFO(logger, "[onOrder] (account.api_key)"<< unit.api_key
+                                                                << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
+                                                                <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
+                                                                <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
+        );
+
+        //此处重用了 restful的获取Order的Status的逻辑
+
+        //报单状态
+        LfOrderStatusType OrderStatus = GetOrderStatus(status);
+        //今成交数量
+        uint64_t VolumeTraded = filledVolume;
+        uint64_t newAveragePrice = averagePrice;
+        //cancel 需要特殊处理
+        if(LF_CHAR_Canceled == OrderStatus) {
+            /*
+             * 因为restful查询有间隔时间，订单可能会先经历过部分成交，然后才达到的cancnel，所以得到cancel不能只认为是cancel，还需要判断有没有部分成交过。
+            这时候需要补状态，补一个on rtn order，一个on rtn trade。
+            这种情况仅cancel才有, 部分成交和全成交没有此问题。
+            当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
+             //2018-09-12.  不清楚websocket会不会有这个问题，先做同样的处理
+            */
+
+            //虽然是撤单状态，但是已经成交的数量和上一次记录的数量不一样，期间一定发生了部分成交. 要补发 LF_CHAR_PartTradedQueueing
+            if(VolumeTraded != orderStatusIterator->VolumeTraded) {
+                //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
+                LFRtnOrderField rtn_order;
+                memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+                rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
+                rtn_order.VolumeTraded = VolumeTraded;
+
+                //first send onRtnOrder about the status change or VolumeTraded change
+                strcpy(rtn_order.ExchangeID, "coinmex");
+                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+                rtn_order.Direction = GetDirection(side);
+                //No this setting on coinmex
+                rtn_order.TimeCondition = LF_CHAR_GTC;
+                rtn_order.OrderPriceType = GetPriceType(orderType);
+                strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
+                rtn_order.VolumeTotalOriginal = volume;
+                rtn_order.LimitPrice = price;
+                rtn_order.VolumeTotal = openVolume;
+
+                //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
+                //on_rtn_order(&rtn_order);
+                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                        source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
+                                        1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+
+                //send OnRtnTrade
+                LFRtnTradeField rtn_trade;
+                memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+                strcpy(rtn_trade.ExchangeID, "coinmex");
+                strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+                strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
+                strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
+                rtn_trade.Direction = rtn_order.Direction;
+                uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
+                uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
+
+                //calculate the volumn and price (it is average too)
+                rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
+                rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
+
+                on_rtn_trade(&rtn_trade);
+                raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                        source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
+
+            }
+
+            //emit the LF_CHAR_Canceled status
+            LFRtnOrderField rtn_order;
+            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+            rtn_order.OrderStatus = LF_CHAR_Canceled;
+            rtn_order.VolumeTraded = VolumeTraded;
+
+            //first send onRtnOrder about the status change or VolumeTraded change
+            strcpy(rtn_order.ExchangeID, "coinmex");
+            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+            rtn_order.Direction = GetDirection(side);
+            //No this setting on coinmex
+            rtn_order.TimeCondition = LF_CHAR_GTC;
+            rtn_order.OrderPriceType = GetPriceType(orderType);
+            strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
+            rtn_order.VolumeTotalOriginal = volume;
+            rtn_order.LimitPrice = price;
+            rtn_order.VolumeTotal = openVolume;
+
+            on_rtn_order(&rtn_order);
+            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                    source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
+                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+
+            //third, update last status for next query_order
+            orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
+            orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
+            orderStatusIterator->averagePrice = newAveragePrice;
+
+        } else if(orderStatusIterator->OrderStatus != OrderStatus ||
+                  (LF_CHAR_PartTradedQueueing == OrderStatus
+                   && VolumeTraded != orderStatusIterator->VolumeTraded))
+        {
+            //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
+            LFRtnOrderField rtn_order;
+            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+            rtn_order.OrderStatus = OrderStatus;
+            rtn_order.VolumeTraded = VolumeTraded;
+
+            //first send onRtnOrder about the status change or VolumeTraded change
+            strcpy(rtn_order.ExchangeID, "coinmex");
+            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+            rtn_order.Direction = GetDirection(side);
+            //No this setting on coinmex
+            rtn_order.TimeCondition = LF_CHAR_GTC;
+            rtn_order.OrderPriceType = GetPriceType(orderType);
+            strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
+            rtn_order.VolumeTotalOriginal = volume;
+            rtn_order.LimitPrice = price;
+            rtn_order.VolumeTotal = openVolume;
+
+            on_rtn_order(&rtn_order);
+            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                    source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
+                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+            uint64_t newAveragePrice = averagePrice;
+            //second, if the status is PartTraded/AllTraded, send OnRtnTrade
+            if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
+               (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
+                && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
+            {
+                LFRtnTradeField rtn_trade;
+                memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+                strcpy(rtn_trade.ExchangeID, "coinmex");
+                strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+                strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
+                strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
+                rtn_trade.Direction = rtn_order.Direction;
+                uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
+                uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
+
+                //calculate the volumn and price (it is average too)
+                rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
+                rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
+
+                on_rtn_trade(&rtn_trade);
+                raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                        source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
+            }
+            //third, update last status for next query_order
+            orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
+            orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
+            orderStatusIterator->averagePrice = newAveragePrice;
+        }
+    }
+}
+
+
+std::string TDEngineCoinmex::parseJsonToString(Document &d)
+{
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    d.Accept(writer);
+
+    return buffer.GetString();
+}
+
+/*
+ {
+    event: "signin",
+    params: {
+        "api_key":"api key"
+        "passphrase":"api 口令"
+    }
+}
+ * */
+std::string TDEngineCoinmex::createAuthJsonString(AccountUnitCoinmex& unit )
+{
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("event");
+    writer.String("signin");
+
+    writer.Key("params");
+    writer.StartObject();
+
+    writer.Key("api_key");
+    writer.String(unit.api_key.c_str());
+
+    writer.Key("passphrase");
+    writer.String(unit.passphrase.c_str());
+
+    writer.EndObject();
+    writer.EndObject();
+    return s.GetString();
+}
+
+/*
+ {
+    event: "subscribe",
+    params: {
+        "type": "orders",
+        "zip": false,
+        "biz": "spot",
+    }
+}
+
+ * */
+std::string TDEngineCoinmex::createOrderJsonString()
+{
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("event");
+    writer.String("subscribe");
+
+    writer.Key("params");
+    writer.StartObject();
+
+    writer.Key("type");
+    writer.String("orders");
+
+    writer.Key("zip");
+    writer.Bool(false);
+
+    writer.Key("biz");
+    writer.String("spot");
+
+    writer.EndObject();
+    writer.EndObject();
+    return s.GetString();
+}
+
+void TDEngineCoinmex::addWebsocketPendingSendMsg(AccountUnitCoinmex& unit, std::string msg)
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+    unit.newPendingSendMsg.push_back(msg);
+}
+
+
+void TDEngineCoinmex::moveNewWebsocketMsgToPending(AccountUnitCoinmex& unit)
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+
+    std::vector<std::string>::iterator newMsgIterator;
+    for(newMsgIterator = unit.newPendingSendMsg.begin(); newMsgIterator != unit.newPendingSendMsg.end();)
+    {
+        unit.pendingSendMsg.push_back(*newMsgIterator);
+        newMsgIterator = unit.newPendingSendMsg.erase(newMsgIterator);
+    }
+}
+
+
+int TDEngineCoinmex::lws_write_subscribe(struct lws* conn)
+{
+    KF_LOG_INFO(logger, "TDEngineCoinmex::lws_write_subscribe");
+    AccountUnitCoinmex& unit = findAccountUnitByWebsocketConn(conn);
+    moveNewWebsocketMsgToPending(unit);
+
+    if(unit.pendingSendMsg.size() > 0) {
+        KF_LOG_INFO(logger, "TDEngineCoinmex::lws_write_subscribe   unit.pendingSendMsg.size(): " << unit.pendingSendMsg.size());
+        unsigned char msg[512];
+        memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
+
+        std::string jsonString = unit.pendingSendMsg[unit.pendingSendMsg.size() - 1];
+        unit.pendingSendMsg.pop_back();
+        KF_LOG_INFO(logger, "TDEngineCoinmex::lws_write_subscribe: websocketPendingSendMsg: " << jsonString.c_str());
+        int length = jsonString.length();
+
+        strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
+        int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+
+        if(unit.pendingSendMsg.size() > 0)
+        {    //still has pending send data, emit a lws_callback_on_writable()
+            lws_callback_on_writable( conn );
+            KF_LOG_INFO(logger, "TDEngineCoinmex::lws_write_subscribe: (websocketPendingSendMsg,size)" << unit.pendingSendMsg.size());
+        }
+        return ret;
+    }
+    return 0;
+}
+
+
+AccountUnitCoinmex& TDEngineCoinmex::findAccountUnitByWebsocketConn(struct lws * websocketConn)
+{
+    for (size_t idx = 0; idx < account_units.size(); idx++) {
+        AccountUnitCoinmex &unit = account_units[idx];
+        if(unit.websocketConn == websocketConn) {
+            return unit;
+        }
+    }
+    return account_units[0];
 }
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))

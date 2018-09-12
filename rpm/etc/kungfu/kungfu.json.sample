@@ -164,6 +164,7 @@
                               "BTC": "BTC"
                            },
               "exchange_shift_ms": 0,
+              "use_restful_to_receive_status": 1,
               "rest_get_interval_ms": 2000,
               "sync_time_interval": 10000
             },

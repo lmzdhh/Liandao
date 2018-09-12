@@ -12,6 +12,7 @@
 #include <mutex>
 #include "Timer.h"
 #include <document.h>
+#include <libwebsockets.h>
 
 using rapidjson::Document;
 
@@ -54,6 +55,10 @@ struct AccountUnitCoinmex
 
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
+
+    std::vector<std::string> newPendingSendMsg;
+    std::vector<std::string> pendingSendMsg;
+    struct lws * websocketConn;
 };
 
 
@@ -87,7 +92,24 @@ public:
 public:
     TDEngineCoinmex();
     ~TDEngineCoinmex();
+
+
+
+    //websocket
+    AccountUnitCoinmex& findAccountUnitByWebsocketConn(struct lws * websocketConn);
+    void onOrder(struct lws * websocketConn, Document& json);
+    void wsloop();
+    void addWebsocketPendingSendMsg(AccountUnitCoinmex& unit, std::string msg);
+    void moveNewWebsocketMsgToPending(AccountUnitCoinmex& unit);
+    std::string createAuthJsonString(AccountUnitCoinmex& unit );
+    std::string createOrderJsonString();
+    void on_lws_data(struct lws* conn, const char* data, size_t len);
+    void on_lws_connection_error(struct lws* conn);
+    int lws_write_subscribe(struct lws* conn);
+    void lws_login(AccountUnitCoinmex& unit, long timeout_nsec);
+    std::string parseJsonToString(Document &d);
 private:
+    bool use_restful_to_receive_status = false;
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
     vector<AccountUnitCoinmex> account_units;
@@ -107,7 +129,7 @@ private:
                                     const uint64_t VolumeTraded, std::string remoteOrderId);
 
     void retrieveOrderStatus(AccountUnitCoinmex& unit);
-    void moveNewtoPending(AccountUnitCoinmex& unit);
+    void moveOrderNewtoPending(AccountUnitCoinmex& unit);
 
     inline int64_t getTimestamp();
     int64_t getTimeDiffOfExchange(AccountUnitCoinmex& unit);
@@ -137,12 +159,19 @@ private:
     SendOrderFilter getSendOrderFilter(AccountUnitCoinmex& unit, const char *symbol);
 
 private:
+
+    struct lws_context *context = nullptr;
+
+
     int HTTP_RESPONSE_OK = 200;
     static constexpr int scale_offset = 1e8;
 
     ThreadPtr rest_thread;
+    ThreadPtr ws_thread;
+
     uint64_t last_rest_get_ts = 0;
     uint64_t rest_get_interval_ms = 500;
+    uint64_t ws_get_interval_ms = 500;
 
     std::mutex* mutex_order_and_trade = nullptr;
 
