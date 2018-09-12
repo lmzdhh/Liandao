@@ -44,18 +44,15 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
     {
         case LWS_CALLBACK_CLIENT_ESTABLISHED:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_ESTABLISHED callback client established, reason = " << reason << std::endl;
             lws_callback_on_writable( wsi );
             break;
         }
         case LWS_CALLBACK_PROTOCOL_INIT:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_PROTOCOL_INIT init, reason = " << reason << std::endl;
             break;
         }
         case LWS_CALLBACK_CLIENT_RECEIVE:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_RECEIVE on data, reason = " << reason << std::endl;
             if(global_md)
             {
                 global_md->on_lws_data(wsi, (const char*)in, len);
@@ -64,7 +61,6 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         }
         case LWS_CALLBACK_CLIENT_CLOSED:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED, reason = " << reason << std::endl;
             if(global_md) {
                 std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
                 global_md->on_lws_connection_error(wsi);
@@ -73,12 +69,10 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         }
         case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_RECEIVE_PONG, reason = " << reason << std::endl;
             break;
         }
         case LWS_CALLBACK_CLIENT_WRITEABLE:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_WRITEABLE writeable, reason = " << reason << std::endl;
             if(global_md)
             {
                 global_md->lws_write_subscribe(wsi);
@@ -87,7 +81,6 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         }
 	    case LWS_CALLBACK_TIMER:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_TIMER, reason = " << reason << std::endl;
             break;
 	    }
         case LWS_CALLBACK_CLOSED:
