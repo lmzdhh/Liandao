@@ -684,7 +684,7 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
                 }
              * */
             //if send successful and the exchange has received ok, then add to  pending query order list
-            std::string remoteOrderId = std::to_string(d["orderId"].GetInt64());
+            int64_t remoteOrderId = d["orderId"].GetInt64();
             //fix defect of use the old value
             localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
@@ -694,7 +694,48 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
             //success, only record raw data
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+
+//            websocket的消息通常回来的比restful快，这时候因为消息里面有OrderId却找不到OrderRef，会先放入responsedOrderStatusNoOrderRef，
+//            当sendOrder返回OrderId信息之后,再处理这个信息
+            std::map<int64_t, ResponsedOrderStatus>::iterator noOrderRefOrserStatusItr;
+            noOrderRefOrserStatusItr = responsedOrderStatusNoOrderRef.find(remoteOrderId);
+            if(noOrderRefOrserStatusItr != responsedOrderStatusNoOrderRef.end()) {
+                //has no orderRed Order status, should link this OrderRef and handler it.
+                ResponsedOrderStatus responsedOrderStatus = noOrderRefOrserStatusItr->second;
+
+                moveNewOrderStatusToPending(unit);
+
+                std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator;
+                for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); ++orderStatusIterator)
+                {
+                    KF_LOG_INFO(logger, "[req_order_insert] (orderStatusIterator->remoteOrderId)"<< orderStatusIterator->remoteOrderId << " (orderId)" << responsedOrderStatus.orderId);
+                    if(orderStatusIterator->remoteOrderId == responsedOrderStatus.orderId)
+                    {
+                        break;
+                    }
+                }
+
+                if(orderStatusIterator == unit.pendingOrderStatus.end()) {
+                    KF_LOG_INFO(logger, "[req_order_insert] not find this pendingOrderStatus of order id, ignore it.(orderId)"<< responsedOrderStatus.orderId);
+                    return;
+                }
+
+                KF_LOG_INFO(logger, "[req_order_insert] handlerResponseOrderStatus (remoteOrderId)"<< remoteOrderId);
+                handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
+
+                //remove order when finish
+                if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
+                   || orderStatusIterator->OrderStatus == LF_CHAR_Error)
+                {
+                    KF_LOG_INFO(logger, "[req_order_insert] remove a pendingOrderStatus. (remoteOrderId)" << remoteOrderId);
+                    orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
+                }
+                responsedOrderStatusNoOrderRef.erase(remoteOrderId);
+                KF_LOG_INFO(logger, "[req_order_insert] responsedOrderStatusNoOrderRef erase(remoteOrderId)"<< remoteOrderId);
+            }
+
             return;
+
         } else {
             /*
              * # Response error
@@ -754,8 +795,8 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
-    std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
-    std::string remoteOrderId;
+    std::map<std::string, int64_t>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
+    int64_t remoteOrderId = 0;
     if(itr == localOrderRefRemoteOrderId.end()) {
         errorId = 1;
         std::stringstream ss;
@@ -773,7 +814,7 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
     }
 
     Document d;
-    cancel_order(unit, ticker, remoteOrderId, d);
+    cancel_order(unit, ticker, std::to_string(remoteOrderId), d);
 
     //cancel order response "" as resultText, it cause json.HasParseError() == true, and json.IsObject() == false.
     //it is not an error, so dont check it.
@@ -805,7 +846,7 @@ void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
         {
             continue;
         }
-        moveOrderNewtoPending(unit);
+        moveNewOrderStatusToPending(unit);
         retrieveOrderStatus(unit);
     }//end every account
 
@@ -819,7 +860,7 @@ void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
     KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
 }
 
-void TDEngineCoinmex::moveOrderNewtoPending(AccountUnitCoinmex& unit)
+void TDEngineCoinmex::moveNewOrderStatusToPending(AccountUnitCoinmex& unit)
 {
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
@@ -835,16 +876,6 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
 {
     KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
     std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator;
-//    int indexNum = 0;
-//    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
-//    {
-//        indexNum++;
-//        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    (account.api_key)"<< unit.api_key
-//                                                                << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
-//                                                                <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
-//                                                                <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
-//        );
-//    }
 
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
     {
@@ -863,7 +894,7 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
         KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
 
         Document d;
-        query_order(unit, ticker, orderStatusIterator->remoteOrderId, d);
+        query_order(unit, ticker, std::to_string(orderStatusIterator->remoteOrderId), d);
 
         /*
  # Response
@@ -922,156 +953,24 @@ volume 	订单委托数量
             }
              * */
             //parse success
+
+            ResponsedOrderStatus responsedOrderStatus;
+            responsedOrderStatus.ticker = ticker;
+            responsedOrderStatus.averagePrice = std::round(std::stod(d["averagePrice"].GetString()) * scale_offset);
+            responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
+            //报单价格条件
+            responsedOrderStatus.OrderPriceType = GetPriceType(d["orderType"].GetString());
+            //买卖方向
+            responsedOrderStatus.Direction = GetDirection(d["side"].GetString());
             //报单状态
-            LfOrderStatusType OrderStatus = GetOrderStatus(d["status"].GetString());
+            responsedOrderStatus.OrderStatus = GetOrderStatus(d["status"].GetString());
+            responsedOrderStatus.price = std::round(std::stod(d["price"].GetString()) * scale_offset);
+            responsedOrderStatus.volume = std::round(std::stod(d["volume"].GetString()) * scale_offset);
             //今成交数量
-            uint64_t VolumeTraded = std::round(std::stod(d["filledVolume"].GetString()) * scale_offset);//coinmex订单已成交数量
-            uint64_t newAveragePrice = std::round(std::stod(d["averagePrice"].GetString()) * scale_offset);
-            //cancel 需要特殊处理
-            if(LF_CHAR_Canceled == OrderStatus) {
-                /*
-                 * 因为restful查询有间隔时间，订单可能会先经历过部分成交，然后才达到的cancnel，所以得到cancel不能只认为是cancel，还需要判断有没有部分成交过。
-                这时候需要补状态，补一个on rtn order，一个on rtn trade。
-                这种情况仅cancel才有, 部分成交和全成交没有此问题。
-                当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
-                */
+            responsedOrderStatus.VolumeTraded = std::round(std::stod(d["filledVolume"].GetString()) * scale_offset);
+            responsedOrderStatus.openVolume = responsedOrderStatus.volume - responsedOrderStatus.VolumeTraded;
 
-                //虽然是撤单状态，但是已经成交的数量和上一次记录的数量不一样，期间一定发生了部分成交. 要补发 LF_CHAR_PartTradedQueueing
-                if(VolumeTraded != orderStatusIterator->VolumeTraded) {
-                    //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
-                    LFRtnOrderField rtn_order;
-                    memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-                    rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
-                    rtn_order.VolumeTraded = VolumeTraded;
-
-                    //first send onRtnOrder about the status change or VolumeTraded change
-                    strcpy(rtn_order.ExchangeID, "coinmex");
-                    strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                    strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                    rtn_order.Direction = GetDirection(d["side"].GetString());
-                    //No this setting on coinmex
-                    rtn_order.TimeCondition = LF_CHAR_GTC;
-                    rtn_order.OrderPriceType = GetPriceType(d["orderType"].GetString());
-                    strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-                    rtn_order.VolumeTotalOriginal = std::round(std::stod(d["volume"].GetString()) * scale_offset);
-                    rtn_order.LimitPrice = std::round(std::stod(d["price"].GetString()) * scale_offset);
-                    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-
-                    //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
-                    //on_rtn_order(&rtn_order);
-                    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                            source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
-                                            1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-
-                    //send OnRtnTrade
-                    LFRtnTradeField rtn_trade;
-                    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-                    strcpy(rtn_trade.ExchangeID, "coinmex");
-                    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-                    strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                    strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
-                    rtn_trade.Direction = rtn_order.Direction;
-                    uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
-                    uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
-
-                    //calculate the volumn and price (it is average too)
-                    rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-                    rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
-
-                    on_rtn_trade(&rtn_trade);
-                    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                            source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
-
-                }
-
-                //emit the LF_CHAR_Canceled status
-                LFRtnOrderField rtn_order;
-                memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-                rtn_order.OrderStatus = LF_CHAR_Canceled;
-                rtn_order.VolumeTraded = VolumeTraded;
-
-                //first send onRtnOrder about the status change or VolumeTraded change
-                strcpy(rtn_order.ExchangeID, "coinmex");
-                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                rtn_order.Direction = GetDirection(d["side"].GetString());
-                //No this setting on coinmex
-                rtn_order.TimeCondition = LF_CHAR_GTC;
-                rtn_order.OrderPriceType = GetPriceType(d["orderType"].GetString());
-                strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-                rtn_order.VolumeTotalOriginal = std::round(std::stod(d["volume"].GetString()) * scale_offset);
-                rtn_order.LimitPrice = std::round(std::stod(d["price"].GetString()) * scale_offset);
-                rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-
-                on_rtn_order(&rtn_order);
-                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                        source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
-                                        1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-
-                //third, update last status for next query_order
-                orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-                orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-                orderStatusIterator->averagePrice = newAveragePrice;
-
-            } else if(orderStatusIterator->OrderStatus != OrderStatus ||
-               (LF_CHAR_PartTradedQueueing == OrderStatus
-                && VolumeTraded != orderStatusIterator->VolumeTraded))
-            {
-                //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
-                LFRtnOrderField rtn_order;
-                memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-                rtn_order.OrderStatus = OrderStatus;
-                rtn_order.VolumeTraded = VolumeTraded;
-
-                //first send onRtnOrder about the status change or VolumeTraded change
-                strcpy(rtn_order.ExchangeID, "coinmex");
-                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                rtn_order.Direction = GetDirection(d["side"].GetString());
-                //No this setting on coinmex
-                rtn_order.TimeCondition = LF_CHAR_GTC;
-                rtn_order.OrderPriceType = GetPriceType(d["orderType"].GetString());
-                strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-                rtn_order.VolumeTotalOriginal = std::round(std::stod(d["volume"].GetString()) * scale_offset);
-                rtn_order.LimitPrice = std::round(std::stod(d["price"].GetString()) * scale_offset);
-                rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-
-                on_rtn_order(&rtn_order);
-                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                        source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
-                                        1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-                uint64_t newAveragePrice = std::round(std::stod(d["averagePrice"].GetString()) * scale_offset);
-                //second, if the status is PartTraded/AllTraded, send OnRtnTrade
-                if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
-                    (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-                    && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
-                {
-                    LFRtnTradeField rtn_trade;
-                    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-                    strcpy(rtn_trade.ExchangeID, "coinmex");
-                    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-                    strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                    strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
-                    rtn_trade.Direction = rtn_order.Direction;
-                    uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
-                    uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
-
-                    //calculate the volumn and price (it is average too)
-                    rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-                    rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
-
-                    on_rtn_trade(&rtn_trade);
-                    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                            source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
-                }
-                //third, update last status for next query_order
-                orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-                orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-                orderStatusIterator->averagePrice = newAveragePrice;
-            }
+            handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
         } else {
             int errorId = 0;
             std::string errorMsg = "";
@@ -1104,7 +1003,7 @@ volume 	订单委托数量
 
 void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
                                                  const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                 const uint64_t VolumeTraded, std::string remoteOrderId)
+                                                 const uint64_t VolumeTraded, int64_t remoteOrderId)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
@@ -1116,7 +1015,7 @@ void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const
     status.OrderStatus = OrderStatus;
     status.VolumeTraded = VolumeTraded;
     status.averagePrice = 0.0;
-    strncpy(status.remoteOrderId, remoteOrderId.c_str(), 21);
+    status.remoteOrderId = remoteOrderId;
     unit.newOrderStatus.push_back(status);
     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << status.InstrumentID
                                                                        << " (OrderRef) " << status.OrderRef
@@ -1982,15 +1881,12 @@ void TDEngineCoinmex::onOrder(struct lws* conn, Document& json)
     if(json.HasMember("data") && json["data"].IsObject()) {
         AccountUnitCoinmex& unit = findAccountUnitByWebsocketConn(conn);
 
-        moveOrderNewtoPending(unit);
+        moveNewOrderStatusToPending(unit);
 
         auto& data = json["data"];
-        int64_t averagePrice = std::round(std::stod(data["averagePrice"].GetString()) * scale_offset);
         std::string symbol = data["code"].GetString();
         //it is lower from order
         std::transform(symbol.begin(), symbol.end(), symbol.begin(), ::toupper);
-
-        //chek ticker
         std::string ticker = unit.coinPairWhiteList.GetKeyByValue(symbol);
         if (ticker.length() == 0) {
             KF_LOG_INFO(logger, "[onOrder]: not in WhiteList , ignore it:" << symbol);
@@ -1999,43 +1895,42 @@ void TDEngineCoinmex::onOrder(struct lws* conn, Document& json)
         KF_LOG_DEBUG(logger, "[onOrder] (exchange_ticker)" << ticker);
 
 
-        int64_t createdDate = data["createdDate"].GetInt64();
-        uint64_t executedVolume = std::round(std::stod(data["executedVolume"].GetString()) * scale_offset);
-        uint64_t filledVolume = std::round(std::stod(data["filledVolume"].GetString()) * scale_offset);
-        int id = data["id"].GetInt();
+        ResponsedOrderStatus responsedOrderStatus;
+        responsedOrderStatus.ticker = ticker;
+        responsedOrderStatus.averagePrice = std::round(std::stod(data["averagePrice"].GetString()) * scale_offset);
+        responsedOrderStatus.orderId = data["orderId"].GetInt64();
+        //报单价格条件
+        responsedOrderStatus.OrderPriceType = GetPriceType(data["orderType"].GetString());
+        //买卖方向
+        responsedOrderStatus.Direction = GetDirection(data["side"].GetString());
+        //报单状态
+        responsedOrderStatus.OrderStatus = GetOrderStatus(data["status"].GetString());
+        responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
+        responsedOrderStatus.volume = std::round(std::stod(data["volume"].GetString()) * scale_offset);
+        //今成交数量
+        responsedOrderStatus.VolumeTraded = std::round(std::stod(data["filledVolume"].GetString()) * scale_offset);
+        responsedOrderStatus.openVolume = std::round(std::stod(data["openVolume"].GetString()) * scale_offset);
 
-        uint64_t openVolume = std::round(std::stod(data["openVolume"].GetString()) * scale_offset);
-        int64_t orderId = data["orderId"].GetInt64();
-        std::string orderType = data["orderType"].GetString();
-        int64_t price = std::round(std::stod(data["price"].GetString()) * scale_offset);
-        std::string side = data["side"].GetString();
-        std::string status = data["status"].GetString();
-        uint64_t trunoverVolume = std::round(std::stod(data["trunoverVolume"].GetString()) * scale_offset);
-        uint64_t volume = std::round(std::stod(data["volume"].GetString()) * scale_offset);
-
-
-        KF_LOG_INFO(logger, "TDEngineCoinmex::onOrder: (id): " << id << " (symbol)" << symbol << " (averagePrice)" << averagePrice << " (executedVolume)" << executedVolume
-                << " (symbol)" << symbol << " (averagePrice)" << averagePrice << " (executedVolume)" << executedVolume
-                << " (filledVolume)" << filledVolume << " (openVolume)" << openVolume << " (orderId)" << orderId
-                << " (orderType)" << orderType << " (price)" << price << " (side)" << side
-                << " (status)" << status << " (trunoverVolume)" << trunoverVolume << " (volume)" << volume);
-
-
+        KF_LOG_INFO(logger, "TDEngineCoinmex::onOrder:  (ticker)" << responsedOrderStatus.ticker
+                << " (averagePrice)" << responsedOrderStatus.averagePrice
+                << " (VolumeTraded)" << responsedOrderStatus.VolumeTraded << " (openVolume)" << responsedOrderStatus.openVolume << " (orderId)" << responsedOrderStatus.orderId
+                << " (OrderPriceType)" << responsedOrderStatus.OrderPriceType << " (price)" << responsedOrderStatus.price << " (Direction)" << responsedOrderStatus.Direction
+                << " (OrderStatus)" << responsedOrderStatus.OrderStatus << " (trunoverVolume)" << responsedOrderStatus.trunoverVolume << " (volume)" << responsedOrderStatus.volume);
 
         std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator;
-        std::string orderIdStr = std::to_string(orderId);
 
-        for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
+        for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); ++orderStatusIterator)
         {
-            KF_LOG_INFO(logger, "[onOrder] (orderStatusIterator->remoteOrderId)"<< orderStatusIterator->remoteOrderId << " (orderIdStr)" << orderIdStr);
-            if(strcmp(orderStatusIterator->remoteOrderId, orderIdStr.c_str()) == 0)
+//            KF_LOG_INFO(logger, "[onOrder] (orderStatusIterator->remoteOrderId)"<< orderStatusIterator->remoteOrderId << " (orderId)" << responsedOrderStatus.orderId);
+            if(orderStatusIterator->remoteOrderId == responsedOrderStatus.orderId)
             {
                 break;
             }
         }
 
         if(orderStatusIterator == unit.pendingOrderStatus.end()) {
-            KF_LOG_INFO(logger, "[onOrder] not find this remote order id, ignore (orderId)"<< orderId);
+            KF_LOG_INFO(logger, "[onOrder] not find this remote order id, ignore it and waiting for InsertOrder restful response (orderId)"<< responsedOrderStatus.orderId);
+            responsedOrderStatusNoOrderRef[responsedOrderStatus.orderId] = responsedOrderStatus;
             return;
         }
 
@@ -2045,162 +1940,170 @@ void TDEngineCoinmex::onOrder(struct lws* conn, Document& json)
                                                                 <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
         );
 
-        //此处重用了 restful的获取Order的Status的逻辑
-
-        //报单状态
-        LfOrderStatusType OrderStatus = GetOrderStatus(status);
-        //今成交数量
-        uint64_t VolumeTraded = filledVolume;
-        uint64_t newAveragePrice = averagePrice;
-        //cancel 需要特殊处理
-        if(LF_CHAR_Canceled == OrderStatus) {
-            /*
-             * 因为restful查询有间隔时间，订单可能会先经历过部分成交，然后才达到的cancnel，所以得到cancel不能只认为是cancel，还需要判断有没有部分成交过。
-            这时候需要补状态，补一个on rtn order，一个on rtn trade。
-            这种情况仅cancel才有, 部分成交和全成交没有此问题。
-            当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
-             //2018-09-12.  不清楚websocket会不会有这个问题，先做同样的处理
-            */
-
-            //虽然是撤单状态，但是已经成交的数量和上一次记录的数量不一样，期间一定发生了部分成交. 要补发 LF_CHAR_PartTradedQueueing
-            if(VolumeTraded != orderStatusIterator->VolumeTraded) {
-                //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
-                LFRtnOrderField rtn_order;
-                memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-                rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
-                rtn_order.VolumeTraded = VolumeTraded;
-
-                //first send onRtnOrder about the status change or VolumeTraded change
-                strcpy(rtn_order.ExchangeID, "coinmex");
-                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                rtn_order.Direction = GetDirection(side);
-                //No this setting on coinmex
-                rtn_order.TimeCondition = LF_CHAR_GTC;
-                rtn_order.OrderPriceType = GetPriceType(orderType);
-                strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-                rtn_order.VolumeTotalOriginal = volume;
-                rtn_order.LimitPrice = price;
-                rtn_order.VolumeTotal = openVolume;
-
-                //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
-                //on_rtn_order(&rtn_order);
-                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                        source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
-                                        1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+        handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
 
 
-                //send OnRtnTrade
-                LFRtnTradeField rtn_trade;
-                memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-                strcpy(rtn_trade.ExchangeID, "coinmex");
-                strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
-                rtn_trade.Direction = rtn_order.Direction;
-                uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
-                uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
-
-                //calculate the volumn and price (it is average too)
-                rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-                rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
-
-                on_rtn_trade(&rtn_trade);
-                raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                        source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
-
-            }
-
-            //emit the LF_CHAR_Canceled status
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.OrderStatus = LF_CHAR_Canceled;
-            rtn_order.VolumeTraded = VolumeTraded;
-
-            //first send onRtnOrder about the status change or VolumeTraded change
-            strcpy(rtn_order.ExchangeID, "coinmex");
-            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-            rtn_order.Direction = GetDirection(side);
-            //No this setting on coinmex
-            rtn_order.TimeCondition = LF_CHAR_GTC;
-            rtn_order.OrderPriceType = GetPriceType(orderType);
-            strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-            rtn_order.VolumeTotalOriginal = volume;
-            rtn_order.LimitPrice = price;
-            rtn_order.VolumeTotal = openVolume;
-
-            on_rtn_order(&rtn_order);
-            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
-                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-
-            //third, update last status for next query_order
-            orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-            orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-            orderStatusIterator->averagePrice = newAveragePrice;
-
-        } else if(orderStatusIterator->OrderStatus != OrderStatus ||
-                  (LF_CHAR_PartTradedQueueing == OrderStatus
-                   && VolumeTraded != orderStatusIterator->VolumeTraded))
+        //remove order when finish
+        if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
+           || orderStatusIterator->OrderStatus == LF_CHAR_Error)
         {
-            //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.OrderStatus = OrderStatus;
-            rtn_order.VolumeTraded = VolumeTraded;
-
-            //first send onRtnOrder about the status change or VolumeTraded change
-            strcpy(rtn_order.ExchangeID, "coinmex");
-            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-            rtn_order.Direction = GetDirection(side);
-            //No this setting on coinmex
-            rtn_order.TimeCondition = LF_CHAR_GTC;
-            rtn_order.OrderPriceType = GetPriceType(orderType);
-            strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-            rtn_order.VolumeTotalOriginal = volume;
-            rtn_order.LimitPrice = price;
-            rtn_order.VolumeTotal = openVolume;
-
-            on_rtn_order(&rtn_order);
-            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
-                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-            uint64_t newAveragePrice = averagePrice;
-            //second, if the status is PartTraded/AllTraded, send OnRtnTrade
-            if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
-               (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-                && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
-            {
-                LFRtnTradeField rtn_trade;
-                memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-                strcpy(rtn_trade.ExchangeID, "coinmex");
-                strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
-                rtn_trade.Direction = rtn_order.Direction;
-                uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
-                uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
-
-                //calculate the volumn and price (it is average too)
-                rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-                rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
-
-                on_rtn_trade(&rtn_trade);
-                raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                        source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
-            }
-            //third, update last status for next query_order
-            orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-            orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-            orderStatusIterator->averagePrice = newAveragePrice;
+            KF_LOG_INFO(logger, "[onOrder] remove a pendingOrderStatus.");
+            orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
         }
     }
 }
 
+void TDEngineCoinmex::handlerResponseOrderStatus(AccountUnitCoinmex& unit, std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
+{
+    int64_t newAveragePrice = responsedOrderStatus.averagePrice;
+    //cancel 需要特殊处理
+    if(LF_CHAR_Canceled == responsedOrderStatus.OrderStatus) {
+        /*
+         * 因为restful查询有间隔时间，订单可能会先经历过部分成交，然后才达到的cancnel，所以得到cancel不能只认为是cancel，还需要判断有没有部分成交过。
+        这时候需要补状态，补一个on rtn order，一个on rtn trade。
+        这种情况仅cancel才有, 部分成交和全成交没有此问题。
+        当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
+         //2018-09-12.  不清楚websocket会不会有这个问题，先做同样的处理
+        */
+
+        //虽然是撤单状态，但是已经成交的数量和上一次记录的数量不一样，期间一定发生了部分成交. 要补发 LF_CHAR_PartTradedQueueing
+        if(responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded) {
+            //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
+            LFRtnOrderField rtn_order;
+            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+            rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
+            rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
+            //first send onRtnOrder about the status change or VolumeTraded change
+            strcpy(rtn_order.ExchangeID, "coinmex");
+            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+            rtn_order.Direction = responsedOrderStatus.Direction;
+            //No this setting on coinmex
+            rtn_order.TimeCondition = LF_CHAR_GTC;
+            rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
+            strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
+            rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
+            rtn_order.LimitPrice = responsedOrderStatus.price;
+            //剩余数量
+            rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
+
+            //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
+            //on_rtn_order(&rtn_order);
+            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                    source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
+                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+
+            //send OnRtnTrade
+            LFRtnTradeField rtn_trade;
+            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+            strcpy(rtn_trade.ExchangeID, "coinmex");
+            strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
+            strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
+            rtn_trade.Direction = rtn_order.Direction;
+            uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
+            uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
+
+            //calculate the volumn and price (it is average too)
+            rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
+            rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
+
+            on_rtn_trade(&rtn_trade);
+            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
+
+        }
+
+        //emit the LF_CHAR_Canceled status
+        LFRtnOrderField rtn_order;
+        memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+        rtn_order.OrderStatus = LF_CHAR_Canceled;
+        rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
+
+        //first send onRtnOrder about the status change or VolumeTraded change
+        strcpy(rtn_order.ExchangeID, "coinmex");
+        strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+        strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+        rtn_order.Direction = responsedOrderStatus.Direction;
+        //coinmex has no this setting
+        rtn_order.TimeCondition = LF_CHAR_GTC;
+        rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
+        strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
+        rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
+        rtn_order.LimitPrice = responsedOrderStatus.price;
+        //剩余数量
+        rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
+
+        on_rtn_order(&rtn_order);
+        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
+                                1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+
+        //third, update last status for next query_order
+        orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
+        orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
+        orderStatusIterator->averagePrice = newAveragePrice;
+
+    } else if(orderStatusIterator->OrderStatus != responsedOrderStatus.OrderStatus ||
+              (LF_CHAR_PartTradedQueueing == responsedOrderStatus.OrderStatus
+               && responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded))
+    {
+        //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
+        LFRtnOrderField rtn_order;
+        memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+        rtn_order.OrderStatus = responsedOrderStatus.OrderStatus;
+        rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
+
+        //first send onRtnOrder about the status change or VolumeTraded change
+        strcpy(rtn_order.ExchangeID, "coinmex");
+        strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+        strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+        rtn_order.Direction = responsedOrderStatus.Direction;
+        //No this setting on coinmex
+        rtn_order.TimeCondition = LF_CHAR_GTC;
+        rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
+        strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
+        rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
+        rtn_order.LimitPrice = responsedOrderStatus.price;
+        rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
+
+        on_rtn_order(&rtn_order);
+        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
+                                1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+        int64_t newAveragePrice = responsedOrderStatus.averagePrice;
+        //second, if the status is PartTraded/AllTraded, send OnRtnTrade
+        if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
+           (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
+            && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
+        {
+            LFRtnTradeField rtn_trade;
+            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+            strcpy(rtn_trade.ExchangeID, "coinmex");
+            strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
+            strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
+            rtn_trade.Direction = rtn_order.Direction;
+            uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
+            uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
+
+            //calculate the volumn and price (it is average too)
+            rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
+            rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
+
+            on_rtn_trade(&rtn_trade);
+            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
+        }
+        //third, update last status for next query_order
+        orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
+        orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
+        orderStatusIterator->averagePrice = newAveragePrice;
+    }
+}
 
 std::string TDEngineCoinmex::parseJsonToString(Document &d)
 {
