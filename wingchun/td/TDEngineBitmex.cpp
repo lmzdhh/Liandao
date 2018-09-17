@@ -81,40 +81,37 @@ TradeAccount TDEngineBitmex::load_account(int idx, const json& j_config)
     // internal load
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
-    string passphrase = j_config["passphrase"].get<string>();
+
     string baseUrl = j_config["baseUrl"].get<string>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
-    if(j_config.find("sync_time_interval") != j_config.end()) {
-        SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
-    }
-    KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
 
     AccountUnitBitmex& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
-    unit.passphrase = passphrase;
     unit.baseUrl = baseUrl;
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
-    //keyIsStrategySideWhiteList
-    readWhiteLists(unit, j_config);
 
-    debug_print(unit.keyIsStrategyCoinpairWhiteList);
-    debug_print(unit.subscribeBitmexBaseQuote);
+    unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
+    unit.coinPairWhiteList.Debug_print();
+
+    unit.positionWhiteList.ReadWhiteLists(j_config, "positionWhiteLists");
+    unit.positionWhiteList.Debug_print();
+
     //display usage:
-    if(unit.keyIsStrategyCoinpairWhiteList.size() == 0) {
-        KF_LOG_ERROR(logger, "TDEngineBitmex::load_account: subscribeBitmexBaseQuote is empty. please add whiteLists in kungfu.json like this :");
+    if(unit.coinPairWhiteList.Size() == 0) {
+        KF_LOG_ERROR(logger, "TDEngineBitmex::load_account: please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
-        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
-        KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
+        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"BTC_USDT\",");
+        KF_LOG_ERROR(logger, "     \"etc_eth\": \"ETC_ETH\"");
         KF_LOG_ERROR(logger, "},");
     }
 
     //cancel all openning orders on TD startup
     Document d;
-    cancel_all_orders(unit,d);
+    cancel_all_orders(unit, d);
 
     // set up
     TradeAccount account = {};
@@ -124,108 +121,6 @@ TradeAccount TDEngineBitmex::load_account(int idx, const json& j_config)
     return account;
 }
 
-void TDEngineBitmex::readWhiteLists(AccountUnitBitmex& unit, const json& j_config)
-{
-    KF_LOG_INFO(logger, "[readWhiteLists]");
-    if(j_config.find("whiteLists") != j_config.end()) {
-        KF_LOG_INFO(logger, "[readWhiteLists] found whiteLists");
-        //has whiteLists
-        json whiteLists = j_config["whiteLists"].get<json>();
-        if(whiteLists.is_object())
-        {
-            for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
-                std::string strategy_coinpair = it.key();
-                std::string exchange_coinpair = it.value();
-                KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
-                unit.keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
-
-                //use strategy_coinpair
-                std::string coinpair = strategy_coinpair;
-                std::transform(coinpair.begin(), coinpair.end(), coinpair.begin(), ::toupper);
-
-                SubscribeBitmexBaseQuote baseQuote;
-                split(coinpair, "_", baseQuote);
-                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeBitmexBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
-
-                if(baseQuote.base.length() > 0)
-                {
-                    //get correct base_quote config
-                    unit.subscribeBitmexBaseQuote.push_back(baseQuote);
-                }
-            }
-        }
-    }
-}
-
-bool TDEngineBitmex::hasSymbolInWhiteList(std::vector<SubscribeBitmexBaseQuote> &sub, std::string symbol)
-{
-    KF_LOG_INFO(logger, "[hasSymbolInWhiteList]");
-    int count = sub.size();
-    std::string upperSymbol = symbol;
-    std::transform(upperSymbol.begin(), upperSymbol.end(), upperSymbol.begin(), ::toupper);
-    for (int i = 0; i < count; i++)
-    {
-        if(strcmp(sub[i].base.c_str(), upperSymbol.c_str()) == 0 || strcmp(sub[i].quote.c_str(), upperSymbol.c_str()) == 0) {
-            KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (found) (symbol) " << symbol);
-            return true;
-        }
-    }
-    KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (not found) (symbol) " << symbol);
-    return false;
-}
-
-//example: xbtusd
-void TDEngineBitmex::split(std::string str, std::string token, SubscribeBitmexBaseQuote& sub)
-{
-    if (str.size() > 0) {
-        size_t index = str.find(token);
-	if (index != std::string::npos) { 
-            sub.base = str.substr(0, index);
-            sub.quote = str.substr(index+token.size());
-	}
-	else {
-	    // not found, do nothing.
-	}
-    }
-}
-
-void TDEngineBitmex::debug_print(std::vector<SubscribeBitmexBaseQuote> &sub)
-{
-    int count = sub.size();
-    KF_LOG_INFO(logger, "[debug_print] SubscribeBitmexBaseQuote (count) " << count);
-
-    for (int i = 0; i < count;i++)
-    {
-        KF_LOG_INFO(logger, "[debug_print] SubscribeBitmexBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
-    }
-}
-
-void TDEngineBitmex::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
-{
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-        KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
-        map_itr++;
-    }
-}
-
-std::string TDEngineBitmex::getWhiteListCoinpairFrom(AccountUnitBitmex& unit, const char_31 strategy_coinpair)
-{
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find strategy_coinpair (strategy_coinpair) " << strategy_coinpair);
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = unit.keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != unit.keyIsStrategyCoinpairWhiteList.end()) {
-        if(strcmp(strategy_coinpair, map_itr->first.c_str()) == 0)
-        {
-            KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
-            return map_itr->second;
-        }
-        map_itr++;
-    }
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] not found strategy_coinpair (strategy_coinpair) " << strategy_coinpair);
-    return "";
-}
 
 void TDEngineBitmex::connect(long timeout_nsec)
 {
@@ -236,15 +131,9 @@ void TDEngineBitmex::connect(long timeout_nsec)
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
-//            Document d;
-//            get_exchange_time(unit, d);
-//            if(d.HasMember("timestamp")) {
-//                Value& s = d["timestamp"];
-//                KF_LOG_INFO(logger, "[connect] (response.timestamp.type) " << s.GetType() << " (response.timestamp) " << d["timestamp"].GetInt64());
-//                unit.logged_in = true;
-//            }
             //exchange infos
             Document doc;
+            //TODO
             get_products(unit, doc);
             KF_LOG_INFO(logger, "[connect] get_products");
             printResponse(doc);
@@ -259,13 +148,9 @@ void TDEngineBitmex::connect(long timeout_nsec)
             unit.logged_in = true;
         }
     }
-    //sync time of exchange
-    timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
-
-    KF_LOG_INFO(logger, "[connect] rest_thread start on TDEngineBitmex::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBitmex::loop, this)));
 }
 
+//TODO
 bool TDEngineBitmex::loadExchangeOrderFilters(AccountUnitBitmex& unit, Document &doc)
 {
     KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
@@ -356,6 +241,8 @@ bool TDEngineBitmex::loadExchangeOrderFilters(AccountUnitBitmex& unit, Document 
 //                                                                                       <<" (tickSize)" << afilter.ticksize);
 //        }
 //    }
+
+    return true;
 }
 
 void TDEngineBitmex::debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters)
@@ -527,15 +414,15 @@ void TDEngineBitmex::req_investor_position(const LFQryPositionField* data, int a
         for(int i = 0; i < len; i++)
         {
             std::string symbol = d.GetArray()[i]["currencyCode"].GetString();
-            if(hasSymbolInWhiteList(unit.subscribeBitmexBaseQuote, symbol))
-            {
-                strncpy(pos.InstrumentID, symbol.c_str(), 31);
+            std::string ticker = unit.positionWhiteList.GetKeyByValue(symbol);
+            if(ticker.length() > 0) {
+                strncpy(pos.InstrumentID, ticker.c_str(), 31);
+                pos.Position = std::round(std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset);
+                tmp_vector.push_back(pos);
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
                                                                           << " available:" << d.GetArray()[i]["available"].GetString()
                                                                           << " balance: " << d.GetArray()[i]["balance"].GetString()
                                                                           << " hold: " << d.GetArray()[i]["hold"].GetString());
-                pos.Position = std::round(std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset);
-                tmp_vector.push_back(pos);
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
             }
         }
@@ -615,7 +502,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
     int errorId = 0;
     std::string errorMsg = "";
 
-    std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
@@ -718,7 +605,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
     int errorId = 0;
     std::string errorMsg = "";
 
-    std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
@@ -784,15 +671,6 @@ void TDEngineBitmex::GetAndHandleOrderTradeResponse()
         moveNewtoPending(unit);
         retrieveOrderStatus(unit);
     }//end every account
-
-    sync_time_interval--;
-    if(sync_time_interval <= 0) {
-        //reset
-        sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
-        timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
-        KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
-    }
-    KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
 }
 
 
@@ -842,9 +720,9 @@ void TDEngineBitmex::retrieveOrderStatus(AccountUnitBitmex& unit)
             KF_LOG_INFO(logger, "[retrieveOrderStatus] found in localOrderRefRemoteOrderId map (orderRef) " << orderStatusIterator->OrderRef << " (remoteOrderId) " << remoteOrderId);
         }
 
-        std::string ticker = getWhiteListCoinpairFrom(unit, orderStatusIterator->InstrumentID);
+        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
         if(ticker.length() == 0) {
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
+            KF_LOG_INFO(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
             continue;
         }
         KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
@@ -1016,6 +894,16 @@ void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const c
                                                                        << "(VolumeTraded)" << VolumeTraded);
 }
 
+
+void TDEngineBitmex::set_reader_thread()
+{
+    ITDEngine::set_reader_thread();
+
+    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineBitmex::loop");
+    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBitmex::loop, this)));
+
+}
+
 void TDEngineBitmex::loop()
 {
     while(isRunning)
@@ -1127,20 +1015,6 @@ void TDEngineBitmex::getResponse(int http_status_code, std::string responseText,
     }
 }
 
-void TDEngineBitmex::get_exchange_time(AccountUnitBitmex& unit, Document& json)
-{
-    KF_LOG_INFO(logger, "[get_exchange_time]");
-    std::string Timestamp = getTimestampString();
-    std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/public/time";
-    std::string queryString= "";
-    std::string body = "";
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    string url = unit.baseUrl + requestPath + queryString;
-    const auto response = Get(Url{url}, Parameters{}, Timeout{10000});
-    KF_LOG_INFO(logger, "[get_exchange_time] (url) " << url << " (response) " << response.text.c_str());
-    return getResponse(response.status_code, response.text, response.error.message, json);
-}
 
 void TDEngineBitmex::get_account(AccountUnitBitmex& unit, Document& json)
 {
@@ -1157,7 +1031,7 @@ void TDEngineBitmex::get_account(AccountUnitBitmex& unit, Document& json)
     std::string sign = base64_encode(signature, 32);
 
     const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+                              Header{{"ACCESS-KEY", unit.api_key},
                                      {"Content-Type", "application/json"},
                                      {"ACCESS-SIGN", sign},
                                      {"ACCESS-TIMESTAMP",  Timestamp}}, Timeout{10000} );
@@ -1205,7 +1079,7 @@ void TDEngineBitmex::get_products(AccountUnitBitmex& unit, Document& json)
     string url = unit.baseUrl + requestPath;
     std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+                              Header{{"ACCESS-KEY", unit.api_key},
                                      {"Content-Type", "application/json"},
                                      {"ACCESS-SIGN", sign},
                                      {"ACCESS-TIMESTAMP",  Timestamp}}, Timeout{10000} );
@@ -1316,7 +1190,7 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
     std::string sign = base64_encode(signature, 32);
 
     const auto response = Post(Url{url},
-                               Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+                               Header{{"ACCESS-KEY", unit.api_key},
                                       {"Content-Type", "application/json; charset=UTF-8"},
                                       {"Content-Length", to_string(body.size())},
                                       {"ACCESS-SIGN", sign},
@@ -1436,7 +1310,7 @@ bids 	买方深度
     string url = unit.baseUrl + requestPath + queryString;
     std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
-                                 Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+                                 Header{{"ACCESS-KEY", unit.api_key},
                                         {"Content-Type", "application/json"},
                                         {"ACCESS-SIGN", sign},
                                         {"ACCESS-TIMESTAMP",  Timestamp}},
@@ -1515,7 +1389,7 @@ void TDEngineBitmex::query_orders(AccountUnitBitmex& unit, std::string code, std
     string url = unit.baseUrl + requestPath + queryString;
     std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key}, {"ACCESS-PASSPHRASE", unit.passphrase},
+                              Header{{"ACCESS-KEY", unit.api_key},
                                      {"Content-Type", "application/json"},
                                      {"ACCESS-SIGN", sign},
                                      {"ACCESS-TIMESTAMP",  Timestamp}},
@@ -1577,7 +1451,7 @@ inline int64_t TDEngineBitmex::getTimestamp()
 std::string TDEngineBitmex::getTimestampString()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    timestamp =  timestamp - timeDiffOfExchange;
+
     std::string timestampStr;
     std::stringstream convertStream;
     convertStream <<std::fixed << std::setprecision(3) << (timestamp/1000.0);
@@ -1585,42 +1459,6 @@ std::string TDEngineBitmex::getTimestampString()
     return timestampStr;
 }
 
-int64_t TDEngineBitmex::getTimeDiffOfExchange(AccountUnitBitmex& unit)
-{
-    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
-    //reset to 0
-    int64_t timeDiffOfExchange = 0;
-
-    int calculateTimes = 3;
-    int64_t accumulationDiffTime = 0;
-    bool hasResponse = false;
-    for(int i = 0 ; i < calculateTimes; i++)
-    {
-        Document d;
-        int64_t start_time = getTimestamp();
-        int64_t exchangeTime = start_time;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
-        get_exchange_time(unit, d);
-        if(!d.HasParseError() && d.HasMember("timestamp")) {//bitmex timestamp
-            exchangeTime = d["timestamp"].GetInt64();
-            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
-            hasResponse = true;
-        }
-        int64_t finish_time = getTimestamp();
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
-        int64_t tripTime = (finish_time - start_time) / 2;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
-        accumulationDiffTime += start_time + tripTime - exchangeTime;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
-    }
-    //set the diff
-    if(hasResponse)
-    {
-        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
-    }
-    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
-    return timeDiffOfExchange;
-}
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
 

@@ -4,6 +4,7 @@
 
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
+#include "CoinPairWhiteList.h"
 #include <vector>
 #include <sstream>
 #include <map>
@@ -52,8 +53,6 @@ struct AccountUnitBitmex
 {
     string api_key;
     string secret_key;
-    string passphrase;
-    //coinmex and bitmore use the same api, use this parameter for them
     string baseUrl;
     // internal flags
     bool    logged_in;
@@ -61,13 +60,9 @@ struct AccountUnitBitmex
     std::vector<PendingBitmexOrderStatus> pendingOrderStatus;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 
-    //in TD, lookup direction is:
-    // our strategy recognized coinpair ---> outcoming exchange coinpair
-    //if strategy's coinpair is not in this map ,ignore it
-    //"strategy_coinpair(base_quote)":"exchange_coinpair",
-    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
+    CoinPairWhiteList coinPairWhiteList;
+    CoinPairWhiteList positionWhiteList;
 
-    std::vector<SubscribeBitmexBaseQuote> subscribeBitmexBaseQuote;
 };
 
 
@@ -101,10 +96,14 @@ public:
 public:
     TDEngineBitmex();
     ~TDEngineBitmex();
+
+    int Round(std::string tickSizeStr);
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
     vector<AccountUnitBitmex> account_units;
+
+    virtual void set_reader_thread() override;
 
     std::string GetSide(const LfDirectionType& input);
     LfDirectionType GetDirection(std::string input);
@@ -130,13 +129,11 @@ private:
 
     std::map<std::string, std::string> localOrderRefRemoteOrderId;
 
-    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
-    int sync_time_interval;
-    int64_t timeDiffOfExchange = 0;
+
 
 private:
     int HTTP_RESPONSE_OK = 200;
-    void get_exchange_time(AccountUnitBitmex& unit, Document& json);
+
     void get_account(AccountUnitBitmex& unit, Document& json);
     void get_depth(AccountUnitBitmex& unit, std::string code, Document& json);
     void get_products(AccountUnitBitmex& unit, Document& json);
@@ -152,7 +149,7 @@ private:
     void printResponse(const Document& d);
     inline std::string getTimestampString();
 
-    int Round(std::string tickSizeStr);
+
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
     bool loadExchangeOrderFilters(AccountUnitBitmex& unit, Document &doc);
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
@@ -160,12 +157,8 @@ private:
 private:
     inline int64_t getTimestamp();
     int64_t getTimeDiffOfExchange(AccountUnitBitmex& unit);
-    void readWhiteLists(AccountUnitBitmex& unit, const json& j_config);
-    std::string getWhiteListCoinpairFrom(AccountUnitBitmex& unit, const char_31 strategy_coinpair);
-    bool hasSymbolInWhiteList(std::vector<SubscribeBitmexBaseQuote> &sub, std::string symbol);
-    void split(std::string str, std::string token, SubscribeBitmexBaseQuote& sub);
-    void debug_print(std::vector<SubscribeBitmexBaseQuote> &sub);
-    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
+
+
 };
 
 WC_NAMESPACE_END
