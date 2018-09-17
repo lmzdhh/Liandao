@@ -527,7 +527,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
                                                                      " (fixedPrice)" << fixedPrice);
 
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
-            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, d);
+            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef, d);
 
     //not expected response
     if(d.HasParseError() || !d.IsObject())
@@ -636,7 +636,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
     }
 
     Document d;
-    cancel_order(unit, ticker, stod(remoteOrderId), d);
+    cancel_order(unit, stod(remoteOrderId), d);
 
     //cancel order response "" as resultText, it cause json.HasParseError() == true, and json.IsObject() == false.
     //it is not an error, so dont check it.
@@ -1089,62 +1089,12 @@ void TDEngineBitmex::get_products(AccountUnitBitmex& unit, Document& json)
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
+//https://www.bitmex.com/api/explorer/#!/Order/Order_new
+
 void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
-                                     const char *side, const char *type, double size, double price, double funds, Document& json)
+                                     const char *side, const char *type, double size, double price,  std::string orderRef,  Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
-
-    //check funds
-    if(strcmp("market", type) == 0 && strcmp("buy", side) == 0)
-    {
-/*
-    {
-        "asks": [
-            ["0.01304566", "0.51385531"],
-            ["0.01310131", "2.20822955"],
-* */
-        /*  DO NOT SUPPORT MARKET-BUY , for it required calculate funds.
-        Document d = get_depth(unit, code);
-        if(d.IsObject() && d.HasMember("asks"))
-        {
-            double currentPrice = 0;
-            if(strcmp("buy", side) == 0) {
-                currentPrice = std::round(std::stod(d["asks"].GetArray()[0][0].GetString());
-            } else {
-                currentPrice = std::round(std::stod(d["bids"].GetArray()[0][0].GetString());
-            }
-            KF_LOG_INFO(logger, "[send_order] (currentPrice) " << std::setprecision(8) << currentPrice);
-            funds = size * price /currentPrice;
-
-        } else {
-            //error, return getResponse(0, "", "get_depth error");  ???
-            return d;
-        }
-        */
-        getResponse(0, "", "market buy is not supported!", json);
-        return;
-    }
-
-    if(strcmp("limit", type) == 0)
-    {
-        if(price == 0 || size == 0) {
-            KF_LOG_ERROR(logger, "[send_order] limit order, price or size cannot be null");
-            getResponse(0, "", "price or size cannot be null", json);
-            return;
-        }
-
-    } else if(strcmp("market", type) == 0) {
-        if(strcmp("buy", side) == 0 &&  funds == 0) {
-            KF_LOG_ERROR(logger, "[send_order] market order, type is buy, the funds cannot be null");
-            getResponse(0, "", "market order, type is buy, the funds cannot be null", json);
-            return;
-        }
-        if(strcmp("sell", side) == 0 &&  size == 0) {
-            KF_LOG_ERROR(logger, "[send_order] market order, type is sell, the size cannot be null");
-            getResponse(0, "", "market order, type is sell, the size cannot be null", json);
-            return;
-        }
-    }
 
     std::string priceStr;
     std::stringstream convertPriceStream;
@@ -1156,45 +1106,70 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
     convertSizeStream <<std::fixed << std::setprecision(8) << size;
     convertSizeStream >> sizeStr;
 
-    std::string fundsStr;
-    std::stringstream convertFundsStream;
-    convertFundsStream <<std::fixed << std::setprecision(8) << funds;
-    convertFundsStream >> fundsStr;
-
     KF_LOG_INFO(logger, "[send_order] (code) " << code << " (side) "<< side << " (type) " <<
-                                               type << " (size) "<< sizeStr << " (price) "<< priceStr << " (funds) " << fundsStr);
+                                               type << " (size) "<< sizeStr << " (price) "<< priceStr);
 
     Document document;
     document.SetObject();
     Document::AllocatorType& allocator = document.GetAllocator();
     //used inner this method only.so  can use reference
-    document.AddMember("code", StringRef(code), allocator);
+    /*Instrument symbol. e.g. 'XBTUSD'.
+    * */
+    document.AddMember("symbol", StringRef(code), allocator);
+    /*Order side. Valid options: Buy, Sell. Defaults to 'Buy' unless orderQty or simpleOrderQty is negative.
+    * */
     document.AddMember("side", StringRef(side), allocator);
-    document.AddMember("type", StringRef(type), allocator);
-    document.AddMember("size", StringRef(sizeStr.c_str()), allocator);
+    /*Order type. Valid options: Market, Limit, Stop, StopLimit, MarketIfTouched, LimitIfTouched, MarketWithLeftOverAsLimit, Pegged. Defaults to 'Limit' when price is specified. Defaults to 'Stop' when stopPx is specified. Defaults to 'StopLimit' when price and stopPx are specified.
+     * */
+    document.AddMember("ordType", StringRef(type), allocator);
+    /*simpleOrderQty:   Order quantity in units of the underlying instrument (i.e. Bitcoin).
+     *
+     * orderQty: Order quantity in units of the instrument (i.e. contracts).
+     * */
+    document.AddMember("orderQty", StringRef(sizeStr.c_str()), allocator);
+    /*
+     * Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders.
+     * */
     document.AddMember("price", StringRef(priceStr.c_str()), allocator);
-    document.AddMember("funds", StringRef(fundsStr.c_str()), allocator);
+    /*
+     * clOrdID : Optional Client Order ID. This clOrdID will come back on the order and any related executions.
+     * */
+    document.AddMember("clOrdID", StringRef(orderRef.c_str()), allocator);
+
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
     document.Accept(writer);
 
     std::string Timestamp = getTimestampString();
     std::string Method = "POST";
-    std::string requestPath = "/api/v1/spot/ccex/orders";
+    std::string requestPath = "/api/v1/order";
     std::string queryString= "";
     std::string body = jsonStr.GetString();
 
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
-    string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, 32);
+    std::time_t baseNow = std::time(nullptr);
+    struct tm* tm = std::localtime(&baseNow);
+    tm->tm_sec += 30;
+    std::time_t next = std::mktime(tm);
 
-    const auto response = Post(Url{url},
-                               Header{{"ACCESS-KEY", unit.api_key},
-                                      {"Content-Type", "application/json; charset=UTF-8"},
+    string Message = Timestamp + Method + requestPath + queryString + body;
+    std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
+    string url = unit.baseUrl + requestPath + queryString;
+
+    /*
+     * Header{{"api-key", unit.api_key},
+                                      {"Accept", "application/json"},
+                                      {"Content-Type", "application/x-www-form-urlencoded"},
                                       {"Content-Length", to_string(body.size())},
-                                      {"ACCESS-SIGN", sign},
-                                      {"ACCESS-TIMESTAMP",  Timestamp}},
+                                      {"api-signature", signature},
+                                      {"api-expires", std::to_string(next) }},
+     * */
+    const auto response = Post(Url{url},
+                               Header{{"api-key", unit.api_key},
+                                      {"Accept", "application/json"},
+                                      {"Content-Type", "application/x-www-form-urlencoded"},
+                                      {"Content-Length", to_string(body.size())},
+                                      {"api-signature", signature},
+                                      {"api-expires", std::to_string(next) }},
                                Body{body}, Timeout{30000});
 
     //an error:
@@ -1221,14 +1196,8 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
     string Message = Method + requestPath;
     Message += std::to_string(next);
 
-    //unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath;
-    //std::string sign = base64_encode(signature, 32);
-    //KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url  << " message= " << Message);
-    //KF_LOG_INFO(logger, "signature= " << signature );
-    //KF_LOG_INFO(logger, "apiKey= " << unit.api_key );
-
 
     const auto response = Delete(Url{url},
                                  Header{{"api-key", unit.api_key},
@@ -1243,113 +1212,32 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-void TDEngineBitmex::get_depth(AccountUnitBitmex& unit, std::string code, Document& json)
-{
-    KF_LOG_INFO(logger, "[get_depth]");
-/*
-返回字段 	字段说明
-asks 	卖方深度  AskPrice1/AskVolume1
-bids 	买方深度
- # Response
-    {
-	"asks": [
-		["0.01304566", "0.51385531"],
-		["0.01310131", "2.20822955"],
-		["0.01312757", "1.92059042"],
-		["0.01314095", "0.53782524"],
-		["0.01315399", "0.4179756"],
-		["0.01318462", "0.44793801"],
-		["0.01323127", "0.90336663"],
-		["0.01327756", "0.75954707"],
-		["0.01332584", "0.63969743"],
-		["0.01334785", "0.65168239"],
-		["0.01338953", "0.53782524"],
-		["0.0135845", "0.84943429"],
-		["0.01371617", "0.00653215"],
-		["0.0138774", "0.37602823"],
-		["0.01393799", "0.83744933"],
-		["0.01414", "0.51385531"],
-		["0.014645", "0.73557714"],
-		["0.0150692", "0.59775006"],
-		["0.01515", "0.38202071"],
-		["0.016059", "0.85542678"],
-		["0.016261", "0.81947188"]
-	],
-	"bids": [
-		["0.01276962", "0.67158993"],
-		["0.01275003", "1.9113995"],
-		["0.01272479", "2.26019503"],
-		["0.01272478", "0.69061514"],
-		["0.01272395", "0.63353951"],
-		["0.01270817", "0.43694567"],
-		["0.01266133", "0.9062342"],
-		["0.01266132", "0.34816135"],
-		["0.01261785", "0.57012214"],
-		["0.0125765", "0.93794288"],
-		["0.01257649", "0.93160115"],
-		["0.01254665", "0.35450309"],
-		["0.012375", "0.60183083"],
-		["0.011979", "0.77939946"],
-		["0.01188", "0.6145143"],
-		["0.011682", "0.70964035"],
-		["0.011385", "0.65890646"],
-		["0.01088999", "0.59548909"],
-		["0.0106623", "0.36084482"],
-		["0.010494", "0.53207172"],
-		["0.00000111", "0.07112221"]
-	]
-}
- * */
-    std::string Timestamp = getTimestampString();
-    std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/public/products/" + code + "/orderbook";
-    std::string queryString= "";
-    std::string body = "";
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
-    string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, 32);
-    const auto response = Get(Url{url},
-                                 Header{{"ACCESS-KEY", unit.api_key},
-                                        {"Content-Type", "application/json"},
-                                        {"ACCESS-SIGN", sign},
-                                        {"ACCESS-TIMESTAMP",  Timestamp}},
-                                 Body{body}, Timeout{10000});
 
-    KF_LOG_INFO(logger, "[get_depth] (url) " << url << " (response.status_code) " << response.status_code <<
-                                             " (response.error.message) " << response.error.message <<
-                                             " (response.text) " << response.text.c_str());
-    //{"asks":[],"bids":[]}
-    getResponse(response.status_code, response.text, response.error.message, json);
-}
-
-void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, std::string code, long orderId, Document& json)
+void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, long orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
-    rapidjson::Document document;
-    document.SetObject();
-    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-    //used inner this method only.so  can use reference
-    document.AddMember("code", StringRef(code.c_str()), allocator);
-    StringBuffer jsonStr;
-    Writer<StringBuffer> writer(jsonStr);
-    document.Accept(writer);
 
     std::string Timestamp = getTimestampString();
+    std::time_t baseNow = std::time(nullptr);
+    struct tm* tm = std::localtime(&baseNow);
+    tm->tm_sec += 30;
+    std::time_t next = std::mktime(tm);
+
     std::string Method = "DELETE";
-    std::string requestPath = "/api/v1/order" + std::to_string(orderId);
+    std::string requestPath = "/api/v1/order";
     std::string queryString= "";
-    std::string body = jsonStr.GetString();
+    std::string body = "clOrdID=" + std::to_string(orderId);
+
     string Message = Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
+    std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
+
     string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, 32);
+
     const auto response = Delete(Url{url},
-                                 Header{{"ACCESS-KEY", unit.api_key},
-                                        {"Content-Type", "application/json; charset=UTF-8"},
-                                        {"Content-Length", to_string(body.size())},
-                                        {"ACCESS-SIGN", sign},
-                                        {"ACCESS-TIMESTAMP",  Timestamp}},
+                                 Header{{"api-key", unit.api_key},
+                                        {"Content-Type", "application/json"},
+                                        {"api-signature", signature},
+                                        {"api-expires", std::to_string(next) }},
                                  Body{body}, Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
@@ -1358,48 +1246,7 @@ void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, std::string code, lon
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-//订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-void TDEngineBitmex::query_orders(AccountUnitBitmex& unit, std::string code, std::string status, Document& json)
-{
-    KF_LOG_INFO(logger, "[query_orders]");
-/*
- # Response
-    {
-        "averagePrice": "0",
-        "code": "chp-eth",
-        "createdDate": 1526299182000,
-        "filledVolume": "0",
-        "funds": "0",
-        "orderId": 9865872,
-        "orderType": "limit",
-        "price": "0.00001",
-        "side": "buy",
-        "status": "canceled",
-        "volume": "1"
-    }
- * */
 
-    std::string Timestamp = getTimestampString();
-    std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/ccex/orders";
-    std::string queryString= "?code=" + code + "&status=" + status;
-    std::string body = "";
-    string Message = Timestamp + Method + requestPath + queryString + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
-    string url = unit.baseUrl + requestPath + queryString;
-    std::string sign = base64_encode(signature, 32);
-    const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key},
-                                     {"Content-Type", "application/json"},
-                                     {"ACCESS-SIGN", sign},
-                                     {"ACCESS-TIMESTAMP",  Timestamp}},
-                              Body{body}, Timeout{10000});
-
-    KF_LOG_INFO(logger, "[query_orders] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                " (response.error.message) " << response.error.message <<
-                                                " (response.text) " << response.text.c_str());
-    getResponse(response.status_code, response.text, response.error.message, json);
-}
 
 void TDEngineBitmex::query_order(AccountUnitBitmex& unit, std::string code, long orderId, Document& json)
 {

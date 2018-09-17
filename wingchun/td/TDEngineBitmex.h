@@ -135,15 +135,14 @@ private:
     int HTTP_RESPONSE_OK = 200;
 
     void get_account(AccountUnitBitmex& unit, Document& json);
-    void get_depth(AccountUnitBitmex& unit, std::string code, Document& json);
+
     void get_products(AccountUnitBitmex& unit, Document& json);
     void send_order(AccountUnitBitmex& unit, const char *code,
-                        const char *side, const char *type, double size, double price, double funds, Document& json);
+                        const char *side, const char *type, double size, double price, std::string orderRef, Document& json);
 
-    //void cancel_all_orders(AccountUnitBitmex& unit, std::string code, Document& json);
     void cancel_all_orders(AccountUnitBitmex& unit, Document& json);
-    void cancel_order(AccountUnitBitmex& unit, std::string code, long orderId, Document& json);
-    void query_orders(AccountUnitBitmex& unit, std::string code, std::string status, Document& json);
+    void cancel_order(AccountUnitBitmex& unit, long orderId, Document& json);
+
     void query_order(AccountUnitBitmex& unit, std::string code, long orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
@@ -157,7 +156,6 @@ private:
 private:
     inline int64_t getTimestamp();
     int64_t getTimeDiffOfExchange(AccountUnitBitmex& unit);
-
 
 };
 
