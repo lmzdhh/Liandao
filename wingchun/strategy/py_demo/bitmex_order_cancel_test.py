@@ -22,8 +22,8 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 
 def initialize(context):
     #context.add_md(source=SOURCE.BITMEX)
-    context.ticker = 'btc_usdt'
-    context.exchange_id = EXCHANGE.BITMEX
+    context.ticker = 'ltc_btc'
+    context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
     context.order_rid = -1
@@ -44,7 +44,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.print_pos(pos_handler)
             #context.stop()
             print '----will test buy cancel----'
-            context.buy_price = 1191234 #market_data.LowerLimitPrice
+            context.buy_price = 1 #market_data.LowerLimitPrice
             context.sell_price = 999999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
