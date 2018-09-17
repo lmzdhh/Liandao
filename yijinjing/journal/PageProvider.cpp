@@ -26,7 +26,7 @@
 #include "PageUtil.h"
 #include "Page.h"
 #include "StrategySocketHandler.h"
-
+#include <iostream>
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 
@@ -120,6 +120,8 @@ int ClientPageProvider::register_journal(const string& dir, const string& jname)
 
 PagePtr ClientPageProvider::getPage(const string &dir, const string &jname, int serviceIdx, short pageNum)
 {
+
+    std::cout << " [getPage] (dir)" << dir << " (jname)" << jname << " (serviceIdx)" << serviceIdx << " (pageNum)" << pageNum << std::endl;
     PageCommMsg* serverMsg = GET_COMM_MSG(comm_buffer, serviceIdx);
     serverMsg->page_num = pageNum;
     serverMsg->status = PAGED_COMM_REQUESTING;

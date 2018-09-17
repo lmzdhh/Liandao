@@ -278,6 +278,7 @@ void WCDataWrapper::run()
                             LFRtnOrderField * rtn_order = (LFRtnOrderField *) data;
                             order_statuses[request_id] = rtn_order->OrderStatus;
                             processor->on_rtn_order(rtn_order, request_id, msg_source, cur_time);
+
                             break;
                         }
                         case MSG_TYPE_LF_RTN_TRADE:

@@ -608,6 +608,7 @@ void MDEngineMock::onDepth(Document& json)
                     asksPriceAndVolume->erase(price);
                     KF_LOG_INFO(logger, "MDEngineMock::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
                 } else {
+					asksPriceAndVolume->erase(price);
                     asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
                 }
 //                KF_LOG_INFO(logger, "MDEngineMock::onDepth: asks price:" << price<<  "  volume:"<< volume);
@@ -627,6 +628,7 @@ void MDEngineMock::onDepth(Document& json)
                     KF_LOG_INFO(logger, "MDEngineMock::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
 
                 } else {
+					bidsPriceAndVolume->erase(price);
                     bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
                 }
 //                KF_LOG_INFO(logger, "MDEngineMock::onDepth: bids price:" << price<<  "  volume:"<< volume);

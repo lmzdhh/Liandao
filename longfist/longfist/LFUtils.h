@@ -62,6 +62,8 @@ inline JournalPair getMdJournalPair(short source)
 		case 21:
 			return {"/shared/kungfu/journal/MD/BITMAX/", "MD_BITMAX"};
 		case 22:
+			return {"/shared/kungfu/journal/MD/BITFINEX/", "MD_BITFINEX"};
+		case 23:
 			return {"/shared/kungfu/journal/MD/BITMEX/", "MD_BITMEX"};
 		default:
 			return {"", ""};
@@ -83,7 +85,9 @@ inline JournalPair getMdRawJournalPair(short source)
 		case 21:
 			return {"/shared/kungfu/journal/MD_RAW/BITMAX/", "MDRAW_BITMAX"};
 		case 22:
-			return {"/shared/kungfu/journal/MD_RAW/BITMEX/", "MDRAW_BITMEX"};
+			return {"/shared/kungfu/journal/MD_RAW/BITFINEX/", "MDRAW_BITFINEX"};
+        case 23:
+            return {"/shared/kungfu/journal/MD_RAW/BITMEX/", "MDRAW_BITMEX"};
 		default:
 			return {"", ""};
 	}
@@ -106,7 +110,9 @@ inline JournalPair getTdJournalPair(short source)
 		case 21:
 			return {"/shared/kungfu/journal/TD/BITMAX/", "TD_BITMAX"};
 		case 22:
-			return {"/shared/kungfu/journal/TD/BITMEX/", "TD_BITMEX"};
+			return {"/shared/kungfu/journal/TD/BITFINEX/", "TD_BITFINEX"};
+        case 23:
+            return {"/shared/kungfu/journal/TD/BITMEX/", "TD_BITMEX"};
 		default:
 			return {"", ""};
 	}
@@ -129,7 +135,9 @@ inline JournalPair getTdSendJournalPair(short source)
 		case 21:
 			return {"/shared/kungfu/journal/TD_SEND/BITMAX/", "TD_SEND_BITMAX"};
 		case 22:
-			return {"/shared/kungfu/journal/TD_SEND/BITMEX/", "TD_SEND_BITMEX"};
+			return {"/shared/kungfu/journal/TD_SEND/BITFINEX/", "TD_SEND_BITFINEX"};
+        case 23:
+            return {"/shared/kungfu/journal/TD_SEND/BITMEX/", "TD_SEND_BITMEX"};
 		default:
 			return {"", ""};
 	}
@@ -152,7 +160,9 @@ inline JournalPair getTdRawJournalPair(short source)
 		case 21:
 			return {"/shared/kungfu/journal/TD_RAW/BITMAX/", "TD_RAW_BITMAX"};
 		case 22:
-			return {"/shared/kungfu/journal/TD_RAW/BITMEX/", "TD_RAW_BITMEX"};
+			return {"/shared/kungfu/journal/TD_RAW/BITFINEX/", "TD_RAW_BITFINEX"};
+        case 23:
+            return {"/shared/kungfu/journal/TD_RAW/BITMEX/", "TD_RAW_BITMEX"};
 		default:
 			return {"", ""};
 	}
@@ -175,7 +185,9 @@ inline JournalPair getTdQJournalPair(short source)
 		case 21:
 			return {"/shared/kungfu/journal/TD_Q/BITMAX/", "TD_Q_BITMAX"};
 		case 22:
-			return {"/shared/kungfu/journal/TD_Q/BITMEX/", "TD_Q_BITMEX"};
+			return {"/shared/kungfu/journal/TD_Q/BITFINEX/", "TD_Q_BITFINEX"};
+        case 23:
+            return {"/shared/kungfu/journal/TD_Q/BITMEX/", "TD_Q_BITMEX"};
 		default:
 			return {"", ""};
 	}

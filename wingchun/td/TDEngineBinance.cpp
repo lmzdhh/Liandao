@@ -40,7 +40,6 @@ using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
-
 USING_WC_NAMESPACE
 
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
@@ -87,18 +86,35 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
 
+    if(j_config.find("exchange_shift_ms") != j_config.end()) {
+        exchange_shift_ms = j_config["exchange_shift_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (exchange_shift_ms)" << exchange_shift_ms);
+
+    if(j_config.find("order_insert_recvwindow_ms") != j_config.end()) {
+        order_insert_recvwindow_ms = j_config["order_insert_recvwindow_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (order_insert_recvwindow_ms)" << order_insert_recvwindow_ms);
+
+    if(j_config.find("order_action_recvwindow_ms") != j_config.end()) {
+        order_action_recvwindow_ms = j_config["order_action_recvwindow_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (order_action_recvwindow_ms)" << order_action_recvwindow_ms);
+
     AccountUnitBinance& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key);
-    //keyIsStrategySideWhiteList
-    readWhiteLists(unit, j_config);
 
-    debug_print(unit.keyIsStrategyCoinpairWhiteList);
-    debug_print(unit.subscribeCoinBaseQuote);
+    unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
+    unit.coinPairWhiteList.Debug_print();
+
+    unit.positionWhiteList.ReadWhiteLists(j_config, "positionWhiteLists");
+    unit.positionWhiteList.Debug_print();
+
     //display usage:
-    if(unit.keyIsStrategyCoinpairWhiteList.size() == 0) {
+    if(unit.coinPairWhiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "TDEngineBinance::load_account: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
@@ -108,11 +124,11 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     }
 
     //cancel all openning orders on TD startup
-    if(unit.keyIsStrategyCoinpairWhiteList.size() > 0)
+    if(unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().size() > 0)
     {
-        std::map<std::string, std::string>::iterator map_itr;
-        map_itr = unit.keyIsStrategyCoinpairWhiteList.begin();
-        while(map_itr != unit.keyIsStrategyCoinpairWhiteList.end())
+        std::unordered_map<std::string, std::string>::iterator map_itr;
+        map_itr = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+        while(map_itr != unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end())
         {
             KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID) of exchange coinpair: " << map_itr->second);
 
@@ -124,7 +140,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
             if(!d.HasParseError() && d.IsArray()) { // expected success response is array
                 size_t len = d.Size();
                 KF_LOG_INFO(logger, "[load_account][get_open_orders] (length)" << len);
-                for (int i = 0; i < len; i++) {
+                for (size_t i = 0; i < len; i++) {
                     if(d.GetArray()[i].IsObject() && d.GetArray()[i].HasMember("symbol") && d.GetArray()[i].HasMember("clientOrderId"))
                     {
                         if(d.GetArray()[i]["symbol"].IsString() && d.GetArray()[i]["clientOrderId"].IsString())
@@ -171,114 +187,11 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     return account;
 }
 
-void TDEngineBinance::readWhiteLists(AccountUnitBinance& unit, const json& j_config)
-{
-    KF_LOG_INFO(logger, "[readWhiteLists]");
-    if(j_config.find("whiteLists") != j_config.end()) {
-        KF_LOG_INFO(logger, "[readWhiteLists] found whiteLists");
-        //has whiteLists
-        json whiteLists = j_config["whiteLists"].get<json>();
-        if(whiteLists.is_object())
-        {
-            for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
-                std::string strategy_coinpair = it.key();
-                std::string exchange_coinpair = it.value();
-                KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
-                unit.keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
-
-                SubscribeCoinBaseQuote baseQuote;
-                //binance exchange_coinpair can not split (for example:TRXBTC), use strategy_coinpair
-                std::string coinpair = strategy_coinpair;
-                std::transform(coinpair.begin(), coinpair.end(), coinpair.begin(), ::toupper);
-
-                split(coinpair, "_", baseQuote);
-                KF_LOG_INFO(logger, "[readWhiteLists] subscribeCoinBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
-
-                if(baseQuote.base.length() > 0)
-                {
-                    //get correct base_quote config
-                    unit.subscribeCoinBaseQuote.push_back(baseQuote);
-                }
-            }
-        }
-    }
-}
-
-bool TDEngineBinance::hasSymbolInWhiteList(std::vector<SubscribeCoinBaseQuote> &sub, std::string symbol)
-{
-    KF_LOG_INFO(logger, "[hasSymbolInWhiteList]");
-    int count = sub.size();
-    std::string upperSymbol = symbol;
-    std::transform(upperSymbol.begin(), upperSymbol.end(), upperSymbol.begin(), ::toupper);
-    for (int i = 0; i < count;i++)
-    {
-        if(strcmp(sub[i].base.c_str(), upperSymbol.c_str()) == 0 || strcmp(sub[i].quote.c_str(), upperSymbol.c_str()) == 0) {
-            KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (found) (symbol) " << symbol);
-            return true;
-        }
-    }
-    KF_LOG_INFO(logger, "[hasSymbolInWhiteList] hasSymbolInWhiteList (not found) (symbol) " << symbol);
-    return false;
-}
-
-//example: btc_usdt
-void TDEngineBinance::split(std::string str, std::string token, SubscribeCoinBaseQuote& sub)
-{
-    if (str.size() > 0) {
-        size_t index = str.find(token);
-        if (index != std::string::npos) {
-            sub.base = str.substr(0, index);
-            sub.quote = str.substr(index + token.size());
-        }
-        else {
-            //not found, do nothing
-        }
-    }
-}
-
-void TDEngineBinance::debug_print(std::vector<SubscribeCoinBaseQuote> &sub)
-{
-    int count = sub.size();
-    KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (count) " << count);
-
-    for (int i = 0; i < count;i++)
-    {
-        KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
-    }
-}
-
-void TDEngineBinance::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
-{
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-        KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
-        map_itr++;
-    }
-}
-
-std::string TDEngineBinance::getWhiteListCoinpairFrom(AccountUnitBinance& unit, const char_31 strategy_coinpair)
-{
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find strategy_coinpair (strategy_coinpair) " << strategy_coinpair);
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = unit.keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != unit.keyIsStrategyCoinpairWhiteList.end()) {
-        if(strcmp(strategy_coinpair, map_itr->first.c_str()) == 0)
-        {
-            KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
-            return map_itr->second;
-        }
-        map_itr++;
-    }
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] not found strategy_coinpair (strategy_coinpair) " << strategy_coinpair);
-    return "";
-}
-
 
 void TDEngineBinance::connect(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "[connect]");
-    for (int idx = 0; idx < account_units.size(); idx ++)
+    for (size_t idx = 0; idx < account_units.size(); idx++)
     {
         AccountUnitBinance& unit = account_units[idx];
 
@@ -302,9 +215,6 @@ void TDEngineBinance::connect(long timeout_nsec)
     }
     //sync time of exchange
     timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
-
-    KF_LOG_INFO(logger, "[connect] rest_thread start on AccountUnitBinance::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::loop, this)));
 }
 
 bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc)
@@ -346,6 +256,7 @@ bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Documen
             }
         }
     }
+    return true;
 }
 
 void TDEngineBinance::debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters)
@@ -370,6 +281,10 @@ SendOrderFilter TDEngineBinance::getSendOrderFilter(AccountUnitBinance& unit, co
         }
         map_itr++;
     }
+    SendOrderFilter defaultFilter;
+    defaultFilter.ticksize = 8;
+    strcpy(defaultFilter.InstrumentID, "notfound");
+    return defaultFilter;
 }
 
 void TDEngineBinance::login(long timeout_nsec)
@@ -543,14 +458,13 @@ void TDEngineBinance::req_investor_position(const LFQryPositionField* data, int 
         int len = d["balances"].Size();
         for ( int i  = 0 ; i < len ; i++ ) {
             std::string symbol = d["balances"].GetArray()[i]["asset"].GetString();
-            if(hasSymbolInWhiteList(unit.subscribeCoinBaseQuote, symbol))
-            {
-                std::string free = d["balances"].GetArray()[i]["free"].GetString();
-                std::string locked = d["balances"].GetArray()[i]["locked"].GetString();
-                KF_LOG_INFO(logger,  "[connect] (symbol)" << symbol << " (free)" <<  free << " (locked)" << locked);
-                strncpy(pos.InstrumentID, symbol.c_str(), 31);
+            std::string ticker = unit.positionWhiteList.GetKeyByValue(symbol);
+            if(ticker.length() > 0) {
+                strncpy(pos.InstrumentID, ticker.c_str(), 31);
                 pos.Position = std::round(stod(d["balances"].GetArray()[i]["free"].GetString()) * scale_offset);
                 tmp_vector.push_back(pos);
+                KF_LOG_INFO(logger,  "[connect] (symbol)" << symbol << " (free)" <<  d["balances"].GetArray()[i]["free"].GetString()
+                                                          << " (locked)" << d["balances"].GetArray()[i]["locked"].GetString());
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
             }
         }
@@ -609,7 +523,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     int errorId = 0;
     std::string errorMsg = "";
 
-    std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
@@ -637,7 +551,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(), GetType(data->OrderPriceType).c_str(),
         GetTimeInForce(data->TimeCondition).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef,
         stopPrice, icebergQty, d);
-    KF_LOG_INFO(logger, "[req_order_insert] send_order");
+//    KF_LOG_INFO(logger, "[req_order_insert] send_order");
 //    printResponse(d);
 
     if(d.HasParseError() )
@@ -695,7 +609,7 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
     */
 
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
-    char noneStatus = '\0';//none
+    char noneStatus = '\0';
     int64_t binanceOrderId =  result["orderId"].GetInt64();
     addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction, binanceOrderId);
 }
@@ -719,6 +633,9 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
                     }
 
     */
+    KF_LOG_DEBUG(logger, "TDEngineBinance::onRspNewOrderRESULT:");
+    printResponse(result);
+
     // no strike price, dont emit OnRtnTrade
     LFRtnOrderField rtn_order;
     memset(&rtn_order, 0, sizeof(LFRtnOrderField));
@@ -756,6 +673,8 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
+
+        //this response has no tradeId, so dont call unit.newSentTradeIds.push_back(tradeid)
     }
 
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
@@ -771,50 +690,32 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
 {
     /*Response FULL:
                 {
-                  "symbol": "BTCUSDT",
-                  "orderId": 28,
-                  "clientOrderId": "6gCrw2kRUAF9CvJDGP16IP",
-                  "transactTime": 1507725176595,
-                  "price": "0.00000000",
-                  "origQty": "10.00000000",
-                  "executedQty": "10.00000000",
-                  "status": "FILLED",
-                  "timeInForce": "GTC",
-                  "type": "MARKET",
-                  "side": "SELL",
-                  "fills": [
-                    {
-                      "price": "4000.00000000",
-                      "qty": "1.00000000",
-                      "commission": "4.00000000",
-                      "commissionAsset": "USDT"
-                    },
-                    {
-                      "price": "3999.00000000",
-                      "qty": "5.00000000",
-                      "commission": "19.99500000",
-                      "commissionAsset": "USDT"
-                    },
-                    {
-                      "price": "3998.00000000",
-                      "qty": "2.00000000",
-                      "commission": "7.99600000",
-                      "commissionAsset": "USDT"
-                    },
-                    {
-                      "price": "3997.00000000",
-                      "qty": "1.00000000",
-                      "commission": "3.99700000",
-                      "commissionAsset": "USDT"
-                    },
-                    {
-                      "price": "3995.00000000",
-                      "qty": "1.00000000",
-                      "commission": "3.99500000",
-                      "commissionAsset": "USDT"
-                    }
-                  ]
-                }
+	"symbol": "BTCUSDT",
+	"orderId": 144678401,
+	"clientOrderId": "25",
+	"transactTime": 1533717358045,
+	"price": "0.00000000",
+	"origQty": "0.01512200",
+	"executedQty": "0.01512200",
+	"cummulativeQuoteQty": "97.90379616",
+	"status": "FILLED",
+	"timeInForce": "GTC",
+	"type": "MARKET",
+	"side": "SELL",
+	"fills": [{
+		"price": "6474.49000000",
+		"qty": "0.00957100",
+		"commission": "0.00372804",
+		"commissionAsset": "BNB",
+		"tradeId": 61800504
+	}, {
+		"price": "6473.87000000",
+		"qty": "0.00555100",
+		"commission": "0.00216198",
+		"commissionAsset": "BNB",
+		"tradeId": 61800505
+	}]
+}
 
     */
 
@@ -827,19 +728,18 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     rtn_order.TimeCondition = data->TimeCondition;
     rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, result["clientOrderId"].GetString(), 13);
-    rtn_order.VolumeTraded = std::round(stod(result["executedQty"].GetString()) * scale_offset);
-    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
-    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-    rtn_order.LimitPrice = std::round(stod(result["price"].GetString()) * scale_offset);
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus = GetOrderStatus(result["status"].GetString());
-    on_rtn_order(&rtn_order);
-    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                            source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
-                            1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
-    //we have strike price, emit OnRtnTrade
-    int fills_size = result["fills"].Size();
+    uint64_t volumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
+    //数量
+    rtn_order.VolumeTotalOriginal = volumeTotalOriginal;
+
+    bool isAllTraded = false;
+    if (rtn_order.OrderStatus == LF_CHAR_AllTraded)
+    {
+        isAllTraded = true;
+    }
 
     LFRtnTradeField rtn_trade;
     memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
@@ -849,13 +749,43 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     strncpy(rtn_trade.OrderRef, result["clientOrderId"].GetString(), 13);
     rtn_trade.Direction = data->Direction;
 
+    //we have strike price, emit OnRtnTrade
+    int fills_size = result["fills"].Size();
+
     for(int i = 0; i < fills_size; ++i)
     {
-        rtn_trade.Volume = std::round(stod(result["executedQty"].GetString()) * scale_offset);
-        rtn_trade.Price = std::round(stod(result["price"].GetString()) * scale_offset);
+        uint64_t volume = std::round(stod(result["fills"].GetArray()[i]["qty"].GetString()) * scale_offset);
+        int64_t price = std::round(stod(result["fills"].GetArray()[i]["price"].GetString()) * scale_offset);
+        //今成交数量
+        rtn_order.VolumeTraded = volume;
+        rtn_order.LimitPrice = price;
+        //剩余数量
+        volumeTotalOriginal = volumeTotalOriginal - volume;
+        rtn_order.VolumeTotal = volumeTotalOriginal;
+
+        if(isAllTraded)
+        {
+            if(i == fills_size - 1) {
+                //the last one
+                rtn_order.OrderStatus = LF_CHAR_AllTraded;
+            } else {
+                rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
+            }
+        }
+        on_rtn_order(&rtn_order);
+        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
+                                1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+        rtn_trade.Volume = volume;
+        rtn_trade.Price = price;
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
+
+        //this trade id has been send on_rtn_trade
+        int64_t newTradeid = result["fills"].GetArray()[i]["tradeId"].GetInt64();
+        addNewSentTradeIds(unit, newTradeid);
     }
 
     //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
@@ -874,14 +804,14 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Iid)" << data->InvestorID
-                                              << " (OrderRef)" << data->OrderRef);
+                                              << " (OrderRef)" << data->OrderRef << " (KfOrderID)" << data->KfOrderID);
 
     send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
 
-    std::string ticker = getWhiteListCoinpairFrom(unit, data->InstrumentID);
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + "not in WhiteList, ignore it";
@@ -895,8 +825,8 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
 
     Document d;
 	cancel_order(unit, ticker.c_str(), 0, data->OrderRef, "", d);
-    KF_LOG_INFO(logger, "[req_order_action] cancel_order");
-    printResponse(d);
+//    KF_LOG_INFO(logger, "[req_order_action] cancel_order");
+//    printResponse(d);
 
     if(d.HasParseError() )
     {
@@ -923,7 +853,7 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
 void TDEngineBinance::GetAndHandleOrderTradeResponse()
 {
     //every account
-    for (int idx = 0; idx < account_units.size(); idx ++)
+    for (size_t idx = 0; idx < account_units.size(); idx++)
     {
         AccountUnitBinance& unit = account_units[idx];
         KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (api_key)" << unit.api_key);
@@ -972,6 +902,12 @@ void TDEngineBinance::moveNewtoPending(AccountUnitBinance& unit)
         unit.pendingTradeStatus.push_back(*newTradeStatusIterator);
         newTradeStatusIterator = unit.newTradeStatus.erase(newTradeStatusIterator);
     }
+
+    std::vector<int64_t>::iterator newSentTradeIdsIterator;
+    for(newSentTradeIdsIterator = unit.newSentTradeIds.begin(); newSentTradeIdsIterator != unit.newSentTradeIds.end();) {
+        unit.sentTradeIds.push_back(*newSentTradeIdsIterator);
+        newSentTradeIdsIterator = unit.newSentTradeIds.erase(newSentTradeIdsIterator);
+    }
 }
 
 void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
@@ -987,12 +923,11 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
                                                                           <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
         );
 
-        std::string ticker = getWhiteListCoinpairFrom(unit, orderStatusIterator->InstrumentID);
+        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
         if(ticker.length() == 0) {
             KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
             continue;
         }
-        KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
 
 
         Document orderResult;
@@ -1005,22 +940,24 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
             continue;
         }
         /*
-            {
-                "symbol": "LTCBTC",
-                "orderId": 1,
-                "clientOrderId": "myOrder1",
-                "price": "0.1",
-                "origQty": "1.0",
-                "executedQty": "0.0",
-                "status": "NEW",
-                "timeInForce": "GTC",
-                "type": "LIMIT",
-                "side": "BUY",
-                "stopPrice": "0.0",
-                "icebergQty": "0.0",
-                "time": 1499827319559,
-                "isWorking": true
-            }
+           {
+            "symbol": "BTCUSDT",
+            "orderId": 144674450,
+            "clientOrderId": "1",
+            "price": "0.00000000",
+            "origQty": "0.00370000",
+            "executedQty": "0.00370000",
+            "cummulativeQuoteQty": "24.02137156",
+            "status": "FILLED",
+            "timeInForce": "GTC",
+            "type": "MARKET",
+            "side": "SELL",
+            "stopPrice": "0.00000000",
+            "icebergQty": "0.00000000",
+            "time": 1533716765364,
+            "updateTime": 1533716765364,
+            "isWorking": true
+        }
         */
         //parse order status
         if(orderResult.IsObject() && !orderResult.HasMember("code"))
@@ -1085,7 +1022,8 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 
 void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 {
-    KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())" << unit.pendingOrderStatus.size() << " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size());
+    KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())"
+                        << unit.pendingOrderStatus.size() << " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size());
     //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
     if(unit.pendingOrderStatus.size() == 0 && unit.pendingOnRtnTrades.size() == 0) return;
     std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
@@ -1105,9 +1043,9 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
     {
         KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 1 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
 
-        std::string ticker = getWhiteListCoinpairFrom(unit, tradeStatusIterator->InstrumentID);
+        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(tradeStatusIterator->InstrumentID));
         if(ticker.length() == 0) {
-            KF_LOG_ERROR(logger, "[retrieveTradeStatus]: not in WhiteList , ignore it:" << tradeStatusIterator->InstrumentID);
+            KF_LOG_INFO(logger, "[retrieveTradeStatus]: not in WhiteList , ignore it:" << tradeStatusIterator->InstrumentID);
             continue;
         }
         KF_LOG_DEBUG(logger, "[retrieveTradeStatus] (exchange_ticker)" << ticker);
@@ -1179,6 +1117,19 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
         int len = resultTrade.Size();
         for(int i = 0 ; i < len; i++)
         {
+            int64_t newtradeId = resultTrade.GetArray()[i]["id"].GetInt64();
+            bool hasSendThisTradeId = false;
+            std::vector<int64_t>::iterator sentTradeIdsIterator;
+            for(sentTradeIdsIterator = unit.sentTradeIds.begin(); sentTradeIdsIterator != unit.sentTradeIds.end(); sentTradeIdsIterator++) {
+                if((*sentTradeIdsIterator) == newtradeId) {
+                    hasSendThisTradeId = true;
+                }
+            }
+            if(hasSendThisTradeId) {
+                KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (hasSendThisTradeId)" << hasSendThisTradeId << " (newtradeId)" << newtradeId);
+                continue;
+            }
+
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
             rtn_trade.Volume = std::round(stod(resultTrade.GetArray()[i]["qty"].GetString()) * scale_offset);
             rtn_trade.Price = std::round(stod(resultTrade.GetArray()[i]["price"].GetString()) * scale_offset);
@@ -1201,11 +1152,13 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                 on_rtn_trade(&rtn_trade);
                 raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                         source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
+            } else {
+                //this order is not me sent out, maybe other strategy's order or manuelly open orders.
             }
 
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 5 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
 
-            int64_t newtradeId = resultTrade.GetArray()[i]["id"].GetInt64();
+
             KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (newtradeId)" << newtradeId);
             if(newtradeId >= tradeStatusIterator->last_trade_id) {
                 tradeStatusIterator->last_trade_id = newtradeId + 1;// for new trade
@@ -1234,16 +1187,28 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
 
 bool TDEngineBinance::removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId)
 {
+    bool removedOne = false;
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
     for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); )
     {
         if(tradeIterator->binanceOrderId == binanceOrderId)
         {
             tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
+            removedOne = true;
         } else {
             ++tradeIterator;
         }
     }
+    return removedOne;
+}
+
+
+void TDEngineBinance::addNewSentTradeIds(AccountUnitBinance& unit, int64_t newSentTradeIds)
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+
+    unit.newSentTradeIds.push_back(newSentTradeIds);
+    KF_LOG_DEBUG(logger, "[addNewSentTradeIds]" << " (newSentTradeIds)" << newSentTradeIds);
 }
 
 void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
@@ -1305,9 +1270,17 @@ bool TDEngineBinance::isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinanc
     return false;
 }
 
+void TDEngineBinance::set_reader_thread()
+{
+    ITDEngine::set_reader_thread();
+
+    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on AccountUnitBinance::loop");
+    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::loop, this)));
+}
 
 void TDEngineBinance::loop()
 {
+    KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
     while(isRunning)
     {
         using namespace std::chrono;
@@ -1353,7 +1326,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
                 Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
-    long recvWindow = 10000;
+    long recvWindow = order_insert_recvwindow_ms;
     std::string Timestamp = getTimestampString();
     std::string Method = "POST";
     std::string requestPath = "https://api.binance.com/api/v3/order?";
@@ -1433,10 +1406,11 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
+
 void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json)
 {
     KF_LOG_INFO(logger, "[get_order]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/order?";
@@ -1485,7 +1459,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
                   long orderId, const char *origClientOrderId, const char *newClientOrderId, Document &json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
-    long recvWindow = 10000;
+    long recvWindow = order_action_recvwindow_ms;
     std::string Timestamp = getTimestampString();
     std::string Method = "DELETE";
     std::string requestPath = "https://api.binance.com/api/v3/order?";
@@ -1538,7 +1512,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol, int limit, int64_t fromId, Document &json)
 {
     KF_LOG_INFO(logger, "[get_my_trades]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/myTrades?";
@@ -1585,7 +1559,7 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &json)
 {
     KF_LOG_INFO(logger, "[get_open_orders]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/openOrders?";
@@ -1661,8 +1635,8 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
 void TDEngineBinance::get_exchange_time(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_exchange_time]");
-    long recvWindow = 10000;
-    std::string Timestamp = getTimestampString();
+    long recvWindow = 5000;
+    std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v1/time";
     std::string queryString("");
@@ -1684,7 +1658,7 @@ void TDEngineBinance::get_exchange_time(AccountUnitBinance& unit, Document &json
 void TDEngineBinance::get_exchange_infos(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_exchange_infos]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v1/exchangeInfo";
@@ -1706,7 +1680,7 @@ void TDEngineBinance::get_exchange_infos(AccountUnitBinance& unit, Document &jso
 void TDEngineBinance::get_account(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_account]");
-    long recvWindow = 10000;
+    long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/account?";
@@ -1764,7 +1738,9 @@ inline int64_t TDEngineBinance::getTimestamp()
 std::string TDEngineBinance::getTimestampString()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    timestamp =  timestamp - timeDiffOfExchange;
+    KF_LOG_DEBUG(logger, "[getTimestampString] (timestamp)" << timestamp << " (timeDiffOfExchange)" << timeDiffOfExchange << " (exchange_shift_ms)" << exchange_shift_ms);
+    timestamp =  timestamp - timeDiffOfExchange + exchange_shift_ms;
+    KF_LOG_INFO(logger, "[getTimestampString] (new timestamp)" << timestamp);
     std::string timestampStr;
     std::stringstream convertStream;
     convertStream << timestamp;
@@ -1778,35 +1754,35 @@ int64_t TDEngineBinance::getTimeDiffOfExchange(AccountUnitBinance& unit)
     KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
     //reset to 0
     int64_t timeDiffOfExchange = 0;
-
-    int calculateTimes = 3;
-    int64_t accumulationDiffTime = 0;
-    bool hasResponse = false;
-    for(int i = 0 ; i < calculateTimes; i++)
-    {
-        Document d;
-        int64_t start_time = getTimestamp();
-        int64_t exchangeTime = start_time;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
-        get_exchange_time(unit, d);
-        if(!d.HasParseError() && d.HasMember("serverTime")) {//binance serverTime
-            exchangeTime = d["serverTime"].GetInt64();
-            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
-            hasResponse = true;
-        }
-        int64_t finish_time = getTimestamp();
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
-        int64_t tripTime = (finish_time - start_time) / 2;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
-        accumulationDiffTime += start_time + tripTime - exchangeTime;
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
-    }
-    //set the diff
-    if(hasResponse)
-    {
-        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
-    }
-    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
+//
+//    int calculateTimes = 3;
+//    int64_t accumulationDiffTime = 0;
+//    bool hasResponse = false;
+//    for(int i = 0 ; i < calculateTimes; i++)
+//    {
+//        Document d;
+//        int64_t start_time = getTimestamp();
+//        int64_t exchangeTime = start_time;
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
+//        get_exchange_time(unit, d);
+//        if(!d.HasParseError() && d.HasMember("serverTime")) {//binance serverTime
+//            exchangeTime = d["serverTime"].GetInt64();
+//            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
+//            hasResponse = true;
+//        }
+//        int64_t finish_time = getTimestamp();
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
+//        int64_t tripTime = (finish_time - start_time) / 2;
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
+//        accumulationDiffTime += start_time + tripTime - exchangeTime;
+//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
+//    }
+//    //set the diff
+//    if(hasResponse)
+//    {
+//        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
+//    }
+//    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
     return timeDiffOfExchange;
 }
 

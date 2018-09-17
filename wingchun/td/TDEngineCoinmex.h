@@ -4,6 +4,7 @@
 
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
+#include "CoinPairWhiteList.h"
 #include <vector>
 #include <sstream>
 #include <map>
@@ -11,6 +12,7 @@
 #include <mutex>
 #include "Timer.h"
 #include <document.h>
+#include <libwebsockets.h>
 
 using rapidjson::Document;
 
@@ -26,13 +28,33 @@ struct PendingCoinmexOrderStatus
     char_21 OrderRef;       //报单引用
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
-    uint64_t averagePrice;//coinmex given averagePrice on response of query_order
+    int64_t averagePrice;//coinmex given averagePrice on response of query_order
+    int64_t remoteOrderId;//coinmex sender_order response order id://{"orderId":19319936159776,"result":true}
 };
 
-struct PendingCoinmexTradeStatus
+struct ResponsedOrderStatus
 {
-    char_31 InstrumentID;   //合约代码
-    uint64_t last_trade_id; //for myTrade
+    int64_t averagePrice = 0;
+    std::string ticker;
+    int64_t createdDate = 0;
+
+
+    //今成交数量
+    uint64_t VolumeTraded;
+    int id = 0;
+    uint64_t openVolume = 0;
+    int64_t orderId = 0;
+    std::string orderType;
+    //报单价格条件
+    LfOrderPriceTypeType OrderPriceType;
+    int64_t price = 0;
+    //买卖方向
+    LfDirectionType Direction;
+
+    //报单状态
+    LfOrderStatusType OrderStatus;
+    uint64_t trunoverVolume = 0;
+    uint64_t volume = 0;
 };
 
 struct SendOrderFilter
@@ -40,12 +62,6 @@ struct SendOrderFilter
     char_31 InstrumentID;   //合约代码
     int ticksize; //for price round.
     //...other
-};
-
-struct SubscribeCoinmexBaseQuote
-{
-    std::string base;
-    std::string quote;
 };
 
 struct AccountUnitCoinmex
@@ -61,13 +77,12 @@ struct AccountUnitCoinmex
     std::vector<PendingCoinmexOrderStatus> pendingOrderStatus;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 
-    //in TD, lookup direction is:
-    // our strategy recognized coinpair ---> outcoming exchange coinpair
-    //if strategy's coinpair is not in this map ,ignore it
-    //"strategy_coinpair(base_quote)":"exchange_coinpair",
-    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
+    CoinPairWhiteList coinPairWhiteList;
+    CoinPairWhiteList positionWhiteList;
 
-    std::vector<SubscribeCoinmexBaseQuote> subscribeCoinmexBaseQuote;
+    std::vector<std::string> newPendingSendMsg;
+    std::vector<std::string> pendingSendMsg;
+    struct lws * websocketConn;
 };
 
 
@@ -101,7 +116,19 @@ public:
 public:
     TDEngineCoinmex();
     ~TDEngineCoinmex();
+
+
+
+    //websocket
+    void on_lws_data(struct lws* conn, const char* data, size_t len);
+    void on_lws_connection_error(struct lws* conn);
+    int lws_write_subscribe(struct lws* conn);
+    void lws_login(AccountUnitCoinmex& unit, long timeout_nsec);
+
+
+
 private:
+    bool use_restful_to_receive_status = false;
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
     vector<AccountUnitCoinmex> account_units;
@@ -111,31 +138,35 @@ private:
     std::string GetType(const LfOrderPriceTypeType& input);
     LfOrderPriceTypeType GetPriceType(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
+    int Round(std::string tickSizeStr);
 
+    virtual void set_reader_thread() override;
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
     void addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded);
+                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus,
+                                    const uint64_t VolumeTraded, int64_t remoteOrderId);
 
     void retrieveOrderStatus(AccountUnitCoinmex& unit);
-    void moveNewtoPending(AccountUnitCoinmex& unit);
-    static constexpr int scale_offset = 1e8;
+    void moveNewOrderStatusToPending(AccountUnitCoinmex& unit);
 
-    ThreadPtr rest_thread;
-    uint64_t last_rest_get_ts = 0;
-    int rest_get_interval_ms = 500;
+    void handlerResponseOrderStatus(AccountUnitCoinmex& unit, std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
 
-    std::mutex* mutex_order_and_trade = nullptr;
+    inline int64_t getTimestamp();
+    int64_t getTimeDiffOfExchange(AccountUnitCoinmex& unit);
 
-    std::map<std::string, std::string> localOrderRefRemoteOrderId;
+    //websocket
+    AccountUnitCoinmex& findAccountUnitByWebsocketConn(struct lws * websocketConn);
+    void onOrder(struct lws * websocketConn, Document& json);
+    void wsloop();
+    void addWebsocketPendingSendMsg(AccountUnitCoinmex& unit, std::string msg);
+    void moveNewWebsocketMsgToPending(AccountUnitCoinmex& unit);
+    std::string createAuthJsonString(AccountUnitCoinmex& unit );
+    std::string createOrderJsonString();
 
-    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
-    int sync_time_interval;
-    int64_t timeDiffOfExchange = 0;
-
+    std::string parseJsonToString(Document &d);
 private:
-    int HTTP_RESPONSE_OK = 200;
     void get_exchange_time(AccountUnitCoinmex& unit, Document& json);
     void get_account(AccountUnitCoinmex& unit, Document& json);
     void get_depth(AccountUnitCoinmex& unit, std::string code, Document& json);
@@ -144,27 +175,44 @@ private:
                         const char *side, const char *type, double size, double price, double funds, Document& json);
 
     void cancel_all_orders(AccountUnitCoinmex& unit, std::string code, Document& json);
-    void cancel_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
+    void cancel_order(AccountUnitCoinmex& unit, std::string code, std::string orderId, Document& json);
     void query_orders(AccountUnitCoinmex& unit, std::string code, std::string status, Document& json);
-    void query_order(AccountUnitCoinmex& unit, std::string code, long orderId, Document& json);
+    void query_order(AccountUnitCoinmex& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
     inline std::string getTimestampString();
 
-    int Round(std::string tickSizeStr);
+    bool shouldRetry(int http_status_code, std::string errorMsg);
+
+
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
     bool loadExchangeOrderFilters(AccountUnitCoinmex& unit, Document &doc);
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
     SendOrderFilter getSendOrderFilter(AccountUnitCoinmex& unit, const char *symbol);
+
 private:
-    inline int64_t getTimestamp();
-    int64_t getTimeDiffOfExchange(AccountUnitCoinmex& unit);
-    void readWhiteLists(AccountUnitCoinmex& unit, const json& j_config);
-    std::string getWhiteListCoinpairFrom(AccountUnitCoinmex& unit, const char_31 strategy_coinpair);
-    bool hasSymbolInWhiteList(std::vector<SubscribeCoinmexBaseQuote> &sub, std::string symbol);
-    void split(std::string str, std::string token, SubscribeCoinmexBaseQuote& sub);
-    void debug_print(std::vector<SubscribeCoinmexBaseQuote> &sub);
-    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
+
+    struct lws_context *context = nullptr;
+
+    int HTTP_RESPONSE_OK = 200;
+    static constexpr int scale_offset = 1e8;
+
+    ThreadPtr rest_thread;
+    ThreadPtr ws_thread;
+
+    uint64_t last_rest_get_ts = 0;
+    uint64_t rest_get_interval_ms = 500;
+    uint64_t ws_get_interval_ms = 500;
+
+    std::mutex* mutex_order_and_trade = nullptr;
+
+    std::map<std::string, int64_t> localOrderRefRemoteOrderId;
+    std::map<int64_t, ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
+
+    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
+    int sync_time_interval;
+    int64_t timeDiffOfExchange = 0;
+    int exchange_shift_ms = 0;
 };
 
 WC_NAMESPACE_END

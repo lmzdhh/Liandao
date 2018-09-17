@@ -3,7 +3,7 @@
 
 #include "IMDEngine.h"
 #include "longfist/LFConstants.h"
-
+#include "CoinPairWhiteList.h"
 #include <libwebsockets.h>
 #include <map>
 #include <unordered_map>
@@ -55,14 +55,7 @@ private:
 
     virtual void set_reader_thread() override;
 
-    void readWhiteLists(const json& j_config);
-	std::string getWhiteListCoinpairFrom(std::string md_coinpair);
-    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
-    //in MD, lookup direction is:
-    // incoming exchange coinpair ---> our strategy recognized coinpair
-    //if coming data 's coinpair is not in this map ,ignore it
-    //"strategy_coinpair(base_quote)":"exchange_coinpair",
-    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
+    CoinPairWhiteList coinPairWhiteList;
 
 private:
     ThreadPtr rest_thread;

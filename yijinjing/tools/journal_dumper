@@ -33,8 +33,8 @@ def strfnano(nano, time_format=format_str):
     import datetime
     return datetime.datetime.fromtimestamp(nano / 1e9).strftime(time_format)
 
-def dump_csv(csv_file, folders, names, t_msg_type, start_nano, end_nano, visualized=False, to_print=False):
-    reader = libjournal.createReader(folders, names, 'journal_dumper', start_nano)
+def dump_csv(csv_file, client, folders, names, t_msg_type, start_nano, end_nano, visualized=False, to_print=False):
+    reader = libjournal.createReader(folders, names, client, start_nano)
     csv_file = open(csv_file, 'wb')
     csv_writer = csv.writer(csv_file, delimiter=',')
     frame = reader.next()
@@ -70,6 +70,7 @@ def dump_csv(csv_file, folders, names, t_msg_type, start_nano, end_nano, visuali
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--client', help='client name', type=str, default='journal_dumper')
     parser.add_argument('-n', '--name', help='journal name', type=str, default='')
     parser.add_argument('-m', '--msg_type', help='msg type to dump', type=int, default=0)
     parser.add_argument('-o', '--output', help='output file name', type=str, default='')
@@ -96,4 +97,4 @@ if __name__ == '__main__':
         print 'msg_type', args.msg_type
         print 'start', args.start
         print 'end', args.end
-        dump_csv(args.output, [libjournal.get_journal_folder(args.name)], [args.name], args.msg_type, nanofstr(args.start), nanofstr(args.end), args.visualize > 0, args.print_out > 0)
+        dump_csv(args.output, args.client, [libjournal.get_journal_folder(args.name)], [args.name], args.msg_type, nanofstr(args.start), nanofstr(args.end), args.visualize > 0, args.print_out > 0)

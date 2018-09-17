@@ -4,6 +4,7 @@
 
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
+#include "CoinPairWhiteList.h"
 #include <vector>
 #include <algorithm>
 #include <iomanip>
@@ -51,12 +52,6 @@ struct SendOrderFilter
     //...other
 };
 
-struct SubscribeCoinBaseQuote
-{
-    std::string base;
-    std::string quote;
-};
-
 struct AccountUnitBinance
 {
     std::string api_key;
@@ -73,13 +68,12 @@ struct AccountUnitBinance
     std::vector<std::string> whiteListInstrumentIDs;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 
-    //in TD, lookup direction is:
-    // our strategy recognized coinpair ---> outcoming exchange coinpair
-    //if strategy's coinpair is not in this map ,ignore it
-    //"strategy_coinpair(base_quote)":"exchange_coinpair",
-    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
+    // the trade id that has been called on_rtn_trade. Do not send it again.
+    std::vector<int64_t> newSentTradeIds;
+    std::vector<int64_t> sentTradeIds;
 
-    std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
+    CoinPairWhiteList coinPairWhiteList;
+    CoinPairWhiteList positionWhiteList;
 };
 
 /**
@@ -125,10 +119,12 @@ private:
     LfTimeConditionType GetTimeCondition(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
 
+    virtual void set_reader_thread() override;
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
     bool loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc);
     void GetAndHandleOrderTradeResponse();
+    void addNewSentTradeIds(AccountUnitBinance& unit, int64_t newSentTradeIds);
     void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
                                         const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, int64_t binanceOrderId);
 
@@ -142,18 +138,12 @@ private:
     bool isExistSymbolInPendingTradeStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
     bool isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID, const char_21 OrderRef);
     bool removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId);
-    static constexpr int scale_offset = 1e8;
+
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
 
-    ThreadPtr rest_thread;
-    uint64_t last_rest_get_ts = 0;
-    int rest_get_interval_ms = 500;
+    inline int64_t getTimestamp();
+    int64_t getTimeDiffOfExchange(AccountUnitBinance& unit);
 
-    std::mutex* mutex_order_and_trade = nullptr;
-
-    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
-    int sync_time_interval;
-    int64_t timeDiffOfExchange = 0;
 private:
     int HTTP_RESPONSE_OK = 200;
     void send_order(AccountUnitBinance& unit, const char *symbol,
@@ -184,14 +174,19 @@ private:
     SendOrderFilter getSendOrderFilter(AccountUnitBinance& unit, const char *symbol);
 
 private:
-    inline int64_t getTimestamp();
-    int64_t getTimeDiffOfExchange(AccountUnitBinance& unit);
-    void readWhiteLists(AccountUnitBinance& unit, const json& j_config);
-    std::string getWhiteListCoinpairFrom(AccountUnitBinance& unit, const char_31 strategy_coinpair);
-    bool hasSymbolInWhiteList(std::vector<SubscribeCoinBaseQuote> &sub, std::string symbol);
-    void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
-    void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
-    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
+    static constexpr int scale_offset = 1e8;
+    ThreadPtr rest_thread;
+    uint64_t last_rest_get_ts = 0;
+    uint64_t rest_get_interval_ms = 500;
+
+    uint64_t order_insert_recvwindow_ms = 5000;
+    uint64_t order_action_recvwindow_ms = 5000;
+    std::mutex* mutex_order_and_trade = nullptr;
+
+    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
+    int sync_time_interval;
+    int64_t timeDiffOfExchange = 0;
+    int exchange_shift_ms = 0;
 
 };
 

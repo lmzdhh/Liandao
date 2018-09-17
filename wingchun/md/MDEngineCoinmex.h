@@ -3,6 +3,8 @@
 
 #include "IMDEngine.h"
 #include "longfist/LFConstants.h"
+#include "CoinPairWhiteList.h"
+#include "PriceBook20Assembler.h"
 #include <libwebsockets.h>
 #include <document.h>
 #include <map>
@@ -13,49 +15,12 @@ WC_NAMESPACE_START
 using rapidjson::Document;
 
 
-struct PriceAndVolume
-{
-    int64_t price;
-    uint64_t volume;
-    bool operator < (const PriceAndVolume &other) const
-    {
-        if (price<other.price)
-        {
-            return true;
-        }
-        return false;
-    }
-};
-
-//coinmex use base and quote to sub depth data
-struct SubscribeCoinBaseQuote
+struct CoinBaseQuote
 {
     std::string base;
     std::string quote;
 };
 
-static int sort_price_asc(const PriceAndVolume &p1,const PriceAndVolume &p2)
-{
-    return p1.price < p2.price;
-};
-
-static int sort_price_desc(const PriceAndVolume &p1,const PriceAndVolume &p2)
-{
-    return p1.price > p2.price;
-};
-
-template<typename T>
-static void sortMapByKey(std::map<int64_t, uint64_t> &t_map, std::vector<PriceAndVolume> &t_vec, T& sort_by)
-{
-    for(std::map<int64_t, uint64_t>::iterator iter = t_map.begin();iter != t_map.end(); iter ++)
-    {
-        PriceAndVolume pv;
-        pv.price = iter->first;
-        pv.volume = iter->second;
-        t_vec.push_back(pv);
-    }
-    sort(t_vec.begin(), t_vec.end(), sort_by);
-};
 
 class MDEngineCoinmex: public IMDEngine
 {
@@ -87,11 +52,17 @@ private:
     std::string createDepthJsonString(std::string base, std::string quote);
     std::string createTickersJsonString();
     std::string createFillsJsonString(std::string base, std::string quote);
-    void clearPriceBook();
     void loop();
 
 
     virtual void set_reader_thread() override;
+    void debug_print(std::vector<std::string> &subJsonString);
+
+    void split(std::string str, std::string token, CoinBaseQuote& sub);
+    //从白名单的策略定义中提取出币种的名称
+    void getBaseQuoteFromWhiteListStrategyCoinPair();
+
+    void makeWebsocketSubscribeJsonString();
 private:
     ThreadPtr rest_thread;
     bool connected = false;
@@ -103,31 +74,19 @@ private:
 
     struct lws_context *context = nullptr;
 
-    int subscribe_index = 0;
+    size_t subscribe_index = 0;
 
-    //<ticker, <price, volume>>
-    std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;
-    std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
-
-private:
-    void readWhiteLists(const json& j_config);
-    std::string getWhiteListCoinpairFrom(std::string md_coinpair);
-
-    void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
-    void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
-    void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
-    void debug_print(std::vector<std::string> &subJsonString);
-    //coinmex use base and quote to sub depth data, so make this vector for it
-    std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
+    PriceBook20Assembler priceBook20Assembler;
 
     std::vector<std::string> websocketSubscribeJsonString;
 
-    //in MD, lookup direction is:
-    // incoming exchange coinpair ---> our strategy recognized coinpair
-    //if coming data 's coinpair is not in this map ,ignore it
-    //"strategy_coinpair(base_quote)":"exchange_coinpair",
-    std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
+    CoinPairWhiteList coinPairWhiteList;
+
+    //订阅的币种的base和quote, 全是大写字母
+    std::vector<CoinBaseQuote> coinBaseQuotes;
 };
+
+
 
 DECLARE_PTR(MDEngineCoinmex);
 

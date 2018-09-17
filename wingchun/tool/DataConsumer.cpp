@@ -61,6 +61,10 @@ void DataConsumer::run()
             cur_time = frame->getNano();
             long extra_nano = frame->getExtraNano();
 
+            cout << " [DataConsumer::run()] [frame.get() != nullptr]  (msg_type)" << msg_type << " (msg_source)" <<
+                 msg_source << " (request_id)" << request_id << " (name)" << name << "(cur_time)" << cur_time << " (extra_nano)" << extra_nano << endl;
+
+
             if (msg_type == MSG_TYPE_LF_MD) // md
             {
                 LFMarketDataField* md = (LFMarketDataField*)data;

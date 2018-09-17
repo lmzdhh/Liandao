@@ -95,11 +95,11 @@ void MDEngineBinance::load(const json& j_config)
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
-    readWhiteLists(j_config);
+    coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
+    coinPairWhiteList.Debug_print();
 
-    debug_print(keyIsStrategyCoinpairWhiteList);
     //display usage:
-    if(keyIsStrategyCoinpairWhiteList.size() == 0) {
+    if(coinPairWhiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "MDEngineBinance::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
@@ -112,57 +112,6 @@ void MDEngineBinance::load(const json& j_config)
 		<< book_depth_count << " trade_count: " << trade_count << " rest_get_interval_ms: " << rest_get_interval_ms); 	
 }
 
-
-void MDEngineBinance::readWhiteLists(const json& j_config)
-{
-	KF_LOG_INFO(logger, "[readWhiteLists]");
-
-	if(j_config.find("whiteLists") != j_config.end()) {
-		KF_LOG_INFO(logger, "[readWhiteLists] found whiteLists");
-		//has whiteLists
-		json whiteLists = j_config["whiteLists"].get<json>();
-		if(whiteLists.is_object())
-		{
-			for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
-				std::string strategy_coinpair = it.key();
-				std::string exchange_coinpair = it.value();
-				KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
-				keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
-			}
-		}
-	}
-}
-
-
-std::string MDEngineBinance::getWhiteListCoinpairFrom(std::string md_coinpair)
-{
-    std::string ticker = md_coinpair;
-    std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
-
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find md_coinpair (md_coinpair) " << md_coinpair << " (toupper(ticker)) " << ticker);
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-        if(ticker == map_itr->second)
-        {
-            KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
-            return map_itr->first;
-        }
-        map_itr++;
-    }
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] not found md_coinpair (md_coinpair) " << md_coinpair);
-    return "";
-}
-
-void MDEngineBinance::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
-{
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-        KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
-        map_itr++;
-    }
-}
 
 void MDEngineBinance::connect(long timeout_nsec)
 {
@@ -188,9 +137,9 @@ void MDEngineBinance::login(long timeout_nsec)
 
 	context = lws_create_context( &info );
 
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
+    std::unordered_map<std::string, std::string>::iterator map_itr;
+    map_itr = coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+    while(map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
         KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) "<< map_itr->second);
         connect_lws(map_itr->second, lws_event::trade);
         //connect_lws(map_itr->second, lws_event::depth5);
@@ -198,8 +147,6 @@ void MDEngineBinance::login(long timeout_nsec)
 
         map_itr++;
     }
-
-
 
    	KF_LOG_INFO(logger, "MDEngineBinance::login:"); 	
 
@@ -294,7 +241,7 @@ void MDEngineBinance::on_lws_market_trade(const char* data, size_t len)
 	}
 
 	std::string symbol = d["s"].GetString();
-	std::string ticker = getWhiteListCoinpairFrom(symbol);
+	std::string ticker = coinPairWhiteList.GetKeyByValue(symbol);
     if(ticker.length() == 0) {
         KF_LOG_INFO(logger, "MDEngineBinance::on_lws_market_trade: not in WhiteList , ignore it:" << symbol);
         return;
@@ -305,6 +252,7 @@ void MDEngineBinance::on_lws_market_trade(const char* data, size_t len)
 
 	trade.Price = std::round(std::stod(d["p"].GetString()) * scale_offset);
 	trade.Volume = std::round(std::stod(d["q"].GetString()) * scale_offset);
+	//"m": true,        // Is the buyer the market maker?
 	trade.OrderBSFlag[0] = d["m"].GetBool() ? 'B' : 'S';
 	on_trade(&trade);
 }
@@ -360,7 +308,7 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
     
     if(has_update)
     {
-        std::string strategy_ticker = getWhiteListCoinpairFrom(ticker);
+        std::string strategy_ticker = coinPairWhiteList.GetKeyByValue(ticker);
         if(strategy_ticker.length() == 0) {
             KF_LOG_INFO(logger, "MDEngineBinance::on_lws_market_trade: not in WhiteList , ignore it:" << strategy_ticker);
             return;

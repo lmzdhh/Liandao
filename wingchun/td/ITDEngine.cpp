@@ -157,6 +157,7 @@ void ITDEngine::listening()
                 }
                 else if (msg_type == MSG_TYPE_SWITCH_TRADING_DAY)
                 {
+//                    std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY"<<std::endl;
                     user_helper->switch_day();
                     for (auto iter: clients)
                     {
@@ -164,6 +165,7 @@ void ITDEngine::listening()
                             iter.second.pos_handler->switch_day();
                     }
                     local_id = 1;
+//                    std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY (local_id)" << local_id <<std::endl;
                     on_switch_day();
                 }
             }
@@ -214,6 +216,7 @@ void ITDEngine::listening()
                         strcpy(order->InvestorID, accounts[idx].InvestorID);
                         int order_id = order->KfOrderID;
                         int local_id;
+//                        std::cout << "MSG_TYPE_LF_ORDER_ACTION: (name)"<<name  <<" (order_id)" << order_id << " (local_id)" << local_id <<std::endl;
                         if (user_helper->get_order(name, order_id, local_id, order->InstrumentID))
                         {
                             string order_ref = std::to_string(local_id);
@@ -371,6 +374,8 @@ bool ITDEngine::add_client(const string& client_name, const json& j_request)
     int rid_s = j_request["rid_s"].get<int>();
     int rid_e = j_request["rid_e"].get<int>();
     long last_switch_day = j_request["last_switch_nano"].get<long>();
+
+    KF_LOG_DEBUG(logger, "[add_client]" << "(rid_s)" << rid_s << " (rid_e)" << rid_e << " (last_switch_day)" << last_switch_day);
     rid_manager.set(rid_s, client_name);
     user_helper->load(client_name);
     auto iter = clients.find(client_name);
@@ -383,6 +388,9 @@ bool ITDEngine::add_client(const string& client_name, const json& j_request)
         else
         {
             int idx = reader->addJournal(folder, client_name);
+
+            KF_LOG_DEBUG(logger, "[add_client]" << "(rid_s)" << rid_s << " (rid_e)" << rid_e << " (last_switch_day)" << last_switch_day << " (addJournal.idx)" << idx);
+
             reader->seekTimeJournal(idx, cur_time);
             ClientInfoUnit& status = clients[client_name];
             status.is_alive = true;

@@ -33,7 +33,6 @@ using std::to_string;
 using std::stod;
 using std::stoi;
 
-
 USING_WC_NAMESPACE
 
 static MDEngineCoinmex* global_md = nullptr;
@@ -49,7 +48,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             lws_callback_on_writable( wsi );
             break;
         }
-        case LWS_CALLBACK_PROTOCOL_INIT:{
+        case LWS_CALLBACK_PROTOCOL_INIT:
+        {
             std::cout << "3.1415926 LWS_CALLBACK_PROTOCOL_INIT init, reason = " << reason << std::endl;
             break;
         }
@@ -62,36 +62,34 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             }
             break;
         }
-	case LWS_CALLBACK_CLIENT_CLOSED:
-	{
-		std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED, reason = " << reason << std::endl;
-		int ret = 0;
-            if(global_md)
-            {
-		std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
-		global_md->on_lws_connection_error(wsi);
+        case LWS_CALLBACK_CLIENT_CLOSED:
+        {
+            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED, reason = " << reason << std::endl;
+            if(global_md) {
+                std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
+                global_md->on_lws_connection_error(wsi);
             }
-
             break;
-	}
+        }
         case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
         {
             std::cout << "3.1415926 LWS_CALLBACK_CLIENT_RECEIVE_PONG, reason = " << reason << std::endl;
+            break;
         }
         case LWS_CALLBACK_CLIENT_WRITEABLE:
         {
             std::cout << "3.1415926 LWS_CALLBACK_CLIENT_WRITEABLE writeable, reason = " << reason << std::endl;
-            int ret = 0;
             if(global_md)
             {
-                ret = global_md->lws_write_subscribe(wsi);
+                global_md->lws_write_subscribe(wsi);
             }
             break;
         }
-	case LWS_CALLBACK_TIMER:
+	    case LWS_CALLBACK_TIMER:
         {
             std::cout << "3.1415926 LWS_CALLBACK_TIMER, reason = " << reason << std::endl;
-	}
+            break;
+	    }
         case LWS_CALLBACK_CLOSED:
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
@@ -141,13 +139,17 @@ void MDEngineCoinmex::load(const json& j_config)
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineCoinmex:: rest_get_interval_ms: " << rest_get_interval_ms);
 
-    readWhiteLists(j_config);
 
-    debug_print(subscribeCoinBaseQuote);
-    debug_print(keyIsStrategyCoinpairWhiteList);
+    coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
+    coinPairWhiteList.Debug_print();
+
+    getBaseQuoteFromWhiteListStrategyCoinPair();
+    
+    makeWebsocketSubscribeJsonString();
     debug_print(websocketSubscribeJsonString);
+
     //display usage:
-    if(keyIsStrategyCoinpairWhiteList.size() == 0) {
+    if(coinPairWhiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "MDEngineCoinmex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
@@ -157,50 +159,42 @@ void MDEngineCoinmex::load(const json& j_config)
     }
 }
 
-void MDEngineCoinmex::readWhiteLists(const json& j_config)
+
+void MDEngineCoinmex::getBaseQuoteFromWhiteListStrategyCoinPair()
 {
-    KF_LOG_INFO(logger, "[readWhiteLists]");
+    std::unordered_map<std::string, std::string>::iterator map_itr;
+    map_itr = coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+    while(map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end())
+    {
+        std::cout << "[getBaseQuoteFromWhiteListStrategyCoinPair] keyIsExchangeSideWhiteList (strategy_coinpair) "
+                  << map_itr->first << " (exchange_coinpair) "<< map_itr->second << std::endl;
 
-    if(j_config.find("whiteLists") != j_config.end()) {
-        KF_LOG_INFO(logger, "[readWhiteLists] found whiteLists");
-        //has whiteLists
-        json whiteLists = j_config["whiteLists"].get<json>();
-        if(whiteLists.is_object())
+        // strategy_coinpair 转换成大写字母
+        std::string coinpair = map_itr->first;
+        std::transform(coinpair.begin(), coinpair.end(), coinpair.begin(), ::toupper);
+
+        CoinBaseQuote baseQuote;
+        split(coinpair, "_", baseQuote);
+        std::cout << "[readWhiteLists] getBaseQuoteFromWhiteListStrategyCoinPair (base) " << baseQuote.base << " (quote) " << baseQuote.quote << std::endl;
+
+        if(baseQuote.base.length() > 0)
         {
-            for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
-                std::string strategy_coinpair = it.key();
-                std::string exchange_coinpair = it.value();
-                KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
-                keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
-                //make subscribeCoinBaseQuote
-
-                //coinmex MD must has base and quote, please see this->createDepthJsonString.
-                SubscribeCoinBaseQuote baseQuote;
-                split(it.key(), "_", baseQuote);
-                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
-
-                if(baseQuote.base.length() > 0)
-                {
-                    //get correct base_quote config
-                    subscribeCoinBaseQuote.push_back(baseQuote);
-                    //get ready websocket subscrube json strings
-                    std::string jsonDepthString = createDepthJsonString(baseQuote.base, baseQuote.quote);
-                    websocketSubscribeJsonString.push_back(jsonDepthString);
-                    std::string jsonFillsString = createFillsJsonString(baseQuote.base, baseQuote.quote);
-                    websocketSubscribeJsonString.push_back(jsonFillsString);
-
-                }
-            }
+            //get correct base_quote config
+            coinBaseQuotes.push_back(baseQuote);
         }
+        map_itr++;
     }
 }
 
+
 //example: btc_usdt
-void MDEngineCoinmex::split(std::string str, std::string token, SubscribeCoinBaseQuote& sub)
+void MDEngineCoinmex::split(std::string str, std::string token, CoinBaseQuote& sub)
 {
-    if (str.size() > 0) {
+    if (str.size() > 0)
+    {
         size_t index = str.find(token);
-        if (index != std::string::npos) {
+        if (index != std::string::npos)
+        {
             sub.base = str.substr(0, index);
             sub.quote = str.substr(index + token.size());
         }
@@ -210,54 +204,25 @@ void MDEngineCoinmex::split(std::string str, std::string token, SubscribeCoinBas
     }
 }
 
-std::string MDEngineCoinmex::getWhiteListCoinpairFrom(std::string md_coinpair)
+void MDEngineCoinmex::makeWebsocketSubscribeJsonString()
 {
-    std::string ticker = md_coinpair;
-    std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
-
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find md_coinpair (md_coinpair) " << md_coinpair << " (toupper(ticker)) " << ticker);
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-        if(ticker == map_itr->second)
-        {
-            KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
-            return map_itr->first;
-        }
-        map_itr++;
-    }
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] not found md_coinpair (md_coinpair) " << md_coinpair);
-    return "";
-}
-
-void MDEngineCoinmex::debug_print(std::vector<SubscribeCoinBaseQuote> &sub)
-{
-    int count = sub.size();
-    KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (count) " << count);
-
-    for (int i = 0; i < count;i++)
+    int count = coinBaseQuotes.size();
+    for (int i = 0; i < count; i++)
     {
-        KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
+        //get ready websocket subscrube json strings
+        std::string jsonDepthString = createDepthJsonString(coinBaseQuotes[i].base, coinBaseQuotes[i].quote);
+        websocketSubscribeJsonString.push_back(jsonDepthString);
+        std::string jsonFillsString = createFillsJsonString(coinBaseQuotes[i].base, coinBaseQuotes[i].quote);
+        websocketSubscribeJsonString.push_back(jsonFillsString);
     }
 }
-
-void MDEngineCoinmex::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
-{
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-        KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
-        map_itr++;
-    }
-}
-
 
 void MDEngineCoinmex::debug_print(std::vector<std::string> &subJsonString)
 {
-    int count = subJsonString.size();
+    size_t count = subJsonString.size();
     KF_LOG_INFO(logger, "[debug_print] websocketSubscribeJsonString (count) " << count);
 
-    for (int i = 0; i < count;i++)
+    for (size_t i = 0; i < count; i++)
     {
         KF_LOG_INFO(logger, "[debug_print] websocketSubscribeJsonString (subJsonString) " << subJsonString[i]);
     }
@@ -272,12 +237,11 @@ void MDEngineCoinmex::login(long timeout_nsec) {
     KF_LOG_INFO(logger, "MDEngineCoinmex::login:");
     global_md = this;
 
-
     char inputURL[300] = "wss://websocket.coinmex.com";
-    int inputPort = 8443;
+
     const char *urlProtocol, *urlTempPath;
     char urlPath[300];
-    int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
+    //int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
     struct lws_client_connect_info clientConnectInfo;
     memset(&clientConnectInfo, 0, sizeof(clientConnectInfo));
     clientConnectInfo.port = 8443;
@@ -342,7 +306,6 @@ void MDEngineCoinmex::login(long timeout_nsec) {
     clientConnectInfo.origin = clientConnectInfo.address;
     clientConnectInfo.ietf_version_or_minus_one = -1;
     clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
-    clientConnectInfo.pwsi = &wsi;
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::login:" << "Connecting to " << urlProtocol << ":" <<
                                                   clientConnectInfo.host << ":" <<
@@ -389,7 +352,7 @@ int MDEngineCoinmex::lws_write_subscribe(struct lws* conn)
     {
         //subscribe_index = 0;
         KF_LOG_INFO(logger, "MDEngineCoinmex::lws_write_subscribe: (none reset subscribe_index = 0, just return 0)");
-	return 0;
+	    return 0;
     }
 
     unsigned char msg[512];
@@ -450,7 +413,7 @@ void MDEngineCoinmex::on_lws_connection_error(struct lws* conn)
     logged_in = false;
     KF_LOG_ERROR(logger, "MDEngineCoinmex::on_lws_connection_error. login again.");
     //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
-    clearPriceBook();
+    priceBook20Assembler.clearPriceBook();
     //no use it
     long timeout_nsec = 0;
     //reset sub
@@ -459,23 +422,6 @@ void MDEngineCoinmex::on_lws_connection_error(struct lws* conn)
     login(timeout_nsec);
 }
 
-void MDEngineCoinmex::clearPriceBook()
-{
-    //clear price and volumes of tickers
-    std::map<std::string, std::map<int64_t, uint64_t>*> ::iterator map_itr;
-
-    map_itr = tickerAskPriceMap.begin();
-    while(map_itr != tickerAskPriceMap.end()){
-        map_itr->second->clear();
-        map_itr++;
-    }
-
-    map_itr = tickerBidPriceMap.begin();
-    while(map_itr != tickerBidPriceMap.end()){
-        map_itr->second->clear();
-        map_itr++;
-    }
-}
 
 void MDEngineCoinmex::onTickers(Document& d)
 {
@@ -539,8 +485,9 @@ void MDEngineCoinmex::onFills(Document& json)
     }
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onFills:" << "base : " << base << "  quote: " << quote);
-
-    std::string ticker = getWhiteListCoinpairFrom(base + "_" +  quote);
+    std::string base_quote = base + "_" +  quote;
+    std::transform(base_quote.begin(), base_quote.end(), base_quote.begin(), ::toupper);
+    std::string ticker = coinPairWhiteList.GetKeyByValue(base_quote);
     if(ticker.length() == 0) {
         return;
     }
@@ -555,7 +502,7 @@ void MDEngineCoinmex::onFills(Document& json)
 
         trade.Price = std::round(std::stod(json["data"].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
         trade.Volume = std::round(std::stod(json["data"].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
-        trade.OrderBSFlag[0] = "buy" == json["data"].GetArray()[i].GetArray()[2].GetString() ? 'B' : 'S';
+        trade.OrderBSFlag[0] = strcmp("buy", json["data"].GetArray()[i].GetArray()[2].GetString()) == 0 ? 'B' : 'S';
 
         KF_LOG_INFO(logger, "MDEngineCoinmex::[onFills] (ticker)" << ticker <<
                                                                   " (Price)" << trade.Price <<
@@ -567,8 +514,6 @@ void MDEngineCoinmex::onFills(Document& json)
 // {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],"bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
 void MDEngineCoinmex::onDepth(Document& json)
 {
-    bool asks_update = false;
-    bool bids_update = false;
 
     std::string base="";
     if(json.HasMember("base") && json["base"].IsString()) {
@@ -580,36 +525,15 @@ void MDEngineCoinmex::onDepth(Document& json)
     }
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "base : " << base << "  quote: " << quote);
-
-    std::string ticker = getWhiteListCoinpairFrom(base + "_" +  quote);
+    std::string base_quote = base + "_" +  quote;
+    std::transform(base_quote.begin(), base_quote.end(), base_quote.begin(), ::toupper);
+    std::string ticker = coinPairWhiteList.GetKeyByValue(base_quote);
     if(ticker.length() == 0) {
         KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: not in WhiteList , ignore it:" << "base : " << base << "  quote: " << quote);
         return;
     }
 
     KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "(ticker) " << ticker);
-    std::map<int64_t, uint64_t>*  asksPriceAndVolume;
-    std::map<int64_t, uint64_t>*  bidsPriceAndVolume;
-
-    auto iter = tickerAskPriceMap.find(ticker);
-    if(iter != tickerAskPriceMap.end()) {
-        asksPriceAndVolume = iter->second;
-//        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  get from map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
-    } else {
-        asksPriceAndVolume = new std::map<int64_t, uint64_t>();
-        tickerAskPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, asksPriceAndVolume));
-//        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  insert into map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
-    }
-
-    iter = tickerBidPriceMap.find(ticker);
-    if(iter != tickerBidPriceMap.end()) {
-        bidsPriceAndVolume = iter->second;
-//        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  get from map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
-    } else {
-        bidsPriceAndVolume = new std::map<int64_t, uint64_t>();
-        tickerBidPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, bidsPriceAndVolume));
-//        KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:" << "ticker : " << ticker << "  insert into map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
-    }
 
     //make depth map
     if(json.HasMember("data") && json["data"].IsObject()) {
@@ -622,13 +546,12 @@ void MDEngineCoinmex::onDepth(Document& json)
                 uint64_t volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
                 //if volume is 0, remove it
                 if(volume == 0) {
-                    asksPriceAndVolume->erase(price);
+                    priceBook20Assembler.EraseAskPrice(ticker, price);
                     KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
                 } else {
-                    asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+                    priceBook20Assembler.UpdateAskPrice(ticker, price, volume);
                 }
 //                KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: asks price:" << price<<  "  volume:"<< volume);
-                asks_update = true;
             }
         }
 
@@ -640,71 +563,27 @@ void MDEngineCoinmex::onDepth(Document& json)
                 int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
                 uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
                 if(volume == 0) {
-                    bidsPriceAndVolume->erase(price);
+                    priceBook20Assembler.EraseBidPrice(ticker, price);
                     KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
 
                 } else {
-                    bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+                    priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
                 }
 //                KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: bids price:" << price<<  "  volume:"<< volume);
-                bids_update = true;
             }
         }
     }
+
     // has any update
-    if(asks_update || bids_update)
-    {
-        //create book update
-        std::vector<PriceAndVolume> sort_result;
-        LFPriceBook20Field md;
-        memset(&md, 0, sizeof(md));
-
-        sortMapByKey(*asksPriceAndVolume, sort_result, sort_price_desc);
-//        std::cout<<"asksPriceAndVolume sorted desc:"<< std::endl;
-//        for(int i=0; i<sort_result.size(); i++)
-//        {
-//            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-//        }
-        //asks 	卖方深度 from big to little
-        int askTotalSize = (int)sort_result.size();
-        auto size = std::min(askTotalSize, 20);
-
-        for(int i = 0; i < size; ++i)
-        {
-            md.AskLevels[i].price = sort_result[askTotalSize - i - 1].price;
-            md.AskLevels[i].volume = sort_result[askTotalSize - i - 1].volume;
-//            KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:  LFPriceBook20Field AskLevels: (i)" << i << "(price)" << md.AskLevels[i].price<<  "  (volume)"<< md.AskLevels[i].volume);
-        }
-        md.AskLevelCount = size;
-
-
-        sort_result.clear();
-        sortMapByKey(*bidsPriceAndVolume, sort_result, sort_price_asc);
-//        std::cout<<"bidsPriceAndVolume sorted asc:"<< std::endl;
-//        for(int i=0; i<sort_result.size(); i++)
-//        {
-//            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-//        }
-        //bids 	买方深度 from big to little
-        int bidTotalSize = (int)sort_result.size();
-        size = std::min(bidTotalSize, 20);
-
-        for(int i = 0; i < size; ++i)
-        {
-            md.BidLevels[i].price = sort_result[bidTotalSize - i - 1].price;
-            md.BidLevels[i].volume = sort_result[bidTotalSize - i - 1].volume;
-//            KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth:  LFPriceBook20Field BidLevels: (i) " << i << "(price)" << md.BidLevels[i].price<<  "  (volume)"<< md.BidLevels[i].volume);
-        }
-        md.BidLevelCount = size;
-        sort_result.clear();
-
-
-        strcpy(md.InstrumentID, ticker.c_str());
+    LFPriceBook20Field md;
+    memset(&md, 0, sizeof(md));
+    if(priceBook20Assembler.Assembler(ticker, md)) {
         strcpy(md.ExchangeID, "coinmex");
 
         KF_LOG_INFO(logger, "MDEngineCoinmex::onDepth: on_price_book_update");
         on_price_book_update(&md);
     }
+
 }
 
 std::string MDEngineCoinmex::parseJsonToString(const char* in)

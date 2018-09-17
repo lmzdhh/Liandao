@@ -149,6 +149,7 @@ void PageSocketHandler::process_msg()
         }
         case PAGED_SOCKET_CLIENT_EXIT:
         {
+            std::cout << "---PagedSocketRequest requestType:PAGED_SOCKET_CLIENT_EXIT---"<<std::endl;
             util->exit_client(req->name, req->hash_code, true);
             PagedSocketResponse rsp = {};
             rsp.type = req_type;
