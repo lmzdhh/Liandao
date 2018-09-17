@@ -110,7 +110,7 @@ void TestInstruments()
   if (response.status_code == 200) {
       Document json;
       json.Parse(response.text.c_str());
-      std::cout << json.count << std::endl;
+      std::cout << json.Size() << std::endl;
   }
 
   //std::cout << "msg: " << response.text << std::endl;
