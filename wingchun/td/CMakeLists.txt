@@ -59,7 +59,7 @@ INSTALL(TARGETS bitfinextd DESTINATION "lib/wingchun")
 
 SET(BITMEX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBitmex.cpp TDEngineBitmex.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
 ADD_LIBRARY(bitmextd SHARED ${BITMEX_SOURCE_FILES})
-TARGET_LINK_LIBRARIES(bitmextd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
+TARGET_LINK_LIBRARIES(bitmextd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS bitmextd DESTINATION "lib/wingchun")
 
 

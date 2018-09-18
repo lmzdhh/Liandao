@@ -43,6 +43,99 @@ using utils::crypto::base64_encode;
 
 USING_WC_NAMESPACE
 
+
+
+static TDEngineBitmex* global_td = nullptr;
+
+static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
+{
+
+    switch( reason )
+    {
+        case LWS_CALLBACK_CLIENT_ESTABLISHED:
+        {
+            lws_callback_on_writable( wsi );
+            break;
+        }
+        case LWS_CALLBACK_PROTOCOL_INIT:
+        {
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_RECEIVE:
+        {
+            if(global_td)
+            {
+                global_td->on_lws_data(wsi, (const char*)in, len);
+            }
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_CLOSED:
+        {
+            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED, reason = " << reason << std::endl;
+            if(global_td) {
+                std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
+                global_td->on_lws_connection_error(wsi);
+            }
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
+        {
+            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_RECEIVE_PONG, reason = " << reason << std::endl;
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_WRITEABLE:
+        {
+            if(global_td)
+            {
+                global_td->lws_write_subscribe(wsi);
+            }
+            break;
+        }
+        case LWS_CALLBACK_TIMER:
+        {
+            break;
+        }
+        case LWS_CALLBACK_CLOSED:
+        case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+        {
+            std::cout << "3.1415926 LWS_CALLBACK_CLOSED/LWS_CALLBACK_CLIENT_CONNECTION_ERROR writeable, reason = " << reason << std::endl;
+            if(global_td)
+            {
+                global_td->on_lws_connection_error(wsi);
+            }
+            break;
+        }
+        default:
+            break;
+    }
+
+    return 0;
+}
+
+static struct lws_protocols protocols[] =
+        {
+                {
+                        "md-protocol",
+                        ws_service_cb,
+                              0,
+                                 65536,
+                },
+                { NULL, NULL, 0, 0 } /* terminator */
+        };
+
+
+enum protocolList {
+    PROTOCOL_TEST,
+
+    PROTOCOL_LIST_COUNT
+};
+
+struct session_data {
+    int fd;
+};
+
+
+
 TDEngineBitmex::TDEngineBitmex(): ITDEngine(SOURCE_BITMEX)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.Bitmex");
@@ -401,7 +494,7 @@ void TDEngineBitmex::req_investor_position(const LFQryPositionField* data, int a
         }
         KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
-    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_COINMEX, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BITMEX, 1, requestId);
 
     LFRspPositionField pos;
     memset(&pos, 0, sizeof(LFRspPositionField));
@@ -457,7 +550,7 @@ void TDEngineBitmex::req_investor_position(const LFQryPositionField* data, int a
     }
     if(errorId != 0)
     {
-        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITMEX, 1, requestId, errorId, errorMsg.c_str());
     }
 }
 
@@ -510,7 +603,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
                                               << " (Volume)" << data->Volume
                                               << " (LimitPrice)" << data->LimitPrice
                                               << " (OrderRef)" << data->OrderRef);
-    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1/*ISLAST*/, requestId);
+    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1/*ISLAST*/, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -522,7 +615,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
         KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList, ignore it  (rid)" << requestId <<
                                                                                       " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
@@ -569,7 +662,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
             char noneStatus = '\0';//none
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
             //success, only record raw data
-            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1, requestId, errorId, errorMsg.c_str());
             return;
         } else {
             /*
@@ -600,7 +693,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1, requestId, errorId, errorMsg.c_str());
 }
 
 
@@ -613,7 +706,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
                                               << " (OrderRef)" << data->OrderRef
                                               << " (KfOrderID)" << data->KfOrderID);
 
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITMEX, 1, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -625,7 +718,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
         KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
                                                                                        errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITMEX, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
@@ -640,7 +733,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
         KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. "
                              << " (rid)" << requestId << " (orderRef)" << data->OrderRef << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITMEX, 1, requestId, errorId, errorMsg.c_str());
         return;
     } else {
         remoteOrderId = itr->second;
@@ -668,22 +761,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
-}
-
-void TDEngineBitmex::GetAndHandleOrderTradeResponse()
-{
-    //every account
-    for (int idx = 0; idx < account_units.size(); idx ++)
-    {
-        AccountUnitBitmex& unit = account_units[idx];
-        if (!unit.logged_in)
-        {
-            continue;
-        }
-        moveNewtoPending(unit);
-        retrieveOrderStatus(unit);
-    }//end every account
+    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITMEX, 1, requestId, errorId, errorMsg.c_str());
 }
 
 
@@ -699,193 +777,6 @@ void TDEngineBitmex::moveNewtoPending(AccountUnitBitmex& unit)
     }
 }
 
-void TDEngineBitmex::retrieveOrderStatus(AccountUnitBitmex& unit)
-{
-    KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
-    std::vector<PendingBitmexOrderStatus>::iterator orderStatusIterator;
-//    int indexNum = 0;
-//    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++)
-//    {
-//        indexNum++;
-//        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order [" << indexNum <<"]    (account.api_key)"<< unit.api_key
-//                                                                << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
-//                                                                <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
-//                                                                <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
-//        );
-//    }
-
-    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
-    {
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "( account.api_key) "<< unit.api_key
-                                                               << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
-                                                               <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
-                                                               <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
-        );
-
-
-        std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(orderStatusIterator->OrderRef);
-        std::string remoteOrderId;
-        if(itr == localOrderRefRemoteOrderId.end()) {
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] not found in localOrderRefRemoteOrderId map (orderRef) " << orderStatusIterator->OrderRef);
-            continue;
-        } else {
-            remoteOrderId = itr->second;
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] found in localOrderRefRemoteOrderId map (orderRef) " << orderStatusIterator->OrderRef << " (remoteOrderId) " << remoteOrderId);
-        }
-
-        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
-        if(ticker.length() == 0) {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
-            continue;
-        }
-        KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
-
-        Document d;
-        query_order(unit, ticker, stod(remoteOrderId), d);
-
-        /*
- # Response
-
-{
-	"averagePrice": "0",
-	"code": "MVP_BTC",
-	"createdDate": 1530417365000,
-	"filledVolume": "0",
-	"funds": "0",
-	"orderId": 20283535,
-	"orderType": "limit",
-	"price": "0.00000001",
-	"side": "buy",
-	"status": "open",
-	"volume": "1"
-}
-
-返回值说明
-返回字段 	字段说明
-averagePrice 	订单已成交部分均价，如果未成交则为0
-code 	币对如btc-usdt
-createDate 	创建订单的时间戳
-filledVolume 	订单已成交数量
-funds 	订单已成交金额
-orderId 	订单代码
-price 	订单委托价
-side 	订单交易方向
-status 	订单状态
-volume 	订单委托数量
-        */
-        //parse order status
-        //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-        if(d.HasParseError()) {
-            //HasParseError, skip
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order response HasParseError " << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                   << " (orderRef)" << orderStatusIterator->OrderRef
-                                                                   << " (remoteOrderId) " << remoteOrderId);
-            continue;
-        }
-        if(d.HasMember("status"))
-        {
-            /*
-             {
-                "averagePrice": "0.00000148",
-                "code": "MVP_BTC",
-                "createdDate": 1530439964000,
-                "filledVolume": "1",
-                "funds": "0",
-                "orderId": 20644648,
-                "orderType": "limit",
-                "price": "0.00001111",
-                "side": "buy",
-                "status": "filled",
-                "volume": "1"
-            }
-             * */
-            //parse success
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.OrderStatus = GetOrderStatus(d["status"].GetString());
-            rtn_order.VolumeTraded = std::round(std::stod(d["filledVolume"].GetString()) * scale_offset);
-
-            //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
-            if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
-               (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-                && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
-            {
-                //first send onRtnOrder about the status change or VolumeTraded change
-                strcpy(rtn_order.ExchangeID, "bitmex");
-                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                rtn_order.Direction = GetDirection(d["side"].GetString());
-                //No this setting on bitmex
-                rtn_order.TimeCondition = LF_CHAR_GFD;
-                rtn_order.OrderPriceType = GetPriceType(d["orderType"].GetString());
-                strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-                rtn_order.VolumeTotalOriginal = std::round(std::stod(d["volume"].GetString()) * scale_offset);
-                rtn_order.LimitPrice = std::round(std::stod(d["price"].GetString()) * scale_offset);
-                rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-
-                on_rtn_order(&rtn_order);
-                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                        source_id, MSG_TYPE_LF_RTN_ORDER_COINMEX,
-                                        1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-                uint64_t newAveragePrice = std::round(std::stod(d["averagePrice"].GetString()) * scale_offset);
-                //second, if the status is PartTraded/AllTraded, send OnRtnTrade
-                if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
-                    (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-                    && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
-                {
-                    LFRtnTradeField rtn_trade;
-                    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-                    strcpy(rtn_trade.ExchangeID, "bitmex");
-                    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-                    strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                    strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
-                    rtn_trade.Direction = rtn_order.Direction;
-                    uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
-                    uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
-
-                    //calculate the volumn and price (it is average too)
-                    rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-                    rtn_trade.Price = (newAmount - oldAmount)/(rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded);
-
-                    on_rtn_trade(&rtn_trade);
-                    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                            source_id, MSG_TYPE_LF_RTN_TRADE_COINMEX, 1, -1);
-                }
-                //third, update last status for next query_order
-                orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-                orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-                orderStatusIterator->averagePrice = newAveragePrice;
-            }
-        } else {
-            int errorId = 0;
-            std::string errorMsg = "";
-            //no status, it must be a Error response. see details in getResponse(...)
-            if(d.HasMember("code") && d["code"].IsInt()) {
-                errorId = d["code"].GetInt();
-            }
-            if(d.HasMember("message") && d["message"].IsString())
-            {
-                errorMsg = d["message"].GetString();
-            }
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                         << " (orderRef)" << orderStatusIterator->OrderRef
-                                                                         << " (errorId)" << errorId
-                                                                         << " (errorMsg)" << errorMsg);
-        }
-
-        //remove order when finish
-        if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
-           || orderStatusIterator->OrderStatus == LF_CHAR_Error)
-        {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
-            orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
-        } else {
-            ++orderStatusIterator;
-        }
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
-    }
-}
 
 
 void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const char_31 InstrumentID,
@@ -912,27 +803,21 @@ void TDEngineBitmex::set_reader_thread()
 {
     ITDEngine::set_reader_thread();
 
-    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineBitmex::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBitmex::loop, this)));
+    KF_LOG_INFO(logger, "[set_reader_thread] ws_thread start on TDEngineBitmex::wsloop");
+    ws_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBitmex::wsloop, this)));
 
 }
 
-void TDEngineBitmex::loop()
+
+void TDEngineBitmex::wsloop()
 {
+    KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
     while(isRunning)
     {
-        using namespace std::chrono;
-        auto current_ms = duration_cast< milliseconds>(system_clock::now().time_since_epoch()).count();
-        if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < rest_get_interval_ms)
-        {
-            continue;
-        }
-
-        last_rest_get_ts = current_ms;
-        GetAndHandleOrderTradeResponse();
+        int n = lws_service( context, rest_get_interval_ms );
+        std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
     }
 }
-
 
 std::vector<std::string> TDEngineBitmex::split(std::string str, std::string token)
 {
@@ -964,21 +849,14 @@ void TDEngineBitmex::printResponse(const Document& d)
     }
 }
 
+
+//an error:
 /*
- * https://github.com/bitmex/bitmex-official-api-docs/blob/master/README_ZH_CN.md
- *
- *成功
-HTTP状态码200表示成功响应，并可能包含内容。如果响应含有内容，则将显示在相应的返回内容里面。
-常见错误码
-    400 Bad Request – Invalid request forma 请求格式无效
-    401 Unauthorized – Invalid API Key 无效的API Key
-    403 Forbidden – You do not have access to the requested resource 请求无权限
-    404 Not Found 没有找到请求
-    429 Too Many Requests 请求太频繁被系统限流
-    500 Internal Server Error – We had a problem with our server 服务器内部阻碍
+ * {"error": {
+      "message": "...",
+      "name": "HTTPError" | "ValidationError" | "WebsocketError" | "Error"
+    }}
  * */
-//当出错时，返回http error code和出错信息message
-//当不出错时，返回结果信息
 void TDEngineBitmex::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
 {
     if(http_status_code == HTTP_RESPONSE_OK)
@@ -1034,71 +912,63 @@ void TDEngineBitmex::get_account(AccountUnitBitmex& unit, Document& json)
     KF_LOG_INFO(logger, "[get_account]");
     std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
-    std::string requestPath = "/api/v1/spot/ccex/account/assets";
-    std::string queryString= "";
+    std::string requestPath = "/api/v1/position";
+    std::string queryString= "?count=100000";
     std::string body = "";
-    string Message = Timestamp + Method + requestPath + queryString + body;
+    string Message = Method + requestPath + queryString + Timestamp + body;
 
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
+    std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath;
-    std::string sign = base64_encode(signature, 32);
 
     const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key},
-                                     {"Content-Type", "application/json"},
-                                     {"ACCESS-SIGN", sign},
-                                     {"ACCESS-TIMESTAMP",  Timestamp}}, Timeout{10000} );
+                                 Header{{"api-key", unit.api_key},
+                                        {"Content-Type", "application/json"},
+                                        {"api-signature", signature},
+                                        {"api-expires", Timestamp }},
+                                 Timeout{30000});
 
-    KF_LOG_INFO(logger, "[get_account] (url) " << url << " (response) " << response.text.c_str());
-    //[]
+    KF_LOG_INFO(logger, "[get_account] (url) " << url  << " (response.status_code) " << response.status_code <<
+                                                " (response.error.message) " << response.error.message <<
+                                                " (response.text) " << response.text.c_str());
+
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
 void TDEngineBitmex::get_products(AccountUnitBitmex& unit, Document& json)
 {
  /*
-[{
-	"baseCurrency": "LTC",
-	"baseMaxSize": "100000.00",
-	"baseMinSize": "0.001",
-	"code": "LTC_BTC",
-	"quoteCurrency": "BTC",
-	"quoteIncrement": "8"
-}, {
-	"baseCurrency": "BCH",
-	"baseMaxSize": "100000.00",
-	"baseMinSize": "0.001",
-	"code": "BCH_BTC",
-	"quoteCurrency": "BTC",
-	"quoteIncrement": "8"
-}, {
-	"baseCurrency": "ETH",
-	"baseMaxSize": "100000.00",
-	"baseMinSize": "0.001",
-	"code": "ETH_BTC",
-	"quoteCurrency": "BTC",
-	"quoteIncrement": "8"
-}.......]
+[
+  {
+    "symbol": "XBTZ14",
+    "rootSymbol": "XBT",
+    "state": "Settled",
+    ...........
+    "maxOrderQty": 10000000,
+    "maxPrice": 1000000,
+    "lotSize": 1,
+    "tickSize": 0.01,
+    "multiplier": 1000,
+	.........
+  },
+  .......
+  ]
   * */
     KF_LOG_INFO(logger, "[get_products]");
     std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
-    std::string requestPath = "/api/v1/instrument";
+    std::string requestPath = "/api/v1/instrument/activeAndIndices";
     std::string queryString= "";
     std::string body = "";
-    string Message = Method + requestPath + Timestamp + queryString + body;
 
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath;
-    std::string sign = base64_encode(signature, 32);
     const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key},
-                                     {"Content-Type", "application/json"},
-                                     {"ACCESS-SIGN", sign},
-                                     {"ACCESS-TIMESTAMP",  Timestamp}}, Timeout{10000} );
+                              Header{
+                                     {"Content-Type", "application/json"}},
+                                     Timeout{10000} );
 
-    KF_LOG_INFO(logger, "[get_products] (url) " << url << " (response) " << response.text.c_str());
-    //
+    KF_LOG_INFO(logger, "[get_products] (url) " << url  << " (response.status_code) " << response.status_code <<
+                                                     " (response.error.message) " << response.error.message <<
+                                                     " (response.text) " << response.text.c_str());
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1188,13 +1058,7 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
                                       {"api-expires", Timestamp }},
                                Body{body}, Timeout{30000});
 
-    //an error:
-    /*
-     * {"error": {
-          "message": "...",
-          "name": "HTTPError" | "ValidationError" | "WebsocketError" | "Error"
-        }}
-     * */
+
     //{ "error": {"message": "Authorization Required","name": "HTTPError"} }
     KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                               " (response.error.message) " << response.error.message <<
@@ -1221,8 +1085,8 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
                                         {"api-signature", signature},
-                                        {"api-expires", Timestamp }}
-                                 );
+                                        {"api-expires", Timestamp }},
+                                 Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url  << " (response.status_code) " << response.status_code <<
                                                      " (response.error.message) " << response.error.message <<
@@ -1269,7 +1133,7 @@ void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, long orderId, Documen
                                         {"Content-Type", "application/json"},
                                         {"api-signature", signature},
                                         {"api-expires", Timestamp }},
-                                 Body{body}, Timeout{30000});
+                                 Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
@@ -1279,51 +1143,217 @@ void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, long orderId, Documen
 
 
 
-void TDEngineBitmex::query_order(AccountUnitBitmex& unit, std::string code, long orderId, Document& json)
-{
-    KF_LOG_INFO(logger, "[query_order]");
-/*
- # Response
-    {
-        "averagePrice":"0",
-        "code":"chp-eth",
-        "createdDate":9887828,
-        "filledVolume":"0",
-        "funds":"0",
-        "orderId":9865872,
-        "orderType":"limit",
-        "price":"0.00001",
-        "side":"buy",
-        "status":"canceled",
-        "volume":"1"
-    }
-* */
-    std::string Timestamp = std::to_string(getTimestamp());
-    std::string Method = "GET";
-    std::string requestPath = "/api/v1/order";
-    std::string body = "";
-    string Message = Method + requestPath + body;
-    unsigned char* signature = hmac_sha256_byte(unit.secret_key.c_str(), Message.c_str());
-    string url = unit.baseUrl + requestPath;
-    std::string sign = base64_encode(signature, 32);
-    const auto response = Get(Url{url},
-                              Header{{"ACCESS-KEY", unit.api_key},
-                                     {"Content-Type", "application/json"},
-                                     {"ACCESS-SIGN", sign},
-                                     {"ACCESS-TIMESTAMP",  Timestamp}},
-                              Body{body}, Timeout{10000});
-
-    KF_LOG_INFO(logger, "[query_order] (url) " << url << " (response.status_code) " << response.status_code <<
-                                               " (response.error.message) " << response.error.message <<
-                                               " (response.text) " << response.text.c_str());
-    //(response.status_code) 404 (response.error.message)  (response.text) {"message":"Order does not exist"}
-    getResponse(response.status_code, response.text, response.error.message, json);
-}
-
 inline int64_t TDEngineBitmex::getTimestamp()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return timestamp/1000;
+}
+
+
+
+
+void TDEngineBitmex::on_lws_connection_error(struct lws* conn)
+{
+    KF_LOG_ERROR(logger, "TDEngineCoinmex::on_lws_connection_error.");
+    //market logged_in false;
+    AccountUnitBitmex& unit = findAccountUnitByWebsocketConn(conn);
+    unit.logged_in = false;
+    KF_LOG_ERROR(logger, "TDEngineCoinmex::on_lws_connection_error. login again.");
+
+    long timeout_nsec = 0;
+    unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
+    lws_login(unit, timeout_nsec);
+}
+
+void TDEngineBitmex::lws_login(AccountUnitBitmex& unit, long timeout_nsec) {
+    KF_LOG_INFO(logger, "TDEngineCoinmex::lws_login:");
+    global_td = this;
+
+    if (context == NULL) {
+        struct lws_context_creation_info info;
+        memset( &info, 0, sizeof(info) );
+
+        info.port = CONTEXT_PORT_NO_LISTEN;
+        info.protocols = protocols;
+        info.iface = NULL;
+        info.ssl_cert_filepath = NULL;
+        info.ssl_private_key_filepath = NULL;
+        info.extensions = NULL;
+        info.gid = -1;
+        info.uid = -1;
+        info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+        info.max_http_header_pool = 1024;
+        info.fd_limit_per_thread = 1024;
+        info.ws_ping_pong_interval = 10;
+        info.ka_time = 10;
+        info.ka_probes = 10;
+        info.ka_interval = 10;
+
+        context = lws_create_context( &info );
+        KF_LOG_INFO(logger, "TDEngineCoinmex::lws_login: context created.");
+    }
+
+    if (context == NULL) {
+        KF_LOG_ERROR(logger, "TDEngineCoinmex::lws_login: context is NULL. return");
+        return;
+    }
+
+    int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
+    lws_set_log_level(logs, NULL);
+
+    struct lws_client_connect_info ccinfo = {0};
+
+    static std::string host  = "websocket.coinmex.com";
+    static std::string path = "/";
+    static int port = 8443;
+
+    ccinfo.context 	= context;
+    ccinfo.address 	= host.c_str();
+    ccinfo.port 	= port;
+    ccinfo.path 	= path.c_str();
+    ccinfo.host 	= host.c_str();
+    ccinfo.origin 	= host.c_str();
+    ccinfo.ietf_version_or_minus_one = -1;
+    ccinfo.protocol = protocols[0].name;
+    ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+
+    unit.websocketConn = lws_client_connect_via_info(&ccinfo);
+    KF_LOG_INFO(logger, "TDEngineCoinmex::lws_login: Connecting to " <<  ccinfo.host << ":" << ccinfo.port << ":" << ccinfo.path);
+
+    if (unit.websocketConn == NULL) {
+        KF_LOG_ERROR(logger, "TDEngineCoinmex::lws_login: wsi create error.");
+        return;
+    }
+    KF_LOG_INFO(logger, "TDEngineCoinmex::lws_login: wsi create success.");
+}
+
+
+void TDEngineBitmex::on_lws_data(struct lws* conn, const char* data, size_t len) {
+    AccountUnitBitmex &unit = findAccountUnitByWebsocketConn(conn);
+    KF_LOG_INFO(logger, "TDEngineBitmex::on_lws_data: " << data);
+    Document json;
+    json.Parse(data);
+
+    if (json.HasParseError()) {
+        KF_LOG_ERROR(logger, "TDEngineBitmex::on_lws_data. parse json error: " << data);
+        return;
+    }
+
+}
+
+
+
+AccountUnitBitmex& TDEngineBitmex::findAccountUnitByWebsocketConn(struct lws * websocketConn)
+{
+    for (size_t idx = 0; idx < account_units.size(); idx++) {
+        AccountUnitBitmex &unit = account_units[idx];
+        if(unit.websocketConn == websocketConn) {
+            return unit;
+        }
+    }
+    return account_units[0];
+}
+
+
+
+void TDEngineBitmex::moveNewOrderStatusToPending(AccountUnitBitmex& unit)
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+
+    std::vector<PendingBitmexOrderStatus>::iterator newOrderStatusIterator;
+    for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
+    {
+        unit.pendingOrderStatus.push_back(*newOrderStatusIterator);
+        newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
+    }
+}
+
+void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
+
+
+    if (json.HasMember("data") && json["data"].IsObject()) {
+        AccountUnitBitmex &unit = findAccountUnitByWebsocketConn(conn);
+
+        moveNewOrderStatusToPending(unit);
+    }
+
+}
+
+
+void TDEngineBitmex::addWebsocketPendingSendMsg(AccountUnitBitmex& unit, std::string msg)
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+    unit.newPendingSendMsg.push_back(msg);
+}
+
+
+void TDEngineBitmex::moveNewWebsocketMsgToPending(AccountUnitBitmex& unit)
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+
+    std::vector<std::string>::iterator newMsgIterator;
+    for(newMsgIterator = unit.newPendingSendMsg.begin(); newMsgIterator != unit.newPendingSendMsg.end();)
+    {
+        unit.pendingSendMsg.push_back(*newMsgIterator);
+        newMsgIterator = unit.newPendingSendMsg.erase(newMsgIterator);
+    }
+}
+
+
+std::string TDEngineBitmex::createAuthJsonString(AccountUnitBitmex& unit )
+{
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("event");
+    writer.String("signin");
+
+    writer.Key("params");
+    writer.StartObject();
+
+    writer.Key("api_key");
+    writer.String(unit.api_key.c_str());
+
+
+    writer.EndObject();
+    writer.EndObject();
+    return s.GetString();
+}
+
+/*
+ {
+    event: "subscribe",
+    params: {
+        "type": "orders",
+        "zip": false,
+        "biz": "spot",
+    }
+}
+
+ * */
+std::string TDEngineBitmex::createOrderJsonString()
+{
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("event");
+    writer.String("subscribe");
+
+    writer.Key("params");
+    writer.StartObject();
+
+    writer.Key("type");
+    writer.String("orders");
+
+    writer.Key("zip");
+    writer.Bool(false);
+
+    writer.Key("biz");
+    writer.String("spot");
+
+    writer.EndObject();
+    writer.EndObject();
+    return s.GetString();
 }
 
 

@@ -12,6 +12,7 @@
 #include <mutex>
 #include "Timer.h"
 #include <document.h>
+#include <libwebsockets.h>
 
 using rapidjson::Document;
 
@@ -27,8 +28,10 @@ struct PendingBitmexOrderStatus
     char_21 OrderRef;       //报单引用
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
-    uint64_t averagePrice;//coinmex given averagePrice on response of query_order
+    int64_t averagePrice;
+    int64_t remoteOrderId;
 };
+
 
 struct PendingBitmexTradeStatus
 {
@@ -63,6 +66,9 @@ struct AccountUnitBitmex
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
 
+    std::vector<std::string> newPendingSendMsg;
+    std::vector<std::string> pendingSendMsg;
+    struct lws * websocketConn;
 };
 
 
@@ -97,6 +103,15 @@ public:
     TDEngineBitmex();
     ~TDEngineBitmex();
 
+
+
+    //websocket
+    void on_lws_data(struct lws* conn, const char* data, size_t len);
+    void on_lws_connection_error(struct lws* conn);
+    int lws_write_subscribe(struct lws* conn);
+    void lws_login(AccountUnitBitmex& unit, long timeout_nsec);
+    void moveNewOrderStatusToPending(AccountUnitBitmex& unit);
+    
     int Round(std::string tickSizeStr);
 private:
     // journal writers
@@ -111,7 +126,6 @@ private:
     LfOrderPriceTypeType GetPriceType(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
 
-    void loop();
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
     void addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const char_31 InstrumentID,
@@ -121,8 +135,6 @@ private:
     void moveNewtoPending(AccountUnitBitmex& unit);
     static constexpr int scale_offset = 1e8;
 
-    ThreadPtr rest_thread;
-    uint64_t last_rest_get_ts = 0;
     int rest_get_interval_ms = 500;
 
     std::mutex* mutex_order_and_trade = nullptr;
@@ -130,6 +142,17 @@ private:
     std::map<std::string, std::string> localOrderRefRemoteOrderId;
 
 
+//websocket
+    AccountUnitBitmex& findAccountUnitByWebsocketConn(struct lws * websocketConn);
+    void onOrder(struct lws * websocketConn, Document& json);
+    void wsloop();
+    void addWebsocketPendingSendMsg(AccountUnitBitmex& unit, std::string msg);
+    void moveNewWebsocketMsgToPending(AccountUnitBitmex& unit);
+    std::string createAuthJsonString(AccountUnitBitmex& unit );
+    std::string createOrderJsonString();
+
+    struct lws_context *context = nullptr;
+    ThreadPtr ws_thread;
 
 private:
     int HTTP_RESPONSE_OK = 200;
@@ -147,14 +170,12 @@ private:
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
 
+    inline int64_t getTimestamp();
 
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
     bool loadExchangeOrderFilters(AccountUnitBitmex& unit, Document &doc);
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
     SendOrderFilter getSendOrderFilter(AccountUnitBitmex& unit, const char *symbol);
-private:
-    inline int64_t getTimestamp();
-    int64_t getTimeDiffOfExchange(AccountUnitBitmex& unit);
 
 };
 
