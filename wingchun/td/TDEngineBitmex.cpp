@@ -62,6 +62,19 @@ void TDEngineBitmex::init()
     JournalPair tdRawPair = getTdRawJournalPair(source_id);
     raw_writer = yijinjing::JournalWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
     KF_LOG_INFO(logger, "[init]");
+
+
+    std::time_t baseNow = std::time(nullptr);
+    struct tm* tm = std::localtime(&baseNow);
+    tm->tm_sec += 30;
+    std::time_t next = std::mktime(tm);
+
+    std::cout << "std::to_string(next):" << std::to_string(next)<< std::endl;
+
+    std::cout << "getTimestamp:" << std::to_string(getTimestamp())<< std::endl;
+
+
+
 }
 
 void TDEngineBitmex::pre_load(const json& j_config)
@@ -1019,7 +1032,7 @@ void TDEngineBitmex::getResponse(int http_status_code, std::string responseText,
 void TDEngineBitmex::get_account(AccountUnitBitmex& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
-    std::string Timestamp = getTimestampString();
+    std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
     std::string requestPath = "/api/v1/spot/ccex/account/assets";
     std::string queryString= "";
@@ -1068,7 +1081,7 @@ void TDEngineBitmex::get_products(AccountUnitBitmex& unit, Document& json)
 }.......]
   * */
     KF_LOG_INFO(logger, "[get_products]");
-    std::string Timestamp = getTimestampString();
+    std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
     std::string requestPath = "/api/v1/instrument";
     std::string queryString= "";
@@ -1090,9 +1103,8 @@ void TDEngineBitmex::get_products(AccountUnitBitmex& unit, Document& json)
 }
 
 //https://www.bitmex.com/api/explorer/#!/Order/Order_new
-
 void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
-                                     const char *side, const char *type, double size, double price,  std::string orderRef,  Document& json)
+                                     const char *side, const char *type, double size, double price,  std::string orderRef, Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
 
@@ -1140,28 +1152,32 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
     Writer<StringBuffer> writer(jsonStr);
     document.Accept(writer);
 
-    std::string Timestamp = getTimestampString();
+    std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "POST";
     std::string requestPath = "/api/v1/order";
     std::string queryString= "";
     std::string body = jsonStr.GetString();
 
-    std::time_t baseNow = std::time(nullptr);
-    struct tm* tm = std::localtime(&baseNow);
-    tm->tm_sec += 30;
-    std::time_t next = std::mktime(tm);
+    string Message = Method + requestPath + queryString + Timestamp + body;
+    KF_LOG_INFO(logger, "[send_order] (Message)" << Message);
 
-    string Message = Timestamp + Method + requestPath + queryString + body;
     std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
 
     /*
-     * Header{{"api-key", unit.api_key},
-                                      {"Accept", "application/json"},
-                                      {"Content-Type", "application/x-www-form-urlencoded"},
-                                      {"Content-Length", to_string(body.size())},
-                                      {"api-signature", signature},
-                                      {"api-expires", std::to_string(next) }},
+    #
+    # POST
+    #
+    verb = 'POST'
+    path = '/api/v1/order'
+    expires = 1518064238 # 2018-02-08T04:30:38Z
+    data = '{"symbol":"XBTM15","price":219.0,"clOrdID":"mm_bitmex_1a/oemUeQ4CAJZgP3fjHsA","orderQty":98}'
+
+    # HEX(HMAC_SHA256(apiSecret, 'POST/api/v1/order1518064238{"symbol":"XBTM15","price":219.0,"clOrdID":"mm_bitmex_1a/oemUeQ4CAJZgP3fjHsA","orderQty":98}'))
+    # Result is:
+    # '1749cd2ccae4aa49048ae09f0b95110cee706e0944e6a14ad0b3a8cb45bd336b'
+    signature = HEX(HMAC_SHA256(apiSecret, verb + path + str(expires) + data))
+
      * */
     const auto response = Post(Url{url},
                                Header{{"api-key", unit.api_key},
@@ -1169,11 +1185,17 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
                                       {"Content-Type", "application/x-www-form-urlencoded"},
                                       {"Content-Length", to_string(body.size())},
                                       {"api-signature", signature},
-                                      {"api-expires", std::to_string(next) }},
+                                      {"api-expires", Timestamp }},
                                Body{body}, Timeout{30000});
 
     //an error:
-    //(response.status_code) 0 (response.error.message) Failed to connect to www.bitmore.top port 443: Connection refused (response.text)
+    /*
+     * {"error": {
+          "message": "...",
+          "name": "HTTPError" | "ValidationError" | "WebsocketError" | "Error"
+        }}
+     * */
+    //{ "error": {"message": "Authorization Required","name": "HTTPError"} }
     KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                               " (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
@@ -1184,17 +1206,13 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
 void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
-
-    std::time_t baseNow = std::time(nullptr);
-    struct tm* tm = std::localtime(&baseNow);
-    tm->tm_sec += 30;
-    std::time_t next = std::mktime(tm);
-
-    std::string Timestamp = getTimestampString();
+    std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "DELETE";
     std::string requestPath = "/api/v1/order/all";
-    string Message = Method + requestPath;
-    Message += std::to_string(next);
+    std::string queryString= "";
+    std::string body = "";
+
+    string Message = Method + requestPath + queryString + Timestamp + body;
 
     std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath;
@@ -1203,7 +1221,7 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
                                         {"api-signature", signature},
-                                        {"api-expires", std::to_string(next) }}
+                                        {"api-expires", Timestamp }}
                                  );
 
     KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url  << " (response.status_code) " << response.status_code <<
@@ -1216,28 +1234,41 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
 void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, long orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
-
-    std::string Timestamp = getTimestampString();
-    std::time_t baseNow = std::time(nullptr);
-    struct tm* tm = std::localtime(&baseNow);
-    tm->tm_sec += 30;
-    std::time_t next = std::mktime(tm);
-
+    std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "DELETE";
     std::string requestPath = "/api/v1/order";
-    std::string queryString= "";
-    std::string body = "clOrdID=" + std::to_string(orderId);
+    std::string queryString= "?clOrdID=" + std::to_string(orderId);
+    std::string body = "";
 
-    string Message = Method + requestPath + queryString + body;
+    string Message = Method + requestPath + queryString + Timestamp + body;
     std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
 
     string url = unit.baseUrl + requestPath + queryString;
 
+    /*
+     *
+     #
+    # GET with complex querystring (value is URL-encoded)
+    #
+    verb = 'GET'
+    # Note url-encoding on querystring - this is '/api/v1/instrument?filter={"symbol": "XBTM15"}'
+    # Be sure to HMAC *exactly* what is sent on the wire
+    path = '/api/v1/instrument?filter=%7B%22symbol%22%3A+%22XBTM15%22%7D'
+    expires = 1518064237 # 2018-02-08T04:30:37Z
+    data = ''
+
+    # HEX(HMAC_SHA256(apiSecret, 'GET/api/v1/instrument?filter=%7B%22symbol%22%3A+%22XBTM15%22%7D1518064237'))
+    # Result is:
+    # 'e2f422547eecb5b3cb29ade2127e21b858b235b386bfa45e1c1756eb3383919f'
+    signature = HEX(HMAC_SHA256(apiSecret, verb + path + str(expires) + data))
+
+    #
+     * */
     const auto response = Delete(Url{url},
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
                                         {"api-signature", signature},
-                                        {"api-expires", std::to_string(next) }},
+                                        {"api-expires", Timestamp }},
                                  Body{body}, Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
@@ -1267,7 +1298,7 @@ void TDEngineBitmex::query_order(AccountUnitBitmex& unit, std::string code, long
         "volume":"1"
     }
 * */
-    std::string Timestamp = getTimestampString();
+    std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
     std::string requestPath = "/api/v1/order";
     std::string body = "";
@@ -1292,18 +1323,7 @@ void TDEngineBitmex::query_order(AccountUnitBitmex& unit, std::string code, long
 inline int64_t TDEngineBitmex::getTimestamp()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    return timestamp;
-}
-
-std::string TDEngineBitmex::getTimestampString()
-{
-    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-    std::string timestampStr;
-    std::stringstream convertStream;
-    convertStream <<std::fixed << std::setprecision(3) << (timestamp/1000.0);
-    convertStream >> timestampStr;
-    return timestampStr;
+    return timestamp/1000;
 }
 
 

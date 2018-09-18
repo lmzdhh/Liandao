@@ -146,7 +146,6 @@ private:
     void query_order(AccountUnitBitmex& unit, std::string code, long orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
-    inline std::string getTimestampString();
 
 
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
