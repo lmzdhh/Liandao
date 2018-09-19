@@ -1724,7 +1724,6 @@ void TDEngineCoinmex::on_lws_connection_error(struct lws* conn)
     KF_LOG_ERROR(logger, "TDEngineCoinmex::on_lws_connection_error.");
     //market logged_in false;
     AccountUnitCoinmex& unit = findAccountUnitByWebsocketConn(conn);
-    unit.logged_in = false;
     KF_LOG_ERROR(logger, "TDEngineCoinmex::on_lws_connection_error. login again.");
 
     long timeout_nsec = 0;
