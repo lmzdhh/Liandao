@@ -122,6 +122,8 @@ private:
     std::string createCancelOrderCIdJsonString(int cid, std::string dateStr);
     std::string getDateStr();
 
+    void cancel_all_orders(AccountUnitBitfinex& unit, Document& json);
+
     void lws_login(AccountUnitBitfinex& unit, long timeout_nsec);
     void onInfo(Document& json);
     void onAuth(struct lws * websocketConn, Document& json);

@@ -37,7 +37,7 @@ using std::to_string;
 using std::stod;
 using std::stoi;
 using utils::crypto::hmac_sha384;
-
+using utils::crypto::base64_encode;
 
 USING_WC_NAMESPACE
 
@@ -244,6 +244,9 @@ void TDEngineBitfinex::connect(long timeout_nsec)
     {
         AccountUnitBitfinex& unit = account_units[idx];
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
+        Document doc;
+        cancel_all_orders(unit, doc);
+
         if (!unit.logged_in)
         {
             unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
@@ -1537,7 +1540,55 @@ void TDEngineBitfinex::loop()
     }
 }
 
+void TDEngineBitfinex::cancel_all_orders(AccountUnitBitfinex& unit, Document& json)
+{
+    /*
+     // view how to authenticate here:
+// https://docs.bitfinex.com/v1/docs/rest-auth
 
+var payload = {
+   request: '/v1/order/cancel/all',
+   nonce: Date.now().toString(),
+}
+
+// or use bitfinex-api-node
+
+const BFX = require('bitfinex-api-node')
+const bfxRest = new BFX(apiKey, apiSecretKey, {version: 1}).rest
+
+bfxRest.cancel_all_orders((err, res) => {
+  if (err) console.log(err)
+  console.log(result)
+})
+
+
+     * */
+
+    std::string Timestamp = std::to_string(getTimestamp());
+    std::string Method = "GET";
+    std::string requestPath = "/v1/order/cancel/all";
+    std::string queryString= "";
+    std::string body = "{\"request\": \"/v1/order/cancel/all\",\"nonce\":\"" + Timestamp+ "\"}";
+    string Message = body;
+
+    string payload = base64_encode((const unsigned char*)Message.c_str(), Message.length());
+
+    std::string signature = hmac_sha384(unit.secret_key.c_str(), payload.c_str());
+    string url = unit.baseUrl + requestPath + queryString;
+
+    const auto response = Get(Url{url}, cpr::VerifySsl{false},
+                              Header{{"X-BFX-APIKEY", unit.api_key},
+                                     {"Content-Type", "application/json"},
+                                     {"X-BFX-PAYLOAD", payload},
+                                     {"X-BFX-SIGNATURE",  signature}},
+                              Body{body}, Timeout{10000});
+
+    KF_LOG_INFO(logger, "[query_order] (url) " << url << " (Message)" << Message << " (response.status_code) " << response.status_code <<
+                                               " (response.error.message) " << response.error.message <<
+                                               " (response.text) " << response.text.c_str());
+
+
+}
 
 inline int64_t TDEngineBitfinex::getTimestamp()
 {
