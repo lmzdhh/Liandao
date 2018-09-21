@@ -60,7 +60,7 @@ void TDEngineBitmax::init()
 {
     ITDEngine::init();
     JournalPair tdRawPair = getTdRawJournalPair(source_id);
-    raw_writer = yijinjing::JournalWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
+    raw_writer = yijinjing::JournalSafeWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
     KF_LOG_INFO(logger, "[init]");
 }
 

@@ -82,6 +82,7 @@ void ITDEngine::listening()
             short msg_type = frame->getMsgType();
             short msg_source = frame->getSource();
             cur_time = frame->getNano();
+            KF_LOG_INFO(logger, "[ITDEngine::listening] (msg_type)" << msg_type << " (cur_time)" << cur_time);
             if (msg_type == MSG_TYPE_LF_MD)
             {
                 void* fdata = frame->getData();
@@ -157,7 +158,7 @@ void ITDEngine::listening()
                 }
                 else if (msg_type == MSG_TYPE_SWITCH_TRADING_DAY)
                 {
-//                    std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY"<<std::endl;
+
                     user_helper->switch_day();
                     for (auto iter: clients)
                     {
@@ -165,7 +166,7 @@ void ITDEngine::listening()
                             iter.second.pos_handler->switch_day();
                     }
                     local_id = 1;
-//                    std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY (local_id)" << local_id <<std::endl;
+
                     on_switch_day();
                 }
             }
@@ -180,6 +181,7 @@ void ITDEngine::listening()
                 void* fdata = frame->getData();
                 int requestId = frame->getRequestId();
                 int idx = iter->second.account_index;
+                KF_LOG_INFO(logger, "[ITDEngine::listening] (msg_type)" << msg_type << " (cur_time)" << cur_time << " (requestId)" << requestId << " (name)" << name << " (idx)" << idx);
                 switch (msg_type)
                 {
                     case MSG_TYPE_LF_QRY_POS:
@@ -216,7 +218,6 @@ void ITDEngine::listening()
                         strcpy(order->InvestorID, accounts[idx].InvestorID);
                         int order_id = order->KfOrderID;
                         int local_id;
-//                        std::cout << "MSG_TYPE_LF_ORDER_ACTION: (name)"<<name  <<" (order_id)" << order_id << " (local_id)" << local_id <<std::endl;
                         if (user_helper->get_order(name, order_id, local_id, order->InstrumentID))
                         {
                             string order_ref = std::to_string(local_id);
