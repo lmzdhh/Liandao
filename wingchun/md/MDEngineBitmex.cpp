@@ -51,11 +51,11 @@ static int eventCallback(struct lws* conn, enum lws_callback_reasons reason, voi
         }
         case LWS_CALLBACK_CLOSED:
         {
-	        std::cout << "received signal LWS_CALLBACK_CLOSED" << std::endl;
+	    std::cout << "received signal LWS_CALLBACK_CLOSED" << std::endl;
             break;
-	    }
+	}
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-	    {
+	{
             std::cout << "received signal LWS_CALLBACK_CLIENT_CONNECTION_ERROR" << std::endl;
             if(md_instance)
             {
@@ -179,7 +179,7 @@ void MDEngineBitmex::login(long timeout_nsec)
 
     if(!conn)
     {
-	    KF_LOG_INFO(logger, "error creating initial lws connection");
+        KF_LOG_INFO(logger, "error creating initial lws connection");
     }
 
     KF_LOG_INFO(logger, "done initiating and creating initial lws connection");
@@ -218,7 +218,7 @@ std::string MDEngineBitmex::createOrderbookJsonString(std::string symbol)
     writer.Key("op");
     writer.String("subscribe");
     writer.Key("args");
-    std::string str = "orderBook10:" + symbol;
+    std::string str = "orderBookL2_25:" + symbol;
     writer.String(str.c_str());
     writer.EndObject();
     return buffer.GetString();
@@ -271,7 +271,7 @@ void MDEngineBitmex::subscribeChannel(struct lws* conn)
     else if(num_subscribed >= subscribeJsonStrings.size())
     {
         KF_LOG_INFO(logger, "no more channel to subscribe to");
-	    return;
+	return;
     }
 
     unsigned char message[512];
@@ -313,6 +313,8 @@ void MDEngineBitmex::handleConnectionError(struct lws* conn)
     num_subscribed = 0;
     
     priceBook.clearPriceBook();
+    id_to_price.clear();
+    received_partial.clear();
 
     long timeout_nsec = 0;
     login(timeout_nsec);
@@ -327,14 +329,14 @@ void MDEngineBitmex::processData(struct lws* conn, const char* data, size_t len)
 
     if(!json.HasParseError() && json.IsObject() && json.HasMember("table") && json["table"].IsString())
     {
-        if(strcmp(json["table"].GetString(), "orderBook10") == 0)
+        if(strcmp(json["table"].GetString(), "orderBookL2_25") == 0)
         {
-            KF_LOG_INFO(logger, "received data is orderBook");
+	    KF_LOG_INFO(logger, "received data is orderBook");
             processOrderbookData(json);
         }
         else if(strcmp(json["table"].GetString(), "trade") == 0)
         {
-            KF_LOG_INFO(logger, "received data is trade");
+	    KF_LOG_INFO(logger, "received data is trade");
             processTradingData(json);
         }
         else
@@ -348,133 +350,135 @@ void MDEngineBitmex::processOrderbookData(Document& json)
 {
     KF_LOG_INFO(logger, "processing orderbook data");
 
-    std::string symbol;
-    std::string ticker;
-
-    if(json.HasMember("action"))
+    if(!json.HasMember("data") || !json["data"].IsArray() || json["data"].Size() == 0)
     {
-        std::string action = json["action"].GetString();
+	KF_LOG_INFO(logger, "received orderbook does not have valid data");
+	return;
+    }
+    
+    std::string symbol = json["data"].GetArray()[0]["symbol"].GetString();
+    std::string ticker = whiteList.GetKeyByValue(symbol);
+    if(ticker.empty())
+    {
+        KF_LOG_INFO(logger, "received orderbook symbol not in white list");
+        return;
+    }
+    KF_LOG_INFO(logger, "received orderbook symbol is " << symbol << " and ticker is " << ticker);
 
-        // upon subscription, an image of the existing data will be received through
-        // a partial action, so you can get started and apply deltas after that
-        if(action == "partial")
+    std::string action = json["action"].GetString();
+    KF_LOG_INFO(logger, "received orderbook action is a(n) " << action);
+
+    // upon subscription, an image of the existing data will be received through
+    // a partial action, so you can get started and apply deltas after that
+    if(action == "partial")
+    {
+        received_partial.insert(symbol);
+        auto& data = json["data"];
+        for(int count = 0; count < data.Size(); count++)
         {
-            received_partial = true;
-            KF_LOG_INFO(logger, "received orderbook is a partial action");
+            auto& update = data.GetArray()[count];
+            // each partial table data row contains symbol, id, side, size, and price field
+            uint64_t id = update["id"].GetUint64();
+            std::string side = update["side"].GetString();
+            uint64_t size = std::round(update["size"].GetUint64() * scale_offset);
+            int64_t price = std::round(update["price"].GetFloat() * scale_offset);
+            // save id/price pair for future update/delete lookup
+            id_to_price[id] = price;
 
-            if(json.HasMember("data"))
+            if(side == "Buy")
             {
-                auto& data = json["data"];
-                if(data.IsArray() && data.Size() > 0)
-                {
-                    for(int count = 0; count < data.Size(); count++)
-                    {
-                        auto& update = data.GetArray()[count];
-                        // each partial action table row contains symbol, id, side, size, and price field
-                        symbol = update["symbol"].GetString();
-                        ticker = whiteList.GetKeyByValue(symbol);
-                        if(ticker.empty())
-                        {
-                            KF_LOG_INFO(logger, "received orderbook symbol not in white list");
-                            continue;
-                        }
-                        KF_LOG_INFO(logger, "symbol is " << symbol << " and ticker is " << ticker);
-
-                        auto& bids = update["bids"];
-                        if(bids.IsArray() && bids.Size() > 0)
-                        {
-                            for(int bid = 0; bid < bids.Size(); bid++)
-                            {
-                                auto& curr = bids.GetArray()[bid];
-                                int64_t price = std::round(curr.GetArray()[0].GetDouble() * scale_offset);
-                                uint64_t amount = std::round(curr.GetArray()[1].GetDouble() * scale_offset);
-                                KF_LOG_INFO(logger, "bid update: price " << price << " and amount " << amount);
-                                priceBook.UpdateBidPrice(ticker, price, amount);
-                            }
-                        }
-
-                        auto& asks = update["asks"];
-                        if(asks.IsArray() && asks.Size() > 0)
-                        {
-                            for(int ask = 0; ask < asks.Size(); ask++)
-                            {
-                                auto& curr = asks.GetArray()[ask];
-                                int64_t price = std::round(curr.GetArray()[0].GetDouble() * scale_offset);
-                                uint64_t amount = std::round(curr.GetArray()[1].GetDouble() * scale_offset);
-                                KF_LOG_INFO(logger, "ask update: price " << price << " and amount " << amount);
-                                priceBook.UpdateAskPrice(ticker, price, amount);
-                            }
-                        }
-                    }
-                }
+                KF_LOG_INFO(logger, "new bid: price " << price << " and amount " << size);
+                priceBook.UpdateBidPrice(ticker, price, size);
             }
-        }
-        // other messages may be received before the partial action comes through
-        // in that case drop any messages received until partial action has been received
-        else if(!received_partial)
-        {
-            KF_LOG_INFO(logger, "have not received first partial action for orderbook");
-            KF_LOG_INFO(logger, "drop any messages received until partial action has been received");
-        }
-        else if(action == "update" || action == "insert" || action == "delete")
-        {
-            KF_LOG_INFO(logger, "received orderbook is a " << action << " action");
-
-            if(json.HasMember("data"))
-            {
-                auto& data = json["data"];
-                if(data.IsArray() && data.Size() > 0)
-                {
-                    for(int count = 0; count < data.Size(); count++)
-                    {
-                        auto& update = data.GetArray()[count];
-
-                        symbol = update["symbol"].GetString();
-                        ticker = whiteList.GetKeyByValue(symbol);
-                        if(ticker.empty())
-                        {
-                            KF_LOG_INFO(logger, "received orderbook symbol not in white list");
-                            continue;
-                        }
-                        KF_LOG_INFO(logger, "symbol is " << symbol << " and ticker is " << ticker);
-
-                        auto& bids = update["bids"];
-                        if(bids.IsArray() && bids.Size() > 0)
-                        {
-                            for(int bid = 0; bid < bids.Size(); bid++)
-                            {
-                            auto& curr = bids.GetArray()[bid];
-                            int64_t price = std::round(curr.GetArray()[0].GetDouble() * scale_offset);
-                            uint64_t amount = std::round(curr.GetArray()[1].GetDouble() * scale_offset);
-                            KF_LOG_INFO(logger, "bid update: price " << price << " and amount " << amount);
-                            priceBook.UpdateBidPrice(ticker, price, amount);
-                            }
-                        }
-
-                        auto& asks = update["asks"];
-                        if(asks.IsArray() && asks.Size() > 0)
-                        {
-                            for(int ask = 0; ask < asks.Size(); ask++)
-                            {
-                            auto& curr = asks.GetArray()[ask];
-                            int64_t price = std::round(curr.GetArray()[0].GetDouble() * scale_offset);
-                            uint64_t amount = std::round(curr.GetArray()[1].GetDouble() * scale_offset);
-                            KF_LOG_INFO(logger, "ask update: price " << price << " and amount " << amount);
-                            priceBook.UpdateAskPrice(ticker, price, amount);
-                            }
-                        }
-                    }
-                }
+            else
+     	    {
+                KF_LOG_INFO(logger, "new ask: price " << price << " and amount " << size);
+                priceBook.UpdateAskPrice(ticker, price, size);
             }
-        }
-        else
-        {
-            KF_LOG_INFO(logger, "received orderbook has invalid action");
         }
     }
-    else
+    // other messages may be received before the partial action comes through
+    // in that case drop any messages received until partial action has been received
+    else if(received_partial.find(symbol) == received_partial.end())
     {
-	    KF_LOG_INFO(logger, "received orderbook does not have action");
+        KF_LOG_INFO(logger, "have not received first partial action for symbol " << symbol);
+        KF_LOG_INFO(logger, "drop any messages received until partial action has been received");
+    }
+    else if(action == "update")
+    {
+	auto& data = json["data"];
+	for(int count = 0; count < data.Size(); count++)
+        {
+	    auto& update = data.GetArray()[count];
+            // each update table data row contains symbol, id, side, and size field
+	    // price is looked up using id
+            uint64_t id = update["id"].GetUint64();
+	    std::string side = update["side"].GetString();
+	    uint64_t size = std::round(update["size"].GetUint64() * scale_offset);
+	    int64_t price = id_to_price[id];
+
+            if(side == "Buy")
+	    {
+	        KF_LOG_INFO(logger, "updated bid: price " << price << " and amount " << size);
+	        priceBook.UpdateBidPrice(ticker, price, size);
+	    }
+            else
+	    {
+		KF_LOG_INFO(logger, "updated ask: price " << price << " and amount " << size);
+		priceBook.UpdateAskPrice(ticker, price, size);
+            }
+        }
+    }
+    else if(action == "insert")
+    {
+	auto& data = json["data"];
+	for(int count = 0; count < data.Size(); count++)
+	{
+	    auto& update = data.GetArray()[count];
+            // each insert table data row contains symbol, id, side, size, and price field
+	    uint64_t id = update["id"].GetUint64();
+	    std::string side = update["side"].GetString();
+	    uint64_t size = std::round(update["size"].GetUint64() * scale_offset);
+	    int64_t price = std::round(update["price"].GetFloat() * scale_offset);
+	    // save id/price pair for future update/delete lookup
+	    id_to_price[id] = price;
+
+	    if(side == "Buy")
+	    {
+	        KF_LOG_INFO(logger, "new bid: price " << price << " and amount " << size);
+	        priceBook.UpdateBidPrice(ticker, price, size);
+	    }
+	    else
+	    {
+                KF_LOG_INFO(logger, "new ask: price " << price << " and amount " << size);
+		priceBook.UpdateAskPrice(ticker, price, size);
+            }
+	}
+    }
+    else if(action == "delete")
+    {
+	auto& data = json["data"];
+	for(int count = 0; count < data.Size(); count++)
+	{
+	    auto& update = data.GetArray()[count];
+	    // each delete table data row contains symbol, id, and side field
+	    // price is looked up using id
+	    uint64_t id = update["id"].GetUint64();
+	    std::string side = update["side"].GetString();
+	    int64_t price = id_to_price[id];
+	    id_to_price.erase(id);
+
+	    if(side == "Buy")
+	    {
+		KF_LOG_INFO(logger, "deleted bid: price " << price);
+		priceBook.EraseBidPrice(ticker, price);
+	    }
+            else
+	    {
+	        KF_LOG_INFO(logger, "deleted ask: price " << price);
+	        priceBook.EraseAskPrice(ticker, price);
+            }
+        }
     }
 
     LFPriceBook20Field update;
@@ -513,8 +517,8 @@ void MDEngineBitmex::processTradingData(Document& json)
                 strcpy(trade.InstrumentID, ticker.c_str());
                 strcpy(trade.ExchangeID, "bitmex");
 
-                int64_t price = std::round(update["price"].GetDouble() * scale_offset);
-                uint64_t amount = std::round(update["size"].GetDouble() * scale_offset);
+                int64_t price = std::round(update["price"].GetFloat() * scale_offset);
+                uint64_t amount = std::round(update["size"].GetUint64() * scale_offset);
                 std::string side = update["side"].GetString();
 
                 trade.Price = price;

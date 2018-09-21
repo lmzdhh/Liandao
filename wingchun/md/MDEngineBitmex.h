@@ -11,6 +11,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <set>
 
 using rapidjson::Document;
 
@@ -48,7 +49,7 @@ private:
     // upon subscription an image of the existing data will be received through as a
     // partial action. other messages may be received before the partial comes through
     // in that case drop any messages received until a partial has been received
-    bool received_partial = false;
+    std::set<std::string> received_partial;
 
     static constexpr int scale_offset = 1e8;
     int rest_get_interval_ms = 500;
@@ -63,10 +64,10 @@ private:
   
     PriceBook20Assembler priceBook;
   
-    // the id on an orderbook entry is a composite of price and symbol, and is always
-    // unique for any given price level. for update and delete actions received message
-    // has id but not price. so id and price pair is saved for future lookup
-    std::unordered_map<int, double> id_to_price;
+    // the id on an orderbook entry is a composite of price and symbol, and is
+    // always unique for any given price level. for update and delete actions
+    // received message has id but not price. so id/price pair is saved for lookup
+    std::unordered_map<uint64_t, int64_t> id_to_price;
 
     virtual void set_reader_thread() override;
 
