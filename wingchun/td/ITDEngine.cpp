@@ -217,12 +217,12 @@ void ITDEngine::listening()
                         strcpy(order->BrokerID, accounts[idx].BrokerID);
                         strcpy(order->InvestorID, accounts[idx].InvestorID);
                         int order_id = order->KfOrderID;
-                        int local_id;
-                        if (user_helper->get_order(name, order_id, local_id, order->InstrumentID))
+                        int local_id_order_action = 0;
+                        if (user_helper->get_order(name, order_id, local_id_order_action, order->InstrumentID))
                         {
-                            string order_ref = std::to_string(local_id);
+                            string order_ref = std::to_string(local_id_order_action);
                             strcpy(order->OrderRef, order_ref.c_str());
-                            KF_LOG_DEBUG(logger, "[cancel_order] (rid)" << order_id << " (ticker)" << order->InstrumentID << " (ref)" << order_ref);
+                            KF_LOG_DEBUG(logger, "[cancel_order] (rid)" << order_id << " (ticker)" << order->InstrumentID << " (ref)" << order_ref << "(local_id_order_action)" << local_id_order_action);
                             req_order_action(order, idx, requestId, cur_time);
                         }
                         break;
