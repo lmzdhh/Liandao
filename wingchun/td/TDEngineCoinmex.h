@@ -147,13 +147,11 @@ private:
     void addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
                                     const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                     const uint64_t VolumeTraded, int64_t remoteOrderId);
-    void addPendingQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
-                                                         const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                         const uint64_t VolumeTraded, int64_t remoteOrderId);
     void retrieveOrderStatus(AccountUnitCoinmex& unit);
     void moveNewOrderStatusToPending(AccountUnitCoinmex& unit);
 
     void handlerResponseOrderStatus(AccountUnitCoinmex& unit, std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
+    void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
 
     inline int64_t getTimestamp();
     int64_t getTimeDiffOfExchange(AccountUnitCoinmex& unit);
@@ -168,6 +166,8 @@ private:
     std::string createOrderJsonString();
 
     std::string parseJsonToString(Document &d);
+
+    void handlerResponsedOrderStatus(AccountUnitCoinmex& unit);
 private:
     void get_exchange_time(AccountUnitCoinmex& unit, Document& json);
     void get_account(AccountUnitCoinmex& unit, Document& json);
