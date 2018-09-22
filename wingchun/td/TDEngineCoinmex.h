@@ -147,7 +147,9 @@ private:
     void addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
                                     const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                     const uint64_t VolumeTraded, int64_t remoteOrderId);
-
+    void addPendingQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
+                                                         const char_21 OrderRef, const LfOrderStatusType OrderStatus,
+                                                         const uint64_t VolumeTraded, int64_t remoteOrderId);
     void retrieveOrderStatus(AccountUnitCoinmex& unit);
     void moveNewOrderStatusToPending(AccountUnitCoinmex& unit);
 
@@ -207,7 +209,8 @@ private:
     std::mutex* mutex_order_and_trade = nullptr;
 
     std::map<std::string, int64_t> localOrderRefRemoteOrderId;
-    std::map<int64_t, ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
+
+    std::vector<ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
 
     int SYNC_TIME_DEFAULT_INTERVAL = 10000;
     int sync_time_interval;

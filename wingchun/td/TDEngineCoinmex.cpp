@@ -690,20 +690,20 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data->OrderRef << " (remoteOrderId) " << remoteOrderId);
 
-            char noneStatus = '\0';
-            addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
             //success, only record raw data
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
 
+            char noneStatus = '\0';
+            addPendingQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
+
+
 //            websocket的消息通常回来的比restful快，这时候因为消息里面有OrderId却找不到OrderRef，会先放入responsedOrderStatusNoOrderRef，
 //            当sendOrder返回OrderId信息之后,再处理这个信息
-            std::map<int64_t, ResponsedOrderStatus>::iterator noOrderRefOrserStatusItr;
-            noOrderRefOrserStatusItr = responsedOrderStatusNoOrderRef.find(remoteOrderId);
-            if(noOrderRefOrserStatusItr != responsedOrderStatusNoOrderRef.end()) {
-                //has no orderRed Order status, should link this OrderRef and handler it.
-                ResponsedOrderStatus responsedOrderStatus = noOrderRefOrserStatusItr->second;
+            std::vector<ResponsedOrderStatus>::iterator noOrderRefOrserStatusItr;
+            for(noOrderRefOrserStatusItr = responsedOrderStatusNoOrderRef.begin(); noOrderRefOrserStatusItr != responsedOrderStatusNoOrderRef.end(); ) {
 
-                moveNewOrderStatusToPending(unit);
+                //has no orderRed Order status, should link this OrderRef and handler it.
+                ResponsedOrderStatus responsedOrderStatus = (*noOrderRefOrserStatusItr);
 
                 std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator;
                 for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); ++orderStatusIterator)
@@ -717,7 +717,8 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
 
                 if(orderStatusIterator == unit.pendingOrderStatus.end()) {
                     KF_LOG_INFO(logger, "[req_order_insert] not find this pendingOrderStatus of order id, ignore it.(orderId)"<< responsedOrderStatus.orderId);
-                    return;
+                    ++noOrderRefOrserStatusItr;
+                    continue;
                 }
 
                 KF_LOG_INFO(logger, "[req_order_insert] handlerResponseOrderStatus (remoteOrderId)"<< remoteOrderId);
@@ -730,7 +731,8 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
                     KF_LOG_INFO(logger, "[req_order_insert] remove a pendingOrderStatus. (remoteOrderId)" << remoteOrderId);
                     orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
                 }
-                responsedOrderStatusNoOrderRef.erase(remoteOrderId);
+
+                noOrderRefOrserStatusItr = responsedOrderStatusNoOrderRef.erase(noOrderRefOrserStatusItr);
                 KF_LOG_INFO(logger, "[req_order_insert] responsedOrderStatusNoOrderRef erase(remoteOrderId)"<< remoteOrderId);
             }
 
@@ -1018,6 +1020,29 @@ void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const
     status.remoteOrderId = remoteOrderId;
     unit.newOrderStatus.push_back(status);
     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << status.InstrumentID
+                                                                       << " (OrderRef) " << status.OrderRef
+                                                                       << " (remoteOrderId) " << status.remoteOrderId
+                                                                       << "(VolumeTraded)" << VolumeTraded);
+}
+
+//used for websocket, websocket dont has loop query , it is quickly, so can read-erase quickly, dont need new->pending
+void TDEngineCoinmex::addPendingQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
+                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus,
+                                                 const uint64_t VolumeTraded, int64_t remoteOrderId)
+{
+    //add new orderId for GetAndHandleOrderTradeResponse
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+
+    PendingCoinmexOrderStatus status;
+    memset(&status, 0, sizeof(PendingCoinmexOrderStatus));
+    strncpy(status.InstrumentID, InstrumentID, 31);
+    strncpy(status.OrderRef, OrderRef, 21);
+    status.OrderStatus = OrderStatus;
+    status.VolumeTraded = VolumeTraded;
+    status.averagePrice = 0.0;
+    status.remoteOrderId = remoteOrderId;
+    unit.pendingOrderStatus.push_back(status);
+    KF_LOG_INFO(logger, "[addPendingQueryOrdersAndTrades] (InstrumentID) " << status.InstrumentID
                                                                        << " (OrderRef) " << status.OrderRef
                                                                        << " (remoteOrderId) " << status.remoteOrderId
                                                                        << "(VolumeTraded)" << VolumeTraded);
@@ -1880,7 +1905,7 @@ void TDEngineCoinmex::onOrder(struct lws* conn, Document& json)
     if(json.HasMember("data") && json["data"].IsObject()) {
         AccountUnitCoinmex& unit = findAccountUnitByWebsocketConn(conn);
 
-        moveNewOrderStatusToPending(unit);
+        std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
         auto& data = json["data"];
         std::string symbol = data["code"].GetString();
@@ -1929,7 +1954,7 @@ void TDEngineCoinmex::onOrder(struct lws* conn, Document& json)
 
         if(orderStatusIterator == unit.pendingOrderStatus.end()) {
             KF_LOG_INFO(logger, "[onOrder] not find this remote order id, ignore it and waiting for InsertOrder restful response (orderId)"<< responsedOrderStatus.orderId);
-            responsedOrderStatusNoOrderRef[responsedOrderStatus.orderId] = responsedOrderStatus;
+            responsedOrderStatusNoOrderRef.push_back(responsedOrderStatus);
             return;
         }
 
