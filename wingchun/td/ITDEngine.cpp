@@ -463,12 +463,12 @@ bool ITDEngine::remove_client(const string &client_name, const json &j_request)
             action.VolumeChange = 0;
             strcpy(action.BrokerID, accounts[idx].BrokerID);
             strcpy(action.InvestorID, accounts[idx].InvestorID);
-            int local_id;
-            if (user_helper->get_order(client_name, order_id, local_id, action.InstrumentID))
+            int local_id_remove_client = 0;
+            if (user_helper->get_order(client_name, order_id, local_id_remove_client, action.InstrumentID))
             {
-                string order_ref = std::to_string(local_id);
+                string order_ref = std::to_string(local_id_remove_client);
                 strcpy(action.OrderRef, order_ref.c_str());
-                KF_LOG_DEBUG(logger, "[cancel_remain_order] (rid)" << order_id << " (ticker)" << action.InstrumentID << " (ref)" << order_ref);
+                KF_LOG_DEBUG(logger, "[cancel_remain_order] (rid)" << order_id << " (ticker)" << action.InstrumentID << " (ref)" << order_ref << " (local_id_remove_client)" << local_id_remove_client);
                 req_order_action(&action, iter->second.account_index, order_id, cur_time);
             }
         }
