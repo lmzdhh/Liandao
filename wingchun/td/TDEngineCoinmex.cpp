@@ -747,7 +747,7 @@ void TDEngineCoinmex::handlerResponsedOrderStatus(AccountUnitCoinmex& unit)
         std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator;
         for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); ++orderStatusIterator)
         {
-            KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] (orderStatusIterator->remoteOrderId)"<< orderStatusIterator->remoteOrderId << " (orderId)" << responsedOrderStatus.orderId);
+//            KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] (orderStatusIterator->remoteOrderId)"<< orderStatusIterator->remoteOrderId << " (orderId)" << responsedOrderStatus.orderId);
             if(orderStatusIterator->remoteOrderId == responsedOrderStatus.orderId)
             {
                 break;
