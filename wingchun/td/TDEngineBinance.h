@@ -173,6 +173,7 @@ private:
 
     SendOrderFilter getSendOrderFilter(AccountUnitBinance& unit, const char *symbol);
 
+    bool shouldRetry(int http_status_code, std::string errorMsg, std::string text);
 private:
     static constexpr int scale_offset = 1e8;
     ThreadPtr rest_thread;
@@ -188,6 +189,8 @@ private:
     int64_t timeDiffOfExchange = 0;
     int exchange_shift_ms = 0;
 
+    int MAX_REST_RETRY_TIMES = 3;
+    int RETRY_INTERVAL_MILLISECONDS = 1000;
 };
 
 WC_NAMESPACE_END

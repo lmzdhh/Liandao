@@ -187,6 +187,19 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (exchange_shift_ms)" << exchange_shift_ms);
 
+
+    if(j_config.find("MAX_REST_RETRY_TIMES") != j_config.end()) {
+        MAX_REST_RETRY_TIMES = j_config["MAX_REST_RETRY_TIMES"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (MAX_REST_RETRY_TIMES)" << MAX_REST_RETRY_TIMES);
+
+
+    if(j_config.find("RETRY_INTERVAL_MILLISECONDS") != j_config.end()) {
+        RETRY_INTERVAL_MILLISECONDS = j_config["RETRY_INTERVAL_MILLISECONDS"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (RETRY_INTERVAL_MILLISECONDS)" << RETRY_INTERVAL_MILLISECONDS);
+
+
     if(j_config.find("use_restful_to_receive_status") != j_config.end()) {
         int use_restful = j_config["use_restful_to_receive_status"].get<int>();
         if(use_restful > 0) {
@@ -1331,7 +1344,7 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
     KF_LOG_INFO(logger, "[send_order] (code) " << code << " (side) "<< side << " (type) " <<
                                                type << " (size) "<< sizeStr << " (price) "<< priceStr << " (funds) " << fundsStr);
 
-    int MAX_RETRY_TIMES = 3;
+
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
@@ -1382,9 +1395,9 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
         if(shouldRetry(response.status_code, response.error.message)) {
             should_retry = true;
             retry_times++;
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_INTERVAL_MILLISECONDS));
         }
-    } while(should_retry && retry_times < MAX_RETRY_TIMES);
+    } while(should_retry && retry_times < MAX_REST_RETRY_TIMES);
 
 
 
@@ -1525,7 +1538,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, s
 {
     KF_LOG_INFO(logger, "[cancel_order]");
 
-    int MAX_RETRY_TIMES = 3;
+
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
@@ -1566,9 +1579,9 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, s
         if(shouldRetry(response.status_code, response.error.message)) {
             should_retry = true;
             retry_times++;
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_INTERVAL_MILLISECONDS));
         }
-    } while(should_retry && retry_times < MAX_RETRY_TIMES);
+    } while(should_retry && retry_times < MAX_REST_RETRY_TIMES);
 
 
 
