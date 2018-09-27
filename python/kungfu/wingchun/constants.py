@@ -24,6 +24,8 @@ class SOURCE:
     BITMAX = 21
     BITFINEX = 22
     BITMEX = 23
+    HITBTC = 24
+    OCEANEX = 25
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
