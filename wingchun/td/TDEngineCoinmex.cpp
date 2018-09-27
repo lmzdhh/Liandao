@@ -141,11 +141,13 @@ TDEngineCoinmex::TDEngineCoinmex(): ITDEngine(SOURCE_COINMEX)
     KF_LOG_INFO(logger, "[TDEngineCoinmex]");
 
     mutex_order_and_trade = new std::mutex();
+    mutex_response_order_status = new std::mutex();
 }
 
 TDEngineCoinmex::~TDEngineCoinmex()
 {
     if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
+    if(mutex_response_order_status != nullptr) delete mutex_response_order_status;
 }
 
 void TDEngineCoinmex::init()
@@ -705,8 +707,12 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
 
             char noneStatus = '\0';
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
-            moveNewOrderStatusToPending(unit);
-            handlerResponsedOrderStatus(unit);
+
+            if(false == use_restful_to_receive_status) {
+                //use websocket
+                moveNewOrderStatusToPending(unit);
+                handlerResponsedOrderStatus(unit);
+            }
 
             //success, only record raw data
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_COINMEX, 1, requestId, errorId, errorMsg.c_str());
@@ -749,7 +755,7 @@ void TDEngineCoinmex::req_order_insert(const LFInputOrderField* data, int accoun
 //当sendOrder返回OrderId信息之后,再处理这个信息
 void TDEngineCoinmex::handlerResponsedOrderStatus(AccountUnitCoinmex& unit)
 {
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+    std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
 
     std::vector<ResponsedOrderStatus>::iterator noOrderRefOrserStatusItr;
     for(noOrderRefOrserStatusItr = responsedOrderStatusNoOrderRef.begin(); noOrderRefOrserStatusItr != responsedOrderStatusNoOrderRef.end(); ) {
@@ -883,6 +889,8 @@ void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
 void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
 {
     KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
+    std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
+
     std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator;
 
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
@@ -1034,7 +1042,9 @@ void TDEngineCoinmex::addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const
 
 void TDEngineCoinmex::moveNewOrderStatusToPending(AccountUnitCoinmex& unit)
 {
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+    std::lock_guard<std::mutex> pending_guard_mutex(*mutex_order_and_trade);
+    std::lock_guard<std::mutex> response_guard_mutex(*mutex_response_order_status);
+
 
     std::vector<PendingCoinmexOrderStatus>::iterator newOrderStatusIterator;
     for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
@@ -1921,7 +1931,7 @@ void TDEngineCoinmex::onOrder(struct lws* conn, Document& json)
 
 void TDEngineCoinmex::addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json)
 {
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+    std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
 
     auto& data = json["data"];
 

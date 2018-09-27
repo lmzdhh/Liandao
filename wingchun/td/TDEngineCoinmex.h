@@ -207,6 +207,7 @@ private:
     uint64_t ws_get_interval_ms = 500;
 
     std::mutex* mutex_order_and_trade = nullptr;
+    std::mutex* mutex_response_order_status = nullptr;
 
     std::map<std::string, int64_t> localOrderRefRemoteOrderId;
 
