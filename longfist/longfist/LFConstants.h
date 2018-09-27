@@ -391,6 +391,8 @@ typedef char LfOrderPriceTypeType;
 //前置已接受
 #define LF_CHAR_OrderAccepted   'j'
 
+#define LF_CHAR_PendingCancel   'k'
+
 typedef char LfOrderStatusType;
 
 ///////////////////////////////////

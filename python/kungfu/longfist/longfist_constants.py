@@ -201,6 +201,7 @@ class LfOrderStatusType:
     Error = 'd' #废单错误（最终状态）
     OrderInserted = 'i' #订单已写入
     OrderAccepted = 'j' #前置已接受
+    PendingCancel = 'k'
 
 ###################################
 # LfPosiDirectionType: 持仓多空方向
@@ -386,6 +387,7 @@ LfOrderStatusTypeMap = {
     'd': 'Error',
     'i': 'OrderInserted',
     'j': 'OrderAccepted',
+    'k': 'PendingCancel',
 }
 
 LfPosiDirectionTypeMap = {

@@ -561,6 +561,8 @@ inline std::string getLfOrderStatusType(char data)
 			return "NoTradeNotQueueing";
 		case '6':
 			return "AcceptedNoReply";
+		case 'k':
+			return "PendingCancel";
 		default:
 			return "UnExpected!";
 	};
