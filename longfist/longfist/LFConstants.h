@@ -21,6 +21,8 @@ enum exchange_source_index : short
     SOURCE_BITMAX = 21,
     SOURCE_BITFINEX = 22,
     SOURCE_BITMEX = 23,
+    SOURCE_HITBTC = 24,
+    SOURCE_OCEANEX = 25,
     SOURCE_UNKNOWN
 };
 
@@ -45,9 +47,13 @@ inline const char* get_str_from_source_index(exchange_source_index source)
 		case SOURCE_BITMAX:
 			return "bitmax";
         case SOURCE_BITFINEX:
-                return "bitfinex";
+            return "bitfinex";
         case SOURCE_BITMEX:
-                return "bitmex";
+            return "bitmex";
+        case SOURCE_HITBTC:
+            return "hitbtc";
+        case SOURCE_OCEANEX:
+            return "oceanex";
 		default:
 			return "unknown";
 	}
@@ -95,6 +101,14 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
 	return SOURCE_BITMEX;
     }
+    else if(exch_str == "hitbtc")
+    {
+        return SOURCE_HITBTC;
+    }
+    else if(exch_str == "oceanex")
+    {
+        return SOURCE_OCEANEX;
+    }
     else
     {
 	return SOURCE_UNKNOWN;
@@ -114,6 +128,8 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_BITMAX "BITMAX"
 #define EXCHANGE_BITFINEX "BITFINEX"
 #define EXCHANGE_BITMEX "BITMEX"
+#define EXCHANGE_HITBTC "HITBTC"
+#define EXCHANGE_OCEANEX "OCEANEX"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -226,6 +242,26 @@ const short MSG_TYPE_LF_ORDER_BITMEX     = 23204;
 const short MSG_TYPE_LF_RTN_ORDER_BITMEX = 23205;
 const short MSG_TYPE_LF_RTN_TRADE_BITMEX = 23206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITMEX = 23207;
+
+
+//HITBTC, idx=24
+const short MSG_TYPE_LF_MD_HITBTC        = 24101;
+const short MSG_TYPE_LF_QRY_POS_HITBTC   = 24201;
+const short MSG_TYPE_LF_RSP_POS_HITBTC   = 24202;
+const short MSG_TYPE_LF_ORDER_HITBTC     = 24204;
+const short MSG_TYPE_LF_RTN_ORDER_HITBTC = 24205;
+const short MSG_TYPE_LF_RTN_TRADE_HITBTC = 24206;
+const short MSG_TYPE_LF_ORDER_ACTION_HITBTC = 24207;
+
+
+//OCEANEX, idx=25
+const short MSG_TYPE_LF_MD_OCEANEX        = 25101;
+const short MSG_TYPE_LF_QRY_POS_OCEANEX   = 25201;
+const short MSG_TYPE_LF_RSP_POS_OCEANEX   = 25202;
+const short MSG_TYPE_LF_ORDER_OCEANEX     = 25204;
+const short MSG_TYPE_LF_RTN_ORDER_OCEANEX = 25205;
+const short MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206;
+const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207;
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
