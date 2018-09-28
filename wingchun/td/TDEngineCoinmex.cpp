@@ -142,12 +142,14 @@ TDEngineCoinmex::TDEngineCoinmex(): ITDEngine(SOURCE_COINMEX)
 
     mutex_order_and_trade = new std::mutex();
     mutex_response_order_status = new std::mutex();
+    mutex_orderaction_waiting_response = new std::mutex();
 }
 
 TDEngineCoinmex::~TDEngineCoinmex()
 {
     if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
     if(mutex_response_order_status != nullptr) delete mutex_response_order_status;
+    if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
 }
 
 void TDEngineCoinmex::init()
@@ -180,15 +182,19 @@ TradeAccount TDEngineCoinmex::load_account(int idx, const json& j_config)
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
     if(j_config.find("sync_time_interval") != j_config.end()) {
-        SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
+        sync_time_default_interval = j_config["sync_time_interval"].get<int>();
     }
-    KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
+    KF_LOG_INFO(logger, "[load_account] (sync_time_default_interval)" << sync_time_default_interval);
 
     if(j_config.find("exchange_shift_ms") != j_config.end()) {
         exchange_shift_ms = j_config["exchange_shift_ms"].get<int>();
     }
     KF_LOG_INFO(logger, "[load_account] (exchange_shift_ms)" << exchange_shift_ms);
 
+    if(j_config.find("orderaction_max_waiting_seconds") != j_config.end()) {
+        orderaction_max_waiting_seconds = j_config["orderaction_max_waiting_seconds"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (orderaction_max_waiting_seconds)" << orderaction_max_waiting_seconds);
 
     if(j_config.find("MAX_REST_RETRY_TIMES") != j_config.end()) {
         MAX_REST_RETRY_TIMES = j_config["MAX_REST_RETRY_TIMES"].get<int>();
@@ -857,8 +863,22 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+    } else {
+        addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
     }
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
+}
+
+//对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
+void TDEngineCoinmex::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, int64_t remoteOrderId)
+{
+    std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
+
+    OrderActionSentTime newOrderActionSent;
+    newOrderActionSent.requestId = requestId;
+    newOrderActionSent.sentNameTime = getTimestamp();
+    memcpy(&newOrderActionSent.data, data, sizeof(LFOrderActionField));
+    remoteOrderIdOrderActionSentTime[remoteOrderId] = newOrderActionSent;
 }
 
 void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
@@ -878,7 +898,7 @@ void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
     sync_time_interval--;
     if(sync_time_interval <= 0) {
         //reset
-        sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
+        sync_time_interval = sync_time_default_interval;
         timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
         KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
     }
@@ -890,6 +910,8 @@ void TDEngineCoinmex::retrieveOrderStatus(AccountUnitCoinmex& unit)
 {
     KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
+    std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
+
 
     std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator;
 
@@ -987,6 +1009,9 @@ volume 	订单委托数量
             responsedOrderStatus.openVolume = responsedOrderStatus.volume - responsedOrderStatus.VolumeTraded;
 
             handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
+
+            //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
+            remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
         } else {
             int errorId = 0;
             std::string errorMsg = "";
@@ -1058,12 +1083,15 @@ void TDEngineCoinmex::set_reader_thread()
 {
     ITDEngine::set_reader_thread();
     if(use_restful_to_receive_status) {
-        KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on AccountUnitCoinmex::loop");
+        KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineCoinmex::loop");
         rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineCoinmex::loop, this)));
     } else {
-        KF_LOG_INFO(logger, "[set_reader_thread] ws_thread start on AccountUnitCoinmex::wsloop");
+        KF_LOG_INFO(logger, "[set_reader_thread] ws_thread start on TDEngineCoinmex::wsloop");
         ws_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineCoinmex::wsloop, this)));
     }
+
+    KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineCoinmex::loopOrderActionNoResponseTimeOut");
+    orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineCoinmex::loopOrderActionNoResponseTimeOut, this)));
 }
 
 
@@ -1095,6 +1123,42 @@ void TDEngineCoinmex::loop()
     }
 }
 
+
+void TDEngineCoinmex::loopOrderActionNoResponseTimeOut()
+{
+    KF_LOG_INFO(logger, "[loopOrderActionNoResponseTimeOut] (isRunning) " << isRunning);
+    while(isRunning)
+    {
+        orderActionNoResponseTimeOut();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+}
+
+void TDEngineCoinmex::orderActionNoResponseTimeOut()
+{
+    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut]");
+    int errorId = 100;
+    std::string errorMsg = "OrderAction has none response for a long time(" + std::to_string(orderaction_max_waiting_seconds) + " s), please send OrderAction again";
+
+    std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
+
+    int64_t currentNano = getTimestamp();
+    int64_t timeBeforeNano = currentNano - orderaction_max_waiting_seconds * 1000;
+    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (currentNano)" << currentNano << " (timeBeforeNano)" << timeBeforeNano);
+    std::map<int64_t, OrderActionSentTime>::iterator itr;
+    for(itr = remoteOrderIdOrderActionSentTime.begin(); itr != remoteOrderIdOrderActionSentTime.end();)
+    {
+        if(itr->second.sentNameTime < timeBeforeNano)
+        {
+            KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (remoteOrderIdOrderActionSentTime.erase remoteOrderId)" << itr->first );
+            on_rsp_order_action(&itr->second.data, itr->second.requestId, errorId, errorMsg.c_str());
+            itr = remoteOrderIdOrderActionSentTime.erase(itr);
+        } else {
+            ++itr;
+        }
+    }
+    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (remoteOrderIdOrderActionSentTime.size)" << remoteOrderIdOrderActionSentTime.size());
+}
 
 std::vector<std::string> TDEngineCoinmex::split(std::string str, std::string token)
 {
@@ -1932,6 +1996,7 @@ void TDEngineCoinmex::onOrder(struct lws* conn, Document& json)
 void TDEngineCoinmex::addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json)
 {
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
+    std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
     auto& data = json["data"];
 
@@ -1956,6 +2021,9 @@ void TDEngineCoinmex::addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &re
                                                               << " (VolumeTraded)" << responsedOrderStatus.VolumeTraded << " (openVolume)" << responsedOrderStatus.openVolume << " (orderId)" << responsedOrderStatus.orderId
                                                               << " (OrderPriceType)" << responsedOrderStatus.OrderPriceType << " (price)" << responsedOrderStatus.price << " (Direction)" << responsedOrderStatus.Direction
                                                               << " (OrderStatus)" << responsedOrderStatus.OrderStatus << " (trunoverVolume)" << responsedOrderStatus.trunoverVolume << " (volume)" << responsedOrderStatus.volume);
+
+    //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
+    remoteOrderIdOrderActionSentTime.erase(responsedOrderStatus.orderId);
 }
 
 
