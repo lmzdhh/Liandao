@@ -1438,11 +1438,17 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 }
 
 /*
+ * https://github.com/binance-exchange/binance-official-api-docs/blob/master/errors.md
+-1021 INVALID_TIMESTAMP
+Timestamp for this request is outside of the recvWindow.
+Timestamp for this request was 1000ms ahead of the server's time.
+
+
  *  (response.status_code) 400 (response.error.message)  (response.text) {"code":-1021,"msg":"Timestamp for this request is outside of the recvWindow."}
  * */
 bool TDEngineBinance::shouldRetry(int http_status_code, std::string errorMsg, std::string text)
 {
-    if( 400 == http_status_code && text.size() > 0 && text.find("Timestamp for this request is outside of the recvWindow") >= 0 )
+    if( 400 == http_status_code && text.size() > 0 && text.find(":-1021,") >= 0 )
     {
         return true;
     }
