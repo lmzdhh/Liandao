@@ -142,6 +142,8 @@
               "exchange_shift_ms": -2000,
               "order_insert_recvwindow_ms": 5000,
               "order_action_recvwindow_ms": 5000,
+              "max_rest_retry_times":3,
+              "retry_interval_milliseconds": 1000,
               "rest_get_interval_ms": 2000,
               "sync_time_interval": 10000
             },
@@ -192,6 +194,9 @@
                            },
               "exchange_shift_ms": 0,
               "use_restful_to_receive_status": 1,
+              "max_rest_retry_times":3,
+              "retry_interval_milliseconds": 1000,
+              "orderaction_max_waiting_seconds": 30,
               "rest_get_interval_ms": 2000,
               "sync_time_interval": 10000
             },

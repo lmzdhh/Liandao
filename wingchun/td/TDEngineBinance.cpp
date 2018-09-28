@@ -102,16 +102,16 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     KF_LOG_INFO(logger, "[load_account] (order_action_recvwindow_ms)" << order_action_recvwindow_ms);
 
 
-    if(j_config.find("MAX_REST_RETRY_TIMES") != j_config.end()) {
-        MAX_REST_RETRY_TIMES = j_config["MAX_REST_RETRY_TIMES"].get<int>();
+    if(j_config.find("max_rest_retry_times") != j_config.end()) {
+        max_rest_retry_times = j_config["max_rest_retry_times"].get<int>();
     }
-    KF_LOG_INFO(logger, "[load_account] (MAX_REST_RETRY_TIMES)" << MAX_REST_RETRY_TIMES);
+    KF_LOG_INFO(logger, "[load_account] (max_rest_retry_times)" << max_rest_retry_times);
 
 
-    if(j_config.find("RETRY_INTERVAL_MILLISECONDS") != j_config.end()) {
-        RETRY_INTERVAL_MILLISECONDS = j_config["RETRY_INTERVAL_MILLISECONDS"].get<int>();
+    if(j_config.find("retry_interval_milliseconds") != j_config.end()) {
+        retry_interval_milliseconds = j_config["retry_interval_milliseconds"].get<int>();
     }
-    KF_LOG_INFO(logger, "[load_account] (RETRY_INTERVAL_MILLISECONDS)" << RETRY_INTERVAL_MILLISECONDS);
+    KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
 
 
     AccountUnitBinance& unit = account_units[idx];
@@ -1426,9 +1426,9 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
             retry_times++;
-            std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_INTERVAL_MILLISECONDS));
+            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
         }
-    } while(should_retry && retry_times < MAX_REST_RETRY_TIMES);
+    } while(should_retry && retry_times < max_rest_retry_times);
 
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
                                                                          " (response.error.message) " << response.error.message <<
@@ -1565,9 +1565,9 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
             retry_times++;
-            std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_INTERVAL_MILLISECONDS));
+            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
         }
-    } while(should_retry && retry_times < MAX_REST_RETRY_TIMES);
+    } while(should_retry && retry_times < max_rest_retry_times);
 
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
                                                                          " (response.error.message) " << response.error.message <<

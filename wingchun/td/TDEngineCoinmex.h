@@ -237,8 +237,8 @@ private:
     int64_t timeDiffOfExchange = 0;
     int exchange_shift_ms = 0;
 
-    int MAX_REST_RETRY_TIMES = 3;
-    int RETRY_INTERVAL_MILLISECONDS = 1000;
+    int max_rest_retry_times = 3;
+    int retry_interval_milliseconds = 1000;
     int orderaction_max_waiting_seconds = 30;
 };
 
