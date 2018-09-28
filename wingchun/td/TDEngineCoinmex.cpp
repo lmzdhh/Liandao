@@ -1136,7 +1136,7 @@ void TDEngineCoinmex::loopOrderActionNoResponseTimeOut()
 
 void TDEngineCoinmex::orderActionNoResponseTimeOut()
 {
-    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut]");
+//    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut]");
     int errorId = 100;
     std::string errorMsg = "OrderAction has none response for a long time(" + std::to_string(orderaction_max_waiting_seconds) + " s), please send OrderAction again";
 
@@ -1144,7 +1144,7 @@ void TDEngineCoinmex::orderActionNoResponseTimeOut()
 
     int64_t currentNano = getTimestamp();
     int64_t timeBeforeNano = currentNano - orderaction_max_waiting_seconds * 1000;
-    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (currentNano)" << currentNano << " (timeBeforeNano)" << timeBeforeNano);
+//    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (currentNano)" << currentNano << " (timeBeforeNano)" << timeBeforeNano);
     std::map<int64_t, OrderActionSentTime>::iterator itr;
     for(itr = remoteOrderIdOrderActionSentTime.begin(); itr != remoteOrderIdOrderActionSentTime.end();)
     {
@@ -1157,7 +1157,7 @@ void TDEngineCoinmex::orderActionNoResponseTimeOut()
             ++itr;
         }
     }
-    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (remoteOrderIdOrderActionSentTime.size)" << remoteOrderIdOrderActionSentTime.size());
+//    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (remoteOrderIdOrderActionSentTime.size)" << remoteOrderIdOrderActionSentTime.size());
 }
 
 std::vector<std::string> TDEngineCoinmex::split(std::string str, std::string token)
