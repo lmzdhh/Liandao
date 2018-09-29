@@ -17,11 +17,15 @@
 #include <chrono>
 
 
+using cpr::Delete;
 using cpr::Get;
 using cpr::Url;
+using cpr::Body;
+using cpr::Header;
 using cpr::Parameters;
 using cpr::Payload;
 using cpr::Post;
+using cpr::Timeout;
 
 using rapidjson::Document;
 using rapidjson::SizeType;
@@ -36,81 +40,6 @@ using std::stoi;
 
 USING_WC_NAMESPACE
 
-static MDEngineOceanEx* global_md = nullptr;
-
-static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
-{
-
-	switch( reason )
-	{
-		case LWS_CALLBACK_CLIENT_ESTABLISHED:
-		{
-			std::cout << "callback client established, reason = " << reason << std::endl;
-			lws_callback_on_writable( wsi );
-			break;
-		}
-		case LWS_CALLBACK_PROTOCOL_INIT:{
-			std::cout << "init, reason = " << reason << std::endl;
-			break;
-		}
-		case LWS_CALLBACK_CLIENT_RECEIVE:
-		{
-			std::cout << "on data, reason = " << reason << std::endl;
-			if(global_md)
-			{
-				global_md->on_lws_data(wsi, (const char*)in, len);
-			}
-			break;
-		}
-		case LWS_CALLBACK_CLIENT_WRITEABLE:
-		{
-			std::cout << "writeable, reason = " << reason << std::endl;
-			int ret = 0;
-			if(global_md)
-			{
-				ret = global_md->lws_write_subscribe(wsi);
-			}
-			std::cout << "send depth result: " << ret << std::endl;
-			break;
-		}
-		case LWS_CALLBACK_CLOSED:
-		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-		{
-			if(global_md)
-			{
-				global_md->on_lws_connection_error(wsi);
-			}
-			break;
-		}
-		default:
-			break;
-	}
-
-	return 0;
-}
-
-static struct lws_protocols protocols[] =
-	{
-			{
-					"md-protocol",
-                    ws_service_cb,
-						  0,
-							 65536,
-			},
-			{ NULL, NULL, 0, 0 } /* terminator */
-	};
-
-
-enum protocolList {
-	PROTOCOL_TEST,
-
-	PROTOCOL_LIST_COUNT
-};
-
-struct session_data {
-    int fd;
-};
-
 MDEngineOceanEx::MDEngineOceanEx(): IMDEngine(SOURCE_OCEANEX)
 {
     logger = yijinjing::KfLog::getLogger("MdEngine.OceanEx");
@@ -121,14 +50,17 @@ void MDEngineOceanEx::load(const json& j_config)
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineOceanEx:: rest_get_interval_ms: " << rest_get_interval_ms);
 
-    readWhiteLists(j_config);
 
-    debug_print(subscribeCoinBaseQuote);
-    debug_print(keyIsStrategyCoinpairWhiteList);
-    debug_print(websocketSubscribeJsonString);
+    coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
+    coinPairWhiteList.Debug_print();
+
+    getBaseQuoteFromWhiteListStrategyCoinPair();
+
+    debug_print(coinpairs_used_in_rest);
+
     //display usage:
-    if(keyIsStrategyCoinpairWhiteList.size() == 0) {
-        KF_LOG_ERROR(logger, "MDEngineOceanEx::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
+    if(coinPairWhiteList.Size() == 0) {
+        KF_LOG_ERROR(logger, "MDEngineOceanEx:: please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
         KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
@@ -137,217 +69,51 @@ void MDEngineOceanEx::load(const json& j_config)
     }
 }
 
-void MDEngineOceanEx::readWhiteLists(const json& j_config)
+void MDEngineOceanEx::getBaseQuoteFromWhiteListStrategyCoinPair()
 {
-	KF_LOG_INFO(logger, "[readWhiteLists]");
+    std::unordered_map<std::string, std::string>::iterator map_itr;
+    map_itr = coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+    while(map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end())
+    {
+        std::cout << "[getBaseQuoteFromWhiteListStrategyCoinPair] keyIsExchangeSideWhiteList (strategy_coinpair) "
+                  << map_itr->first << " (exchange_coinpair) "<< map_itr->second << std::endl;
 
-	if(j_config.find("whiteLists") != j_config.end()) {
-		KF_LOG_INFO(logger, "[readWhiteLists] found whiteLists");
-		//has whiteLists
-		json whiteLists = j_config["whiteLists"].get<json>();
-		if(whiteLists.is_object())
-		{
-			for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
-				std::string strategy_coinpair = it.key();
-				std::string exchange_coinpair = it.value();
-				KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
-				keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
-				//make subscribeCoinBaseQuote
-
-				//coinmex MD must has base and quote, please see this->createDepthJsonString.
-                SubscribeCoinBaseQuote baseQuote;
-				split(it.key(), "_", baseQuote);
-                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
-
-				if(baseQuote.base.length() > 0)
-				{
-					//get correct base_quote config
-                    subscribeCoinBaseQuote.push_back(baseQuote);
-                    //get ready websocket subscrube json strings
-                    std::string jsonDepthString = createDepthJsonString(baseQuote.base, baseQuote.quote);
-                    websocketSubscribeJsonString.push_back(jsonDepthString);
-                    std::string jsonFillsString = createFillsJsonString(baseQuote.base, baseQuote.quote);
-                    websocketSubscribeJsonString.push_back(jsonFillsString);
-
-				}
-			}
-		}
-	}
-}
-
-//example: btc_usdt
-void MDEngineOceanEx::split(std::string str, std::string token, SubscribeCoinBaseQuote& sub)
-{
-	if (str.size() > 0) {
-		size_t index = str.find(token);
-		if (index != std::string::npos) {
-			sub.base = str.substr(0, index);
-			sub.quote = str.substr(index + token.size());
-		}
-		else {
-			//not found, do nothing
-		}
-	}
-}
-
-std::string MDEngineOceanEx::getWhiteListCoinpairFrom(std::string md_coinpair)
-{
-    std::string ticker = md_coinpair;
-    std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
-
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find md_coinpair (md_coinpair) " << md_coinpair << " (toupper(ticker)) " << ticker);
-    std::map<std::string, std::string>::iterator map_itr;
-    map_itr = keyIsStrategyCoinpairWhiteList.begin();
-    while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-		if(ticker == map_itr->second)
-		{
-            KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] found md_coinpair (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
-            return map_itr->first;
-		}
+        coinpairs_used_in_rest.push_back(map_itr->second);
         map_itr++;
     }
-    KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] not found md_coinpair (md_coinpair) " << md_coinpair);
-    return "";
-}
-
-void MDEngineOceanEx::debug_print(std::vector<SubscribeCoinBaseQuote> &sub)
-{
-    int count = sub.size();
-    KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (count) " << count);
-
-	for (int i = 0; i < count;i++)
-	{
-		KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
-	}
-}
-
-void MDEngineOceanEx::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
-{
-	std::map<std::string, std::string>::iterator map_itr;
-	map_itr = keyIsStrategyCoinpairWhiteList.begin();
-	while(map_itr != keyIsStrategyCoinpairWhiteList.end()) {
-		KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
-		map_itr++;
-	}
 }
 
 
-void MDEngineOceanEx::debug_print(std::vector<std::string> &subJsonString)
+void MDEngineOceanEx::debug_print(std::vector<std::string> &coinpairs_used_in_rest)
 {
-    int count = subJsonString.size();
-    KF_LOG_INFO(logger, "[debug_print] websocketSubscribeJsonString (count) " << count);
+    int count = coinpairs_used_in_rest.size();
+    KF_LOG_INFO(logger, "[debug_print] coinpairs_used_in_rest (count) " << count);
 
     for (int i = 0; i < count;i++)
     {
-        KF_LOG_INFO(logger, "[debug_print] websocketSubscribeJsonString (subJsonString) " << subJsonString[i]);
+        KF_LOG_INFO(logger, "[debug_print] coinpairs_used_in_rest: " << coinpairs_used_in_rest[i]);
     }
 }
 
 void MDEngineOceanEx::connect(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "MDEngineOceanEx::connect:");
-    connected = true;
 }
 
-void MDEngineOceanEx::login(long timeout_nsec)
-{
-	KF_LOG_INFO(logger, "MDEngineOceanEx::login:");
-	global_md = this;
-
-	char inputURL[300] = "wss://websocket.coinmex.com";
-	int inputPort = 8443;
-	const char *urlProtocol, *urlTempPath;
-	char urlPath[300];
-	int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
-
-
-	struct lws_context_creation_info ctxCreationInfo;
-	struct lws_client_connect_info clientConnectInfo;
-	struct lws *wsi = NULL;
-	struct lws_protocols protocol;
-
-	memset(&ctxCreationInfo, 0, sizeof(ctxCreationInfo));
-	memset(&clientConnectInfo, 0, sizeof(clientConnectInfo));
-
-	clientConnectInfo.port = 8443;
-
-	if (lws_parse_uri(inputURL, &urlProtocol, &clientConnectInfo.address, &clientConnectInfo.port, &urlTempPath))
-	{
-		KF_LOG_ERROR(logger, "MDEngineOceanEx::connect: Couldn't parse URL. Please check the URL and retry: " << inputURL);
-		return;
-	}
-
-	// Fix up the urlPath by adding a / at the beginning, copy the temp path, and add a \0     at the end
-	urlPath[0] = '/';
-	strncpy(urlPath + 1, urlTempPath, sizeof(urlPath) - 2);
-	urlPath[sizeof(urlPath) - 1] = '\0';
-	clientConnectInfo.path = urlPath; // Set the info's path to the fixed up url path
-
-	KF_LOG_INFO(logger, "MDEngineOceanEx::login:" << "urlProtocol=" << urlProtocol <<
-												  "address=" << clientConnectInfo.address <<
-												  "urlTempPath=" << urlTempPath <<
-												  "urlPath=" << urlPath);
-
-	ctxCreationInfo.port = CONTEXT_PORT_NO_LISTEN;
-	ctxCreationInfo.iface = NULL;
-	ctxCreationInfo.protocols = &protocol;
-	ctxCreationInfo.ssl_cert_filepath = NULL;
-	ctxCreationInfo.ssl_private_key_filepath = NULL;
-	ctxCreationInfo.extensions = NULL;
-	ctxCreationInfo.gid = -1;
-	ctxCreationInfo.uid = -1;
-	ctxCreationInfo.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-	ctxCreationInfo.fd_limit_per_thread = 1024;
-	ctxCreationInfo.max_http_header_pool = 1024;
-	ctxCreationInfo.ws_ping_pong_interval=1;
-	ctxCreationInfo.ka_time = 10;
-	ctxCreationInfo.ka_probes = 10;
-	ctxCreationInfo.ka_interval = 10;
-
-	protocol.name  = protocols[PROTOCOL_TEST].name;
-	protocol.callback = &ws_service_cb;
-	protocol.per_session_data_size = sizeof(struct session_data);
-	protocol.rx_buffer_size = 0;
-	protocol.id = 0;
-	protocol.user = NULL;
-
-	context = lws_create_context(&ctxCreationInfo);
-	KF_LOG_INFO(logger, "MDEngineOceanEx::login: context created.");
-
-
-	if (context == NULL) {
-		KF_LOG_ERROR(logger, "MDEngineOceanEx::login: context is NULL. return");
-		return;
-	}
-
-	// Set up the client creation info
-	clientConnectInfo.context = context;
-	clientConnectInfo.port = 8443;
-	clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-	clientConnectInfo.host = clientConnectInfo.address;
-	clientConnectInfo.origin = clientConnectInfo.address;
-	clientConnectInfo.ietf_version_or_minus_one = -1;
-	clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
-	clientConnectInfo.pwsi = &wsi;
-
-	KF_LOG_INFO(logger, "MDEngineOceanEx::login:" << "Connecting to " << urlProtocol << ":" <<
-												  clientConnectInfo.host << ":" <<
-												  clientConnectInfo.port << ":" << urlPath);
-
-	wsi = lws_client_connect_via_info(&clientConnectInfo);
-	if (wsi == NULL) {
-		KF_LOG_ERROR(logger, "MDEngineOceanEx::login: wsi create error.");
-		return;
-	}
-	KF_LOG_INFO(logger, "MDEngineOceanEx::login: wsi create success.");
-	logged_in = true;
-}
 
 void MDEngineOceanEx::set_reader_thread()
 {
 	IMDEngine::set_reader_thread();
 
-	rest_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineOceanEx::loop, this)));
+    rest_order_book_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineOceanEx::loopOrderBook, this)));
+
+    rest_trade_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineOceanEx::loopTrade, this)));
+}
+
+void MDEngineOceanEx::login(long timeout_nsec)
+{
+    KF_LOG_INFO(logger, "[login]");
+    connect(timeout_nsec);
 }
 
 void MDEngineOceanEx::logout()
@@ -365,455 +131,283 @@ void MDEngineOceanEx::subscribeMarketData(const vector<string>& instruments, con
    KF_LOG_INFO(logger, "MDEngineOceanEx::subscribeMarketData:");
 }
 
-int MDEngineOceanEx::lws_write_subscribe(struct lws* conn)
+
+void MDEngineOceanEx::loopOrderBook()
 {
-	KF_LOG_INFO(logger, "MDEngineOceanEx::lws_write_subscribe: (subscribe_index)" << subscribe_index);
-
-    if(websocketSubscribeJsonString.size() == 0) return 0;
-    //sub depth
-    if(subscribe_index >= websocketSubscribeJsonString.size())
+    while(isRunning)
     {
-        subscribe_index = 0;
-    }
+        int count = coinpairs_used_in_rest.size();
+        KF_LOG_INFO(logger, "[loopOrderBook] coinpairs_used_in_rest (count) " << count);
 
-    unsigned char msg[512];
-    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
-
-    std::string jsonString = websocketSubscribeJsonString[subscribe_index++];
-
-    KF_LOG_INFO(logger, "MDEngineOceanEx::lws_write_subscribe: " << jsonString.c_str());
-    int length = jsonString.length();
-
-    strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
-    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
-
-    if(subscribe_index < websocketSubscribeJsonString.size())
-    {
-        lws_callback_on_writable( conn );
-    }
-
-    return ret;
-}
-
-void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len)
-{
-	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
-    Document json;
-	json.Parse(data);
-
-	if(!json.HasParseError() && json.IsObject() && json.HasMember("type") && json["type"].IsString())
-	{
-
-		if(strcmp(json["type"].GetString(), "depth") == 0)
-		{
-			KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: is depth");
-            onDepth(json);
-		}
-
-		if(strcmp(json["type"].GetString(), "fills") == 0)
-		{
-			KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: is fills");
-            onFills(json);
-		}
-        if(strcmp(json["type"].GetString(), "tickers") == 0)
+        for (int i = 0; i < count;i++)
         {
-            KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: is tickers");
-            onTickers(json);
-        }
-	} else {
-		KF_LOG_ERROR(logger, "MDEngineOceanEx::on_lws_data . parse json error: " << data);
-	}
-}
+            KF_LOG_INFO(logger, "[loopOrderBook] coinpairs_used_in_rest: " << coinpairs_used_in_rest[i]);
 
-
-void MDEngineOceanEx::on_lws_connection_error(struct lws* conn)
-{
-	KF_LOG_ERROR(logger, "MDEngineOceanEx::on_lws_connection_error.");
-	//market logged_in false;
-    logged_in = false;
-    KF_LOG_ERROR(logger, "MDEngineOceanEx::on_lws_connection_error. login again.");
-    //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
-	clearPriceBook();
-	//no use it
-    long timeout_nsec = 0;
-    //reset sub
-    subscribe_index = 0;
-
-    login(timeout_nsec);
-}
-
-void MDEngineOceanEx::clearPriceBook()
-{
-    //clear price and volumes of tickers
-    std::map<std::string, std::map<int64_t, uint64_t>*> ::iterator map_itr;
-
-    map_itr = tickerAskPriceMap.begin();
-    while(map_itr != tickerAskPriceMap.end()){
-        map_itr->second->clear();
-        map_itr++;
-    }
-
-    map_itr = tickerBidPriceMap.begin();
-    while(map_itr != tickerBidPriceMap.end()){
-        map_itr->second->clear();
-        map_itr++;
-    }
-}
-
-void MDEngineOceanEx::onTickers(Document& d)
-{
-/*
-{
-    "type": "tickers",
-    "biz":"spot",
-    "data": [
-      [
-     "1520318917765", #创建时间
-     "0.02",#当日最高成交价
-     "0.01",#当日最低成交价
-     "0.01",#成交单价
-     "200",#基准货币成交量
-     "300",#报价货币成交量
-     "10",#变化量
-     "30",#涨幅百分比
-     "btc_usdt",#币对
-      9,   #币对ID
-     ]
-    ],
-    "zip":false
-}
- * */
-
-
-}
-
-void MDEngineOceanEx::onFills(Document& json)
-{
-    /*
-     {
-  "base": "cel",
-  "zip": false,
-  "data": [[
-    "0.02"# 价格
-    "200"# 数量
-    "buy"#交易方向（buy:买|sell:卖）
-    1520318917765 #创建时间
-  ]],
-  "biz": "spot",
-  "quote": "btc",
-  "type": "fills"
-}
-
-     * */
-
-    if(!json.HasMember("data") || !json["data"].IsArray())
-    {
-        KF_LOG_ERROR(logger, "MDEngineOceanEx::[onFills] invalid market trade message");
-        return;
-    }
-
-    std::string base="";
-    if(json.HasMember("base") && json["base"].IsString()) {
-        base = json["base"].GetString();
-    }
-    std::string quote="";
-    if(json.HasMember("quote") && json["quote"].IsString()) {
-        quote = json["quote"].GetString();
-    }
-
-    KF_LOG_INFO(logger, "MDEngineOceanEx::onFills:" << "base : " << base << "  quote: " << quote);
-
-    std::string ticker = getWhiteListCoinpairFrom(base + "_" +  quote);
-    if(ticker.length() == 0) {
-        return;
-    }
-
-    int len = json["data"].Size();
-
-    for(int i = 0 ; i < len; i++) {
-        LFL2TradeField trade;
-        memset(&trade, 0, sizeof(trade));
-        strcpy(trade.InstrumentID, ticker.c_str());
-        strcpy(trade.ExchangeID, "mock");
-
-        trade.Price = std::round(std::stod(json["data"].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
-        trade.Volume = std::round(std::stod(json["data"].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
-        trade.OrderBSFlag[0] = "buy" == json["data"].GetArray()[i].GetArray()[2].GetString() ? 'B' : 'S';
-
-        KF_LOG_INFO(logger, "MDEngineOceanEx::[onFills] (ticker)" << ticker <<
-                                                                    " (Price)" << trade.Price <<
-                                                                    " (trade.Volume)" << trade.Volume);
-        on_trade(&trade);
-    }
-}
-
-// {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],"bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
-void MDEngineOceanEx::onDepth(Document& json)
-{
-    bool asks_update = false;
-    bool bids_update = false;
-
-    std::string base="";
-    if(json.HasMember("base") && json["base"].IsString()) {
-        base = json["base"].GetString();
-    }
-    std::string quote="";
-    if(json.HasMember("quote") && json["quote"].IsString()) {
-        quote = json["quote"].GetString();
-    }
-
-    KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "base : " << base << "  quote: " << quote);
-
-    std::string ticker = getWhiteListCoinpairFrom(base + "_" +  quote);
-    if(ticker.length() == 0) {
-		KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: not in WhiteList , ignore it:" << "base : " << base << "  quote: " << quote);
-		return;
-    }
-
-    KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "(ticker) " << ticker);
-	std::map<int64_t, uint64_t>*  asksPriceAndVolume;
-	std::map<int64_t, uint64_t>*  bidsPriceAndVolume;
-
-	auto iter = tickerAskPriceMap.find(ticker);
-	if(iter != tickerAskPriceMap.end()) {
-		asksPriceAndVolume = iter->second;
-//        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "ticker : " << ticker << "  get from map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
-	} else {
-        asksPriceAndVolume = new std::map<int64_t, uint64_t>();
-		tickerAskPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, asksPriceAndVolume));
-//        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "ticker : " << ticker << "  insert into map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
-	}
-
-	iter = tickerBidPriceMap.find(ticker);
-	if(iter != tickerBidPriceMap.end()) {
-		bidsPriceAndVolume = iter->second;
-//        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "ticker : " << ticker << "  get from map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
-	} else {
-        bidsPriceAndVolume = new std::map<int64_t, uint64_t>();
-		tickerBidPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, bidsPriceAndVolume));
-//        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "ticker : " << ticker << "  insert into map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
-	}
-
-    //make depth map
-    if(json.HasMember("data") && json["data"].IsObject()) {
-        if(json["data"].HasMember("asks") && json["data"]["asks"].IsArray()) {
-            int len = json["data"]["asks"].Size();
-            auto& asks = json["data"]["asks"];
-            for(int i = 0 ; i < len; i++)
-            {
-                int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
-                uint64_t volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
-                //if volume is 0, remove it
-                if(volume == 0) {
-                    asksPriceAndVolume->erase(price);
-                    KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
-                } else {
-					asksPriceAndVolume->erase(price);
-                    asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
-                }
-//                KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: asks price:" << price<<  "  volume:"<< volume);
-                asks_update = true;
+            std::string symbol = coinpairs_used_in_rest[i];
+            std::string base_quote = symbol;
+            std::string ticker = coinPairWhiteList.GetKeyByValue(base_quote);
+            if (ticker.length() == 0) {
+                KF_LOG_INFO(logger,
+                            "MDEngineOceanEx::loopTrade: not in WhiteList , ignore it:" << base_quote);
+                continue;
             }
-        }
 
-        if(json["data"].HasMember("bids") && json["data"]["bids"].IsArray()) {
-            int len = json["data"]["bids"].Size();
-            auto& bids = json["data"]["bids"];
-            for(int i = 0 ; i < len; i++)
-            {
-                int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
-                uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
-                if(volume == 0) {
-                    bidsPriceAndVolume->erase(price);
-                    KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
-
-                } else {
-					bidsPriceAndVolume->erase(price);
-                    bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
-                }
-//                KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: bids price:" << price<<  "  volume:"<< volume);
-                bids_update = true;
-            }
-        }
-    }
-    // has any update
-    if(asks_update || bids_update)
-    {
-        //create book update
-        std::vector<PriceAndVolume> sort_result;
-        LFPriceBook20Field md;
-        memset(&md, 0, sizeof(md));
-
-        sortMapByKey(*asksPriceAndVolume, sort_result, sort_price_desc);
-        std::cout<<"asksPriceAndVolume sorted desc:"<< std::endl;
-        for(int i=0; i<sort_result.size(); i++)
-        {
-            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-        }
-        //asks 	卖方深度 from big to little
-        int askTotalSize = (int)sort_result.size();
-        auto size = std::min(askTotalSize, 20);
-
-        for(int i = 0; i < size; ++i)
-        {
-            md.AskLevels[i].price = sort_result[askTotalSize - i - 1].price;
-            md.AskLevels[i].volume = sort_result[askTotalSize - i - 1].volume;
-            KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  LFPriceBook20Field AskLevels: (i)" << i << "(price)" << md.AskLevels[i].price<<  "  (volume)"<< md.AskLevels[i].volume);
-        }
-        md.AskLevelCount = size;
+            KF_LOG_INFO(logger, "MDEngineOceanEx::loopTrade:" << "(ticker) " << ticker);
 
 
-        sort_result.clear();
-        sortMapByKey(*bidsPriceAndVolume, sort_result, sort_price_asc);
-        std::cout<<"bidsPriceAndVolume sorted asc:"<< std::endl;
-        for(int i=0; i<sort_result.size(); i++)
-        {
-            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-        }
-        //bids 	买方深度 from big to little
-        int bidTotalSize = (int)sort_result.size();
-        size = std::min(bidTotalSize, 20);
+            int limit = 100;
+            std::string requestPath = "";
+            std::string queryString= "?market=" + symbol + "&limit=" + std::to_string(limit);
 
-        for(int i = 0; i < size; ++i)
-        {
-            md.BidLevels[i].price = sort_result[bidTotalSize - i - 1].price;
-            md.BidLevels[i].volume = sort_result[bidTotalSize - i - 1].volume;
-            KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  LFPriceBook20Field BidLevels: (i) " << i << "(price)" << md.BidLevels[i].price<<  "  (volume)"<< md.BidLevels[i].volume);
-        }
-        md.BidLevelCount = size;
-        sort_result.clear();
+            string url = "https://api.oceanex.cc/v1/order_book" + requestPath + queryString;
+            const auto response = Get(Url{url}, cpr::VerifySsl{false},
+                                      Header{{"Content-Type", "application/json"}},
+                                      Timeout{10000});
 
+            KF_LOG_DEBUG(logger, "[loopOrderBook] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                         " (response.error.message) " << response.error.message <<
+                                                         " (response.text) " << response.text.c_str());
 
-        strcpy(md.InstrumentID, ticker.c_str());
-        strcpy(md.ExchangeID, "mock");
-
-        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: on_price_book_update");
-        on_price_book_update(&md);
-    }
-}
-
-std::string MDEngineOceanEx::parseJsonToString(const char* in)
-{
-	Document d;
-	d.Parse(reinterpret_cast<const char*>(in));
-
-	StringBuffer buffer;
-	Writer<StringBuffer> writer(buffer);
-	d.Accept(writer);
-
-	return buffer.GetString();
-}
+            Document doc;
+            doc.Parse(response.text.c_str());
 
 /*
-Name    Type    Required    Description
-event   String    true    事件类型，订阅:subscribe
-biz     String    true    产品类型: spot
-type    String    true    业务类型: depth
-base    String    true    基准货币
-quote   String    true    交易货币
-zip     String    false    默认false,不压缩
 
- * */
-std::string MDEngineOceanEx::createDepthJsonString(std::string base, std::string quote)
-{
-    /*
-{
-    "event":"subscribe",
-    "params":{
-        "biz":"spot",
-        "type":"depth",
-        "base":"btc",
-        "quote":"usdt",
-        "zip":false
-    }
-}
-
-     * */
-	StringBuffer s;
-	Writer<StringBuffer> writer(s);
-	writer.StartObject();
-	writer.Key("event");
-	writer.String("subscribe");
-	writer.Key("params");
-	writer.StartObject();
-	writer.Key("biz");
-	writer.String("spot");
-	writer.Key("type");
-	writer.String("depth");
-	writer.Key("base");
-	writer.String(base.c_str());
-	writer.Key("quote");
-	writer.String(quote.c_str());
-	writer.Key("zip");
-	writer.Bool(false);
-	writer.EndObject();
-	writer.EndObject();
-	return s.GetString();
-}
-
-std::string MDEngineOceanEx::createFillsJsonString(std::string base, std::string quote)
-{
-    /*
  {
-"event": "subscribe",
-"params": {
-    "biz": "spot",
-    "type": "fills",
-    "base": "cel",
-    "quote": "btc",
-    "zip": false
-}
+	"code": 0,
+	"message": "Operation is successful",
+	"data": {
+		"timestamp": 1538985260,
+		"asks": [
+			["1039.21645069", "1.06722078"],
+			["1038.40778933", "0.07441827"],
+			["1037.95664878", "0.44592126"],
+			["1037.66232086", "0.05652834"],
+			["1037.61225818", "0.075671"],
+			["1037.46313803", "0.40483944"],
+			["1037.4623265", "0.53098531"],
+			["1037.37284386", "1.8986311"],
+			["1037.0162613", "1.41806928"],
+			["1036.81484619", "0.20376681"],
+			["1036.67046166", "0.25264251"],
+			["1036.41471872", "0.23540677"],
+			["1036.21483639", "1.01314363"],
+			["1036.19212007", "1.73290909"],
+			["1035.66055306", "0.06383132"],
+			["1035.54764438", "0.36198474"],
+			["1035.40553884", "0.86875877"],
+			["1035.2106592", "0.46704188"],
+			["1034.93944458", "0.53006703"],
+			["1034.78966391", "0.08469086"],
+			["1034.59060527", "2.0"],
+			["1034.45103684", "0.07637663"],
+			["1034.15651499", "0.12563001"],
+			["1033.84093451", "0.97796759"],
+			["1033.81357133", "0.67432327"],
+			["1033.7873936", "0.33818252"],
+			["1033.74901591", "0.10168555"],
+			["1033.62780622", "0.57090756"],
+			["1033.32719203", "1.7228337"],
+			["1033.21302309", "0.03511597"],
+			["1033.19812427", "0.42062344"],
+			["1032.77195358", "0.63407398"],
+			["1032.61424164", "0.99695279"],
+			["1031.87231685", "0.78713849"],
+			["1031.78951854", "0.07440293"],
+			["1031.63293789", "0.50278902"],
+			["1031.01599648", "0.90575449"],
+			["1030.84717524", "0.31659817"],
+			["1030.83407423", "0.39996163"],
+			["1030.74735858", "0.14122479"],
+			["1030.6173438", "1.3640138"],
+			["1030.11769821", "0.57926346"],
+			["1030.1025338", "0.04923149"],
+			["1030.09962212", "0.26459943"],
+			["1029.77935501", "0.18670439"],
+			["1029.43748501", "2.0"],
+			["1029.41531401", "0.09274924"],
+			["1029.30796584", "0.13145998"],
+			["981.6311429", "0.13013964"]
+		],
+		"bids": []
+	}
 }
 
-     * */
-    StringBuffer s;
-    Writer<StringBuffer> writer(s);
-    writer.StartObject();
-    writer.Key("event");
-    writer.String("subscribe");
-    writer.Key("params");
-    writer.StartObject();
-    writer.Key("biz");
-    writer.String("spot");
-    writer.Key("type");
-    writer.String("fills");
-    writer.Key("base");
-    writer.String(base.c_str());
-    writer.Key("quote");
-    writer.String(quote.c_str());
-    writer.Key("zip");
-    writer.Bool(false);
-    writer.EndObject();
-    writer.EndObject();
-    return s.GetString();
+ * */
+            if (doc.HasParseError() || !doc.HasMember("data") ) {
+                continue;
+            } else {
+                const auto &d = doc["data"];
+
+                LFPriceBook20Field md;
+                memset(&md, 0, sizeof(LFPriceBook20Field));
+
+                bool has_update = false;
+                if(d.HasMember("bids"))
+                {
+                    auto& bids = d["bids"];
+
+                    if(bids.IsArray() && bids.Size() > 0)
+                    {
+                        auto size = std::min((int)bids.Size(), 20);
+
+                        for(int i = 0; i < size; ++i)
+                        {
+                            md.BidLevels[i].price = stod(bids.GetArray()[i][0].GetString()) * scale_offset;
+                            md.BidLevels[i].volume = stod(bids.GetArray()[i][1].GetString()) * scale_offset;
+                        }
+                        md.BidLevelCount = size;
+
+                        has_update = true;
+                    }
+                }
+
+                if(d.HasMember("asks"))
+                {
+                    auto& asks = d["asks"];
+
+                    if(asks.IsArray() && asks.Size() >0)
+                    {
+                        auto size = std::min((int)asks.Size(), 20);
+
+                        for(int i = 0; i < size; ++i)
+                        {
+                            md.AskLevels[i].price = stod(asks.GetArray()[i][0].GetString()) * scale_offset;
+                            md.AskLevels[i].volume = stod(asks.GetArray()[i][1].GetString()) * scale_offset;
+                        }
+                        md.AskLevelCount = size;
+
+                        has_update = true;
+                    }
+                }
+
+                if (has_update) {
+
+                    strcpy(md.InstrumentID, ticker.c_str());
+                    strcpy(md.ExchangeID, "oceanex");
+
+                    on_price_book_update(&md);
+                }
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(rest_get_interval_ms));
+    }
 }
 
-std::string MDEngineOceanEx::createTickersJsonString()
+void MDEngineOceanEx::loopTrade()
 {
-	StringBuffer s;
-	Writer<StringBuffer> writer(s);
-	writer.StartObject();
-	writer.Key("event");
-	writer.String("subscribe");
-	writer.Key("params");
-	writer.StartObject();
-	writer.Key("biz");
-	writer.String("spot");
-	writer.Key("type");
-	writer.String("tickers");
-	writer.Key("zip");
-	writer.Bool(false);
-	writer.EndObject();
-	writer.EndObject();
-	return s.GetString();
-}
+    while(isRunning)
+    {
+        int count = coinpairs_used_in_rest.size();
+        KF_LOG_INFO(logger, "[loopTrade] coinpairs_used_in_rest (count) " << count);
 
-void MDEngineOceanEx::loop()
-{
-		while(isRunning)
-		{
-			lws_service( context, rest_get_interval_ms );
-		}
+        for (int i = 0; i < count;i++)
+        {
+            KF_LOG_INFO(logger, "[loopTrade] coinpairs_used_in_rest: " << coinpairs_used_in_rest[i]);
+
+            std::string symbol = coinpairs_used_in_rest[i];
+            int limit = 100;
+            std::string requestPath = "";
+            std::string queryString= "?market=" + symbol + "&limit=" + std::to_string(limit);
+
+            if(fromTradeId > 0)
+            {
+                queryString += "&from=" + std::to_string(fromTradeId);
+            }
+            string url = "https://api.oceanex.cc/v1/trades" + requestPath + queryString;
+            const auto response = Get(Url{url}, cpr::VerifySsl{false},
+                                      Header{{"Content-Type", "application/json"}},
+                                      Timeout{10000});
+
+            KF_LOG_DEBUG(logger, "[loopTrade] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                         " (response.error.message) " << response.error.message <<
+                                                         " (response.text) " << response.text.c_str());
+
+            Document d;
+            d.Parse(response.text.c_str());
+            /*
+        {
+        "code": 0,
+        "message": "Operation is successful",
+        "data": {
+            "num_of_resources": 2,
+            "resources": [{
+                "id": 60947,
+                "price": "980.67464115",
+                "volume": "0.1560637",
+                "funds": "153.047712994041255",
+                "market": "ocevet",
+                "market_name": "OCE/VET",
+                "created_at": "2018-10-08T07:54:34Z",
+                "side": "bid",
+                "fee": "0.0015"
+            }, {
+                "id": 60946,
+                "price": "981.54026365",
+                "volume": "2.0",
+                "funds": "1963.0805273",
+                "market": "ocevet",
+                "market_name": "OCE/VET",
+                "created_at": "2018-10-08T07:54:32Z",
+                "side": "bid",
+                "fee": "0.0015"
+            }]
+            }
+        }
+            * */
+
+            if (d.HasParseError() || !d.HasMember("data") || !d["data"].IsObject() || !d["data"].HasMember("resources") || !d["data"]["resources"].IsArray()) {
+                continue;
+            } else {
+                auto& resources = d["data"]["resources"];
+                int len = resources.Size();
+                KF_LOG_DEBUG(logger, "MDEngineOceanEx::loopTrade:" << "(resources.size) " << len);
+
+                //倒序排列
+                for(int i = len - 1; i > 0 ; i--)
+                {
+                    const auto& ele = resources.GetArray()[i];
+
+                    std::string symbol = ele["market"].GetString();
+                    std::string ticker = coinPairWhiteList.GetKeyByValue(symbol);
+                    if(ticker.length() == 0) {
+                        KF_LOG_INFO(logger, "MDEngineOceanEx::loopTrade: not in WhiteList , ignore it:" << symbol);
+                        continue;
+                    }
+
+                    KF_LOG_INFO(logger, "MDEngineOceanEx::loopTrade:" << "(ticker) " << ticker);
+
+                    LFL2TradeField trade;
+                    memset(&trade, 0, sizeof(LFL2TradeField));
+                    strcpy(trade.InstrumentID, ticker.c_str());
+                    strcpy(trade.ExchangeID, "oceanex");
+
+                    trade.Price = std::round(std::stod(ele["price"].GetString()) * scale_offset);
+                    trade.Volume = std::round(std::stod(ele["volume"].GetString()) * scale_offset);
+
+                    int id = ele["id"].GetInt();
+                    if(fromTradeId < id) {
+                        fromTradeId = id;
+                    }
+                    KF_LOG_INFO(logger, "MDEngineOceanEx::loopTrade:" << "(id) " << id);
+
+                    std::string side = ele["side"].GetString();
+                    trade.OrderKind[0] = "bid" == side? 'B' : 'N';
+                    trade.OrderBSFlag[0] = "bid" == side? 'B' : 'S';
+                    on_trade(&trade);
+
+                    KF_LOG_INFO(logger, "MDEngineOceanEx::loopTrade:" << "(ticker) " << ticker
+                                                                       << " (Price)" << trade.Price
+                                                                       << " (Volume)" << trade.Volume
+                                                                       << " (id)" << id
+                                                                       << " (side)" << side);
+                }
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(rest_get_interval_ms));
+    }
 }
 
 BOOST_PYTHON_MODULE(liboceanexmd)
