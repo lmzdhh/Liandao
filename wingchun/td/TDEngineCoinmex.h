@@ -177,7 +177,7 @@ private:
     void handlerResponsedOrderStatus(AccountUnitCoinmex& unit);
 
     void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, int64_t remoteOrderId);
-
+    void removeRemoteOrderIdOrderActionSentTime(int64_t remoteOrderId);
     void loopOrderActionNoResponseTimeOut();
     void orderActionNoResponseTimeOut();
 private:

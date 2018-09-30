@@ -844,6 +844,14 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
                              << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
     }
 
+    /* 测试发现，restful还没完全返回的时候，retrieveOrderStatus 就已经返回了，websocket也会有这个问题
+     * addRemoteOrderIdOrderActionSentTime 时间晚于  状态处理逻辑里面的remoteOrderIdOrderActionSentTime.erase(remoteOrderId)
+        结果就是会多发on_rsp_order_action “ OrderAction has none response for a long time(30 s), please send OrderAction again”消息。
+        现在改变做法，cancel还没发出的时候， 先写入，发送如果出错，就消除掉，没出错，就保留。
+     */
+    addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
+
+
     Document d;
     cancel_order(unit, ticker, std::to_string(remoteOrderId), d);
 
@@ -862,9 +870,8 @@ void TDEngineCoinmex::req_order_action(const LFOrderActionField* data, int accou
 
     if(errorId != 0)
     {
+        removeRemoteOrderIdOrderActionSentTime(remoteOrderId);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-    } else {
-        addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
     }
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_COINMEX, 1, requestId, errorId, errorMsg.c_str());
 }
@@ -880,6 +887,15 @@ void TDEngineCoinmex::addRemoteOrderIdOrderActionSentTime(const LFOrderActionFie
     memcpy(&newOrderActionSent.data, data, sizeof(LFOrderActionField));
     remoteOrderIdOrderActionSentTime[remoteOrderId] = newOrderActionSent;
 }
+
+void TDEngineCoinmex::removeRemoteOrderIdOrderActionSentTime(int64_t remoteOrderId)
+{
+    std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
+
+    remoteOrderIdOrderActionSentTime.erase(remoteOrderId);
+}
+
+
 
 void TDEngineCoinmex::GetAndHandleOrderTradeResponse()
 {
