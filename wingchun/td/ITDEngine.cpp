@@ -200,6 +200,7 @@ void ITDEngine::listening()
                         strcpy(order->UserID, accounts[idx].UserID);
                         strcpy(order->BusinessUnit, accounts[idx].BusinessUnit);
                         string order_ref = std::to_string(local_id);
+                        //通过orderRef来记录requestId(KfOrderID), InstrumentID
                         td_helper->record_order(local_id, requestId);
                         user_helper->record_order(name, local_id, requestId, order->InstrumentID);
                         local_id ++;
@@ -218,6 +219,7 @@ void ITDEngine::listening()
                         strcpy(order->InvestorID, accounts[idx].InvestorID);
                         int order_id = order->KfOrderID;
                         int local_id_order_action = 0;
+                        //通过KfOrderID来查找原始的 orderRef, InstrumentID
                         if (user_helper->get_order(name, order_id, local_id_order_action, order->InstrumentID))
                         {
                             string order_ref = std::to_string(local_id_order_action);
