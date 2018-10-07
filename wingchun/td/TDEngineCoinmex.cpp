@@ -1482,7 +1482,8 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
                                                   " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
 
         //has error and find the 'error setting certificate verify locations' error, should retry
-        if(shouldRetry(response.status_code, response.error.message)) {
+        //(response.status_code) 401 (response.error.message)  (response.text) {"message":"Auth error"} (retry_times)0
+        if(shouldRetry(response.status_code, response.text)) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
@@ -1666,7 +1667,8 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, s
                                                     " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
 
         //has error and find the 'error setting certificate verify locations' error, should retry
-        if(shouldRetry(response.status_code, response.error.message)) {
+        //(response.status_code) 401 (response.error.message)  (response.text) {"message":"Auth error"} (retry_times)0
+        if(shouldRetry(response.status_code, response.text)) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
