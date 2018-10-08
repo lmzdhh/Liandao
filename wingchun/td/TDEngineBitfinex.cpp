@@ -333,6 +333,8 @@ LfOrderPriceTypeType TDEngineBitfinex::GetPriceType(std::string input) {
 //[0,"oc",[16649428489,0,2,"tLTCBTC",1536633838845,1536633840840,-0.2001,-0.2001,"LIMIT",null,null,null,0,"CANCELED",null,null,9.9999,0,null,null,null,null,null,0,0,0,null,null,"API>BFX",null,null,null]]
 //[0,"oc",[16649214640,0,1,"tLTCBTC",1536633469325,1536633469352,0,0.2001,"MARKET",null,null,null,0,"EXECUTED @ 0.008535(0.2001)",null,null,0.00854,0.008535,null,null,null,null,null,0,0,0,null,null,"API>BFX",null,null,null]]
 //[0,"oc",[16650541381,0,2,"tLTCBTC",1536635990678,1536635990698,0,-1.0104,"LIMIT",null,null,null,0,"EXECUTED @ 0.0085376(-1.0104)",null,null,0.0085376,0.0085376,null,null,null,null,null,0,0,0,null,null,"API>BFX",null,null,null]]
+//[0,"oc",[17748166239,0,2,"tLTCBTC",1538872907976,1538872907992,0.2,0.2,"EXCHANGE FOK",null,null,null,0,"FILLORKILL CANCELED",null,null,0.00876,0,0,0,null,null,null,0,0,null,null,null,"API>BFX",null,null,null]]
+
 LfOrderStatusType TDEngineBitfinex::GetOrderStatus(std::string input) {
     if (startWith(input, "ACTIVE")) {
         return LF_CHAR_NotTouched;
@@ -342,8 +344,12 @@ LfOrderStatusType TDEngineBitfinex::GetOrderStatus(std::string input) {
         return LF_CHAR_Canceled;
     } else if (startWith(input, "EXECUTED")) {
         return LF_CHAR_AllTraded;
+    } else if (startWith(input, "INSUFFICIENT")) {
+        return LF_CHAR_Error;
     } else if (startWith(input, "ERROR")) {
         return LF_CHAR_Error;
+    } else if (input.find("FILLORKILL CANCELED") != std::string::npos  ) {
+        return LF_CHAR_Canceled;
     } else {
         return LF_CHAR_NotTouched;
     }
@@ -612,7 +618,7 @@ void TDEngineBitfinex::onPosition(struct lws* conn, Document& json)
                     }
                     positionHolder.push_back(position);
                     KF_LOG_INFO(logger, "TDEngineBitfinex::on_lws_data: position: (ticker)"
-                                        << ticker << " (isLong)" << position.isLong << " (amount)" << position.amount);
+                            << ticker << " (isLong)" << position.isLong << " (amount)" << position.amount);
                 }
             }
         }
@@ -676,10 +682,10 @@ void TDEngineBitfinex::onTradeExecuted(struct lws* conn, Document& json)
         double exec_price = orderStatus.GetArray()[5].GetDouble();
         int maker = orderStatus.GetArray()[8].GetInt();
         KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecuted: (trade_id)" << trade_id << " (symbol)" << symbol
-                                                                    << " (orderId)" << remoteOrderId
-                                                                    << " (exec_amount)" << exec_amount
-                                                                    << " (exec_price)" << exec_price
-                                                                    << " (maker)" << maker);
+                                                                            << " (orderId)" << remoteOrderId
+                                                                            << " (exec_amount)" << exec_amount
+                                                                            << " (exec_price)" << exec_price
+                                                                            << " (maker)" << maker);
 
         std::string ticker = unit.coinPairWhiteList.GetKeyByValue(symbol);
         if(ticker.length() == 0) {
@@ -796,10 +802,10 @@ void TDEngineBitfinex::onTradeExecutionUpdate(struct lws* conn, Document& json)
         //double order_price = orderStatus.GetArray()[7].GetDouble();// null
         int maker = orderStatus.GetArray()[8].GetInt();
         KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecutionUpdate: (trade_id)" << trade_id << " (symbol)" << symbol
-                                                                    << " (orderId)" << remoteOrderId
-                                                                    << " (exec_amount)" << exec_amount
-                                                                    << " (exec_price)" << exec_price
-                                                                    << " (maker)" << maker);
+                                                                                   << " (orderId)" << remoteOrderId
+                                                                                   << " (exec_amount)" << exec_amount
+                                                                                   << " (exec_price)" << exec_price
+                                                                                   << " (maker)" << maker);
 
 
 
@@ -994,8 +1000,10 @@ FLAGS	int	See flags below.
 //[0,"oc",[16650519644,0,1,"tLTCBTC",1536635943168,1536635945166,-1.0104,-1.0104,"LIMIT",null,null,null,0,"CANCELED",null,null,0.008541,0,null,null,null,null,null,0,0,0,null,null,"API>BFX",null,null,null]]
 //[0,"oc",[16651134080,0,4,"tLTCBTC",1536637134189,1536637136167,-1.0001,-1.0001,"LIMIT",null,null,null,0,"CANCELED",null,null,0.0085204,0,null,null,null,null,null,0,0,0,null,null,"API>BFX",null,null,null]]
 //[0,"oc",[16653164135,0,1,"tLTCBTC",1536640990454,1536640995441,-1.0001,-1.0001,"LIMIT",null,null,null,0,"CANCELED",null,null,0.0085397,0,null,null,null,null,null,0,0,0,null,null,"API>BFX",null,null,null]]
-//
 //[0,"oc",[16653210798,0,2,"tLTCBTC",1536641097028,1536641097058,0,-1.0001,"LIMIT",null,null,null,0,"EXECUTED @ 0.0085406(-0.31225457): was PARTIALLY FILLED @ 0.0085406(-0.68784543)",null,null,0.0085397,0.0085406,null,null,null,null,null,0,0,0,null,null,"API>BFX",null,null,null]]
+
+//[0,"oc",[17748166239,0,2,"tLTCBTC",1538872907976,1538872907992,0.2,0.2,"EXCHANGE FOK",null,null,null,0,"FILLORKILL CANCELED",null,null,0.00876,0,0,0,null,null,null,0,0,null,null,null,"API>BFX",null,null,null]]
+
 void TDEngineBitfinex::onOrderNewUpdateCancel(struct lws* conn, Document& json)
 {
     KF_LOG_INFO(logger, "TDEngineBitfinex::onOrderNewUpdateCancel: " << parseJsonToString(json));
@@ -1041,7 +1049,9 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
     KF_LOG_DEBUG(logger, "[onOrder] (exchange_ticker)" << ticker);
     strncpy(rtn_order.InstrumentID, ticker.c_str(), 31);
 
+
     if(amount >= 0) {
+        //今成交数量
         rtn_order.VolumeTraded = std::round(amount * scale_offset);
         rtn_order.Direction = LF_CHAR_Buy;
     } else {
@@ -1050,13 +1060,24 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
     }
 
     if(amount_orig > 0) {
+        //数量
         rtn_order.VolumeTotalOriginal = std::round(amount_orig * scale_offset);
     } else {
         rtn_order.VolumeTotalOriginal = std::round(amount_orig * scale_offset * -1);
     }
+
+    //剩余数量
     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
 
-    if("FOK" == type) {
+    //剩余数量的计算是有问题的，按文档描述AMOUNT_ORIG 是原始发单数量,AMOUNT是成交数量， 但实际AMOUNT是0，没法对的上全成交，此处强制修改：全成交的数量处理
+    if(LF_CHAR_AllTraded == rtn_order.OrderStatus) {
+        //剩余数量
+        rtn_order.VolumeTotal = 0;
+        //今成交数量                             //数量
+        rtn_order.VolumeTraded = rtn_order.VolumeTotalOriginal;
+    }
+
+    if("FOK" == type  || "EXCHANGE FOK" == type) {
         rtn_order.TimeCondition = LF_CHAR_FOK;
     } else {
         rtn_order.TimeCondition = LF_CHAR_GTC;
@@ -1084,6 +1105,7 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
 // [0,"n",[1536571802054,"oc-req",null,null,[22948376339485,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null],null,"ERROR","Order not found."]]
 //has this order
 //[0,"n",[1536575651298,"oc-req",null,null,[16616840342,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null],null,"SUCCESS","Submitted for cancellation; waiting for confirmation (ID: 16616840342)."]]
+
 //after reformat:
 //[0,"n",[1536136851766,"oc-req",null,null,[],null,"ERROR","Order not found."]]
 //[0,"n",[1536136851810,"on-req",null,null,[],null,"ERROR","This pair cannot be traded on margin."]]
@@ -1119,11 +1141,9 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                     std::unordered_map<int, OrderInsertData>::iterator itr;
                     itr = CIDorderInsertData.find(cid);
                     if (itr != CIDorderInsertData.end()) {
-                        OrderInsertData cache = itr->second;
                         int64_t remoteOrderId = notify_data.GetArray()[0].GetInt64();
+                        OrderInsertData& cache = itr->second;
                         cache.remoteOrderId = remoteOrderId;
-                        //not address of 'cache' should update it in map
-                        CIDorderInsertData[itr->first] = cache;
 
                         raw_writer->write_error_frame(&cache.data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITFINEX, 1, cache.requestId, 0, stateValue.c_str());
                         KF_LOG_INFO(logger, "TDEngineBitfinex::onNotification: (cid) " << cid
@@ -1179,12 +1199,12 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                         OrderInsertData cache = itr->second;
                         KF_LOG_INFO(logger,
                                     "TDEngineBitfinex::onNotification: on_rsp_order_insert  (cache.requestId)" << cache.requestId
-                                                                                                    << " (OrderRef)"
-                                                                                                    << cache.data.OrderRef
-                                                                                                    << " (LimitPrice)"
-                                                                                                    << cache.data.LimitPrice
-                                                                                                    << " (Volume)"
-                                                                                                    << cache.data.Volume);
+                                                                                                               << " (OrderRef)"
+                                                                                                               << cache.data.OrderRef
+                                                                                                               << " (LimitPrice)"
+                                                                                                               << cache.data.LimitPrice
+                                                                                                               << " (Volume)"
+                                                                                                               << cache.data.Volume);
                         on_rsp_order_insert(&cache.data, cache.requestId, 100, stateValue.c_str());
                         raw_writer->write_error_frame(&cache.data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITFINEX, 1, cache.requestId, 100, stateValue.c_str());
                     }
@@ -1198,6 +1218,11 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                         itr = RemoteOrderIDorderActionData.find(remoteOrderId);
                         if (itr != RemoteOrderIDorderActionData.end()) {
                             OrderActionData cache = itr->second;
+                            KF_LOG_INFO(logger, "TDEngineBitfinex::onNotification: on_rsp_order_action  (cache.requestId)" << cache.requestId <<
+                                                                                                                           " (OrderRef)" << cache.data.OrderRef <<
+                                                                                                                           " (LimitPrice)" << cache.data.LimitPrice <<
+                                                                                                                           " (KfOrderID)" << cache.data.KfOrderID);
+                            on_rsp_order_action(&cache.data, cache.requestId, 100, stateValue.c_str());
                             raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFINEX, 1, cache.requestId, 100, stateValue.c_str());
                         }
                     } else if(notify_data.GetArray()[2].IsInt()) {
@@ -1366,6 +1391,7 @@ void TDEngineBitfinex::req_order_insert(const LFInputOrderField* data, int accou
     if(data->VolumeCondition == LF_CHAR_CV) {
         //WCStrategyUtil.cpp
         //insert_fok_order: order.VolumeCondition = LF_CHAR_CV;
+        //在设计上还没法自由切换，hardcode只支持EXCHANGE 类型的交易
         type = "EXCHANGE FOK";
     } else {
         //WCStrategyUtil.cpp
@@ -1434,8 +1460,8 @@ void TDEngineBitfinex::req_order_action(const LFOrderActionField* data, int acco
         return;
     } else {
         KF_LOG_DEBUG(logger, "[req_order_action] found in OrderRefAndDateStr map (requestId) "
-                             << insertData.requestId << " (remoteOrderId) " << insertData.remoteOrderId
-                             << " (dateStr) " << insertData.dateStr << " (Volume) " << insertData.data.Volume);
+                << insertData.requestId << " (remoteOrderId) " << insertData.remoteOrderId
+                << " (dateStr) " << insertData.dateStr << " (Volume) " << insertData.data.Volume);
     }
 
     int cid = atoi(data->OrderRef);
@@ -1469,10 +1495,10 @@ OrderInsertData TDEngineBitfinex::findOrderInsertDataByOrderId(int64_t orderId)
     for(itr = CIDorderInsertData.begin(); itr != CIDorderInsertData.end(); ++itr)
     {
         KF_LOG_DEBUG(logger, "[findOrderInsertDataByOrderId] (requestId)" << itr->second.requestId <<
-                                                                           " (remoteOrderId)" << itr->second.remoteOrderId <<
-                                                                           " (dateStr)" << itr->second.dateStr << " (OrderRef) " <<
-                                                                           itr->second.data.OrderRef << " (LimitPrice)" <<
-                                                                           itr->second.data.LimitPrice << " (Volume)" << itr->second.data.Volume);
+                                                                          " (remoteOrderId)" << itr->second.remoteOrderId <<
+                                                                          " (dateStr)" << itr->second.dateStr << " (OrderRef) " <<
+                                                                          itr->second.data.OrderRef << " (LimitPrice)" <<
+                                                                          itr->second.data.LimitPrice << " (Volume)" << itr->second.data.Volume);
         if(itr->second.remoteOrderId == orderId) {
             return itr->second;
         }
