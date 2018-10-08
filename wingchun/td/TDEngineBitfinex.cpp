@@ -1025,7 +1025,7 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
     int gid = order_i.GetArray()[1].GetInt();
     int cid = order_i.GetArray()[2].GetInt();
     std::string symbol = order_i.GetArray()[3].GetString();
-    double amount = order_i.GetArray()[6].GetDouble();
+    double remaining_amount = order_i.GetArray()[6].GetDouble();
 
     double amount_orig = order_i.GetArray()[7].GetDouble();
     std::string type = order_i.GetArray()[8].GetString();
@@ -1050,12 +1050,12 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
     strncpy(rtn_order.InstrumentID, ticker.c_str(), 31);
 
 
-    if(amount >= 0) {
-        //今成交数量
-        rtn_order.VolumeTraded = std::round(amount * scale_offset);
+    if(remaining_amount >= 0) {
+        //剩余数量
+        rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset);
         rtn_order.Direction = LF_CHAR_Buy;
     } else {
-        rtn_order.VolumeTraded = std::round(amount * scale_offset * -1);
+        rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset * -1);
         rtn_order.Direction = LF_CHAR_Sell;
     }
 
@@ -1066,16 +1066,9 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
         rtn_order.VolumeTotalOriginal = std::round(amount_orig * scale_offset * -1);
     }
 
-    //剩余数量
-    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
+    //今成交数量
+    rtn_order.VolumeTraded = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTotal;
 
-    //剩余数量的计算是有问题的，按文档描述AMOUNT_ORIG 是原始发单数量,AMOUNT是成交数量， 但实际AMOUNT是0，没法对的上全成交，此处强制修改：全成交的数量处理
-    if(LF_CHAR_AllTraded == rtn_order.OrderStatus) {
-        //剩余数量
-        rtn_order.VolumeTotal = 0;
-        //今成交数量                             //数量
-        rtn_order.VolumeTraded = rtn_order.VolumeTotalOriginal;
-    }
 
     if("FOK" == type  || "EXCHANGE FOK" == type) {
         rtn_order.TimeCondition = LF_CHAR_FOK;
