@@ -1483,7 +1483,7 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
 
         //has error and find the 'error setting certificate verify locations' error, should retry
         //(response.status_code) 401 (response.error.message)  (response.text) {"message":"Auth error"} (retry_times)0
-        if(shouldRetry(response.status_code, response.text)) {
+        if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
@@ -1499,11 +1499,11 @@ void TDEngineCoinmex::send_order(AccountUnitCoinmex& unit, const char *code,
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-bool TDEngineCoinmex::shouldRetry(int http_status_code, std::string errorMsg)
+bool TDEngineCoinmex::shouldRetry(int http_status_code, std::string errorMsg, std::string text)
 {
     if( 502 == http_status_code
-       || (errorMsg.size() > 0 && errorMsg.find("error setting certificate verify locations") >= 0)
-       || (401 == http_status_code && errorMsg.size() > 0 && errorMsg.find("Auth error") >= 0) )
+       || text.find("error setting certificate verify locations") != std::string::npos
+       || (401 == http_status_code && text.find("Auth error") != std::string::npos) )
     {
         return true;
     }
@@ -1668,7 +1668,7 @@ void TDEngineCoinmex::cancel_order(AccountUnitCoinmex& unit, std::string code, s
 
         //has error and find the 'error setting certificate verify locations' error, should retry
         //(response.status_code) 401 (response.error.message)  (response.text) {"message":"Auth error"} (retry_times)0
-        if(shouldRetry(response.status_code, response.text)) {
+        if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));

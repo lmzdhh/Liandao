@@ -1448,7 +1448,7 @@ Timestamp for this request was 1000ms ahead of the server's time.
  * */
 bool TDEngineBinance::shouldRetry(int http_status_code, std::string errorMsg, std::string text)
 {
-    if( 400 == http_status_code && text.size() > 0 && text.find(":-1021,") >= 0 )
+    if( 400 == http_status_code && text.find(":-1021,") != std::string::npos )
     {
         return true;
     }
