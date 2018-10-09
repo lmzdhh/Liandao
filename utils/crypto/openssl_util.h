@@ -3,6 +3,8 @@
 #include <cstring>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
 
 namespace utils { namespace crypto {
 
@@ -128,6 +130,56 @@ std::string base64_decode(std::string const& encoded_string) {
     }
 
     return ret;
+}
+
+
+
+inline std::string rsa256_private_encrypt(const std::string &data_to_sign, const std::string &priKey) {
+    std::string strRet;
+    RSA *rsa = NULL;
+    BIO *keybio = BIO_new_mem_buf((unsigned char *)priKey.c_str(), -1);
+
+    rsa = PEM_read_bio_RSAPrivateKey(keybio, &rsa, NULL, NULL);
+    int len = RSA_size(rsa);
+
+    char *encryptedText = (char *)malloc(len + 1);
+    memset(encryptedText, 0, len + 1);
+    int ret = RSA_private_encrypt(data_to_sign.length(), (const unsigned char*)data_to_sign.c_str(), (unsigned char*)encryptedText, rsa, RSA_PKCS1_PADDING);
+
+    if (ret >= 0) {
+        strRet = std::string(encryptedText, ret);
+    }
+
+    free(encryptedText);
+    BIO_free_all(keybio);
+    RSA_free(rsa);
+    return strRet;
+}
+
+
+
+inline std::string rsa256_pub_decrypt(const std::string &cipherText, const std::string &pubKey)
+{
+    std::string strRet;
+    RSA *rsa = RSA_new();
+    BIO *keybio;
+    keybio = BIO_new_mem_buf((unsigned char *)pubKey.c_str(), -1);
+
+    rsa = PEM_read_bio_RSAPublicKey(keybio, &rsa, NULL, NULL);
+
+    int len = RSA_size(rsa);
+    char *decryptedText = (char *)malloc(len + 1);
+    memset(decryptedText, 0, len + 1);
+    int ret = RSA_public_decrypt(cipherText.length(), (const unsigned char*)cipherText.c_str(), (unsigned char*)decryptedText, rsa, RSA_PKCS1_PADDING);
+
+    if (ret >= 0) {
+        strRet = std::string(decryptedText, ret);
+    }
+
+    free(decryptedText);
+    BIO_free_all(keybio);
+    RSA_free(rsa);
+    return strRet;
 }
 
 }}
