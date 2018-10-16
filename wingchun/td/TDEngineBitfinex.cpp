@@ -519,7 +519,8 @@ void TDEngineBitfinex::on_lws_data(struct lws* conn, const char* data, size_t le
                 onTradeExecutionUpdate(conn, json);
             }
             if (dataType == "os") {
-                onOrderSnapshot(conn, json);
+                //fix duplicate send 'no touch' on_rtn_order
+//                onOrderSnapshot(conn, json);
             }
             if (dataType == "on" || dataType == "ou" || dataType == "oc") {
                 onOrderNewUpdateCancel(conn, json);
