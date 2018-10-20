@@ -67,7 +67,7 @@ OPTION(USE_HASH_CODE "use hash code when writing" ON)
 ADD_SUBDIRECTORY(longfist)
 ADD_SUBDIRECTORY(yijinjing)
 ADD_SUBDIRECTORY(wingchun)
-ADD_SUBDIRECTORY(test)
+#ADD_SUBDIRECTORY(test)
 
 ############################################################
 SET(INFO_TXT_IN "${CMAKE_CURRENT_SOURCE_DIR}/rpm/INFO.txt")
