@@ -57,7 +57,7 @@ inline bool is_base64(unsigned char c) {
     return (isalnum(c) || (c == '-') || (c == '_'));
 }
 
-std::string base64_encode(char const* bytes_to_encode, unsigned int in_len) {
+std::string base64_encode(char const* bytes_to_encode, unsigned long in_len) {
     std::string ret;
     int i = 0;
     int j = 0;
@@ -228,13 +228,13 @@ inline std::string rsa256_pub_verify(const std::string &data_to_sign,const std::
     return strRet;
 }
 
-inline std::string jwt_create(const string& data,const std::string& private_key)
+inline std::string jwt_create(const std::string& data,const std::string& private_key)
 {
     //JWT:
     //1. secret =  RSASHA256(base64UrlEncode(header) + "." + base64UrlEncode(payload),private_key)
     //2. jwt = base64UrlEncode(header) + "." + base64UrlEncode(payload) +base64UrlEncode(secret)
     std::string header =R"({"typ":"JWT","alg":"RS256"})";
-    std::string payload=data;
+    std::string payload = data;
 
     std::string encoded_header = base64_encode(header.c_str(),header.length());
     std::string encoded_payload=base64_encode(payload.c_str(),payload.length());
