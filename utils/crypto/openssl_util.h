@@ -5,7 +5,11 @@
 #include <openssl/sha.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
-
+#include <openssl/evp.h>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <sstream>
 namespace utils { namespace crypto {
 
 inline std::string b2a_hex(char *byte_arr, int n) {
@@ -47,13 +51,13 @@ inline std::string hmac_sha512( const char *key, const char *data) {
 
 static const std::string base64_chars ="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                        "abcdefghijklmnopqrstuvwxyz"
-                                       "0123456789+/";
+                                       "0123456789-_";
 
 inline bool is_base64(unsigned char c) {
-    return (isalnum(c) || (c == '+') || (c == '/'));
+    return (isalnum(c) || (c == '-') || (c == '_'));
 }
 
-std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
+std::string base64_encode(char const* bytes_to_encode, unsigned int in_len) {
     std::string ret;
     int i = 0;
     int j = 0;
@@ -86,8 +90,8 @@ std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_
         for (j = 0; (j < i + 1); j++)
             ret += base64_chars[char_array_4[j]];
 
-        while((i++ < 3))
-            ret += '=';
+        //while((i++ < 3))
+            //ret += '=';
 
     }
 
@@ -134,52 +138,112 @@ std::string base64_decode(std::string const& encoded_string) {
 
 
 
-inline std::string rsa256_private_encrypt(const std::string &data_to_sign, const std::string &priKey) {
+inline std::string rsa256_private_sign(const std::string &data_to_sign, const std::string &priKey) {
     std::string strRet;
-    RSA *rsa = NULL;
-    BIO *keybio = BIO_new_mem_buf((unsigned char *)priKey.c_str(), -1);
+    unsigned int len=0;
+    BIO *keybio = BIO_new(BIO_s_mem());
 
-    rsa = PEM_read_bio_RSAPrivateKey(keybio, &rsa, NULL, NULL);
-    int len = RSA_size(rsa);
-
-    char *encryptedText = (char *)malloc(len + 1);
-    memset(encryptedText, 0, len + 1);
-    int ret = RSA_private_encrypt(data_to_sign.length(), (const unsigned char*)data_to_sign.c_str(), (unsigned char*)encryptedText, rsa, RSA_PKCS1_PADDING);
-
-    if (ret >= 0) {
-        strRet = std::string(encryptedText, ret);
+    size_t  ret = BIO_write(keybio,priKey.data(),priKey.size());
+    if(ret != priKey.size())
+    {
+        return "";
     }
+    std::string password ="";
+    RSA *rsa = PEM_read_bio_RSAPrivateKey(keybio, nullptr , nullptr, (void*)password.c_str());
+    if(rsa == nullptr)
+    {
+        return  "";
+    }
+    EVP_PKEY* key = EVP_PKEY_new();
 
-    free(encryptedText);
+    EVP_PKEY_assign_RSA(key,rsa);
+    strRet.resize(EVP_PKEY_size(key));
+
+    EVP_MD_CTX* ctx = EVP_MD_CTX_create();
+    EVP_SignInit(ctx,EVP_sha256());
+    EVP_SignUpdate(ctx,data_to_sign.c_str(),data_to_sign.length());
+    EVP_SignFinal(ctx,(unsigned char*)strRet.data(),&len,key);
+    strRet.resize(len);
+
+    EVP_MD_CTX_destroy(ctx);
+    //RSA_free(rsa);
+    EVP_PKEY_free(key);
     BIO_free_all(keybio);
-    RSA_free(rsa);
+
     return strRet;
 }
 
 
 
-inline std::string rsa256_pub_decrypt(const std::string &cipherText, const std::string &pubKey)
+inline std::string rsa256_pub_verify(const std::string &data_to_sign,const std::string &cipherText, const std::string &pubKey)
 {
     std::string strRet;
-    RSA *rsa = RSA_new();
-    BIO *keybio;
-    keybio = BIO_new_mem_buf((unsigned char *)pubKey.c_str(), -1);
+    BIO *keybio = BIO_new(BIO_s_mem());
 
-    rsa = PEM_read_bio_RSAPublicKey(keybio, &rsa, NULL, NULL);
+    size_t  ret = BIO_write(keybio,pubKey.data(),pubKey.size());
+    if(ret != pubKey.size())
+    {
+        strRet = "failed to load public key: bio_write failed";
+        return strRet;
+    }
+    std::string password ="";
+    RSA *rsa = PEM_read_bio_RSAPublicKey(keybio, nullptr , nullptr, (void*)password.c_str());
+    if(rsa == nullptr)
+    {
+        strRet = "failed to load public key: PEM_read_bio_PUBKEY failed";
+        return strRet;
+    }
+    EVP_PKEY* key = EVP_PKEY_new();
 
-    int len = RSA_size(rsa);
-    char *decryptedText = (char *)malloc(len + 1);
-    memset(decryptedText, 0, len + 1);
-    int ret = RSA_public_decrypt(cipherText.length(), (const unsigned char*)cipherText.c_str(), (unsigned char*)decryptedText, rsa, RSA_PKCS1_PADDING);
+    EVP_PKEY_assign_RSA(key,rsa);
+    EVP_MD_CTX* ctx =EVP_MD_CTX_create();
 
-    if (ret >= 0) {
-        strRet = std::string(decryptedText, ret);
+    if (!ctx)
+    {
+        strRet = "failed to verify signature: could not create context";
+        return strRet;
+    }
+    if (!EVP_VerifyInit(ctx, EVP_sha256()))
+    {
+        strRet = "failed to verify signature: VerifyInit failed";
+        return strRet;
+    }
+    if (!EVP_VerifyUpdate(ctx, data_to_sign.data(), data_to_sign.size()))
+    {
+        strRet = "failed to verify signature: VerifyUpdate failed";
+        return strRet;
+    }
+    if (!EVP_VerifyFinal(ctx, (const unsigned char*)cipherText.data(), cipherText.size(), key))
+    {
+        strRet = "failed to load public key: PEM_read_bio_PUBKEY failed";
+        return strRet;
     }
 
-    free(decryptedText);
+
+    EVP_MD_CTX_destroy(ctx);
+    //RSA_free(rsa);
+    EVP_PKEY_free(key);
     BIO_free_all(keybio);
-    RSA_free(rsa);
+
     return strRet;
+}
+
+inline std::string jwt_create(const string& data,const std::string& private_key)
+{
+    //JWT:
+    //1. secret =  RSASHA256(base64UrlEncode(header) + "." + base64UrlEncode(payload),private_key)
+    //2. jwt = base64UrlEncode(header) + "." + base64UrlEncode(payload) +base64UrlEncode(secret)
+    std::string header =R"({"typ":"JWT","alg":"RS256"})";
+    std::string payload=data;
+
+    std::string encoded_header = base64_encode(header.c_str(),header.length());
+    std::string encoded_payload=base64_encode(payload.c_str(),payload.length());
+    std::string data_to_sign = encoded_header +"."+encoded_payload;
+    std::string signature = rsa256_private_sign(data_to_sign, private_key);
+    std::string secret = base64_encode(signature.c_str(),signature.length());
+
+    std::string jwt = data_to_sign+"."+secret;
+    return  jwt;
 }
 
 }}
