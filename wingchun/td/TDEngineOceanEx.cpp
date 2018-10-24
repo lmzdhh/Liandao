@@ -39,11 +39,47 @@ using std::stoi;
 using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
-using utils::crypto::rsa256_private_encrypt;
-using utils::crypto::rsa256_pub_decrypt;
 USING_WC_NAMESPACE
 
+std::string private_key=R"(-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8h
+Q1r6M6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmss
+U8zcLSzm72WTbC7HM8St2Ky5V4eCLHJsqCB/Je1Q/F6/K+pMMzPumornUpDgr6El
+UjjOgroRNnl5mgqB466Op1Xfnl/nLsHXetDPZ2Ekp4iQmCl5zR7sYMY0tUviVbjE
+GEQ6VobnkkZDH/pnjrdjWKW+Un6cO/WLDKKdsgloCBnFRH8jyAiifwTItTP+ejmK
+uqsjLUWcNJ/MtGvhTyxPd4z18SsgQ3g6Goc+swIBAwKCAQEAiP0oCPESE+d4C0Wr
+1rEQCvK8hlazSmCwzpThNaGE/ibqBuoWLOdRd8qIeP+H9t1BYfGnCYnh4JOzmfS6
+WnFDUMdi8w3erEloqotOUzRbG6Y6tEdy4oiSyMiZ9O5iSB8vd9hz5ch7j6+sHaGd
+xWr/bp41/ZR/cpwyzM1JvFyaNwoOJgA81SDUZjmZpfZYH7tc52JhlBJroJ3rQJFx
+O1yvLvMnM5akWhdVDtsRy2WUo5ToVbTFYOxqevstxwKNTpECxvl4+Rn8bIuzjo1b
+vQLWIepb6v9CFb0QNgP6IodxUg4vaNni/NCaD9Mc2mJiriFgpBKKwcdNgFIpveHP
+F9n6awKBgQDy4annCKGYJa+tD3IoQDDrugzxTZQ8eEXMRct1HUS9nhz4aI1Q8rF6
+BLbbrtNG6tVWfw45GdOMCQIVXTEkuoZkLHBx/Yr1mNyfNtE/3ej11pk8Lfr7K5Ie
+QaOX4ckpD6cI2t+4yI1DH2DNwYe17W5bcRSMpXIhRwUSJL9DQqZ50QKBgQDYlPbj
+CeX3w7P9rhXNKkCKzo4K+6YBtS06CBw4hIELAtdxcZlJHlUAMh92ANqO1RcvVhti
+7Q4OlQwNipFKb5p/N9C75XPOFtBvr1BBkzVmqJCh+Z/m+FFtNV8TaXB1qneughL9
+duT49igjK4SCwct05/vyr2/gaarPgeZANBnNQwKBgQCh68aaBcEQGR/ItPbFgCCd
+JrNLiQ19pYPdg9z4vi3Tvr368F419yD8AySSdIzZ8eOO/17Qu+JdW1a46Mtt0a7t
+cvWhU7H5EJMUzzYqk/Cj5GYoHqdSHQwUK8JlQTDGCm9bPJUl2wjXakCJK6/OnkmS
+S2MIbkwWL1i2wyos1xmmiwKBgQCQY09CBplP181TyWPeHCsHNF6x/RlWeMjRWr17
+AwCyAeT2S7uGFDiqzBT5VecJ42TKOWeXSLQJuLKzsbYxn7xUz+B9Q6KJZIr1H4rW
+YiOZxbXBURVEpYueI5S3m6BOcaUfAWH+T0NQpBrCHQMB1oejRVKhykqVm8c1AUQq
+zWaI1wKBgB6TWnnVGhx2jTei8YnD//IYplv8/kErxwHaC2yz7qvdBQB+ljuimGzm
+xefSDq993EWmKGYJ/IiiRoue2x6IX4EcrnG2hZ2sBfgjvjxGSm1s0w81XLMcMnL2
++ItII2MKryk0lMyRyfVyaMr52wbXSo7Lali5wweXvxUCU1CGGUJD
+-----END RSA PRIVATE KEY-----
+)";
 
+std::string public_key=R"(
+-----BEGIN RSA PUBLIC KEY-----
+MIIBCAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8hQ1r6
+M6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmssU8zc
+LSzm72WTbC7HM8St2Ky5V4eCLHJsqCB/Je1Q/F6/K+pMMzPumornUpDgr6ElUjjO
+groRNnl5mgqB466Op1Xfnl/nLsHXetDPZ2Ekp4iQmCl5zR7sYMY0tUviVbjEGEQ6
+VobnkkZDH/pnjrdjWKW+Un6cO/WLDKKdsgloCBnFRH8jyAiifwTItTP+ejmKuqsj
+LUWcNJ/MtGvhTyxPd4z18SsgQ3g6Goc+swIBAw==
+-----END RSA PUBLIC KEY-----
+)";
 TDEngineOceanEx::TDEngineOceanEx(): ITDEngine(SOURCE_OCEANEX)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.OceanEx");
@@ -115,13 +151,13 @@ TradeAccount TDEngineOceanEx::load_account(int idx, const json& j_config)
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
 //test rs256
-    std::string data ="{}"
-    std::string signature = rsa256_private_sign(data, "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8h\nQ1r6M6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmss\nU8zcLSzm72WTbC7HM8St2Ky5V4eCLHJsqCB/Je1Q/F6/K+pMMzPumornUpDgr6El\nUjjOgroRNnl5mgqB466Op1Xfnl/nLsHXetDPZ2Ekp4iQmCl5zR7sYMY0tUviVbjE\nGEQ6VobnkkZDH/pnjrdjWKW+Un6cO/WLDKKdsgloCBnFRH8jyAiifwTItTP+ejmK\nuqsjLUWcNJ/MtGvhTyxPd4z18SsgQ3g6Goc+swIBAwKCAQEAiP0oCPESE+d4C0Wr\n1rEQCvK8hlazSmCwzpThNaGE/ibqBuoWLOdRd8qIeP+H9t1BYfGnCYnh4JOzmfS6\nWnFDUMdi8w3erEloqotOUzRbG6Y6tEdy4oiSyMiZ9O5iSB8vd9hz5ch7j6+sHaGd\nxWr/bp41/ZR/cpwyzM1JvFyaNwoOJgA81SDUZjmZpfZYH7tc52JhlBJroJ3rQJFx\nO1yvLvMnM5akWhdVDtsRy2WUo5ToVbTFYOxqevstxwKNTpECxvl4+Rn8bIuzjo1b\nvQLWIepb6v9CFb0QNgP6IodxUg4vaNni/NCaD9Mc2mJiriFgpBKKwcdNgFIpveHP\nF9n6awKBgQDy4annCKGYJa+tD3IoQDDrugzxTZQ8eEXMRct1HUS9nhz4aI1Q8rF6\nBLbbrtNG6tVWfw45GdOMCQIVXTEkuoZkLHBx/Yr1mNyfNtE/3ej11pk8Lfr7K5Ie\nQaOX4ckpD6cI2t+4yI1DH2DNwYe17W5bcRSMpXIhRwUSJL9DQqZ50QKBgQDYlPbj\nCeX3w7P9rhXNKkCKzo4K+6YBtS06CBw4hIELAtdxcZlJHlUAMh92ANqO1RcvVhti\n7Q4OlQwNipFKb5p/N9C75XPOFtBvr1BBkzVmqJCh+Z/m+FFtNV8TaXB1qneughL9\nduT49igjK4SCwct05/vyr2/gaarPgeZANBnNQwKBgQCh68aaBcEQGR/ItPbFgCCd\nJrNLiQ19pYPdg9z4vi3Tvr368F419yD8AySSdIzZ8eOO/17Qu+JdW1a46Mtt0a7t\ncvWhU7H5EJMUzzYqk/Cj5GYoHqdSHQwUK8JlQTDGCm9bPJUl2wjXakCJK6/OnkmS\nS2MIbkwWL1i2wyos1xmmiwKBgQCQY09CBplP181TyWPeHCsHNF6x/RlWeMjRWr17\nAwCyAeT2S7uGFDiqzBT5VecJ42TKOWeXSLQJuLKzsbYxn7xUz+B9Q6KJZIr1H4rW\nYiOZxbXBURVEpYueI5S3m6BOcaUfAWH+T0NQpBrCHQMB1oejRVKhykqVm8c1AUQq\nzWaI1wKBgB6TWnnVGhx2jTei8YnD//IYplv8/kErxwHaC2yz7qvdBQB+ljuimGzm\nxefSDq993EWmKGYJ/IiiRoue2x6IX4EcrnG2hZ2sBfgjvjxGSm1s0w81XLMcMnL2\n+ItII2MKryk0lMyRyfVyaMr52wbXSo7Lali5wweXvxUCU1CGGUJD\n-----END RSA PRIVATE KEY-----");
+    std::string data ="{}";
+    std::string signature =utils::crypto::rsa256_private_sign(data, private_key);
     std::string sign = base64_encode((unsigned char*)signature.c_str(), signature.size());
     std::cout  << "[TDEngineOceanEx] (test rs256-base64-sign)" << sign << std::endl;
 
-    std::string decodeStr = rsa256_pub_verify(data,signature, "-----BEGIN RSA PUBLIC KEY-----\nMIIBCAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8hQ1r6\nM6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmssU8zc\nLSzm72WTbC7HM8St2Ky5V4eCLHJsqCB/Je1Q/F6/K+pMMzPumornUpDgr6ElUjjO\ngroRNnl5mgqB466Op1Xfnl/nLsHXetDPZ2Ekp4iQmCl5zR7sYMY0tUviVbjEGEQ6\nVobnkkZDH/pnjrdjWKW+Un6cO/WLDKKdsgloCBnFRH8jyAiifwTItTP+ejmKuqsj\nLUWcNJ/MtGvhTyxPd4z18SsgQ3g6Goc+swIBAw==\n-----END RSA PUBLIC KEY-----");
-    std::cout  << "[TDEngineOceanEx] (test rs256-verify)" << decodeStr.empty()?"yes":"no" << std::endl;
+    std::string decodeStr = utils::crypto::rsa256_pub_verify(data,signature, public_key);
+    std::cout  << "[TDEngineOceanEx] (test rs256-verify)" << (decodeStr.empty()?"yes":"no") << std::endl;
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
@@ -896,18 +932,8 @@ void TDEngineOceanEx::getResponse(int http_status_code, std::string responseText
 
 std::string TDEngineOceanEx::construct_request_body(AccountUnitOceanEx& unit, std::string data)
 {
-    std::string header = "{\"typ\":\"JWT\",\"alg\":\"RS256\"}";
-    string header_base64 = base64_encode((const unsigned char*)header.c_str(), header.length());
-    std::string pay_load = "{\"uid\":\"" + unit.api_key + "\",\"data\":" + data + "}";
-    string pay_load_base64 = base64_encode((const unsigned char*)pay_load.c_str(), pay_load.length());
-
-    std::string signature = rsa256_private_encrypt(header_base64 + "." + pay_load_base64, unit.secret_key);
-
-    std::cout  << "[construct_request_body] (signature)" << signature << std::endl;
-    std::string sign = base64_encode((unsigned char*)signature.c_str(), signature.size());
-    std::cout  << "[construct_request_body] (sign)" << sign << std::endl;
-
-    std::string request_body = header_base64 + "." + pay_load_base64 + "." + sign;
+    std::string pay_load = R"({"uid":")" + unit.api_key + R"(","data":")" + data + R"("})";
+    std::string request_body = utils::crypto::jwt_create(pay_load,private_key);
     std::cout  << "[construct_request_body] (request_body)" << request_body << std::endl;
     return request_body;
 }

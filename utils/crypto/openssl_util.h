@@ -57,7 +57,7 @@ inline bool is_base64(unsigned char c) {
     return (isalnum(c) || (c == '-') || (c == '_'));
 }
 
-std::string base64_encode(char const* bytes_to_encode, unsigned long in_len) {
+std::string base64_encode(const unsigned char* bytes_to_encode, unsigned long in_len) {
     std::string ret;
     int i = 0;
     int j = 0;
@@ -236,11 +236,11 @@ inline std::string jwt_create(const std::string& data,const std::string& private
     std::string header =R"({"typ":"JWT","alg":"RS256"})";
     std::string payload = data;
 
-    std::string encoded_header = base64_encode(header.c_str(),header.length());
-    std::string encoded_payload=base64_encode(payload.c_str(),payload.length());
+    std::string encoded_header = base64_encode((const unsigned char*)header.c_str(),header.length());
+    std::string encoded_payload=base64_encode((const unsigned char*)payload.c_str(),payload.length());
     std::string data_to_sign = encoded_header +"."+encoded_payload;
     std::string signature = rsa256_private_sign(data_to_sign, private_key);
-    std::string secret = base64_encode(signature.c_str(),signature.length());
+    std::string secret = base64_encode((const unsigned char*)signature.c_str(),signature.length());
 
     std::string jwt = data_to_sign+"."+secret;
     return  jwt;
