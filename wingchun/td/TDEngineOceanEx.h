@@ -13,7 +13,7 @@
 #include "Timer.h"
 #include <document.h>
 #include <libwebsockets.h>
-
+#include <cpr/cpr.h>
 using rapidjson::Document;
 
 WC_NAMESPACE_START
@@ -112,6 +112,7 @@ WC_NAMESPACE_START
             virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
             virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
 
+
         public:
             TDEngineOceanEx();
             ~TDEngineOceanEx();
@@ -163,11 +164,14 @@ WC_NAMESPACE_START
             void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
             void printResponse(const Document& d);
 
-            bool shouldRetry(int http_status_code, std::string errorMsg);
+            bool shouldRetry(Document& d);
 
-            std::string construct_request_body(AccountUnitOceanEx& unit, std::string data);
+            std::string construct_request_body(const AccountUnitOceanEx& unit,const  std::string& data);
             std::string createInsertOrdertring(const char *code,
                                                const char *side, const char *type, double size, double price);
+
+            cpr::Response Get(const std::string& url,const std::string& body, AccountUnitOceanEx& unit);
+            cpr::Response Post(const std::string& url,const std::string& body, AccountUnitOceanEx& unit);
         private:
 
             struct lws_context *context = nullptr;

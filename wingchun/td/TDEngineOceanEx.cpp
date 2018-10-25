@@ -12,18 +12,16 @@
 #include <sstream>
 #include <stdio.h>
 #include <assert.h>
-#include <cpr/cpr.h>
+
 #include <chrono>
 #include "../../utils/crypto/openssl_util.h"
 
 using cpr::Delete;
-using cpr::Get;
 using cpr::Url;
 using cpr::Body;
 using cpr::Header;
 using cpr::Parameters;
 using cpr::Payload;
-using cpr::Post;
 using cpr::Timeout;
 
 using rapidjson::StringRef;
@@ -41,7 +39,7 @@ using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 USING_WC_NAMESPACE
 
-std::string private_key=R"(-----BEGIN RSA PRIVATE KEY-----
+std::string g_private_key=R"(-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8h
 Q1r6M6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmss
 U8zcLSzm72WTbC7HM8St2Ky5V4eCLHJsqCB/Je1Q/F6/K+pMMzPumornUpDgr6El
@@ -70,7 +68,7 @@ xefSDq993EWmKGYJ/IiiRoue2x6IX4EcrnG2hZ2sBfgjvjxGSm1s0w81XLMcMnL2
 -----END RSA PRIVATE KEY-----
 )";
 
-std::string public_key=R"(
+std::string g_public_key=R"(
 -----BEGIN RSA PUBLIC KEY-----
 MIIBCAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8hQ1r6
 M6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmssU8zc
@@ -95,6 +93,37 @@ TDEngineOceanEx::~TDEngineOceanEx()
     if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
     if(mutex_response_order_status != nullptr) delete mutex_response_order_status;
     if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
+}
+
+cpr::Response TDEngineOceanEx::Get(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
+{
+    std::string queryString= "?" + construct_request_body(unit,body);
+    string url = unit.baseUrl + url + queryString;
+
+    const auto response = cpr::Get(Url{url}, cpr::VerifySsl{false},
+                              Header{{"Content-Type", "application/json"}}, Timeout{10000} );
+
+    KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
+                                               " (response.error.message) " << response.error.message <<
+                                               " (response.text) " << response.text.c_str());
+    return response;
+}
+
+cpr::Response TDEngineOceanEx::Post(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
+{
+    std::string reqbody = construct_request_body(unit,body);
+
+    string url = unit.baseUrl + method_url;
+
+    auto response = cpr::Post(Url{url}, cpr::VerifySsl{false},
+                    Header{{"Content-Type", "application/json; charset=UTF-8"},
+                           {"Content-Length", to_string(body.size())}},
+                    Body{reqbody}, Timeout{30000});
+
+    KF_LOG_INFO(logger, "[post] (url) " << url << " (response.status_code) " << response.status_code <<
+                                       " (response.error.message) " << response.error.message <<
+                                       " (response.text) " << response.text.c_str());
+    return response;
 }
 
 void TDEngineOceanEx::init()
@@ -152,11 +181,11 @@ TradeAccount TDEngineOceanEx::load_account(int idx, const json& j_config)
 
 //test rs256
     std::string data ="{}";
-    std::string signature =utils::crypto::rsa256_private_sign(data, private_key);
+    std::string signature =utils::crypto::rsa256_private_sign(data, g_private_key);
     std::string sign = base64_encode((unsigned char*)signature.c_str(), signature.size());
     std::cout  << "[TDEngineOceanEx] (test rs256-base64-sign)" << sign << std::endl;
 
-    std::string decodeStr = utils::crypto::rsa256_pub_verify(data,signature, public_key);
+    std::string decodeStr = utils::crypto::rsa256_pub_verify(data,signature, g_public_key);
     std::cout  << "[TDEngineOceanEx] (test rs256-verify)" << (decodeStr.empty()?"yes":"no") << std::endl;
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
@@ -198,11 +227,17 @@ void TDEngineOceanEx::connect(long timeout_nsec)
         AccountUnitOceanEx& unit = account_units[idx];
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         Document doc;
-        //cancel_all_orders(unit, doc);
+        KF_LOG_INFO(logger, "[get_account]");
+        //
+        std::string requestPath = "/key";
+        const auto response = Get(requestPath,"{}",unit);
 
-        if (!unit.logged_in)
+        getResponse(response.status_code, response.text, response.error.message, doc);
+
+        if ( !unit.logged_in && doc.HasMember("code"))
         {
-            unit.logged_in = true;
+            int code = doc["code"].GetInt();
+            unit.logged_in = (code == 0);
         }
     }
 }
@@ -283,16 +318,12 @@ LfOrderPriceTypeType TDEngineOceanEx::GetPriceType(std::string input) {
 }
 //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
 LfOrderStatusType TDEngineOceanEx::GetOrderStatus(std::string input) {
-    if ("open" == input) {
+    if ("wait" == input) {
         return LF_CHAR_NotTouched;
-    } else if ("partially-filled" == input) {
-        return LF_CHAR_PartTradedQueueing;
-    } else if ("filled" == input) {
+    } else if ("done" == input) {
         return LF_CHAR_AllTraded;
-    } else if ("canceled" == input) {
-        return LF_CHAR_Canceled;
     } else if ("cancel" == input) {
-        return LF_CHAR_NotTouched;
+        return LF_CHAR_Canceled;
     } else {
         return LF_CHAR_NotTouched;
     }
@@ -308,22 +339,6 @@ void TDEngineOceanEx::req_investor_position(const LFQryPositionField* data, int 
     AccountUnitOceanEx& unit = account_units[account_index];
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key << " (InstrumentID) " << data->InstrumentID);
 
-    int errorId = 0;
-    std::string errorMsg = "";
-    Document d;
-    get_account(unit, d);
-
-    if(!d.HasParseError() && d.IsObject() && d.HasMember("code"))
-    {
-        errorId = d["code"].GetInt();
-        if(d.HasMember("message") && d["message"].IsString())
-        {
-            errorMsg = d["message"].GetString();
-        }
-        KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
-    }
-    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_OCEANEX, 1, requestId);
-
     LFRspPositionField pos;
     memset(&pos, 0, sizeof(LFRspPositionField));
     strncpy(pos.BrokerID, data->BrokerID, 11);
@@ -334,6 +349,27 @@ void TDEngineOceanEx::req_investor_position(const LFQryPositionField* data, int 
     pos.Position = 0;
     pos.YdPosition = 0;
     pos.PositionCost = 0;
+
+    int errorId = 0;
+    std::string errorMsg = "";
+    Document d;
+    get_account(unit, d);
+
+    if(!d.HasParseError() && d.IsObject() && d.HasMember("code"))
+    {
+        errorId = d["code"].GetInt();
+        if(errorId != 0) {
+            if (d.HasMember("message") && d["message"].IsString()) {
+                errorMsg = d["message"].GetString();
+            }
+            KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId
+                                                                   << " (errorMsg) " << errorMsg);
+            raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        }
+    }
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_OCEANEX, 1, requestId);
+
+
 
 
 /*
@@ -374,23 +410,17 @@ void TDEngineOceanEx::req_investor_position(const LFQryPositionField* data, int 
         }
     }
 
-    bool findSymbolInResult = false;
     //send the filtered position
     int position_count = tmp_vector.size();
-    for (int i = 0; i < position_count; i++)
-    {
-        on_rsp_position(&tmp_vector[i], i == (position_count - 1), requestId, errorId, errorMsg.c_str());
-        findSymbolInResult = true;
+    if(position_count > 0) {
+        for (int i = 0; i < position_count; i++) {
+            on_rsp_position(&tmp_vector[i], i == (position_count - 1), requestId, errorId, errorMsg.c_str());
+        }
     }
-
-    if(!findSymbolInResult)
+    else
     {
         KF_LOG_INFO(logger, "[req_investor_position] (!findSymbolInResult) (requestId)" << requestId);
         on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
-    }
-    if(errorId != 0)
-    {
-        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
     }
 }
 
@@ -930,12 +960,12 @@ void TDEngineOceanEx::getResponse(int http_status_code, std::string responseText
     }
 }
 
-std::string TDEngineOceanEx::construct_request_body(AccountUnitOceanEx& unit, std::string data)
+std::string TDEngineOceanEx::construct_request_body(const AccountUnitOceanEx& unit,const  std::string& data)
 {
     std::string pay_load = R"({"uid":")" + unit.api_key + R"(","data":")" + data + R"("})";
-    std::string request_body = utils::crypto::jwt_create(pay_load,private_key);
+    std::string request_body = utils::crypto::jwt_create(pay_load,g_private_key);
     std::cout  << "[construct_request_body] (request_body)" << request_body << std::endl;
-    return request_body;
+    return "user_jwt:"+request_body;
 }
 
 
@@ -944,19 +974,13 @@ void TDEngineOceanEx::get_account(AccountUnitOceanEx& unit, Document& json)
     KF_LOG_INFO(logger, "[get_account]");
 
     std::string requestPath = "/members/me";
-    std::string queryString= "?user_jwt=RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA"
+    std::string queryString= "?user_jwt=" + construct_request_body(unit,"{}");
+    //RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA
             ;//construct_request_body(unit, "{}");
 
     string url = unit.baseUrl + requestPath + queryString;
 
-    const auto response = Get(Url{url}, cpr::VerifySsl{false},
-                              Header{{"Content-Type", "application/json"}}, Timeout{10000} );
-
-    KF_LOG_INFO(logger, "[get_account] (url) " << url << " (response.status_code) " << response.status_code <<
-                                              " (response.error.message) " << response.error.message <<
-                                              " (response.text) " << response.text.c_str());
-
-
+    const auto response = Get(requestPath,"{}",unit);
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1006,22 +1030,16 @@ void TDEngineOceanEx::send_order(AccountUnitOceanEx& unit, const char *code,
         should_retry = false;
 
         std::string requestPath = "/orders";
-        std::string queryString= "";
-        std::string body = "?user_jwt=" + construct_request_body(unit, createInsertOrdertring(code, side, type, size, price));
+        response = Post(requestPath,createInsertOrdertring(code, side, type, size, price),unit);
 
-        string url = unit.baseUrl + requestPath + queryString;
-
-        response = Post(Url{url}, cpr::VerifySsl{false},
-                        Header{{"Content-Type", "application/json; charset=UTF-8"},
-                               {"Content-Length", to_string(body.size())}},
-                        Body{body}, Timeout{30000});
-
-        KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
+        KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
                                                   " (response.error.message) " << response.error.message <<
                                                   " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
 
+        json.Clear();
+        getResponse(response.status_code, response.text, response.error.message, json);
         //has error and find the 'error setting certificate verify locations' error, should retry
-        if(shouldRetry(response.status_code, response.error.message)) {
+        if(shouldRetry(json)) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
@@ -1034,18 +1052,23 @@ void TDEngineOceanEx::send_order(AccountUnitOceanEx& unit, const char *code,
                                                                          " (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
 
-    getResponse(response.status_code, response.text, response.error.message, json);
+    //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-bool TDEngineOceanEx::shouldRetry(int http_status_code, std::string errorMsg)
+bool TDEngineOceanEx::shouldRetry(Document& doc)
 {
+    bool ret = false;
+    if(!doc.IsObject() || doc.HasMember("code") || !doc["code"].GetInt() != 0)
+    {
+        ret = true;
+    }
 //    if( 502 == http_status_code
 //        || (errorMsg.size() > 0 && errorMsg.find("error setting certificate verify locations") >= 0)
 //        || (401 == http_status_code && errorMsg.size() > 0 && errorMsg.find("Auth error") >= 0) )
 //    {
 //        return true;
 //    }
-    return false;
+    return ret;
 }
 
 void TDEngineOceanEx::cancel_all_orders(AccountUnitOceanEx& unit, std::string code, Document& json)
@@ -1053,17 +1076,9 @@ void TDEngineOceanEx::cancel_all_orders(AccountUnitOceanEx& unit, std::string co
     KF_LOG_INFO(logger, "[cancel_all_orders]");
 
     std::string requestPath = "/orders/clear";
-    std::string queryString= "?user_jwt=RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA";//construct_request_body(unit, "{}");
+    //std::string queryString= "?user_jwt=RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA";//construct_request_body(unit, "{}");
 
-    string url = unit.baseUrl + requestPath + queryString;
-
-    const auto response = Get(Url{url}, cpr::VerifySsl{false},
-                              Header{{"Content-Type", "application/json"}}, Timeout{30000} );
-
-
-    KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                     " (response.error.message) " << response.error.message <<
-                                                     " (response.text) " << response.text.c_str());
+    auto response = Post(requestPath,"{}",unit);
 
     getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1079,19 +1094,13 @@ void TDEngineOceanEx::cancel_order(AccountUnitOceanEx& unit, std::string code, s
         should_retry = false;
 
         std::string requestPath = "/order/delete";
-        std::string queryString= "?user_jwt=" + construct_request_body(unit, "{\"id\":" + orderId + "}");
+        //std::string queryString= construct_request_body(unit, "{\"id\":" + orderId + "}");
+        response = Post(requestPath,"{\"id\":" + orderId + "}",unit);
 
-        string url = unit.baseUrl + requestPath + queryString;
-
-        const auto response = Get(Url{url}, cpr::VerifySsl{false},
-                                  Header{{"Content-Type", "application/json"}}, Timeout{30000} );
-
-        KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (response.status_code) " << response.status_code <<
-                                                    " (response.error.message) " << response.error.message <<
-                                                    " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
-
+        json.Clear();
+        getResponse(response.status_code, response.text, response.error.message, json);
         //has error and find the 'error setting certificate verify locations' error, should retry
-        if(shouldRetry(response.status_code, response.error.message)) {
+        if(shouldRetry(json)) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
@@ -1103,23 +1112,14 @@ void TDEngineOceanEx::cancel_order(AccountUnitOceanEx& unit, std::string code, s
                                                                            " (response.error.message) " << response.error.message <<
                                                                            " (response.text) " << response.text.c_str() );
 
-    getResponse(response.status_code, response.text, response.error.message, json);
+    //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
 void TDEngineOceanEx::query_order(AccountUnitOceanEx& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[query_order]");
     std::string requestPath = "/orders";
-    std::string queryString= "?user_jwt=" + construct_request_body(unit, "{\"ids\": [" + orderId + "]}");
-
-    string url = unit.baseUrl + requestPath + queryString;
-
-    const auto response = Get(Url{url}, cpr::VerifySsl{false},
-                              Header{{"Content-Type", "application/json"}}, Timeout{30000} );
-
-    KF_LOG_INFO(logger, "[query_order] (url) " << url << " (response.status_code) " << response.status_code <<
-                                               " (response.error.message) " << response.error.message <<
-                                               " (response.text) " << response.text.c_str());
+    auto response = Get(requestPath,"{\"ids\": [" + orderId + "]}",unit);
 
     getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1130,7 +1130,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 {
     int64_t newAveragePrice = responsedOrderStatus.averagePrice;
     //cancel 需要特殊处理
-    if(LF_CHAR_Canceled == responsedOrderStatus.OrderStatus) {
+    if(LF_CHAR_Canceled == responsedOrderStatus.OrderStatus)  {
         /*
          * 因为restful查询有间隔时间，订单可能会先经历过部分成交，然后才达到的cancnel，所以得到cancel不能只认为是cancel，还需要判断有没有部分成交过。
         这时候需要补状态，补一个on rtn order，一个on rtn trade。
@@ -1144,7 +1144,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
             //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
+            rtn_order.OrderStatus = LF_CHAR_PartTradedNotQueueing;
             rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
             //first send onRtnOrder about the status change or VolumeTraded change
             strcpy(rtn_order.ExchangeID, "oceanex");
