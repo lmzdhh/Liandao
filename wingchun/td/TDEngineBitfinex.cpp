@@ -1131,11 +1131,12 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
 //                        KF_LOG_ERROR(logger, "[onNotification]: not in WhiteList , ignore it: (symbol)" << symbol << " (cid)" << cid);
 //                        return;
 //                    }
+                    int64_t remoteOrderId = notify_data.GetArray()[0].GetInt64();
 
                     std::unordered_map<int, OrderInsertData>::iterator itr;
                     itr = CIDorderInsertData.find(cid);
                     if (itr != CIDorderInsertData.end()) {
-                        int64_t remoteOrderId = notify_data.GetArray()[0].GetInt64();
+
                         OrderInsertData& cache = itr->second;
                         cache.remoteOrderId = remoteOrderId;
 
@@ -1145,6 +1146,17 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                                                                                        " (orderType)" << orderType <<
                                                                                        " (state)" << state <<
                                                                                        " (stateValue)" << stateValue);
+                    }
+                    //the pendingOrderActionData wait and got remoteOrderId, then send OrderAction
+                    std::unordered_map<int, OrderActionData>::iterator orderActionItr;
+                    orderActionItr = pendingOrderActionData.find(cid);
+                    if (orderActionItr != pendingOrderActionData.end()) {
+                        OrderActionData& cache = orderActionItr->second;
+
+                        std::string cancelOrderJsonString = createCancelOrderIdJsonString(remoteOrderId);
+                        addPendingSendMsg(unit, cancelOrderJsonString);
+                        KF_LOG_DEBUG(logger, "TDEngineBitfinex::onNotification: pending_and_send  [req_order_action] createCancelOrderIdJsonString (remoteOrderId) " << remoteOrderId);
+                        RemoteOrderIDorderActionData.insert(std::pair<int64_t, OrderActionData>(remoteOrderId, cache));
                     }
                 }
 
@@ -1469,14 +1481,19 @@ void TDEngineBitfinex::req_order_action(const LFOrderActionField* data, int acco
         memcpy(&cache.data, data, sizeof(LFOrderActionField));
         RemoteOrderIDorderActionData.insert(std::pair<int64_t, OrderActionData>(insertData.remoteOrderId, cache));
     } else {
+        /*
         //remote order id 是在on-req消息里面获取的， 如果发单后，还没收到o-req就撤单，就只能使用cid+dateStr了
         std::string cancelOrderJsonString = createCancelOrderCIdJsonString(cid, insertData.dateStr);
         addPendingSendMsg(unit, cancelOrderJsonString);
         KF_LOG_DEBUG(logger, "[req_order_action] createCancelOrderIdJsonString (cid) " << cid << " (dateStr)" << insertData.dateStr);
+        */
         OrderActionData cache;
         cache.requestId = requestId;
         memcpy(&cache.data, data, sizeof(LFOrderActionField));
         CIDorderActionData.insert(std::pair<int, OrderActionData>(cid, cache));
+        //if not remoteOrderId, should wait for remoteid then send orderaction
+        pendingOrderActionData.insert(std::pair<int, OrderActionData>(cid, cache));
+
     }
 
     //emit e event for websocket callback
