@@ -119,6 +119,17 @@
       },
       "rest_get_interval_ms": 500
     }
+    "huobi":
+        {
+          "book_depth_count": 5,
+          "trade_count": 10,
+          "whiteLists": {
+            "btc_usd": "btcusdt",
+            "eth_usd": "etcusdt"
+          },
+          "rest_get_interval_ms": 500
+        }
+      }
   },
   "td":
   {

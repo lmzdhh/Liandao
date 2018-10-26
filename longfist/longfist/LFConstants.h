@@ -23,6 +23,7 @@ enum exchange_source_index : short
     SOURCE_BITMEX = 23,
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
+    SOURCE_HUOBI = 26,
     SOURCE_UNKNOWN
 };
 
@@ -54,6 +55,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "hitbtc";
         case SOURCE_OCEANEX:
             return "oceanex";
+        case SOURCE_HUOBI:
+            return "HUOBI";
 		default:
 			return "unknown";
 	}
@@ -109,6 +112,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_OCEANEX;
     }
+    else if(exch_str == "huobi")
+    {
+        return SOURCE_HUOBI;
+    }
     else
     {
 	return SOURCE_UNKNOWN;
@@ -130,6 +137,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_BITMEX "BITMEX"
 #define EXCHANGE_HITBTC "HITBTC"
 #define EXCHANGE_OCEANEX "OCEANEX"
+#define EXCHANGE_HUOBI "HUOBI"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
