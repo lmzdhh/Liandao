@@ -31,5 +31,8 @@ def initialize(context):
     context.add_td(source=SOURCE.BINANCE)
     context.subscribe(tickers=[context.ticker], source=SOURCE.BINANCE)
 
-def on_price_book(context, price_book, source, rcv_time)
-    print price_book.InstrumentID
+def on_price_book(context, price_book, source, rcv_time):
+    print 'symbol' , price_book.InstrumentID
+    print 'ExchangeID' , price_book.ExchangeID
+    print 'BidLevels' , price_book.BidLevels
+    print 'AskLevels' , price_book.BidLevels
