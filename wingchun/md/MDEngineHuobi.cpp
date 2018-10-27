@@ -425,4 +425,16 @@ void MDEngineHuobi::onWrite(struct lws* conn)
     return 0;
 }
 
+BOOST_PYTHON_MODULE(libhuobimd)
+{
+    using namespace boost::python;
+    class_<MDEngineHuobi, boost::shared_ptr<MDEngineHuobi> >("Engine")
+            .def(init<>())
+            .def("init", &MDEngineHuobi::initialize)
+            .def("start", &MDEngineHuobi::start)
+            .def("stop", &MDEngineHuobi::stop)
+            .def("logout", &MDEngineHuobi::logout)
+            .def("wait_for_stop", &MDEngineHuobi::wait_for_stop);
+}
+
 WC_NAMESPACE_END
