@@ -233,7 +233,7 @@ inline std::string jwt_create(const std::string& data,const std::string& private
     //JWT:
     //1. secret =  RSASHA256(base64UrlEncode(header) + "." + base64UrlEncode(payload),private_key)
     //2. jwt = base64UrlEncode(header) + "." + base64UrlEncode(payload) +base64UrlEncode(secret)
-    std::string header =R"({"typ":"JWT","alg":"RS256"})";
+    std::string header =R"({"alg":"RS256","typ":"JWT"})";
     std::string payload = data;
 
     std::string encoded_header = base64_encode((const unsigned char*)header.c_str(),header.length());

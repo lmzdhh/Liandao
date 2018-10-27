@@ -98,7 +98,7 @@ TDEngineOceanEx::~TDEngineOceanEx()
 cpr::Response TDEngineOceanEx::Get(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
 {
     std::string queryString= "?" + construct_request_body(unit,body);
-    string url = unit.baseUrl + url + queryString;
+    string url = unit.baseUrl + method_url + queryString;
 
     const auto response = cpr::Get(Url{url}, cpr::VerifySsl{false},
                               Header{{"Content-Type", "application/json"}}, Timeout{10000} );
