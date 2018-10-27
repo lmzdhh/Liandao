@@ -7,6 +7,7 @@
 #include <document.h>
 #include <libwebsockets.h>
 #include <algorithm>
+#include <stdio.h>
 #include "../../utils/common/Utils.h"
 using rapidjson::Document;
 using namespace rapidjson;
@@ -60,6 +61,11 @@ void MDEngineHuobi::genSubscribeString()
     {
         m_subcribeJsons.push_back(genDepthString(var.second));
         m_subcribeJsons.push_back(genDepthString(var.second));
+    }
+    if(m_subcribeJsons.empty())
+    {
+        KF_LOG_INFO(logger, "genSubscribeString failed, {error:has no white list}");
+        exit(0);
     }
 }
 
