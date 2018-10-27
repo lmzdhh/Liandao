@@ -963,7 +963,7 @@ void TDEngineOceanEx::getResponse(int http_status_code, std::string responseText
 std::string TDEngineOceanEx::construct_request_body(const AccountUnitOceanEx& unit,const  std::string& data)
 {
     std::string pay_load = R"({"uid":")" + unit.api_key + R"(","data":")" + data + R"("})";
-    std::string request_body = utils::crypto::jwt_create(pay_load,g_private_key);
+    std::string request_body = utils::crypto::jwt_create(pay_load,unit.secret_key);
     std::cout  << "[construct_request_body] (request_body)" << request_body << std::endl;
     return "user_jwt:"+request_body;
 }
@@ -974,11 +974,11 @@ void TDEngineOceanEx::get_account(AccountUnitOceanEx& unit, Document& json)
     KF_LOG_INFO(logger, "[get_account]");
 
     std::string requestPath = "/members/me";
-    std::string queryString= "?user_jwt=" + construct_request_body(unit,"{}");
+    //std::string queryString= construct_request_body(unit,"{}");
     //RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA
             ;//construct_request_body(unit, "{}");
 
-    string url = unit.baseUrl + requestPath + queryString;
+    //string url = unit.baseUrl + requestPath + queryString;
 
     const auto response = Get(requestPath,"{}",unit);
     return getResponse(response.status_code, response.text, response.error.message, json);
