@@ -278,6 +278,7 @@ class_details = [
                               ('StartUpdateMillisec', 'int', '首tick最后修改毫秒'),
                               ('EndUpdateTime', 'str', '尾tick最后修改时间'),
                               ('EndUpdateMillisec', 'int', '尾tick最后修改毫秒'),
+                              ('PeriodMillisec', 'int', ''),
                               ('Open', 'float', '开'),
                               ('Close', 'float', '收'),
                               ('Low', 'float', '低'),

@@ -223,6 +223,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "StartUpdateMillisec:" << std::setw(6) << "(i)" << " " << (int)ptr->StartUpdateMillisec << std::endl \
 	 << std::setw(20) << "EndUpdateTime:" << std::setw(6) << "(c13)" << " " << ptr->EndUpdateTime << std::endl \
 	 << std::setw(20) << "EndUpdateMillisec:" << std::setw(6) << "(i)" << " " << (int)ptr->EndUpdateMillisec << std::endl \
+	 << std::setw(20) << "PeriodMillisec:" << std::setw(6) << "(i)" << " " << (int)ptr->PeriodMillisec << std::endl \
 	 << std::setw(20) << "Open:" << std::setw(6) << "(d)" << " " << ptr->Open << std::endl \
 	 << std::setw(20) << "Close:" << std::setw(6) << "(d)" << " " << ptr->Close << std::endl \
 	 << std::setw(20) << "Low:" << std::setw(6) << "(d)" << " " << ptr->Low << std::endl \
