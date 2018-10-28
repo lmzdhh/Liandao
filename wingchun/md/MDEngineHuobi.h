@@ -70,7 +70,8 @@ private:
 private:
     struct lws_context*         m_lwsContext = nullptr;
     struct lws*                 m_lwsConnection = nullptr;
-
+    //   wss://api.huobi.pro/ws
+    std::string                 m_uri;
 
 };
 DECLARE_PTR(MDEngineHuobi);

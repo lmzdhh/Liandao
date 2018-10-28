@@ -47,11 +47,21 @@ void MDEngineHuobi::set_reader_thread()
 
 void MDEngineHuobi::load(const json& config)
 {
-    KF_LOG_INFO(logger, "load config");
-    m_priceBookNum = config["book_depth_count"].get<int>();
-    m_whiteList.ReadWhiteLists(config, "whiteLists");
-    m_whiteList.Debug_print();
-    genSubscribeString();
+    KF_LOG_INFO(logger, "load config start");
+    try
+    {
+        m_priceBookNum = config["book_depth_count"].get<int>();
+        m_uri = config["uri"].get<std::string>();
+        KF_LOG_INFO(logger, "huobi uri is "<< m_uri);
+        m_whiteList.ReadWhiteLists(config, "whiteLists");
+        m_whiteList.Debug_print();
+        genSubscribeString();
+    }
+    catch (const std::exception& e)
+    {
+        KF_LOG_INFO(logger, "load config exception,"<<e.what());
+    }
+    KF_LOG_INFO(logger, "load config end");
 }
 
 void MDEngineHuobi::genSubscribeString()
@@ -119,7 +129,7 @@ void MDEngineHuobi::connect(long)
 
 void MDEngineHuobi::login(long)
 {
-    KF_LOG_INFO(logger, "login start");
+    KF_LOG_INFO(logger, "create context start");
     m_instance = this;
     struct lws_context_creation_info creation_info;
     memset(&creation_info, 0x00, sizeof(creation_info));
@@ -131,7 +141,37 @@ void MDEngineHuobi::login(long)
     creation_info.max_http_header_pool = 1024;
     creation_info.fd_limit_per_thread = 1024;
     m_lwsContext = lws_create_context( &creation_info );
+    if (!m_lwsContext)
+    {
+        KF_LOG_ERROR(logger, "create context error");
+        return;
+    }
+    KF_LOG_INFO(logger, "create context success");
     createConnection();
+}
+
+void MDEngineHuobi::createConnection()
+{
+    KF_LOG_INFO(logger, "create connect start");
+    struct lws_client_connect_info conn_info = { 0 };
+    //parse uri
+    conn_info.context 	= m_lwsContext;
+    conn_info.address = "wss://api.huobi.pro";
+    conn_info.path 	= "/ws";
+    conn_info.port = 443;
+    conn_info.host 	= conn_info.address;
+    conn_info.origin = conn_info.address;
+    conn_info.protocol = lwsProtocols[0].name;
+    conn_info.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+    KF_LOG_DEBUG(logger, "connect to "<<conn_info.address<<":"<<conn_info.port<<conn_info.path);
+    m_lwsConnection = lws_client_connect_via_info(&conn_info);
+    if(!m_lwsConnection)
+    {
+        KF_LOG_INFO(logger, " create connect error");
+        return ;
+    }
+    KF_LOG_INFO(logger, "connect server success");
+    m_logged_in = true;
 }
 
 void MDEngineHuobi::logout()
@@ -139,28 +179,6 @@ void MDEngineHuobi::logout()
     lws_context_destroy(m_lwsContext);
     m_logged_in = false;
     KF_LOG_INFO(logger, "logout");
-}
-
-void MDEngineHuobi::createConnection()
-{
-    KF_LOG_INFO(logger, "connect server start");
-    struct lws_client_connect_info conn_info = {0};
-    conn_info.context 	= m_lwsContext;
-    conn_info.address 	= "wss://api.huobi.pro";
-    conn_info.port 	= 443;
-    conn_info.path 	= "/ws";
-    conn_info.host 	= lws_canonical_hostname(m_lwsContext);
-    conn_info.origin 	= "origin";
-    conn_info.protocol = lwsProtocols[0].name;
-    conn_info.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-    m_lwsConnection = lws_client_connect_via_info(&conn_info);
-    if(!m_lwsConnection)
-    {
-        KF_LOG_INFO(logger, "connect server error");
-        return ;
-    }
-    KF_LOG_INFO(logger, "connect server success");
-    m_logged_in = true;
 }
 
 void MDEngineHuobi::lwsEventLoop()

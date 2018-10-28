@@ -121,6 +121,7 @@
     }
     "huobi":
         {
+          "uri":"wss://api.huobi.pro/ws"
           "book_depth_count": 5,
           "trade_count": 10,
           "whiteLists": {
