@@ -116,7 +116,7 @@ cpr::Response TDEngineOceanEx::Post(const std::string& method_url,const std::str
     string url = unit.baseUrl + method_url;
 
     auto response = cpr::Post(Url{url}, cpr::VerifySsl{false},
-                    Header{{"Content-Type", "application/json; charset=UTF-8"},
+                    Header{{"Content-Type", "application/json"},
                            {"Content-Length", to_string(reqbody.size())}},
                     Body{reqbody}, Timeout{30000});
 
@@ -470,9 +470,10 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
         errorMsg = "send_order http response has parse error or is not json. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                            errorId << " (errorMsg) " << errorMsg);
-    } else  if(d.HasMember("code") && d.HasMember("data") && d["data"].IsObject())
+    } else  if(d.HasMember("code"))
     {
-        if(d["code"].GetInt() == 0)
+	int code = d["code"].GetInt();
+        if(code == 0)
         {
             /*
              {
@@ -771,7 +772,7 @@ void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
         {
             ResponsedOrderStatus responsedOrderStatus;
             responsedOrderStatus.ticker = ticker;
-            responsedOrderStatus.averagePrice = std::round(std::stod(d["averagePrice"].GetString()) * scale_offset);
+            responsedOrderStatus.averagePrice = std::round(std::stod(d["avg_price"].GetString()) * scale_offset);
             responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
             //报单价格条件
             responsedOrderStatus.OrderPriceType = GetPriceType(d["ord_type"].GetString());
@@ -931,10 +932,10 @@ void TDEngineOceanEx::printResponse(const Document& d)
 
 void TDEngineOceanEx::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
 {
-    if(http_status_code == HTTP_RESPONSE_OK)
+    if(http_status_code >= HTTP_RESPONSE_OK && http_status_code <= 299)
     {
         json.Parse(responseText.c_str());
-    } else if(http_status_code == 0 && responseText.length() == 0)
+    } else if(http_status_code == 0)
     {
         json.SetObject();
         Document::AllocatorType& allocator = json.GetAllocator();
@@ -961,7 +962,7 @@ void TDEngineOceanEx::getResponse(int http_status_code, std::string responseText
 
 std::string TDEngineOceanEx::construct_request_body(const AccountUnitOceanEx& unit,const  std::string& data,bool isget)
 {
-    std::string pay_load = R"({"uid":")" + unit.api_key + R"(","data":")" + data + R"("})";
+    std::string pay_load = R"({"uid":")" + unit.api_key + R"(","data":)" + data + R"(})";
     std::string request_body = utils::crypto::jwt_create(pay_load,unit.secret_key);
     std::cout  << "[construct_request_body] (request_body)" << request_body << std::endl;
     return  isget ? "user_jwt="+request_body:R"({"user_jwt":")"+request_body+"\"}";
@@ -1035,7 +1036,7 @@ void TDEngineOceanEx::send_order(AccountUnitOceanEx& unit, const char *code,
                                                   " (response.error.message) " << response.error.message <<
                                                   " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
 
-        json.Clear();
+        //json.Clear();
         getResponse(response.status_code, response.text, response.error.message, json);
         //has error and find the 'error setting certificate verify locations' error, should retry
         if(shouldRetry(json)) {
@@ -1057,7 +1058,7 @@ void TDEngineOceanEx::send_order(AccountUnitOceanEx& unit, const char *code,
 bool TDEngineOceanEx::shouldRetry(Document& doc)
 {
     bool ret = false;
-    if(!doc.IsObject() || doc.HasMember("code") || !doc["code"].GetInt() != 0)
+    if(!doc.IsObject() || !doc.HasMember("code") || !doc["code"].GetInt() != 0)
     {
         ret = true;
     }
@@ -1096,7 +1097,7 @@ void TDEngineOceanEx::cancel_order(AccountUnitOceanEx& unit, std::string code, s
         //std::string queryString= construct_request_body(unit, "{\"id\":" + orderId + "}");
         response = Post(requestPath,"{\"id\":" + orderId + "}",unit);
 
-        json.Clear();
+        //json.Clear();
         getResponse(response.status_code, response.text, response.error.message, json);
         //has error and find the 'error setting certificate verify locations' error, should retry
         if(shouldRetry(json)) {
