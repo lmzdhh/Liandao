@@ -111,13 +111,13 @@ cpr::Response TDEngineOceanEx::Get(const std::string& method_url,const std::stri
 
 cpr::Response TDEngineOceanEx::Post(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
 {
-    std::string reqbody = construct_request_body(unit,body);
+    std::string reqbody = construct_request_body(unit,body,false);
 
     string url = unit.baseUrl + method_url;
 
     auto response = cpr::Post(Url{url}, cpr::VerifySsl{false},
                     Header{{"Content-Type", "application/json; charset=UTF-8"},
-                           {"Content-Length", to_string(body.size())}},
+                           {"Content-Length", to_string(reqbody.size())}},
                     Body{reqbody}, Timeout{30000});
 
     KF_LOG_INFO(logger, "[post] (url) " << url << " (response.status_code) " << response.status_code <<
@@ -227,7 +227,6 @@ void TDEngineOceanEx::connect(long timeout_nsec)
         AccountUnitOceanEx& unit = account_units[idx];
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         Document doc;
-        KF_LOG_INFO(logger, "[get_account]");
         //
         std::string requestPath = "/key";
         const auto response = Get(requestPath,"{}",unit);
@@ -960,12 +959,12 @@ void TDEngineOceanEx::getResponse(int http_status_code, std::string responseText
     }
 }
 
-std::string TDEngineOceanEx::construct_request_body(const AccountUnitOceanEx& unit,const  std::string& data)
+std::string TDEngineOceanEx::construct_request_body(const AccountUnitOceanEx& unit,const  std::string& data,bool isget)
 {
     std::string pay_load = R"({"uid":")" + unit.api_key + R"(","data":")" + data + R"("})";
     std::string request_body = utils::crypto::jwt_create(pay_load,unit.secret_key);
     std::cout  << "[construct_request_body] (request_body)" << request_body << std::endl;
-    return "user_jwt:"+request_body;
+    return  isget ? "user_jwt="+request_body:R"({user_jwt:)"+request_body+"}";
 }
 
 

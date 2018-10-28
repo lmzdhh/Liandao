@@ -166,7 +166,7 @@ WC_NAMESPACE_START
 
             bool shouldRetry(Document& d);
 
-            std::string construct_request_body(const AccountUnitOceanEx& unit,const  std::string& data);
+            std::string construct_request_body(const AccountUnitOceanEx& unit,const  std::string& data,bool isget = true);
             std::string createInsertOrdertring(const char *code,
                                                const char *side, const char *type, double size, double price);
 
