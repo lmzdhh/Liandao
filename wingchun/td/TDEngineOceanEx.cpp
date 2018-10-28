@@ -472,7 +472,7 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
                                                                            errorId << " (errorMsg) " << errorMsg);
     } else  if(d.HasMember("code"))
     {
-	int code = d["code"].GetInt();
+        int code = d["code"].GetInt();
         if(code == 0)
         {
             /*
@@ -517,7 +517,7 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
             return;
 
         } else {
-            errorId = d["code"].GetInt();
+            errorId = code;
             if(d.HasMember("message") && d["message"].IsString())
             {
                 errorMsg = d["message"].GetString();
@@ -525,16 +525,16 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
             KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                                errorId << " (errorMsg) " << errorMsg);
         }
-    } else if (d.HasMember("code") && d["code"].IsNumber()) {
+    }
+    /*else if (d.HasMember("code") && d["code"].IsNumber()) {
         //send error, example: http timeout.
         errorId = d["code"].GetInt();
-        if(d.HasMember("message") && d["message"].IsString())
-        {
+        if (d.HasMember("message") && d["message"].IsString()) {
             errorMsg = d["message"].GetString();
         }
         KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (errorId)" <<
                                                           errorId << " (errorMsg) " << errorMsg);
-    }
+    }*/
 
     if(errorId != 0)
     {
@@ -770,26 +770,32 @@ void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
         }
         if(d.HasMember("code") && d["code"].GetInt() == 0)
         {
-            ResponsedOrderStatus responsedOrderStatus;
-            responsedOrderStatus.ticker = ticker;
-            responsedOrderStatus.averagePrice = std::round(std::stod(d["avg_price"].GetString()) * scale_offset);
-            responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
-            //报单价格条件
-            responsedOrderStatus.OrderPriceType = GetPriceType(d["ord_type"].GetString());
-            //买卖方向
-            responsedOrderStatus.Direction = GetDirection(d["side"].GetString());
-            //报单状态
-            responsedOrderStatus.OrderStatus = GetOrderStatus(d["state"].GetString());
-            responsedOrderStatus.price = std::round(std::stod(d["price"].GetString()) * scale_offset);
-            responsedOrderStatus.volume = std::round(std::stod(d["volume"].GetString()) * scale_offset);
-            //今成交数量
-            responsedOrderStatus.VolumeTraded = std::round(std::stod(d["executed_volume"].GetString()) * scale_offset);
-            responsedOrderStatus.openVolume = std::round(std::stod(d["remaining_volume"].GetString()) * scale_offset);
+            rapidjson::Value &dataArray = d["data"];
+            if(dataArray.IsArray() && dataArray.Size() > 0) {
+                rapidjson::Value &data = dataArray[0];
+                ResponsedOrderStatus responsedOrderStatus;
+                responsedOrderStatus.ticker = ticker;
+                responsedOrderStatus.averagePrice = std::round(std::stod(data["avg_price"].GetString()) * scale_offset);
+                responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
+                //报单价格条件
+                responsedOrderStatus.OrderPriceType = GetPriceType(data["ord_type"].GetString());
+                //买卖方向
+                responsedOrderStatus.Direction = GetDirection(data["side"].GetString());
+                //报单状态
+                responsedOrderStatus.OrderStatus = GetOrderStatus(data["state"].GetString());
+                responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
+                responsedOrderStatus.volume = std::round(std::stod(data["volume"].GetString()) * scale_offset);
+                //今成交数量
+                responsedOrderStatus.VolumeTraded = std::round(
+                        std::stod(data["executed_volume"].GetString()) * scale_offset);
+                responsedOrderStatus.openVolume = std::round(
+                        std::stod(data["remaining_volume"].GetString()) * scale_offset);
 
-            handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
+                handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
 
-            //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
-            remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
+                //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
+                remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
+            }
         } else {
             std::string errorMsg = "";
 
