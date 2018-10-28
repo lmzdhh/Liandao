@@ -964,7 +964,7 @@ std::string TDEngineOceanEx::construct_request_body(const AccountUnitOceanEx& un
     std::string pay_load = R"({"uid":")" + unit.api_key + R"(","data":")" + data + R"("})";
     std::string request_body = utils::crypto::jwt_create(pay_load,unit.secret_key);
     std::cout  << "[construct_request_body] (request_body)" << request_body << std::endl;
-    return  isget ? "user_jwt="+request_body:R"({user_jwt:)"+request_body+"}";
+    return  isget ? "user_jwt="+request_body:R"({"user_jwt":")"+request_body+"\"}";
 }
 
 
