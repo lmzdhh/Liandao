@@ -77,6 +77,7 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_BITMEX);
     loadJournalInfo(SOURCE_HITBTC);
     loadJournalInfo(SOURCE_OCEANEX);
+    loadJournalInfo(SOURCE_HUOBI);
 
     loadJournalInfo(0, getSystemJournalPair);
 
