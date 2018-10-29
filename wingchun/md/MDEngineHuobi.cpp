@@ -162,11 +162,10 @@ void MDEngineHuobi::createConnection()
     conn_info.path 	= m_path.c_str();
     conn_info.port = m_port;
     conn_info.protocol = m_protocol.c_str();
-    //conn_info.protocol = lwsProtocols[0].name;
     conn_info.host 	= conn_info.address;
     conn_info.origin = conn_info.address;
     conn_info.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-    KF_LOG_DEBUG(logger, "connect to "<<conn_info.address<<":"<<conn_info.port<<conn_info.path);
+    KF_LOG_DEBUG(logger, "connect to"<< conn_info.protocol<< conn_info.address<< ":"<< conn_info.port<< conn_info.path);
     m_lwsConnection = lws_client_connect_via_info(&conn_info);
     if(!m_lwsConnection)
     {
@@ -203,7 +202,9 @@ void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
     try
     {
         Document json;
-        json.Parse(LDUtils::gzip_decompress(std::string(data,len)).c_str());
+        auto dataJson = LDUtils::gzip_decompress(std::string(data,len));
+        json.Parse(dataJson.c_str());
+        KF_LOG_DEBUG(logger, "received data from huobi,{msg:"<< dataJson<< "}");
         if(json.HasParseError())
         {
             KF_LOG_DEBUG(logger, "received data from huobi failed,json parse error");
@@ -255,8 +256,8 @@ void MDEngineHuobi::onWrite(struct lws* conn)
         KF_LOG_DEBUG(logger, "subcribe ignore");
         return;
     }
-    KF_LOG_DEBUG(logger, "subcribe #" << m_subcribeIndex);
     auto symbol = m_subcribeJsons[m_subcribeIndex++];
+    KF_LOG_DEBUG(logger, "req subcribe " << symbol);
     sendMessage(std::move(symbol));
     if(m_subcribeIndex >= m_subcribeJsons.size())
     {
@@ -312,7 +313,9 @@ void MDEngineHuobi::onWrite(struct lws* conn)
      {
          //ignore failed subcribe
          KF_LOG_INFO(logger, "subscribe sysmbol error");
+         return;
      }
+     KF_LOG_INFO(logger, "subscribe {sysmbol:"<< json["subbed"].GetString()<<"}");
  }
 
  void MDEngineHuobi::parseSubscribeData(const rapidjson::Document& json)
@@ -409,20 +412,12 @@ void MDEngineHuobi::onWrite(struct lws* conn)
             }
             break;
         }
-        case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
-        {
-            break;
-        }
         case LWS_CALLBACK_CLIENT_WRITEABLE:
         {
             if(MDEngineHuobi::m_instance)
             {
                 MDEngineHuobi::m_instance->onWrite(conn);
             }
-            break;
-        }
-        case LWS_CALLBACK_TIMER:
-        {
             break;
         }
         case LWS_CALLBACK_CLOSED:
