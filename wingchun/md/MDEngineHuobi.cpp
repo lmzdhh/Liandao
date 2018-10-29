@@ -87,8 +87,8 @@ std::string MDEngineHuobi::genDepthString(const std::string& symbol)
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartObject();
     writer.Key("sub");
-    std::string sub_value ("market");
-    sub_value += symbol+"depth.step0";
+    std::string sub_value ("market.");
+    sub_value += symbol+".depth.step0";
     writer.String(sub_value.c_str());
     writer.Key("id");
     writer.String(std::to_string(m_id++).c_str());
@@ -102,8 +102,8 @@ std::string MDEngineHuobi::genTradeString(const std::string& symbol)
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartObject();
     writer.Key("sub");
-    std::string sub_value("market");
-    sub_value += symbol+"trade.detail";
+    std::string sub_value("market.");
+    sub_value += symbol+".trade.detail";
     writer.String(sub_value.c_str());
     writer.Key("id");
     writer.String(std::to_string(m_id++).c_str());
@@ -193,7 +193,7 @@ void MDEngineHuobi::lwsEventLoop()
 
 void MDEngineHuobi::sendMessage(std::string&& msg)
 {
-    lws_write(m_lwsConnection, (unsigned char*)(msg.data() + LWS_PRE), msg.size(), LWS_WRITE_TEXT);
+    lws_write(m_lwsConnection, (unsigned char*)(msg.data() + LWS_PRE), msg.size()-LWS_PRE, LWS_WRITE_TEXT);
 }
 
 void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
