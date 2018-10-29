@@ -201,6 +201,10 @@ void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
     KF_LOG_DEBUG(logger, "received data from huobi start");
     try
     {
+        if(!isRunning)
+        {
+            return;
+        }
         Document json;
         auto dataJson = LDUtils::gzip_decompress(std::string(data,len));
         json.Parse(dataJson.c_str());
@@ -210,7 +214,7 @@ void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
             KF_LOG_DEBUG(logger, "received data from huobi failed,json parse error");
             return;
         }
-        if(json.HasMember("pong"))
+        if(json.HasMember("ping"))
         {
             parsePingMsg(json);
         }
@@ -238,8 +242,12 @@ void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
 
 void MDEngineHuobi::onClose(struct lws* conn)
 {
-    reset();
-    login(0);
+    if(isRunning)
+    {
+        reset();
+        login(0);
+    }
+
 }
 void MDEngineHuobi::reset()
 {
@@ -250,6 +258,10 @@ void MDEngineHuobi::reset()
 
 void MDEngineHuobi::onWrite(struct lws* conn)
 {
+    if(!isRunning)
+    {
+        return;
+    }
     KF_LOG_DEBUG(logger, "subcribe start");
     if (m_subcribeJsons.empty() || m_subcribeIndex == -1)
     {
