@@ -669,7 +669,7 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
     } else {
         //addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
 
-
+        addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
 
         //TODO:   onRtn order/on rtn trade
 

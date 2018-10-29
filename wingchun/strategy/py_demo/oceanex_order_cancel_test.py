@@ -91,9 +91,9 @@ def on_tick(context, market_data, source, rcv_time):
 def on_rtn_order(context, rtn_order, order_id, source, rcv_time):
     if order_id == context.order_rid and context.cancel_id < 0 and rtn_order.OrderStatus != 'a':
         context.cancel_id = context.cancel_order(source=source, order_id=order_id)
-        print 'cancel (order_id)', order_id, ' (request_id)', context.cancel_id
+        print 'rtn order:cancel (order_id)', order_id, ' (request_id)', context.cancel_id
     if order_id == context.order_rid and rtn_order.OrderStatus == '5':
-        print 'cancel successfully!'
+        print 'rtn order:cancel successfully!'
         context.stop()
 
 def on_error(context, error_id, error_msg, order_id, source, rcv_time):
