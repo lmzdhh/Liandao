@@ -51,8 +51,10 @@ void MDEngineHuobi::load(const json& config)
     try
     {
         m_priceBookNum = config["book_depth_count"].get<int>();
-        m_uri = config["uri"].get<std::string>();
-        KF_LOG_INFO(logger, "huobi uri is "<< m_uri);
+        m_protocol = config["protocol"].get<std::string>();
+        m_ip = config["ip"].get<std::string>();
+        m_port = config["port"].get<int>();
+        m_path = config["path"].get<std::string>();
         m_whiteList.ReadWhiteLists(config, "whiteLists");
         m_whiteList.Debug_print();
         genSubscribeString();
@@ -156,12 +158,13 @@ void MDEngineHuobi::createConnection()
     struct lws_client_connect_info conn_info = { 0 };
     //parse uri
     conn_info.context 	= m_lwsContext;
-    conn_info.address = "wss://api.huobi.pro";
-    conn_info.path 	= "/ws";
-    conn_info.port = 443;
+    conn_info.address = m_ip.c_str();
+    conn_info.path 	= m_path.c_str();
+    conn_info.port = m_port;
+    conn_info.protocol = m_protocol.c_str();
+    //conn_info.protocol = lwsProtocols[0].name;
     conn_info.host 	= conn_info.address;
     conn_info.origin = conn_info.address;
-    conn_info.protocol = lwsProtocols[0].name;
     conn_info.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
     KF_LOG_DEBUG(logger, "connect to "<<conn_info.address<<":"<<conn_info.port<<conn_info.path);
     m_lwsConnection = lws_client_connect_via_info(&conn_info);
@@ -398,23 +401,11 @@ void MDEngineHuobi::onWrite(struct lws* conn)
             lws_callback_on_writable( conn );
             break;
         }
-        case LWS_CALLBACK_PROTOCOL_INIT:
-        {
-            break;
-        }
         case LWS_CALLBACK_CLIENT_RECEIVE:
         {
             if(MDEngineHuobi::m_instance)
             {
                 MDEngineHuobi::m_instance->onMessage(conn, (char*)data, len);
-            }
-            break;
-        }
-        case LWS_CALLBACK_CLIENT_CLOSED:
-        {
-            if(MDEngineHuobi::m_instance)
-            {
-                MDEngineHuobi::m_instance->onClose(conn);
             }
             break;
         }

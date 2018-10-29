@@ -121,7 +121,10 @@
     }
     "huobi":
         {
-          "uri":"wss://api.huobi.pro/ws"
+          "protocol":"wss://",
+          "ip":"api.huobi.pro",
+          "port":443,
+          "path":"/ws",
           "book_depth_count": 5,
           "trade_count": 10,
           "whiteLists": {
