@@ -1157,7 +1157,10 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                         addPendingSendMsg(unit, cancelOrderJsonString);
                         KF_LOG_DEBUG(logger, "TDEngineBitfinex::onNotification: pending_and_send  [req_order_action] createCancelOrderIdJsonString (remoteOrderId) " << remoteOrderId);
                         RemoteOrderIDorderActionData.insert(std::pair<int64_t, OrderActionData>(remoteOrderId, cache));
+                        //emit e event for websocket callback
+                        lws_callback_on_writable(unit.websocketConn);
                     }
+                    pendingOrderActionData.erase(cid);
                 }
 
                 if("oc-req" == orderType) {
