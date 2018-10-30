@@ -72,7 +72,7 @@ void MDEngineHuobi::genSubscribeString()
     for(const auto& var : symbol_map)
     {
         m_subcribeJsons.push_back(genDepthString(var.second));
-        m_subcribeJsons.push_back(genDepthString(var.second));
+        m_subcribeJsons.push_back(genTradeString(var.second));
     }
     if(m_subcribeJsons.empty())
     {
@@ -131,7 +131,7 @@ void MDEngineHuobi::connect(long)
 
 void MDEngineHuobi::login(long)
 {
-    KF_LOG_INFO(logger, "create context start");
+    KF_LOG_DEBUG(logger, "create context start");
     m_instance = this;
     struct lws_context_creation_info creation_info;
     memset(&creation_info, 0x00, sizeof(creation_info));
@@ -154,7 +154,7 @@ void MDEngineHuobi::login(long)
 
 void MDEngineHuobi::createConnection()
 {
-    KF_LOG_INFO(logger, "create connect start");
+    KF_LOG_DEBUG(logger, "create connect start");
     struct lws_client_connect_info conn_info = { 0 };
     //parse uri
     conn_info.context 	= m_lwsContext;
@@ -165,14 +165,13 @@ void MDEngineHuobi::createConnection()
     conn_info.host 	= conn_info.address;
     conn_info.origin = conn_info.address;
     conn_info.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-    KF_LOG_DEBUG(logger, "connect to"<< conn_info.protocol<< conn_info.address<< ":"<< conn_info.port<< conn_info.path);
     m_lwsConnection = lws_client_connect_via_info(&conn_info);
     if(!m_lwsConnection)
     {
-        KF_LOG_INFO(logger, " create connect error");
+        KF_LOG_INFO(logger, "create connect error");
         return ;
     }
-    KF_LOG_INFO(logger, "connect server success");
+    KF_LOG_INFO(logger, "connect to"<< conn_info.protocol<< conn_info.address<< ":"<< conn_info.port<< conn_info.path <<" success");
     m_logged_in = true;
 }
 
@@ -211,7 +210,7 @@ void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
         KF_LOG_DEBUG(logger, "received data from huobi,{msg:"<< dataJson<< "}");
         if(json.HasParseError())
         {
-            KF_LOG_DEBUG(logger, "received data from huobi failed,json parse error");
+            KF_LOG_ERROR(logger, "received data from huobi failed,json parse error");
             return;
         }
         if(json.HasMember("ping"))
@@ -247,6 +246,7 @@ void MDEngineHuobi::onClose(struct lws* conn)
         reset();
         login(0);
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
 }
 void MDEngineHuobi::reset()
@@ -327,7 +327,7 @@ void MDEngineHuobi::onWrite(struct lws* conn)
          KF_LOG_INFO(logger, "subscribe sysmbol error");
          return;
      }
-     KF_LOG_INFO(logger, "subscribe {sysmbol:"<< json["subbed"].GetString()<<"}");
+     KF_LOG_DEBUG(logger, "subscribe {sysmbol:"<< json["subbed"].GetString()<<"}");
  }
 
  void MDEngineHuobi::parseSubscribeData(const rapidjson::Document& json)
@@ -336,7 +336,7 @@ void MDEngineHuobi::onWrite(struct lws* conn)
      auto ch = LDUtils::split(json["ch"].GetString(), ".");
      if(ch.size() != 4)
      {
-         KF_LOG_DEBUG(logger, "parseSubscribeData [ch] split error");
+         KF_LOG_INFO(logger, "parseSubscribeData [ch] split error");
         return;
      }
      auto instrument = m_whiteList.GetKeyByValue(ch[1]);
