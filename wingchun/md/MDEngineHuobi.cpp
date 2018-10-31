@@ -387,14 +387,15 @@ void MDEngineHuobi::onWrite(struct lws* conn)
      try
      {
          KF_LOG_DEBUG(logger, "doTradeData start");
-         if(json["data"].Empty())
+         auto& data = json["tick"]["data"];
+         if(data.Empty())
          {
              return;
          }
          LFL2TradeField trade{0};
          strncpy(trade.ExchangeID, "huobi", std::min((int)sizeof(trade.ExchangeID)-1, 5));
          strncpy(trade.InstrumentID, instrument.c_str(),std::min(sizeof(trade.InstrumentID)-1, instrument.size()));
-         auto& first_data = json["data"][0];
+         auto& first_data = data[0];
          trade.Volume =  std::round(first_data["amount"].GetDouble() * SCALE_OFFSET);
          trade.Price  =  std::round(first_data["price"].GetDouble() * SCALE_OFFSET);
          std::string side = first_data["direction"].GetString();
