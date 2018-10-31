@@ -1225,7 +1225,8 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
         orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
         orderStatusIterator->averagePrice = newAveragePrice;
 
-    } else if(responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded))
+    }
+    else if(responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded)
     {
 
         //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
