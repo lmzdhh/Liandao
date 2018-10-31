@@ -198,7 +198,6 @@ void MDEngineHuobi::sendMessage(std::string&& msg)
 
 void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
 {
-    KF_LOG_DEBUG(logger, "received data from huobi start");
     try
     {
         if(!isRunning)
@@ -208,7 +207,6 @@ void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
         Document json;
         auto dataJson = LDUtils::gzip_decompress(std::string(data,len));
         json.Parse(dataJson.c_str());
-        KF_LOG_DEBUG(logger, "received data from huobi,{msg:"<< dataJson<< "}");
         if(json.HasParseError())
         {
             KF_LOG_ERROR(logger, "received data from huobi failed,json parse error");
@@ -237,7 +235,6 @@ void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
     {
         KF_LOG_ERROR(logger, "received data from huobi system exception");
     }
-    KF_LOG_DEBUG(logger, "received data from huobi end");
 }
 
 void MDEngineHuobi::onClose(struct lws* conn)
@@ -291,7 +288,6 @@ void MDEngineHuobi::onWrite(struct lws* conn)
      try
      {
          auto pong = genPongString(std::to_string(json["ping"].GetInt64()));
-         KF_LOG_DEBUG(logger, "send pong msg to server,{ pong:" << pong << " }");
          sendMessage(std::move(pong));
      }
      catch (const std::exception& e)
@@ -328,12 +324,11 @@ void MDEngineHuobi::onWrite(struct lws* conn)
          KF_LOG_INFO(logger, "subscribe sysmbol error");
          return;
      }
-     KF_LOG_DEBUG(logger, "subscribe {sysmbol:"<< json["subbed"].GetString()<<"}");
+     KF_LOG_INFO(logger, "subscribe {sysmbol:"<< json["subbed"].GetString()<<"}");
  }
 
  void MDEngineHuobi::parseSubscribeData(const rapidjson::Document& json)
  {
-     KF_LOG_DEBUG(logger, "parseSubscribeData start");
      auto ch = LDUtils::split(json["ch"].GetString(), ".");
      if(ch.size() != 4)
      {
@@ -362,7 +357,6 @@ void MDEngineHuobi::onWrite(struct lws* conn)
  {
     try
     {
-        KF_LOG_DEBUG(logger, "doDepthData start");
         auto& bids = json["tick"]["bids"];
         auto& asks = json["tick"]["asks"];
         LFPriceBook20Field priceBook {0};
@@ -379,14 +373,12 @@ void MDEngineHuobi::onWrite(struct lws* conn)
     {
         KF_LOG_INFO(logger, "doDepthData,{error:"<< e.what()<<"}");
     }
-     KF_LOG_DEBUG(logger, "doDepthData end");
  }
 
  void MDEngineHuobi::doTradeData(const rapidjson::Document& json, const std::string& instrument)
  {
      try
      {
-         KF_LOG_DEBUG(logger, "doTradeData start");
          auto& data = json["tick"]["data"];
          if(data.Empty())
          {
@@ -406,7 +398,6 @@ void MDEngineHuobi::onWrite(struct lws* conn)
      {
          KF_LOG_INFO(logger, "doTradeData,{error:"<< e.what()<<"}");
      }
-     KF_LOG_DEBUG(logger, "doTradeData end");
  }
 
  int lwsEventCallback( struct lws *conn, enum lws_callback_reasons reason, void *, void *data , size_t len )
