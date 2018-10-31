@@ -4,7 +4,6 @@
 
 #ifndef KUNGFU_PRICEBOOK20ASSEMBLER_H
 #define KUNGFU_PRICEBOOK20ASSEMBLER_H
-
 #include <iostream>
 #include <algorithm>
 #include <map>
