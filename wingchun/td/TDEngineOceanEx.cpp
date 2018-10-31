@@ -1225,14 +1225,20 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
         orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
         orderStatusIterator->averagePrice = newAveragePrice;
 
-    } else if(orderStatusIterator->OrderStatus != responsedOrderStatus.OrderStatus ||
-              (LF_CHAR_PartTradedQueueing == responsedOrderStatus.OrderStatus
-               && responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded))
+    } else if(responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded))
     {
+
         //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
         LFRtnOrderField rtn_order;
         memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-        rtn_order.OrderStatus = responsedOrderStatus.OrderStatus;
+
+        KF_LOG_INFO(logger, "[handlerResponseOrderStatus] VolumeTraded Change  LastOrderPsp:" << orderStatusIterator->VolumeTraded << ", NewOrderRsp: " << responsedOrderStatus.VolumeTraded  <<
+                                                        " NewOrderRsp.Status " << responsedOrderStatus.OrderStatus);
+        if(responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched) {
+            rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
+        } else{
+            rtn_order.OrderStatus = responsedOrderStatus.OrderStatus;
+        }
         rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
 
         //first send onRtnOrder about the status change or VolumeTraded change
