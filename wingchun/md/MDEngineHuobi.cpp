@@ -171,7 +171,7 @@ void MDEngineHuobi::createConnection()
         KF_LOG_INFO(logger, "create connect error");
         return ;
     }
-    KF_LOG_INFO(logger, "connect to"<< conn_info.protocol<< conn_info.address<< ":"<< conn_info.port<< conn_info.path <<" success");
+    KF_LOG_INFO(logger, "connect to "<< conn_info.protocol<< conn_info.address<< ":"<< conn_info.port<< conn_info.path <<" success");
     m_logged_in = true;
 }
 
@@ -192,7 +192,8 @@ void MDEngineHuobi::lwsEventLoop()
 
 void MDEngineHuobi::sendMessage(std::string&& msg)
 {
-    lws_write(m_lwsConnection, (unsigned char*)(msg.data() + LWS_PRE), msg.size()-LWS_PRE, LWS_WRITE_TEXT);
+    msg.insert(msg.begin(),  LWS_PRE, 0x00);
+    lws_write(m_lwsConnection, (uint8_t*)(msg.data() + LWS_PRE), msg.size() - LWS_PRE, LWS_WRITE_TEXT);
 }
 
 void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
