@@ -61,9 +61,9 @@ private:
     std::vector<std::string> subscribeJsonStrings;
     // number of channels have been subscribed to
     int num_subscribed = 0;
-  
+
     PriceBook20Assembler priceBook;
-  
+
     // the id on an orderbook entry is a composite of price and symbol, and is
     // always unique for any given price level. for update and delete actions
     // received message has id but not price. so id/price pair is saved for lookup
@@ -74,14 +74,18 @@ private:
     // serialize json to string to append to websocket request
     void createSubscribeJsonStrings();
     std::string createOrderbookJsonString(std::string symbol);
+    std::string createQuoteBinsJsonString(std::string symbol);
     std::string createTradeJsonString(std::string symbol);
+    std::string createTradeBinsJsonString(std::string symbol);
     void debugPrint(std::vector<std::string> &jsons);
-  
+
     // enter event loop and close any active websocket connections after done
     void enterEventLoop();
-    
+
     void processOrderbookData(Document& json);
     void processTradingData(Document& json);
+    void processQuoteData(Document& json);
+    void processTradeBinsData(Document& json);
 };
 
 DECLARE_PTR(MDEngineBitmex);

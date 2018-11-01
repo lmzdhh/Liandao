@@ -243,6 +243,7 @@ struct LFBarMarketDataField
 {
 	char_9   	TradingDay;            //交易日
 	char_31  	InstrumentID;          //合约代码
+        char_9   	ExchangeID;
 	int64_t   	UpperLimitPrice;       //涨停板价
 	int64_t   	LowerLimitPrice;       //跌停板价
 	char_13  	StartUpdateTime;       //首tick修改时间
@@ -256,6 +257,8 @@ struct LFBarMarketDataField
 	int64_t   	High;                  //高
 	uint64_t   	Volume;                //区间交易量
 	uint64_t   	StartVolume;           //初始总交易量
+        int64_t         BestBidPrice;
+        int64_t         BestAskPrice;
 };
 
 struct LFQryPositionField

@@ -146,7 +146,35 @@ void PriceBook20Assembler::UpdateBidPrice(std::string ticker, int64_t price, uin
     }
 }
 
+int64_t PriceBook20Assembler::GetBestAskPrice(std::string ticker)
+{
+    auto iter = tickerPriceMap.find(ticker);
+    if(iter != tickerPriceMap.end()) {
+        std::vector<PriceAndVolume>* asksPriceAndVolumes = iter->second->asksPriceAndVolumes;
+        if(!asksPriceAndVolumes->empty())
+	{
+	    PriceAndVolume& bestAsk = asksPriceAndVolumes->front();
+	    return bestAsk.price;
+	}
+    }
 
+    return -1;
+}
+
+int64_t PriceBook20Assembler::GetBestBidPrice(std::string ticker)
+{
+    auto iter = tickerPriceMap.find(ticker);
+    if(iter != tickerPriceMap.end()) {
+        std::vector<PriceAndVolume>* bidsPriceAndVolumes = iter->second->bidsPriceAndVolumes;
+        if(!bidsPriceAndVolumes->empty())
+	{
+	    PriceAndVolume& bestBid = bidsPriceAndVolumes->front();
+	    return bestBid.price;
+	}
+    }
+
+    return -1;
+}
 
 bool PriceBook20Assembler::Assembler(std::string ticker, LFPriceBook20Field &md)
 {
