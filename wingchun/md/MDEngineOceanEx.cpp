@@ -108,6 +108,7 @@ void MDEngineOceanEx::set_reader_thread()
     rest_order_book_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineOceanEx::loopOrderBook, this)));
 
     rest_trade_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineOceanEx::loopTrade, this)));
+
 }
 
 void MDEngineOceanEx::login(long timeout_nsec)
@@ -131,6 +132,141 @@ void MDEngineOceanEx::subscribeMarketData(const vector<string>& instruments, con
    KF_LOG_INFO(logger, "MDEngineOceanEx::subscribeMarketData:");
 }
 
+void MDEngineOceanEx::loopMarketData()
+{
+    while(isRunning)
+    {
+        int count = coinpairs_used_in_rest.size();
+        KF_LOG_INFO(logger, "[loopMarketData] coinpairs_used_in_rest (count) " << count);
+
+        std::string  strMarkets="";
+        for (int i = 0; i < count;i++) {
+            KF_LOG_INFO(logger, "[loopOrderBook] coinpairs_used_in_rest: " << coinpairs_used_in_rest[i]);
+
+            std::string symbol = coinpairs_used_in_rest[i];
+            std::string base_quote = symbol;
+            std::string ticker = coinPairWhiteList.GetKeyByValue(base_quote);
+            if (ticker.length() == 0) {
+                KF_LOG_INFO(logger,
+                            "[loopMarketData]  not in WhiteList , ignore it:" << base_quote);
+                continue;
+            }
+            KF_LOG_INFO(logger, "[loopMarketData] " << "(ticker) " << ticker);
+            strMarkets+=symbol+',';
+        }
+        if(!strMarkets.empty()) {
+            strMarkets.pop_back();
+            std::string queryString = "?markets=[" + strMarkets + "]";
+
+            string url = "https://api.oceanex.cc/v1/tickers_multi" + queryString;
+            const auto response = Get(Url{url}, cpr::VerifySsl{false},
+                                      Header{{"Content-Type", "application/json"}},
+                                      Timeout{10000});
+
+            KF_LOG_DEBUG(logger,
+                         "[loopMarketData]  (url) " << url << " (response.status_code) " << response.status_code <<
+                                                    " (response.error.message) " << response.error.message <<
+                                                    " (response.text) " << response.text.c_str());
+
+            Document doc;
+            doc.Parse(response.text.c_str());
+
+/*
+
+ {
+	"code": 0,
+	"message": "Operation is successful",
+	"data": {
+		"timestamp": 1538985260,
+		"asks": [
+			["1039.21645069", "1.06722078"],
+			["1038.40778933", "0.07441827"],
+			["1037.95664878", "0.44592126"],
+			["1037.66232086", "0.05652834"],
+			["1037.61225818", "0.075671"],
+			["1037.46313803", "0.40483944"],
+			["1037.4623265", "0.53098531"],
+			["1037.37284386", "1.8986311"],
+			["1037.0162613", "1.41806928"],
+			["1036.81484619", "0.20376681"],
+			["1036.67046166", "0.25264251"],
+			["1036.41471872", "0.23540677"],
+			["1036.21483639", "1.01314363"],
+			["1036.19212007", "1.73290909"],
+			["1035.66055306", "0.06383132"],
+			["1035.54764438", "0.36198474"],
+			["1035.40553884", "0.86875877"],
+			["1035.2106592", "0.46704188"],
+			["1034.93944458", "0.53006703"],
+			["1034.78966391", "0.08469086"],
+			["1034.59060527", "2.0"],
+			["1034.45103684", "0.07637663"],
+			["1034.15651499", "0.12563001"],
+			["1033.84093451", "0.97796759"],
+			["1033.81357133", "0.67432327"],
+			["1033.7873936", "0.33818252"],
+			["1033.74901591", "0.10168555"],
+			["1033.62780622", "0.57090756"],
+			["1033.32719203", "1.7228337"],
+			["1033.21302309", "0.03511597"],
+			["1033.19812427", "0.42062344"],
+			["1032.77195358", "0.63407398"],
+			["1032.61424164", "0.99695279"],
+			["1031.87231685", "0.78713849"],
+			["1031.78951854", "0.07440293"],
+			["1031.63293789", "0.50278902"],
+			["1031.01599648", "0.90575449"],
+			["1030.84717524", "0.31659817"],
+			["1030.83407423", "0.39996163"],
+			["1030.74735858", "0.14122479"],
+			["1030.6173438", "1.3640138"],
+			["1030.11769821", "0.57926346"],
+			["1030.1025338", "0.04923149"],
+			["1030.09962212", "0.26459943"],
+			["1029.77935501", "0.18670439"],
+			["1029.43748501", "2.0"],
+			["1029.41531401", "0.09274924"],
+			["1029.30796584", "0.13145998"],
+			["981.6311429", "0.13013964"]
+		],
+		"bids": []
+	}
+}
+
+ * */
+            if (doc.HasParseError() || !doc.HasMember("data")) {
+                continue;
+            } else {
+                const auto &d = doc["data"];
+                if (d.IsArray() && d.Size() > 0) {
+                    auto size = (int) d.Size();
+                    for (int i = 0; i < size; ++i) {
+                        LFMarketDataField md;
+                        memset(&md, 0, sizeof(LFMarketDataField));
+                        auto &data = d.GetArray()[i];
+                        auto &ticker = data["ticker"];
+                        md.LastPrice = stod(ticker["last"].GetString()) * scale_offset;
+                        md.Volume = stod(ticker["vol"].GetString()) * scale_offset;
+                        md.BidPrice1 = stod(ticker["buy"].GetString()) * scale_offset;
+                        md.AskPrice1 = stod(ticker["sell"].GetString()) * scale_offset;
+                        md.UpperLimitPrice = stod(ticker["high"].GetString()) * scale_offset;
+                        md.LowerLimitPrice = stod(ticker["high"].GetString()) * scale_offset;
+                        //md.Ti
+                        strcpy(md.InstrumentID, data["market"].GetString());
+                        strcpy(md.ExchangeID, "oceanex");
+                        //KF_LOG_DEBUG(logger,
+                        //             "[loopMarketData]  (on_market_data) " << url << " (response.status_code) " << response.status_code <<
+                        //                                        " (response.error.message) " << response.error.message <<
+                        //                                       " (response.text) " << response.text.c_str());
+                        on_market_data(&md);
+                    }
+                }
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(rest_get_interval_ms));
+    }
+}
 
 void MDEngineOceanEx::loopOrderBook()
 {
@@ -148,11 +284,11 @@ void MDEngineOceanEx::loopOrderBook()
             std::string ticker = coinPairWhiteList.GetKeyByValue(base_quote);
             if (ticker.length() == 0) {
                 KF_LOG_INFO(logger,
-                            "MDEngineOceanEx::loopTrade: not in WhiteList , ignore it:" << base_quote);
+                            "MDEngineOceanEx::loopOrderBook: not in WhiteList , ignore it:" << base_quote);
                 continue;
             }
 
-            KF_LOG_INFO(logger, "MDEngineOceanEx::loopTrade:" << "(ticker) " << ticker);
+            KF_LOG_INFO(logger, "MDEngineOceanEx::loopOrderBook:" << "(ticker) " << ticker);
 
 
             int limit = 100;
@@ -287,6 +423,16 @@ void MDEngineOceanEx::loopOrderBook()
                     strcpy(md.ExchangeID, "oceanex");
 
                     on_price_book_update(&md);
+                    //
+                    LFMarketDataField marketdata;
+                    memset(&marketdata, 0, sizeof(LFMarketDataField));
+                    marketdata.BidPrice1 = md.BidLevels[0].price;
+                    marketdata.BidVolume1 = md.BidLevels[0].volume;
+                    marketdata.AskPrice1 = md.AskLevels[0].price;
+                    marketdata.AskVolume1 = md.AskLevels[0].volume;
+                    strcpy(md.InstrumentID, ticker.c_str());
+                    strcpy(md.ExchangeID, "oceanex");
+                    on_market_data(&marketdata);
                 }
             }
         }

@@ -35,7 +35,7 @@ public:
 private:
     void loopOrderBook();
     void loopTrade();
-
+    void loopMarketData();
     virtual void set_reader_thread() override;
 
     //从白名单的策略定义中提取出币种的名称
