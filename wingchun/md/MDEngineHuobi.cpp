@@ -247,13 +247,16 @@ void MDEngineHuobi::onClose(struct lws* conn)
         reset();
         login(0);
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    if(!m_logged_in)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    }
+
 
 }
 void MDEngineHuobi::reset()
 {
-    KF_LOG_DEBUG(logger, "reset");
-    m_logged_in = false;
+    logout();
     m_subcribeIndex = 0;
 }
 
@@ -363,15 +366,40 @@ void MDEngineHuobi::onWrite(struct lws* conn)
     try
     {
         KF_LOG_DEBUG(logger, "doDepthData start");
-        auto& bids = json["tick"]["bids"];
-        auto& asks = json["tick"]["asks"];
+        if (!json.HasMember("tick"))
+        {
+            return;
+        }
+        auto& tick = json["tick"];
+        if (!tick.HasMember("bids"))
+        {
+            return;
+        }
+        auto& bids = tick["bids"];
+
+        if (!tick.HasMember("asks"))
+        {
+            return;
+        }
+        auto& asks = tick["asks"];
         LFPriceBook20Field priceBook {0};
         strncpy(priceBook.ExchangeID, "huobi", std::min<size_t>(sizeof(priceBook.ExchangeID)-1, 5));
         strncpy(priceBook.InstrumentID, instrument.c_str(),std::min(sizeof(priceBook.InstrumentID)-1, instrument.size()));
-        for(auto i = 0; i < std::min((int)bids.Size(),m_priceBookNum); ++i)
+        if(bids.IsArray())
         {
-            priceBook.AskLevels[i].price = std::round(bids[i][0].GetDouble() * SCALE_OFFSET);
-            priceBook.AskLevels[i].volume = std::round(bids[i][1].GetDouble() * SCALE_OFFSET);
+            for(auto i = 0; i < std::min((int)bids.Size(),m_priceBookNum); ++i)
+            {
+                priceBook.BidLevels[i].price = std::round(bids[i][0].GetDouble() * SCALE_OFFSET);
+                priceBook.BidLevels[i].volume = std::round(bids[i][1].GetDouble() * SCALE_OFFSET);
+            }
+        }
+        if (asks.IsArray())
+        {
+            for(auto i = 0; i < std::min((int)asks.Size(),m_priceBookNum); ++i)
+            {
+                priceBook.AskLevels[i].price = std::round(asks[i][0].GetDouble() * SCALE_OFFSET);
+                priceBook.AskLevels[i].volume = std::round(asks[i][1].GetDouble() * SCALE_OFFSET);
+            }
         }
         on_price_book_update(&priceBook);
     }
@@ -387,7 +415,16 @@ void MDEngineHuobi::onWrite(struct lws* conn)
      try
      {
          KF_LOG_DEBUG(logger, "doTradeData start");
-         auto& data = json["tick"]["data"];
+         if (!json.HasMember("tick"))
+         {
+             return;
+         }
+         auto& tick = json["tick"];
+         if (!tick.HasMember("data"))
+         {
+             return;
+         }
+         auto& data = tick["data"];
          if(data.Empty())
          {
              return;
@@ -434,6 +471,7 @@ void MDEngineHuobi::onWrite(struct lws* conn)
             }
             break;
         }
+        case LWS_CALLBACK_WSI_DESTROY:
         case LWS_CALLBACK_CLOSED:
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
