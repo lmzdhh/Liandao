@@ -113,9 +113,12 @@
       "trade_count": 10,
       "whiteLists": {
         "strategy_coinpair(base_quote)": "exchange_coinpair",
-        "btc_usd": "XBTUSD",
-        "btc_u18": "XBTU18",
-        "eth_u18": "ETHU18"
+        "btc_usdt": "btcusdt",
+        "eth_usdt": "ethusdt",
+        "vet_usdt": "vetusdt",
+        "eth_btc": "ethbtc",
+        "vet_btc": "vetbtc",
+        "vet_eth": "veteth"
       },
       "rest_get_interval_ms": 500
     }
@@ -479,12 +482,12 @@
               "baseUrl": "https://api.oceanex.cc/v1",
               "whiteLists": {
                 "strategy_coinpair(base_quote)": "exchange_coinpair",
-                "eth_btc": "tETHBTC",
-                "bch_btc": "tBCHBTC",
-                "ltc_btc": "tLTCBTC",
-                "bch_eth": "tBCHETH",
-                "eth_btc": "tETHBTC",
-                "ltc_eth": "tLTCETH"
+                 "btc_usdt": "btcusdt",
+                 "eth_usdt": "ethusdt",
+                 "vet_usdt": "vetusdt",
+                 "eth_btc": "ethbtc",
+                 "vet_btc": "vetbtc",
+                 "vet_eth": "veteth"
               },
               "positionWhiteLists":{
                               "ETC": "ETC",
