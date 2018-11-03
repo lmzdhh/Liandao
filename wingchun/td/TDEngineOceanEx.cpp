@@ -1134,7 +1134,7 @@ void TDEngineOceanEx::query_order(AccountUnitOceanEx& unit, std::string code, st
 
 void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
 {
-    if( responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus && responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded)
+    if( responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus && responsedOrderStatus.VolumeTraded == orderStatusIterator->VolumeTraded)
     {//no change
         return;
     }
