@@ -508,7 +508,7 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
 
 
 
-            char noneStatus = '\0';
+            char noneStatus = LF_CHAR_Unknown;
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
 
             //success, only record raw data
@@ -1134,6 +1134,10 @@ void TDEngineOceanEx::query_order(AccountUnitOceanEx& unit, std::string code, st
 
 void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
 {
+    if( responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus && responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded)
+    {//no change
+        return;
+    }
     int64_t newAveragePrice = responsedOrderStatus.averagePrice;
     //cancel 需要特殊处理
     if(LF_CHAR_Canceled == responsedOrderStatus.OrderStatus)  {
@@ -1226,16 +1230,15 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
         orderStatusIterator->averagePrice = newAveragePrice;
 
     }
-    else if(responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded)
+    else
     {
-
         //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
         LFRtnOrderField rtn_order;
         memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
         KF_LOG_INFO(logger, "[handlerResponseOrderStatus] VolumeTraded Change  LastOrderPsp:" << orderStatusIterator->VolumeTraded << ", NewOrderRsp: " << responsedOrderStatus.VolumeTraded  <<
                                                         " NewOrderRsp.Status " << responsedOrderStatus.OrderStatus);
-        if(responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched) {
+        if(responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched && responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded) {
             rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
         } else{
             rtn_order.OrderStatus = responsedOrderStatus.OrderStatus;
