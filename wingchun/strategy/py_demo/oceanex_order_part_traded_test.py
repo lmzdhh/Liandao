@@ -22,7 +22,7 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 
 def initialize(context):
     context.add_md(source=SOURCE.OCEANEX)
-    context.ticker = 'oce_vet'
+    context.ticker = 'eth_btc'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
@@ -30,6 +30,7 @@ def initialize(context):
     context.cancel_id = -1
     context.add_td(source=SOURCE.OCEANEX)
     context.subscribe(tickers=[context.ticker], source=SOURCE.OCEANEX)
+    context.handle_tick = True
 
 def on_pos(context, pos_handler, request_id, source, rcv_time):
     print("on_pos,", pos_handler, request_id, source, rcv_time)
@@ -52,29 +53,34 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
 
 
 def on_tick(context, market_data, source, rcv_time):
-    print('market_data', market_data)
-    if market_data.InstrumentID == context.ticker:
+    #print('market_data',market_data)
+    #print('instrument:',market_data.InstrumentID)
+    #print('ticker:',context.ticker)
+    #
+    if market_data.InstrumentID == context.ticker and context.handle_tick:
         print("context.insert_limit_order ")
         context.order_rid = context.insert_limit_order(source=SOURCE.OCEANEX,
                                                        ticker=context.ticker,
                                                        price=market_data.AskPrice1,
                                                        exchange_id=context.exchange_id,
-                                                       volume=market_data.AskVolume1 * 2,
+                                                       volume=market_data.AskVolume1,
                                                        direction=DIRECTION.Buy,
                                                        offset=OFFSET.Open)
+        print ("price:",market_data.AskPrice1,"vol:",market_data.AskVolume1)
+	context.handle_tick=False
         print("context.order_rid:", context.order_rid)
 
 def on_rtn_order(context, rtn_order, order_id, source, rcv_time):
-    print('----on rtn order----',rtn_order, ' order_id ', order_id)
-    if order_id == context.order_rid and context.cancel_id < 0 and rtn_order.OrderStatus != 'a':
-        print('send cancel order, but is no time, cancel will be fail')
-        context.cancel_id = context.cancel_order(source=source, order_id=order_id)
-        print 'cancel (order_id)', order_id, ' (request_id)', context.cancel_id
+    print('----on rtn order----',rtn_order, ' order_id ', order_id,'status',rtn_order.OrderStatus)
+    #if order_id == context.order_rid and context.cancel_id < 0 and rtn_order.OrderStatus != 'a':
+    #    print('send cancel order, but is no time, cancel will be fail')
+    #    context.cancel_id = context.cancel_order(source=source, order_id=order_id)
+    #    print 'cancel (order_id)', order_id, ' (request_id)', context.cancel_id
     if order_id == context.order_rid and rtn_order.OrderStatus == '1':
         print 'Part Traded!'
-    if order_id == context.order_rid and rtn_order.OrderStatus == '5':
-        print 'cancel successfully!'
-        context.stop()
+    #if order_id == context.order_rid and rtn_order.OrderStatus == '5':
+    #    print 'cancel successfully!'
+    #    context.stop()
     if order_id == context.order_rid and rtn_order.OrderStatus == '0':
         print 'All Traded!'
         context.stop()
@@ -96,5 +102,5 @@ def on_error(context, error_id, error_msg, order_id, source, rcv_time):
 
 def on_rtn_trade(context, rtn_trade, order_id, source, rcv_time):
     print '----on rtn trade----'
-    context.print_pos(context.get_pos(source=1))
-    context.req_rid = context.req_pos(source=1)
+    context.print_pos(context.get_pos(source=SOURCE.OCEANEX))
+    context.req_rid = context.req_pos(source=SOURCE.OCEANEX)

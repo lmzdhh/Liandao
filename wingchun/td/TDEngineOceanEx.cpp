@@ -653,7 +653,7 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
   "message": "Operation is successful"
 }
  * */
-    if(!d.HasParseError() && d.HasMember("code") && d["code"].IsNumber()) {
+    if(!d.HasParseError() && d.HasMember("code") && d["code"].GetInt() != 0) {
         errorId = d["code"].GetInt();
         if(d.HasMember("message") && d["message"].IsString())
         {
@@ -666,19 +666,17 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+	raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+
     } else {
         //addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
 
-        addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
+       // addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
 
         //TODO:   onRtn order/on rtn trade
 
-
-
-
     }
-    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
-}
+    }
 
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
 void TDEngineOceanEx::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, int64_t remoteOrderId)
@@ -710,7 +708,7 @@ void TDEngineOceanEx::GetAndHandleOrderTradeResponse()
 
 void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
 {
-    KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
+    KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
@@ -1064,7 +1062,7 @@ void TDEngineOceanEx::send_order(AccountUnitOceanEx& unit, const char *code,
 bool TDEngineOceanEx::shouldRetry(Document& doc)
 {
     bool ret = false;
-    if(!doc.IsObject() || !doc.HasMember("code") || !doc["code"].GetInt() != 0)
+    if(!doc.IsObject() || !doc.HasMember("code") || doc["code"].GetInt() != 0)
     {
         ret = true;
     }
@@ -1134,7 +1132,7 @@ void TDEngineOceanEx::query_order(AccountUnitOceanEx& unit, std::string code, st
 
 void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
 {
-    if( responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus && responsedOrderStatus.VolumeTraded == orderStatusIterator->VolumeTraded)
+    if( (responsedOrderStatus.OrderStatus == 'b' && '1' == orderStatusIterator-> OrderStatus || responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus) && responsedOrderStatus.VolumeTraded == orderStatusIterator->VolumeTraded)
     {//no change
         return;
     }
