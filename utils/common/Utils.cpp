@@ -1,19 +1,13 @@
 //
 // Created by wang on 10/22/18.
 //
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filtering_streambuf.hpp>
-#include <boost/iostreams/copy.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <iostream>
 #include <sstream>
 #include "Utils.h"
 #include "../../yijinjing/log/KfLog.h"
-namespace  biossgzip = boost::iostreams::gzip;
-namespace  biostream= boost::iostreams;
+#include "../zlib/include/zlib.h"
 using namespace kungfu::yijinjing;
 KfLogPtr   g_logger;
 namespace  kungfu
@@ -22,13 +16,10 @@ namespace  kungfu
      {
          try
          {
-             std::string ret;
-             biostream::filtering_ostream fos;
-             fos.push(biostream::gzip_compressor(biostream::gzip_params(biossgzip::best_compression)));
-             fos.push(boost::iostreams::back_inserter(ret));
-             fos << src;
-             boost::iostreams::close(fos);
-             return std::move(ret);//ret is char array , not string
+             unsigned char dest[10240] = {0};
+             unsigned long len = sizeof(dest);
+             compress(dest, &len, (const unsigned char*)src.data(), src.size());
+             return std::move(std::string((char*)dest, len));
          }
          catch (const std::exception& e)
          {
@@ -41,13 +32,10 @@ namespace  kungfu
      {
          try
          {
-             std::string ret;
-             biostream::filtering_ostream fos;
-             fos.push(biostream::gzip_decompressor());
-             fos.push(biostream::back_inserter(ret));
-             fos << src;
-             fos << std::flush;
-             return std::move(ret);
+             unsigned char dest[10240] = {0};
+             unsigned long len = sizeof(dest);
+             uncompress(dest, &len, (const unsigned char*)src.data(), src.size());
+             return std::move(std::string((char*)dest, len));
          }
          catch (const std::exception& e)
          {

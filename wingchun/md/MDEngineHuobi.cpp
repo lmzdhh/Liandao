@@ -252,12 +252,11 @@ void MDEngineHuobi::onClose(struct lws* conn)
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     }
 
-
 }
 void MDEngineHuobi::reset()
 {
-    logout();
     m_subcribeIndex = 0;
+    m_logged_in     = false;
 }
 
 void MDEngineHuobi::onWrite(struct lws* conn)
