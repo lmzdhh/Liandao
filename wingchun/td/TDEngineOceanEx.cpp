@@ -728,7 +728,7 @@ void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
                                                                << "  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
                                                                << "  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->remoteOrderId
                                                                << "  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
-                                                               << "  (exchange_ticker)" << ticker"
+                                                               << "  (exchange_ticker)" << ticker
         );
 
         Document d;
