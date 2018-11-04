@@ -7,23 +7,21 @@
 #include <sstream>
 #include "Utils.h"
 #include "../../yijinjing/log/KfLog.h"
-#include "../zlib/include/zlib.h"
+#include "../gzip/decompress.hpp"
+#include "../gzip/compress.hpp"
 using namespace kungfu::yijinjing;
-KfLogPtr   g_logger;
+using namespace gzip;
 namespace  kungfu
 {
      std::string LDUtils::gzip_compress(const std::string& src)
      {
          try
          {
-             unsigned char dest[10240] = {0};
-             unsigned long len = sizeof(dest);
-             compress(dest, &len, (const unsigned char*)src.data(), src.size());
-             return std::move(std::string((char*)dest, len));
+             return gzip::compress(src.c_str(), src.size());
          }
          catch (const std::exception& e)
          {
-             KF_LOG_INFO(g_logger, "gzip compress exception,{error:"<<e.what()<<"}");
+             std::cout<<"gzip compress exception,{error:"<<e.what()<<"}"<<std::endl;
          }
          return std::string();
      }
@@ -32,14 +30,11 @@ namespace  kungfu
      {
          try
          {
-             unsigned char dest[10240] = {0};
-             unsigned long len = sizeof(dest);
-             uncompress(dest, &len, (const unsigned char*)src.data(), src.size());
-             return std::move(std::string((char*)dest, len));
+             return gzip::decompress(src.c_str(), src.size());
          }
          catch (const std::exception& e)
          {
-             KF_LOG_INFO(g_logger, "gzip decompress exception,{error:"<<e.what()<<"}");
+             std::cout<<"gzip decompress exception,{error:"<<e.what()<<"}"<<std::endl;
          }
          return std::string();
      }
@@ -53,7 +48,7 @@ namespace  kungfu
         }
         catch (const std::exception& e)
         {
-            KF_LOG_INFO(g_logger, "split exception,{error:"<<e.what()<<"}");
+            std::cout<<"split exception,{error:"<<e.what()<<"}"<<std::endl;
         }
         return std::move(ret);
     }

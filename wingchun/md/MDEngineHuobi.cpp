@@ -481,6 +481,7 @@ void MDEngineHuobi::onWrite(struct lws* conn)
             break;
         }
         default:
+            std::cout<< "callback #"<<(int)reason<<std::endl;
             break;
     }
     return 0;
