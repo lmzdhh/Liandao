@@ -3,11 +3,12 @@ set (CMAKE_CXX_STANDARD 11)
 
 project (liandao_test)
 
+include_directories(/usr/include/)
 include_directories(../utils/rapidjson/include/)
 add_executable(rapidjson_test rapidjson_test/rapidjson_test.cpp)
 
-find_package(crypto)
-set(CORELIBS crypto)
+#find_package(crypto)
+#set(CORELIBS crypto)
 
 add_executable(openssl_util_test crypto_test/openssl_util_test.cpp)
 target_link_libraries(openssl_util_test ${CORELIBS})

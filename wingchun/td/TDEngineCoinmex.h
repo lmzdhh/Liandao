@@ -177,7 +177,7 @@ private:
     void handlerResponsedOrderStatus(AccountUnitCoinmex& unit);
 
     void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, int64_t remoteOrderId);
-
+    void removeRemoteOrderIdOrderActionSentTime(int64_t remoteOrderId);
     void loopOrderActionNoResponseTimeOut();
     void orderActionNoResponseTimeOut();
 private:
@@ -196,7 +196,7 @@ private:
     void printResponse(const Document& d);
     inline std::string getTimestampString();
 
-    bool shouldRetry(int http_status_code, std::string errorMsg);
+    bool shouldRetry(int http_status_code, std::string errorMsg, std::string text);
 
 
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);

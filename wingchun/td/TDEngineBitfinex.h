@@ -169,6 +169,7 @@ private:
 
     std::unordered_map<int, OrderInsertData> CIDorderInsertData;
     std::unordered_map<int, OrderActionData> CIDorderActionData;
+    std::unordered_map<int, OrderActionData> pendingOrderActionData;
     std::unordered_map<int64_t, OrderActionData> RemoteOrderIDorderActionData;
 };
 

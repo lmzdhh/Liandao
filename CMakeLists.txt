@@ -48,7 +48,7 @@ SET(Boost_USE_MULTITHREADED ON)
 SET(Boost_USE_STATIC_LIBS OFF)
 SET(Boost_USE_STATIC_RUNTIME OFF)
 
-FIND_PACKAGE(Boost 1.62.0 COMPONENTS locale date_time filesystem system thread serialization math_tr1 python chrono regex program_options REQUIRED)
+FIND_PACKAGE(Boost 1.62.0 COMPONENTS locale date_time filesystem system thread serialization math_tr1 python chrono regex program_options iostreams REQUIRED)
 INCLUDE_DIRECTORIES(${BOOST_INCLUDEDIR})
 
 FIND_PACKAGE(PythonInterp)
@@ -67,7 +67,7 @@ OPTION(USE_HASH_CODE "use hash code when writing" ON)
 ADD_SUBDIRECTORY(longfist)
 ADD_SUBDIRECTORY(yijinjing)
 ADD_SUBDIRECTORY(wingchun)
-ADD_SUBDIRECTORY(test)
+#ADD_SUBDIRECTORY(test)
 
 ############################################################
 SET(INFO_TXT_IN "${CMAKE_CURRENT_SOURCE_DIR}/rpm/INFO.txt")

@@ -223,6 +223,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "StartUpdateMillisec:" << std::setw(6) << "(i)" << " " << (int)ptr->StartUpdateMillisec << std::endl \
 	 << std::setw(20) << "EndUpdateTime:" << std::setw(6) << "(c13)" << " " << ptr->EndUpdateTime << std::endl \
 	 << std::setw(20) << "EndUpdateMillisec:" << std::setw(6) << "(i)" << " " << (int)ptr->EndUpdateMillisec << std::endl \
+	 << std::setw(20) << "PeriodMillisec:" << std::setw(6) << "(i)" << " " << (int)ptr->PeriodMillisec << std::endl \
 	 << std::setw(20) << "Open:" << std::setw(6) << "(d)" << " " << ptr->Open << std::endl \
 	 << std::setw(20) << "Close:" << std::setw(6) << "(d)" << " " << ptr->Close << std::endl \
 	 << std::setw(20) << "Low:" << std::setw(6) << "(d)" << " " << ptr->Low << std::endl \
@@ -268,6 +269,9 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "IsAutoSuspend:" << std::setw(6) << "(i)" << " " << (int)ptr->IsAutoSuspend << std::endl \
 	 << std::setw(20) << "ContingentCondition:" << std::setw(6) << "(t)" << " " << getLfContingentConditionType(ptr->ContingentCondition) << std::endl \
 	 << std::setw(20) << "MiscInfo:" << std::setw(6) << "(c30)" << " " << ptr->MiscInfo << std::endl \
+	 << std::setw(20) << "MassOrderSeqId:" << std::setw(6) << "(i)" << " " << ptr->MassOrderSeqId << std::endl \
+	 << std::setw(20) << "MassOrderIndex:" << std::setw(6) << "(i)" << " " << ptr->MassOrderIndex << std::endl \
+	 << std::setw(20) << "MassOrderTotalNum:" << std::setw(6) << "(i)" << " " << ptr->MassOrderTotalNum << std::endl \
 	
 #define PRINT_RTN_ORDER(ptr) ""\
 	 << std::setw(20) << "BrokerID:" << std::setw(6) << "(c11)" << " " << ptr->BrokerID << std::endl \
@@ -324,6 +328,9 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "LimitPrice:" << std::setw(6) << "(d)" << " " << ptr->LimitPrice << std::endl \
 	 << std::setw(20) << "VolumeChange:" << std::setw(6) << "(i)" << " " << (int)ptr->VolumeChange << std::endl \
 	 << std::setw(20) << "KfOrderID:" << std::setw(6) << "(i)" << " " << (int)ptr->KfOrderID << std::endl \
+	 << std::setw(20) << "MassOrderSeqId:" << std::setw(6) << "(i)" << " " << ptr->MassOrderSeqId << std::endl \
+	 << std::setw(20) << "MassOrderIndex:" << std::setw(6) << "(i)" << " " << ptr->MassOrderIndex << std::endl \
+	 << std::setw(20) << "MassOrderTotalNum:" << std::setw(6) << "(i)" << " " << ptr->MassOrderTotalNum << std::endl \
 	
 #define PRINT_QRY_ACCOUNT(ptr) ""\
 	 << std::setw(20) << "BrokerID:" << std::setw(6) << "(c11)" << " " << ptr->BrokerID << std::endl \

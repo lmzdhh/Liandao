@@ -240,18 +240,19 @@ class LFBarMarketDataField(Structure):
     _fields_ = [
         ("TradingDay", c_char * 9),	# 交易日 
         ("InstrumentID", c_char * 31),	# 合约代码 
-        ("UpperLimitPrice", c_double),	# 涨停板价 
-        ("LowerLimitPrice", c_double),	# 跌停板价 
+        ("UpperLimitPrice", c_int64),	# 涨停板价 
+        ("LowerLimitPrice", c_int64),	# 跌停板价 
         ("StartUpdateTime", c_char * 13),	# 首tick修改时间 
         ("StartUpdateMillisec", c_int),	# 首tick最后修改毫秒 
         ("EndUpdateTime", c_char * 13),	# 尾tick最后修改时间 
         ("EndUpdateMillisec", c_int),	# 尾tick最后修改毫秒 
-        ("Open", c_double),	# 开 
-        ("Close", c_double),	# 收 
-        ("Low", c_double),	# 低 
-        ("High", c_double),	# 高 
-        ("Volume", c_double),	# 区间交易量 
-        ("StartVolume", c_double),	# 初始总交易量 
+        ("PeriodMillisec", c_int),	
+        ("Open", c_int64),	# 开 
+        ("Close", c_int64),	# 收 
+        ("Low", c_int64),	# 低 
+        ("High", c_int64),	# 高 
+        ("Volume", c_uint64),	# 区间交易量 
+        ("StartVolume", c_uint64),	# 初始总交易量 
         ]
 
 class LFQryPositionField(Structure):
@@ -297,6 +298,9 @@ class LFInputOrderField(Structure):
         ("IsAutoSuspend", c_int),	# 自动挂起标志 
         ("ContingentCondition", c_char),	# 触发条件 LfContingentConditionType
         ("MiscInfo", c_char * 30),	# 委托自定义标签 
+        ("MassOrderSeqId", c_uint64),	
+        ("MassOrderIndex", c_int),	
+        ("MassOrderTotalNum", c_int),	
         ]
 
 class LFRtnOrderField(Structure):
@@ -359,6 +363,9 @@ class LFOrderActionField(Structure):
         ("LimitPrice", c_int64),	# 价格 
         ("VolumeChange", c_uint64),	# 数量变化 
         ("KfOrderID", c_int),	# Kf系统内订单ID 
+        ("MassOrderSeqId", c_uint64),	
+        ("MassOrderIndex", c_int),	
+        ("MassOrderTotalNum", c_int),	
         ]
 
 class LFQryAccountField(Structure):
@@ -716,6 +723,7 @@ DataFieldMap = {
 		'Volume': 'd',
 		'StartVolume': 'd',
 		'EndUpdateMillisec': 'i',
+		'PeriodMillisec': 'i',
 		'High': 'd',
 		'TradingDay': 'c9',
 		'LowerLimitPrice': 'd',

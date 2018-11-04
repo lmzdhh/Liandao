@@ -101,7 +101,7 @@ void TDUserInfoHelper::switch_day()
 void TDUserInfoHelper::clean_up(TDUserInfo* info)
 {
     info->last_order_index = -1;
-//    std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY   clean_up  info->orders"<<std::endl;
+    std::cout<< "[TDUserInfoHelper]clean_up(TDUserInfo* info)" << std::endl;
     memset(info->orders, '\0', AVAILABLE_ORDER_LIMIT * sizeof(TDOrderInfo));
 }
 
@@ -119,8 +119,11 @@ TDOrderInfo* TDUserInfoHelper::locate_readable(const string& user_name, int orde
     }
     if (count == AVAILABLE_ORDER_LIMIT)
         return nullptr;
-    else
+    else {
+        std::cout<< "[TDUserInfoHelper]locate_readable (user_name)" << user_name << " (order_id)" << order_id << "(idx)" << idx << std::endl;
+
         return &(info->orders[idx]);
+    }
 }
 
 inline bool order_is_existing(char status)
@@ -140,7 +143,8 @@ TDOrderInfo* TDUserInfoHelper::locate_writable(const string &user_name, int orde
     int idx = order_id % AVAILABLE_ORDER_LIMIT;
     int count = 0;
     char status = info->orders[idx].status;
-    while (order_is_existing(status) && count < AVAILABLE_ORDER_LIMIT)
+    //while (order_is_existing(status) && count < AVAILABLE_ORDER_LIMIT)
+    while (false && count < AVAILABLE_ORDER_LIMIT)
     {
         idx = (idx + 1) % AVAILABLE_ORDER_LIMIT;
         status = info->orders[idx].status;
@@ -152,6 +156,9 @@ TDOrderInfo* TDUserInfoHelper::locate_writable(const string &user_name, int orde
     {
         if (idx > info->last_order_index)
             info->last_order_index = idx;
+
+        std::cout<< "[TDUserInfoHelper]locate_writable (user_name)" << user_name << " (order_id)" << order_id << "(idx)" << idx << std::endl;
+
         return &(info->orders[idx]);
     }
 }
@@ -165,6 +172,8 @@ void TDUserInfoHelper::record_order(const string& user_name, int local_id, int o
         order_info->local_id = local_id;
         order_info->status = LF_CHAR_OrderInserted;
         strncpy(order_info->ticker, ticker, ORDER_INFO_TICKER_LIMIT);
+
+        std::cout<< "[TDUserInfoHelper]record_order (order_id)" << order_id << " (local_id)" << local_id << "(ticker)" << ticker << std::endl;
     }
 }
 
@@ -175,12 +184,12 @@ bool TDUserInfoHelper::get_order(const string& user_name, int order_id, int &loc
     {
         local_id = order_info->local_id;
         strncpy(ticker, order_info->ticker, ORDER_INFO_TICKER_LIMIT);
-//        std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY  [true] get_order  (order_id)" << order_id << " (local_id)" << local_id  << " (order_info->ticker)" << order_info->ticker<< std::endl;
+        std::cout<< "#[TDUserInfoHelper]get_order (order_id)" << order_id << " (local_id)" << local_id  << " (ticker)" << ticker<< std::endl;
         return true;
     }
     else
     {
-//        std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY  [false]  get_order  (order_id)" << order_id << " (local_id)" << local_id << "(ticker)" << ticker << std::endl;
+
         return false;
     }
 }
@@ -287,7 +296,8 @@ TDBasicOrderInfo* TDEngineInfoHelper::locate_writable(int local_id)
     int idx = local_id % TD_AVAILABLE_ORDER_LIMIT;
     int count = 0;
     char status = info->orders[idx].status;
-    while (order_is_existing(status) && count < TD_AVAILABLE_ORDER_LIMIT)
+    //while (order_is_existing(status) && count < TD_AVAILABLE_ORDER_LIMIT)
+    while (false && count < TD_AVAILABLE_ORDER_LIMIT)
     {
         idx = (idx + 1) % TD_AVAILABLE_ORDER_LIMIT;
         status = info->orders[idx].status;
@@ -311,6 +321,7 @@ void TDEngineInfoHelper::switch_day()
 void TDEngineInfoHelper::cleanup()
 {
     info->last_local_index = -1;
+    std::cout<< "[TDUserInfoHelper]clean_up()" << std::endl;
     memset(info->orders, '\0', TD_AVAILABLE_ORDER_LIMIT * sizeof(TDBasicOrderInfo));
 }
 

@@ -42,6 +42,11 @@ void IMDEngine::init()
 {
     reader = yijinjing::JournalReader::createSysReader(name());
     JournalPair l1MdPair = getMdJournalPair(source_id);
+    if (l1MdPair.first.empty() || l1MdPair.second.empty())
+    {
+        KF_LOG_INFO(logger, "getMdJournalPair failed ,{source_id:"<<  source_id << "}");
+        return;
+    }
     writer = yijinjing::JournalWriter::create(l1MdPair.first, l1MdPair.second, name());
 }
 

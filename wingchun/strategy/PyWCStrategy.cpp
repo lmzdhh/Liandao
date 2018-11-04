@@ -59,6 +59,17 @@ void PyWCStrategy::on_market_data(const LFMarketDataField* data, short source, l
     }
 }
 
+void PyWCStrategy::on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time)
+{
+    bp::object& obj = py_on_data[MSG_TYPE_LF_PRICE_BOOK_20];
+    if (obj != bp::object() && IWCDataProcessor::signal_received <= 0)
+    {
+        START_PYTHON_FUNC_CALLING
+            obj((uintptr_t)data, source, rcv_time);
+        END_PYTHON_FUNC_CALLING
+    }
+}
+
 void PyWCStrategy::on_market_bar(const BarMdMap& data, int min_interval, short source, long rcv_time)
 {
     bp::object& obj = py_on_data[MSG_TYPE_LF_BAR_MD];
