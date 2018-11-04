@@ -473,8 +473,7 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
     } else  if(d.HasMember("code"))
     {
         int code = d["code"].GetInt();
-        if(code == 0)
-        {
+        if(code == 0) {
             /*
              {
   "code": 0,
@@ -500,23 +499,47 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
             //fix defect of use the old value
             localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
-                                                                       data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+                                                                       data->OrderRef << " (remoteOrderId) "
+                                                                       << remoteOrderId);
+            //on_rtn_oder
+            rapidjson::Value &dataRsp = d["data"];
+            LFRtnOrderField rtn_order;
+            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+
+            rtn_order.OrderStatus = LF_CHAR_NotTouched;
+            rtn_order.VolumeTraded = std::round(
+                    std::stod(dataRsp["executed_volume"].GetString()) * scale_offset);
+
+            //first send onRtnOrder about the status change or VolumeTraded change
+            strcpy(rtn_order.ExchangeID, "oceanex");
+            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_order.InstrumentID, ticker.c_str(), 31);
+            rtn_order.Direction = GetDirection(dataRsp["side"].GetString());
+            //No this setting on OceanEx
+            rtn_order.TimeCondition = LF_CHAR_GTC;
+            rtn_order.OrderPriceType = GetPriceType(dataRsp["ord_type"].GetString());
+            strncpy(rtn_order.OrderRef, data->OrderRef, 13);
+            rtn_order.VolumeTotalOriginal = std::round(std::stod(dataRsp["volume"].GetString()) * scale_offset);
+            rtn_order.LimitPrice = std::round(std::stod(dataRsp["price"].GetString()) * scale_offset);
+            rtn_order.VolumeTotal = std::round(
+                    std::stod(dataRsp["remaining_volume"].GetString()) * scale_offset);
+
+            on_rtn_order(&rtn_order);
+            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                    source_id, MSG_TYPE_LF_RTN_ORDER_OCEANEX,
+                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
 
 
-            //TODO:   onRtn order/on rtn trade
-
-
-
-
-            char noneStatus = LF_CHAR_Unknown;
+            char noneStatus = LF_CHAR_NotTouched;
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
 
             //success, only record raw data
-            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1,
+                                          requestId, errorId, errorMsg.c_str());
 
             return;
 
-        } else {
+        }else {
             errorId = code;
             if(d.HasMember("message") && d["message"].IsString())
             {
@@ -526,21 +549,11 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
                                                                                errorId << " (errorMsg) " << errorMsg);
         }
     }
-    /*else if (d.HasMember("code") && d["code"].IsNumber()) {
-        //send error, example: http timeout.
-        errorId = d["code"].GetInt();
-        if (d.HasMember("message") && d["message"].IsString()) {
-            errorMsg = d["message"].GetString();
-        }
-        KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (errorId)" <<
-                                                          errorId << " (errorMsg) " << errorMsg);
-    }*/
-
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
 }
 
 //websocket的消息通常回来的比restful快，这时候因为消息里面有OrderId却找不到OrderRef，会先放入responsedOrderStatusNoOrderRef，
