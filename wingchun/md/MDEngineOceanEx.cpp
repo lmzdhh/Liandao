@@ -428,10 +428,10 @@ void MDEngineOceanEx::loopOrderBook()
                     memset(&marketdata, 0, sizeof(LFMarketDataField));
                     marketdata.BidPrice1 = md.BidLevels[0].price;
                     marketdata.BidVolume1 = md.BidLevels[0].volume;
-                    marketdata.AskPrice1 = md.AskLevels[0].price;
-                    marketdata.AskVolume1 = md.AskLevels[0].volume;
-                    strcpy(md.InstrumentID, ticker.c_str());
-                    strcpy(md.ExchangeID, "oceanex");
+                    marketdata.AskPrice1 = md.AskLevels[md.AskLevelCount-1].price;
+                    marketdata.AskVolume1 = md.AskLevels[md.AskLevelCount-1].volume;
+                    strcpy(marketdata.InstrumentID, ticker.c_str());
+                    strcpy(marketdata.ExchangeID, "oceanex");
                     on_market_data(&marketdata);
                 }
             }

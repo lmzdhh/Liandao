@@ -22,7 +22,7 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 
 def initialize(context):
     #context.add_md(source=SOURCE.OCEANEX)
-    context.ticker = 'oce_vet'
+    context.ticker = 'eth_usdt'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
@@ -57,10 +57,10 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                                offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
                 print('will cancel it')
-                import time
-                time.sleep(6)
-                context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
-                print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
+                #import time
+                #time.sleep(6)
+                #context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
+                #print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
 
 
     else:
@@ -95,6 +95,7 @@ def on_rtn_order(context, rtn_order, order_id, source, rcv_time):
     if order_id == context.order_rid and rtn_order.OrderStatus == '5':
         print 'rtn order:cancel successfully!'
         context.stop()
+    print('order_id',order_id,'status',rtn_order.OrderStatus)
 
 def on_error(context, error_id, error_msg, order_id, source, rcv_time):
     print 'on_error:', error_id, error_msg, order_id, source, rcv_time
