@@ -3,7 +3,7 @@
 #include <cstring>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
-
+#include <openssl/evp.h>
 namespace utils { namespace crypto {
 
 inline std::string b2a_hex(char *byte_arr, int n) {

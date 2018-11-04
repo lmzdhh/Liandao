@@ -5,7 +5,8 @@
 
 // example in https://github.com/binance-exchange/binance-official-api-docs/blob/master/rest-api.md
 
-int main() {
+int main() 
+{
   const std::string secret = "NhqPtmdSJYdKjVHjA7PZj4Mge3R5YNiP1e3UZjInClVN65XAbvqqM6A7H5fATj0j";
   const std::string message = "symbol=LTCBTC&side=BUY&type=LIMIT&timeInForce=GTC&quantity=1&price=0.1&recvWindow=5000&timestamp=1499827319559";
 
