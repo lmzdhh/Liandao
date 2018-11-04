@@ -710,7 +710,7 @@ void TDEngineOceanEx::GetAndHandleOrderTradeResponse()
 
 void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
 {
-    KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
+    //KF_LOG_INFO(logger, "[retrieveOrderStatus] ");
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
@@ -719,19 +719,19 @@ void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
 
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
     {
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "( account.api_key) "<< unit.api_key
-                                                               << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
-                                                               <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
-                                                               <<"  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->remoteOrderId
-                                                               <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
-        );
-
         std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
         if(ticker.length() == 0) {
             KF_LOG_INFO(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
             continue;
         }
-        KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "( account.api_key) "<< unit.api_key
+                                                               << "  (account.pendingOrderStatus.InstrumentID) "<< orderStatusIterator->InstrumentID
+                                                               <<"  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
+                                                               <<"  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->remoteOrderId
+                                                               <<"  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
+                                                               <<"  (exchange_ticker)"<< ticker
+        );
+        //KF_LOG_DEBUG(logger, "[retrieveOrderStatus] (exchange_ticker)" << ticker);
 
         Document d;
         query_order(unit, ticker, std::to_string(orderStatusIterator->remoteOrderId), d);
@@ -820,7 +820,7 @@ void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
         } else {
             ++orderStatusIterator;
         }
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
+        //KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
     }
 }
 
@@ -1168,7 +1168,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
             rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
             rtn_order.LimitPrice = responsedOrderStatus.price;
             //剩余数量
-            rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
+            rtn_order.VolumeTotal = 0;//responsedOrderStatus.openVolume;
 
             //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
             //on_rtn_order(&rtn_order);
@@ -1216,7 +1216,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
         rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
         rtn_order.LimitPrice = responsedOrderStatus.price;
         //剩余数量
-        rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
+        rtn_order.VolumeTotal = 0;
 
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
