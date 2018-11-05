@@ -1276,7 +1276,7 @@ inline int64_t TDEngineOceanEx2::getTimestamp()
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
 
-BOOST_PYTHON_MODULE(liboceanextd)
+BOOST_PYTHON_MODULE(liboceanex2td)
 {
     using namespace boost::python;
     class_<TDEngineOceanEx2, boost::shared_ptr<TDEngineOceanEx2> >("Engine")
