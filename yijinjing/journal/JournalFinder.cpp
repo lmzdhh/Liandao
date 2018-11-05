@@ -78,7 +78,7 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_HITBTC);
     loadJournalInfo(SOURCE_OCEANEX);
     loadJournalInfo(SOURCE_HUOBI);
-
+	loadJournalInfo(SOURCE_OCEANEX2);
     loadJournalInfo(0, getSystemJournalPair);
 
     boost::filesystem::path bl_journal_folder(BL_BASE_FOLDER);
