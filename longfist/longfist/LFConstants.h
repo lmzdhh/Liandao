@@ -58,6 +58,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "oceanex";
         case SOURCE_HUOBI:
             return "HUOBI";
+		case SOURCE_OCEANEX2:
+			return "oceanex2";
 		default:
 			return "unknown";
 	}
@@ -117,6 +119,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_HUOBI;
     }
+	else if (exch_str == "oceanex2")
+	{
+		return SOURCE_OCEANEX2;
+	}
     else
     {
 	return SOURCE_UNKNOWN;
@@ -139,6 +145,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_HITBTC "HITBTC"
 #define EXCHANGE_OCEANEX "OCEANEX"
 #define EXCHANGE_HUOBI "HUOBI"
+#define EXCHANGE_OCEANEX2 "OCEANEX2"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -272,6 +279,14 @@ const short MSG_TYPE_LF_RTN_ORDER_OCEANEX = 25205;
 const short MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206;
 const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207;
 
+//OCEANEX2, idx=27
+const short MSG_TYPE_LF_MD_OCEANEX2 = 27101;
+const short MSG_TYPE_LF_QRY_POS_OCEANEX2 = 27201;
+const short MSG_TYPE_LF_RSP_POS_OCEANEX2 = 27202;
+const short MSG_TYPE_LF_ORDER_OCEANEX2 = 27204;
+const short MSG_TYPE_LF_RTN_ORDER_OCEANEX2 = 27205;
+const short MSG_TYPE_LF_RTN_TRADE_OCEANEX2 = 27206;
+const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX2 = 27207;
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
 ///////////////////////////////////

@@ -27,7 +27,7 @@ class SOURCE:
     HITBTC = 24
     OCEANEX = 25
     HUOBI = 26
-    OCEANEX = 27
+    OCEANEX2 = 27
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所

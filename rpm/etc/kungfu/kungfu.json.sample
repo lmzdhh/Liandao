@@ -27,9 +27,16 @@
       "trade_count": 10,
       "whiteLists": {
         "strategy_coinpair(base_quote)": "exchange_coinpair",
-        "btc_usdt": "BTC_USDT",
         "etc_eth": "ETC_ETH",
-        "mvp_btc": "MVP_BTC"
+        "ltc_btc": "LTC_BTC",
+        "ltc_usdt": "LTC_USDT",
+        "bch_btc": "BCH_BTC",
+        "bch_usdt": "BCH_USDT",
+        "etc_btc": "ETC_BTC",
+        "eth_btc": "ETH_BTC",
+        "etc_usdt": "ETC_USDT",
+        "eth_usdt": "ETH_USDT",
+        "btc_usdt": "BTC_USDT"
       },
       "rest_get_interval_ms": 500
     },
@@ -281,7 +288,6 @@
               "bch_btc": "BCH/BTC",
               "ltc_btc": "LTC/BTC",
               "bch_eth": "BCH/ETH",
-              "eth_btc": "ETH/BTC",
               "ltc_eth": "LTC/ETH"
             },
             "positionWhiteLists": {
@@ -324,7 +330,6 @@
               "bch_btc": "tBCHBTC",
               "ltc_btc": "tLTCBTC",
               "bch_eth": "tBCHETH",
-              "eth_btc": "tETHBTC",
               "ltc_eth": "tLTCETH"
             },
             "positionWhiteLists": {
@@ -367,7 +372,6 @@
               "bch_btc": "tBCHBTC",
               "ltc_btc": "tLTCBTC",
               "bch_eth": "tBCHETH",
-              "eth_btc": "tETHBTC",
               "ltc_eth": "tLTCETH"
             },
             "positionWhiteLists": {
@@ -410,7 +414,6 @@
               "bch_btc": "tBCHBTC",
               "ltc_btc": "tLTCBTC",
               "bch_eth": "tBCHETH",
-              "eth_btc": "tETHBTC",
               "ltc_eth": "tLTCETH"
             },
             "positionWhiteLists": {
