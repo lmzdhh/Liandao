@@ -34,7 +34,7 @@ WC_NAMESPACE_START
             virtual void release_api();
             virtual bool is_connected() const;
             virtual bool is_logged_in() const;
-            virtual string name() const { return "TDEngineOceanEx"; };
+            virtual string name() const { return "TDEngineOceanEx2"; };
 
             // req functions
             virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
