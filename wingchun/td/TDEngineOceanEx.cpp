@@ -12,7 +12,7 @@
 #include <sstream>
 #include <stdio.h>
 #include <assert.h>
-
+#include <mutex>
 #include <chrono>
 #include "../../utils/crypto/openssl_util.h"
 
@@ -95,14 +95,16 @@ TDEngineOceanEx::~TDEngineOceanEx()
     if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
 }
 
+std::mutex g_httpMutex;
 cpr::Response TDEngineOceanEx::Get(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
 {
     std::string queryString= "?" + construct_request_body(unit,body);
     string url = unit.baseUrl + method_url + queryString;
 
+    std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Get(Url{url}, cpr::VerifySsl{false},
                               Header{{"Content-Type", "application/json"}}, Timeout{10000} );
-
+    lock.unlock();
     KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
                                                " (response.error.message) " << response.error.message <<
                                                " (response.text) " << response.text.c_str());
@@ -114,12 +116,12 @@ cpr::Response TDEngineOceanEx::Post(const std::string& method_url,const std::str
     std::string reqbody = construct_request_body(unit,body,false);
 
     string url = unit.baseUrl + method_url;
-
+    std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, cpr::VerifySsl{false},
                     Header{{"Content-Type", "application/json"},
                            {"Content-Length", to_string(reqbody.size())}},
                     Body{reqbody}, Timeout{30000});
-
+    lock.unlock();
     KF_LOG_INFO(logger, "[post] (url) " << url << " (response.status_code) " << response.status_code <<
                                        " (response.error.message) " << response.error.message <<
                                        " (response.text) " << response.text.c_str());
