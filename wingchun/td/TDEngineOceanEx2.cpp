@@ -12,7 +12,7 @@
 #include <sstream>
 #include <stdio.h>
 #include <assert.h>
-
+#include <mutex>
 #include <chrono>
 #include "../../utils/crypto/openssl_util.h"
 
@@ -56,7 +56,8 @@ TDEngineOceanEx2::~TDEngineOceanEx2()
     if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
 }
 
-cpr::Response TDEngineOceanEx2::Get(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
+std::mutex g_httpMutex;
+cpr::Response TDEngineOceanEx::Get(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
 {
     std::string queryString= "?" + construct_request_body(unit,body);
     string url = unit.baseUrl + method_url + queryString;
