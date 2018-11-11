@@ -61,9 +61,10 @@ cpr::Response TDEngineOceanEx2::Get(const std::string& method_url,const std::str
     std::string queryString= "?" + construct_request_body(unit,body);
     string url = unit.baseUrl + method_url + queryString;
 
+    std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Get(Url{url}, cpr::VerifySsl{false},
                               Header{{"Content-Type", "application/json"}}, Timeout{10000} );
-
+    lock.unlock();
     KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
                                                " (response.error.message) " << response.error.message <<
                                                " (response.text) " << response.text.c_str());
@@ -75,13 +76,13 @@ cpr::Response TDEngineOceanEx2::Post(const std::string& method_url,const std::st
     std::string reqbody = construct_request_body(unit,body,false);
 
     string url = unit.baseUrl + method_url;
-
+    std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, cpr::VerifySsl{false},
                     Header{{"Content-Type", "application/json"},
                            {"Content-Length", to_string(reqbody.size())}},
                     Body{reqbody}, Timeout{30000});
-
-    KF_LOG_INFO(logger, "[post] (url) " << url << " (response.status_code) " << response.status_code <<
+    lock.unlock();
+    KF_LOG_INFO(logger, "[post] (url) " << url <<"(body) "<< reqbody<< " (response.status_code) " << response.status_code <<
                                        " (response.error.message) " << response.error.message <<
                                        " (response.text) " << response.text.c_str());
     return response;
