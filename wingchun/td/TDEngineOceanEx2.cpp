@@ -38,7 +38,7 @@ using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 USING_WC_NAMESPACE
-
+using namespace oceanex2;
 TDEngineOceanEx2::TDEngineOceanEx2(): ITDEngine(SOURCE_OCEANEX2)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.OceanEx2");
