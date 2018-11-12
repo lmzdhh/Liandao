@@ -57,7 +57,7 @@ TDEngineOceanEx2::~TDEngineOceanEx2()
 }
 
 std::mutex g_httpMutex;
-cpr::Response TDEngineOceanEx::Get(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
+cpr::Response TDEngineOceanEx2::Get(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
 {
     std::string queryString= "?" + construct_request_body(unit,body);
     string url = unit.baseUrl + method_url + queryString;
