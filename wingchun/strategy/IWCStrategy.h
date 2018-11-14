@@ -39,6 +39,7 @@ protected:
 public:
     /** IWCDataProcessor functions *//* market data */
     virtual void on_market_data(const LFMarketDataField* data, short source, long rcv_time);
+    virtual void on_market_bar_data(const LFBarMarketDataField* data, short source, long rcv_time);
     virtual void on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time);
     virtual void on_market_data_level2(const LFL2MarketDataField* data, short source, long rcv_time);
     virtual void on_l2_index(const LFL2IndexField* data, short source, long rcv_time);

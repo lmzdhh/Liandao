@@ -38,8 +38,10 @@ public:
     ~PriceBook20Assembler();
     void EraseAskPrice(std::string ticker, int64_t price);
     void UpdateAskPrice(std::string ticker, int64_t price, uint64_t volume);
+    int64_t GetBestAskPrice(std::string ticker);
     void EraseBidPrice(std::string ticker, int64_t price);
     void UpdateBidPrice(std::string ticker, int64_t price, uint64_t volume);
+    int64_t GetBestBidPrice(std::string ticker);
     //返回true是有效的更新; false是无效的更新,应该忽略这个LFPriceBook20Field
     bool Assembler(std::string ticker, LFPriceBook20Field &md);
 
