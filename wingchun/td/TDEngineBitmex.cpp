@@ -43,7 +43,7 @@ using utils::crypto::base64_encode;
 
 USING_WC_NAMESPACE
 
-
+int g_RequestGap=5*60;
 
 static TDEngineBitmex* global_td = nullptr;
 
@@ -924,7 +924,7 @@ void TDEngineBitmex::get_account(AccountUnitBitmex& unit, Document& json)
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
                                         {"api-signature", signature},
-                                        {"api-expires", "" }},
+                                        {"api-expires", Timestamp+g_RequestGap }},
                                  Timeout{30000});
 
     KF_LOG_INFO(logger, "[get_account] (url) " << url  << " (response.status_code) " << response.status_code <<
@@ -1055,7 +1055,7 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
                                       {"Content-Type", "application/x-www-form-urlencoded"},
                                       {"Content-Length", to_string(body.size())},
                                       {"api-signature", signature},
-                                      {"api-expires", "" }},
+                                      {"api-expires", Timestamp +g_RequestGap}},
                                Body{body}, Timeout{30000});
 
 
@@ -1085,7 +1085,7 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
                                         {"api-signature", signature},
-                                        {"api-expires", "" }},
+                                        {"api-expires", Timestamp+g_RequestGap }},
                                  Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url  << " (response.status_code) " << response.status_code <<
@@ -1132,7 +1132,7 @@ void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, long orderId, Documen
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
                                         {"api-signature", signature},
-                                        {"api-expires", "" }},
+                                        {"api-expires", Timestamp+g_RequestGap }},
                                  Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
