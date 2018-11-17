@@ -416,18 +416,18 @@ bool TDEngineBitmex::is_connected() const
 
 std::string TDEngineBitmex::GetSide(const LfDirectionType& input) {
     if (LF_CHAR_Buy == input) {
-        return "buy";
+        return "Buy";
     } else if (LF_CHAR_Sell == input) {
-        return "sell";
+        return "Sell";
     } else {
         return "";
     }
 }
 
 LfDirectionType TDEngineBitmex::GetDirection(std::string input) {
-    if ("buy" == input) {
+    if ("Buy" == input) {
         return LF_CHAR_Buy;
-    } else if ("sell" == input) {
+    } else if ("Sell" == input) {
         return LF_CHAR_Sell;
     } else {
         return LF_CHAR_Buy;
@@ -436,18 +436,18 @@ LfDirectionType TDEngineBitmex::GetDirection(std::string input) {
 
 std::string TDEngineBitmex::GetType(const LfOrderPriceTypeType& input) {
     if (LF_CHAR_LimitPrice == input) {
-        return "limit";
+        return "Limit";
     } else if (LF_CHAR_AnyPrice == input) {
-        return "market";
+        return "Market";
     } else {
         return "";
     }
 }
 
 LfOrderPriceTypeType TDEngineBitmex::GetPriceType(std::string input) {
-    if ("limit" == input) {
+    if ("Limit" == input) {
         return LF_CHAR_LimitPrice;
-    } else if ("market" == input) {
+    } else if ("Market" == input) {
         return LF_CHAR_AnyPrice;
     } else {
         return '0';
@@ -455,13 +455,13 @@ LfOrderPriceTypeType TDEngineBitmex::GetPriceType(std::string input) {
 }
 //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
 LfOrderStatusType TDEngineBitmex::GetOrderStatus(std::string input) {
-    if ("open" == input) {
+    if ("Open" == input) {
         return LF_CHAR_NotTouched;
-    } else if ("partially-filled" == input) {
+    } else if ("Partially-filled" == input) {
         return LF_CHAR_PartTradedQueueing;
-    } else if ("filled" == input) {
+    } else if ("Filled" == input) {
         return LF_CHAR_AllTraded;
-    } else if ("canceled" == input) {
+    } else if ("Canceled" == input) {
         return LF_CHAR_Canceled;
     } else if ("cancel" == input) {
         return LF_CHAR_NotTouched;
@@ -815,7 +815,7 @@ void TDEngineBitmex::wsloop()
     while(isRunning)
     {
         int n = lws_service( context, rest_get_interval_ms );
-        std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
+        //std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
     }
 }
 
@@ -1163,6 +1163,11 @@ void TDEngineBitmex::on_lws_connection_error(struct lws* conn)
     long timeout_nsec = 0;
     unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
     lws_login(unit, timeout_nsec);
+}
+
+int TDEngineBitmex::lws_write_subscribe(struct lws* conn)
+{
+    KF_LOG_INFO(logger,"TDEngineCoinmex::lws_write_subscribe");
 }
 
 void TDEngineBitmex::lws_login(AccountUnitBitmex& unit, long timeout_nsec) {
