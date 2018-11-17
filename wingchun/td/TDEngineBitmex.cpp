@@ -910,7 +910,7 @@ void TDEngineBitmex::getResponse(int http_status_code, std::string responseText,
 void TDEngineBitmex::get_account(AccountUnitBitmex& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
-    std::string Timestamp = std::to_string(getTimestamp());
+    std::string Timestamp = std::to_string(getTimestamp()+g_RequestGap);
     std::string Method = "GET";
     std::string requestPath = "/api/v1/position";
     std::string queryString= "?count=100000";
@@ -924,7 +924,7 @@ void TDEngineBitmex::get_account(AccountUnitBitmex& unit, Document& json)
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
                                         {"api-signature", signature},
-                                        {"api-expires", Timestamp+g_RequestGap }},
+                                        {"api-expires", Timestamp }},
                                  Timeout{30000});
 
     KF_LOG_INFO(logger, "[get_account] (url) " << url  << " (response.status_code) " << response.status_code <<
@@ -1022,7 +1022,7 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
     Writer<StringBuffer> writer(jsonStr);
     document.Accept(writer);
 
-    std::string Timestamp = std::to_string(getTimestamp());
+    std::string Timestamp = std::to_string(getTimestamp()+g_RequestGap);
     std::string Method = "POST";
     std::string requestPath = "/api/v1/order";
     std::string queryString= "";
@@ -1055,7 +1055,7 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
                                       {"Content-Type", "application/x-www-form-urlencoded"},
                                       {"Content-Length", to_string(body.size())},
                                       {"api-signature", signature},
-                                      {"api-expires", Timestamp +g_RequestGap}},
+                                      {"api-expires", Timestamp}},
                                Body{body}, Timeout{30000});
 
 
@@ -1070,7 +1070,7 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
 void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
-    std::string Timestamp = std::to_string(getTimestamp());
+    std::string Timestamp = std::to_string(getTimestamp()+g_RequestGap);
     std::string Method = "DELETE";
     std::string requestPath = "/api/v1/order/all";
     std::string queryString= "";
@@ -1085,7 +1085,7 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
                                         {"api-signature", signature},
-                                        {"api-expires", Timestamp+g_RequestGap }},
+                                        {"api-expires", Timestamp }},
                                  Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url  << " (response.status_code) " << response.status_code <<
@@ -1098,7 +1098,7 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
 void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, long orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
-    std::string Timestamp = std::to_string(getTimestamp());
+    std::string Timestamp = std::to_string(getTimestamp()+g_RequestGap);
     std::string Method = "DELETE";
     std::string requestPath = "/api/v1/order";
     std::string queryString= "?clOrdID=" + std::to_string(orderId);
@@ -1132,7 +1132,7 @@ void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, long orderId, Documen
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
                                         {"api-signature", signature},
-                                        {"api-expires", Timestamp+g_RequestGap }},
+                                        {"api-expires", Timestamp }},
                                  Timeout{30000});
 
     KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
