@@ -15,7 +15,7 @@
 #include <cpr/cpr.h>
 #include <chrono>
 #include "../../utils/crypto/openssl_util.h"
-
+#include "../../utils/iconv/include/char_set_convert.h"
 using cpr::Delete;
 using cpr::Get;
 using cpr::Url;
@@ -1031,7 +1031,7 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
     string Message = Method + requestPath + queryString + Timestamp + body;
     KF_LOG_INFO(logger, "[send_order] (Message)" << Message);
 
-    std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
+    std::string signature = hmac_sha256(utils::ToUTF8(unit.secret_key).c_str(), utils::ToUTF8(Message).c_str());
     string url = unit.baseUrl + requestPath + queryString;
 
     /*
@@ -1056,11 +1056,11 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
                                       {"Content-Length", to_string(body.size())},
                                       {"api-signature", signature},
                                       {"api-expires", Timestamp}},
-                               Body{body}, Timeout{30000});
+                               Body{utils::ToUTF8(body)}, Timeout{30000});
 
 
     //{ "error": {"message": "Authorization Required","name": "HTTPError"} }
-    KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< utils::ToUTF8(body) << " (response.status_code) " << response.status_code <<
                                               " (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
     getResponse(response.status_code, response.text, response.error.message, json);
