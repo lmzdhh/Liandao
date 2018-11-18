@@ -15,7 +15,6 @@
 #include <cpr/cpr.h>
 #include <chrono>
 #include "../../utils/crypto/openssl_util.h"
-#include "../../utils/iconv/include/char_set_convert.h"
 using cpr::Delete;
 using cpr::Get;
 using cpr::Url;
@@ -455,7 +454,10 @@ LfOrderPriceTypeType TDEngineBitmex::GetPriceType(std::string input) {
 }
 //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
 LfOrderStatusType TDEngineBitmex::GetOrderStatus(std::string input) {
-    if ("Open" == input) {
+    if("New" == input){
+        return LF_CHAR_Unknown;
+    }
+    else if ("Open" == input) {
         return LF_CHAR_NotTouched;
     } else if ("Partially-filled" == input) {
         return LF_CHAR_PartTradedQueueing;
@@ -463,8 +465,6 @@ LfOrderStatusType TDEngineBitmex::GetOrderStatus(std::string input) {
         return LF_CHAR_AllTraded;
     } else if ("Canceled" == input) {
         return LF_CHAR_Canceled;
-    } else if ("cancel" == input) {
-        return LF_CHAR_NotTouched;
     } else {
         return LF_CHAR_NotTouched;
     }
@@ -635,6 +635,14 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
             GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef, d);
 
+    /*
+     {"orderID":"18eb8aeb-3a29-b546-b2fe-1b55f24ef63f","clOrdID":"5","clOrdLinkID":"","account":272991,"symbol":"XBTUSD","side":"Buy",
+     "simpleOrderQty":null,"orderQty":10,"price":1,"displayQty":null,"stopPx":null,"pegOffsetValue":null,"pegPriceType":"","currency":"USD",
+     "settlCurrency":"XBt","ordType":"Limit","timeInForce":"GoodTillCancel","execInst":"","contingencyType":"",
+     "exDestination":"XBME","ordStatus":"New","triggered":"","workingIndicator":true,"ordRejReason":"","simpleLeavesQty":null,
+     "leavesQty":10,"simpleCumQty":null,"cumQty":0,"avgPx":null,"multiLegReportingType":"SingleSecurity","text":"Submitted via API.",
+     "transactTime":"2018-11-18T13:18:33.598Z","timestamp":"2018-11-18T13:18:33.598Z"}
+     */
     //not expected response
     if(d.HasParseError() || !d.IsObject())
     {
@@ -642,43 +650,20 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
         errorMsg = "send_order http response has parse error or is not json. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                            errorId << " (errorMsg) " << errorMsg);
-    } else  if(d.HasMember("orderId") && d.HasMember("result"))
+    } else  if(d.HasMember("orderID"))
     {
-        if(d["result"].GetBool())
-        {
-            /*
-             * # Response OK
-                {
-                    "result": true,
-                    "order_id": 123456
-                }
-             * */
+
             //if send successful and the exchange has received ok, then add to  pending query order list
-            std::string remoteOrderId = std::to_string(d["orderId"].GetInt64());
+            std::string remoteOrderId = d["orderID"].GetString();
             localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data->OrderRef << " (remoteOrderId) " << remoteOrderId);
 
-            char noneStatus = '\0';//none
+            char noneStatus = GetOrderStatus(d["ordStatus"].GetString());//none
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0);
             //success, only record raw data
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1, requestId, errorId, errorMsg.c_str());
-            return;
-        } else {
-            /*
-             * # Response error
-                {
-                    "result": false,
-                    "order_id": 123456
-                }
-             * */
-            //send successful BUT the exchange has received fail
-            errorId = 200;
-            errorMsg = "http.code is 200, but result is false";
-            KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
-                                                                               errorId << " (errorMsg) " << errorMsg);
-        }
-    } else if (d.HasMember("code") && d["code"].IsNumber()) {
+    }  else if (d.HasMember("code") && d["code"].IsNumber()) {
         //send error, example: http timeout.
         errorId = d["code"].GetInt();
         if(d.HasMember("message") && d["message"].IsString())
@@ -688,6 +673,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
         KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (errorId)" <<
                                                           errorId << " (errorMsg) " << errorMsg);
     }
+
 
     if(errorId != 0)
     {
@@ -891,13 +877,6 @@ void TDEngineBitmex::getResponse(int http_status_code, std::string responseText,
                 val.SetString(message.c_str(), message.length(), allocator);
                 json.AddMember("message", val, allocator);
             }
-            if( d.HasMember("msg")) {
-                //KF_LOG_INFO(logger, "[getResponse] (err) (errorMsg)" << d["msg"].GetString());
-                std::string message = d["msg"].GetString();
-                rapidjson::Value val;
-                val.SetString(message.c_str(), message.length(), allocator);
-                json.AddMember("message", val, allocator);
-            }
         } else {
             rapidjson::Value val;
             val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
@@ -1031,7 +1010,7 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
     string Message = Method + requestPath + queryString + Timestamp + body;
     KF_LOG_INFO(logger, "[send_order] (Message)" << Message);
 
-    std::string signature = hmac_sha256(utils::ToUTF8(unit.secret_key).c_str(), utils::ToUTF8(Message).c_str());
+    std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath + queryString;
 
     /*
@@ -1056,11 +1035,11 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
                                       {"Content-Length", to_string(body.size())},
                                       {"api-signature", signature},
                                       {"api-expires", Timestamp}},
-                               Body{utils::ToUTF8(body)}, Timeout{30000});
+                               Body{body}, Timeout{30000});
 
 
     //{ "error": {"message": "Authorization Required","name": "HTTPError"} }
-    KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< utils::ToUTF8(body) << " (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                               " (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
     getResponse(response.status_code, response.text, response.error.message, json);
