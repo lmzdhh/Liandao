@@ -728,7 +728,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
     }
 
     Document d;
-    cancel_order(unit, remoteOrderId, d);
+    cancel_order(unit, remoteOrderId,data->OrderRef, d);
 
     //cancel order response "" as resultText, it cause json.HasParseError() == true, and json.IsObject() == false.
     //it is not an error, so dont check it.
@@ -1074,13 +1074,13 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
 }
 
 
-void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, std::string orderId, Document& json)
+void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, std::string orderId,std::string orderRef, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
     std::string Timestamp = std::to_string(getTimestamp()+g_RequestGap);
     std::string Method = "DELETE";
     std::string requestPath = "/api/v1/order";
-    std::string queryString= "?clOrdID=" + orderId;
+    std::string queryString= "?clOrdID=" + orderRef+"&orderID="+orderId;
     std::string body = "";
 
     string Message = Method + requestPath + queryString + Timestamp + body;

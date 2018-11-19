@@ -164,7 +164,7 @@ private:
                         const char *side, const char *type, double size, double price, std::string orderRef, Document& json);
 
     void cancel_all_orders(AccountUnitBitmex& unit, Document& json);
-    void cancel_order(AccountUnitBitmex& unit, std::string orderId, Document& json);
+    void cancel_order(AccountUnitBitmex& unit, std::string orderId,std::string orderRef, Document& json);
 
     void query_order(AccountUnitBitmex& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
