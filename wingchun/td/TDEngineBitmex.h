@@ -29,7 +29,8 @@ struct PendingBitmexOrderStatus
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
     int64_t averagePrice;
-    int64_t remoteOrderId;
+    std::string remoteOrderId;
+	int requestID;
 };
 
 
@@ -62,13 +63,14 @@ struct AccountUnitBitmex
     std::vector<PendingBitmexOrderStatus> newOrderStatus;
     std::vector<PendingBitmexOrderStatus> pendingOrderStatus;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
-
+	std::map<std::string, PendingBitmexOrderStatus> ordersMap;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
 
     std::vector<std::string> newPendingSendMsg;
     std::vector<std::string> pendingSendMsg;
     struct lws * websocketConn;
+    int wsStatus=0;
 };
 
 
@@ -110,7 +112,6 @@ public:
     void on_lws_connection_error(struct lws* conn);
     int lws_write_subscribe(struct lws* conn);
     void lws_login(AccountUnitBitmex& unit, long timeout_nsec);
-    void moveNewOrderStatusToPending(AccountUnitBitmex& unit);
     
     int Round(std::string tickSizeStr);
 private:
@@ -127,11 +128,9 @@ private:
     LfOrderStatusType GetOrderStatus(std::string input);
 
     std::vector<std::string> split(std::string str, std::string token);
-    void GetAndHandleOrderTradeResponse();
     void addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded);
+                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID);
 
-    void retrieveOrderStatus(AccountUnitBitmex& unit);
     void moveNewtoPending(AccountUnitBitmex& unit);
     static constexpr int scale_offset = 1e8;
 
@@ -145,9 +144,9 @@ private:
 //websocket
     AccountUnitBitmex& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onOrder(struct lws * websocketConn, Document& json);
+    void onTrade(struct lws * websocketConn, Document& json);
     void wsloop();
-    void addWebsocketPendingSendMsg(AccountUnitBitmex& unit, std::string msg);
-    void moveNewWebsocketMsgToPending(AccountUnitBitmex& unit);
+    //void addWebsocketPendingSendMsg(AccountUnitBitmex& unit, std::string msg);
     std::string createAuthJsonString(AccountUnitBitmex& unit );
     std::string createOrderJsonString();
 
@@ -164,11 +163,14 @@ private:
                         const char *side, const char *type, double size, double price, std::string orderRef, Document& json);
 
     void cancel_all_orders(AccountUnitBitmex& unit, Document& json);
-    void cancel_order(AccountUnitBitmex& unit, std::string orderId,std::string orderRef, Document& json);
+    void cancel_order(AccountUnitBitmex& unit, std::string orderId, Document& json);
 
     void query_order(AccountUnitBitmex& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
+
+    std::string getLwsAuthReq(AccountUnitBitmex& unit);
+    std::string getLwsSubscribe(AccountUnitBitmex& unit);
 
     inline int64_t getTimestamp();
 
