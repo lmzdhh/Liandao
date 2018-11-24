@@ -785,7 +785,18 @@ void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const c
     status.averagePrice = 0.0;
 	status.requestID = reqID;
     unit.newOrderStatus.push_back(status);
-	unit.ordersMap.insert(std::make_pair(OrderRef, status));
+
+	LFRtnOrderField order;	
+	order.OrderStatus = OrderStatus;
+	order.VolumeTraded = VolumeTraded;
+	strncpy(order.OrderRef, OrderRef, 21);
+	strncpy(order.InstrumentID, InstrumentID, 31);
+	order.RequestID = reqID;
+	strcpy(order.ExchangeID, "BitMEX");
+	strncpy(order.UserID, unit.api_key.c_str(), 16);
+	order.TimeCondition = LF_CHAR_GTC;
+
+	unit.ordersMap.insert(std::make_pair(OrderRef, order));
     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << InstrumentID
                                                                        << " (OrderRef) " << OrderRef
                                                                        << "(VolumeTraded)" << VolumeTraded);
@@ -1317,30 +1328,28 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 		auto& arrayData = json["data"];
 		for (SizeType index = 0; index < arrayData.Size(); ++index)
 		{
-			auto& order = arrayData[index];
-			LFRtnOrderField rtn_order;
-			memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-			rtn_order.OrderStatus = GetOrderStatus(order["ordStatus"].GetString());
-			rtn_order.VolumeTraded = int64_t(order["leavesQty"].GetDouble()*scale_offset);
-			strncpy(rtn_order.OrderRef, order["clOrdID"].GetString(), 13);
-			auto it = unit.ordersMap.find(rtn_order.OrderRef);
+			auto& order = arrayData[index];			
+			std::string OrderRef= order["clOrdID"].GetString();
+			auto it = unit.ordersMap.find(OrderRef);
 			if (it == unit.ordersMap.end())
 			{
 				continue;
 			}
-			strncpy(rtn_order.InstrumentID, it->second.InstrumentID, 31);
-			rtn_order.RequestID = it->second.requestID;
-			//first send onRtnOrder about the status change or VolumeTraded change
-			strcpy(rtn_order.ExchangeID, "BitMEX");
-			strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);			
-			rtn_order.Direction = GetDirection(order["side"].GetString());
-			//No this setting on coinmex
-			rtn_order.TimeCondition = LF_CHAR_GTC;
-			rtn_order.OrderPriceType = GetPriceType(order["ordType"].GetString());
-			
-			rtn_order.VolumeTotalOriginal = int64_t(order["orderQty"].GetDouble()*scale_offset);
-			rtn_order.LimitPrice = order["price"].GetDouble()*scale_offset;
-			rtn_order.VolumeTotal = int64_t(order["cumQty"].GetDouble()*scale_offset);
+			LFRtnOrderField& rtn_order = it->second;
+			if (order.HasMember("ordStatus"))
+				rtn_order.OrderStatus = GetOrderStatus(order["ordStatus"].GetString());
+			if (order.HasMember("leavesQty"))
+				rtn_order.VolumeTraded = int64_t(order["leavesQty"].GetDouble()*scale_offset);	
+			if (order.HasMember("side"))
+				rtn_order.Direction = GetDirection(order["side"].GetString());
+			if (order.HasMember("ordType"))
+				rtn_order.OrderPriceType = GetPriceType(order["ordType"].GetString());
+			if (order.HasMember("orderQty"))
+				rtn_order.VolumeTotalOriginal = int64_t(order["orderQty"].GetDouble()*scale_offset);
+			if (order.HasMember("price"))
+				rtn_order.LimitPrice = order["price"].GetDouble()*scale_offset;
+			if (order.HasMember("cumQty"))
+				rtn_order.VolumeTotal = int64_t(order["cumQty"].GetDouble()*scale_offset);
 
 			on_rtn_order(&rtn_order);
 			raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
@@ -1358,31 +1367,32 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 }
 void TDEngineBitmex::onTrade(struct lws * websocketConn, Document& json)
 {
+	if(json.HasMember("action") && json["action"].GetString() == std::string("insert"))
 	if (json.HasMember("data") && json["data"].IsArray()) {
 		AccountUnitBitmex &unit = findAccountUnitByWebsocketConn(websocketConn);
 		auto& arrayData = json["data"];
 		for (SizeType index = 0; index < arrayData.Size(); ++index)
 		{
+			
 			auto& trade = arrayData[index];
 			//send OnRtnTrade
 			LFRtnTradeField rtn_trade;
 			memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-			strcpy(rtn_trade.ExchangeID, "BitMEX");
-			strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-
 			strncpy(rtn_trade.OrderRef, trade["clOrdID"].GetString(), 13);
 			auto it = unit.ordersMap.find(rtn_trade.OrderRef);
 			if (it == unit.ordersMap.end())
 			{
 				continue;
 			}
+			auto& order = it->second;
+			strcpy(rtn_trade.ExchangeID, "BitMEX");
+			strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
 			strncpy(rtn_trade.InstrumentID, it->second.InstrumentID, 31);
-
-			rtn_trade.Direction = GetDirection(trade["side"].GetString());
+			rtn_trade.Direction = order.Direction;
 			
-
-			//calculate the volumn and price (it is average too)
-			rtn_trade.Volume = int64_t(trade["lastQty"].GetDouble()*scale_offset);
+			if(trade.HasMember("lastQty"))
+				rtn_trade.Volume = int64_t(trade["lastQty"].GetDouble()*scale_offset);
+			if (trade.HasMember("lastPx"))
 			rtn_trade.Price = int64_t(trade["lastPx"].GetDouble()*scale_offset);
 
 			on_rtn_trade(&rtn_trade);

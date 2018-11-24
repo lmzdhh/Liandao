@@ -63,7 +63,7 @@ struct AccountUnitBitmex
     std::vector<PendingBitmexOrderStatus> newOrderStatus;
     std::vector<PendingBitmexOrderStatus> pendingOrderStatus;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
-	std::map<std::string, PendingBitmexOrderStatus> ordersMap;
+	std::map<std::string, LFRtnOrderField> ordersMap;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
 
