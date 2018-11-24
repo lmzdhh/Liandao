@@ -849,7 +849,7 @@ std::string TDEngineBitmex::getLwsAuthReq(AccountUnitBitmex& unit) {
     return "\"" + unit.api_key + "\"," + expires + ",\"" + signature + "\"";
 }
 std::string TDEngineBitmex::getLwsSubscribe(AccountUnitBitmex& unit) {
-    return "order,execution";
+    return R"("order","execution")";
 }
 
 
@@ -1178,6 +1178,7 @@ int TDEngineBitmex::lws_write_subscribe(struct lws* conn)
 	}
 	else
     {
+	    return 0;
 		args = getLwsSubscribe(unit);
 		reqMsg = "{\"op\": \"unsubscribe\", \"args\": [" + args + "]}";
     }
@@ -1236,9 +1237,9 @@ void TDEngineBitmex::lws_login(AccountUnitBitmex& unit, long timeout_nsec) {
 
     struct lws_client_connect_info ccinfo = {0};
 
-    static std::string host  = "websocket.coinmex.com";
-    static std::string path = "/";
-    static int port = 8443;
+    static std::string host  = "www.bitmex.com";
+    static std::string path = "/realtime";
+    static int port = 443;
 
     ccinfo.context 	= context;
     ccinfo.address 	= host.c_str();
@@ -1266,7 +1267,7 @@ void TDEngineBitmex::on_lws_data(struct lws* conn, const char* data, size_t len)
     KF_LOG_INFO(logger, "TDEngineBitmex::on_lws_data: " << data);
     Document json;
     json.Parse(data,len);
-    if (json.HasParseError() || json.IsObject()) {
+    if (json.HasParseError() || !json.IsObject()) {
         KF_LOG_ERROR(logger, "TDEngineBitmex::on_lws_data. parse json error: " << data);        
     }
 	else if (json.HasMember("error"))
