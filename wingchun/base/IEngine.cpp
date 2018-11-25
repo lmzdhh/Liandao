@@ -139,10 +139,6 @@ void IEngine::wait_for_stop()
 
 void IEngine::initialize(const string& json_str)
 {
-    // init reader / writer / logger first
-    init();
-    // record its status
-    WRITE_ENGINE_STATUS(WC_ENGINE_STATUS_IDLE);
     // prepare config information
     json j_config = json::parse(json_str);
     for (json::const_iterator iter = j_config.begin(); iter != j_config.end(); ++iter)
@@ -152,8 +148,19 @@ void IEngine::initialize(const string& json_str)
     // pre_load process is mainly for IMDEngine or ITDEngine,
     // engine-wise control information loading, sometimes needs to be loaded before.
     pre_load(j_config);
+
+    // init reader / writer / logger first
+    init();
+    // record its status
+    WRITE_ENGINE_STATUS(WC_ENGINE_STATUS_IDLE);
+	
     // load config information
     load(j_config);
+}
+
+void IEngine::set_source_id(short source)
+{
+	source_id = source;
 }
 
 static string utf8_error_msg;

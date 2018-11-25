@@ -46,7 +46,7 @@ class IEngine
 {
 protected:
     /** source identifier */
-    const short source_id;
+    short source_id;
     /** reader, keep reading system journal */
     JournalReaderPtr reader;
     /** writer, output. */
@@ -69,6 +69,8 @@ protected:
     static volatile int signal_received;
     /* signal handler */
     static void signal_handler(int signum) { signal_received = signum; }
+	
+	void set_source_id(short source);
 
 public:
     /** initialize engine, pass-in parameters as json format

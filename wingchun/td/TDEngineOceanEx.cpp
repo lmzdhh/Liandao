@@ -39,6 +39,20 @@ using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 USING_WC_NAMESPACE
 
+#define DEF_TYPE_LF_QRY_POS_OCEANEX \
+	(source_id == SOURCE_OCEANEX ? MSG_TYPE_LF_QRY_POS_OCEANEX : MSG_TYPE_LF_QRY_POS_OCEANEX2)
+#define DEF_TYPE_LF_RSP_POS_OCEANEX \
+	(source_id == SOURCE_OCEANEX ? MSG_TYPE_LF_RSP_POS_OCEANEX : MSG_TYPE_LF_RSP_POS_OCEANEX2)
+#define DEF_TYPE_LF_ORDER_OCEANEX \
+	(source_id == SOURCE_OCEANEX ? MSG_TYPE_LF_ORDER_OCEANEX : MSG_TYPE_LF_ORDER_OCEANEX2)
+#define DEF_TYPE_LF_RTN_ORDER_OCEANEX \
+	(source_id == SOURCE_OCEANEX ? MSG_TYPE_LF_RTN_ORDER_OCEANEX : MSG_TYPE_LF_RTN_ORDER_OCEANEX2)
+#define DEF_TYPE_LF_RTN_TRADE_OCEANEX \
+	(source_id == SOURCE_OCEANEX ? MSG_TYPE_LF_RTN_TRADE_OCEANEX : MSG_TYPE_LF_RTN_TRADE_OCEANEX2)
+#define DEF_TYPE_LF_ORDER_ACTION_OCEANEX \
+	(source_id == SOURCE_OCEANEX ? MSG_TYPE_LF_ORDER_ACTION_OCEANEX : MSG_TYPE_LF_ORDER_ACTION_OCEANEX2)
+
+
 std::string g_private_key=R"(-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8h
 Q1r6M6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmss
@@ -78,6 +92,8 @@ VobnkkZDH/pnjrdjWKW+Un6cO/WLDKKdsgloCBnFRH8jyAiifwTItTP+ejmKuqsj
 LUWcNJ/MtGvhTyxPd4z18SsgQ3g6Goc+swIBAw==
 -----END RSA PUBLIC KEY-----
 )";
+
+
 TDEngineOceanEx::TDEngineOceanEx(): ITDEngine(SOURCE_OCEANEX)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.OceanEx");
@@ -130,15 +146,23 @@ cpr::Response TDEngineOceanEx::Post(const std::string& method_url,const std::str
 
 void TDEngineOceanEx::init()
 {
+	KF_LOG_INFO(logger, "[init0]" << name());
     ITDEngine::init();
     JournalPair tdRawPair = getTdRawJournalPair(source_id);
     raw_writer = yijinjing::JournalSafeWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
-    KF_LOG_INFO(logger, "[init]");
+    KF_LOG_INFO(logger, "[init1]" << name());
 }
 
 void TDEngineOceanEx::pre_load(const json& j_config)
 {
     KF_LOG_INFO(logger, "[pre_load]");
+
+	int source_id = 0;
+	if(j_config.find("exchange_source_index") != j_config.end()) {
+        source_id = j_config["exchange_source_index"].get<int>();
+		KF_LOG_INFO(logger, "[pre_load] exchange_source_index " << source_id);
+		set_source_id(source_id);
+    }
 }
 
 void TDEngineOceanEx::resize_accounts(int account_num)
@@ -368,7 +392,7 @@ void TDEngineOceanEx::req_investor_position(const LFQryPositionField* data, int 
             raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
         }
     }
-    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_OCEANEX, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, DEF_TYPE_LF_QRY_POS_OCEANEX, 1, requestId);
 
 
 
@@ -440,7 +464,7 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
                                               << " (Volume)" << data->Volume
                                               << " (LimitPrice)" << data->LimitPrice
                                               << " (OrderRef)" << data->OrderRef);
-    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1/*ISLAST*/, requestId);
+    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, DEF_TYPE_LF_ORDER_OCEANEX, 1/*ISLAST*/, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -452,7 +476,7 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
         KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList, ignore it  (rid)" << requestId <<
                                                                                       " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, DEF_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
@@ -528,7 +552,7 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
 
             on_rtn_order(&rtn_order);
             raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_OCEANEX,
+                                    source_id, DEF_TYPE_LF_RTN_ORDER_OCEANEX,
                                     1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
 
 
@@ -536,7 +560,7 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
 
             //success, only record raw data
-            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1,
+            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, DEF_TYPE_LF_ORDER_OCEANEX, 1,
                                           requestId, errorId, errorMsg.c_str());
 
             return;
@@ -554,7 +578,7 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, DEF_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
     }
 }
 
@@ -610,7 +634,7 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
                                               << " (OrderRef)" << data->OrderRef
                                               << " (KfOrderID)" << data->KfOrderID);
 
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, DEF_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -622,7 +646,7 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
         KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
                                                                                        errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, DEF_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
@@ -637,7 +661,7 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
         KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. "
                 << " (rid)" << requestId << " (orderRef)" << data->OrderRef << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, DEF_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
         return;
     } else {
         remoteOrderId = itr->second;
@@ -681,7 +705,7 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-	raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+	raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, DEF_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
 
     } else {
         //addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
@@ -1186,7 +1210,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
             //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
             //on_rtn_order(&rtn_order);
             raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_OCEANEX,
+                                    source_id, DEF_TYPE_LF_RTN_ORDER_OCEANEX,
                                     1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
 
@@ -1207,7 +1231,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_OCEANEX, 1, -1);
+                                    source_id, DEF_TYPE_LF_RTN_TRADE_OCEANEX, 1, -1);
 
         }
 
@@ -1233,7 +1257,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_OCEANEX,
+                                source_id, DEF_TYPE_LF_RTN_ORDER_OCEANEX,
                                 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
 
@@ -1273,7 +1297,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_OCEANEX,
+                                source_id, DEF_TYPE_LF_RTN_ORDER_OCEANEX,
                                 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
         int64_t newAveragePrice = responsedOrderStatus.averagePrice;
@@ -1298,7 +1322,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_OCEANEX, 1, -1);
+                                    source_id, DEF_TYPE_LF_RTN_TRADE_OCEANEX, 1, -1);
         }
         //third, update last status for next query_order
         orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
@@ -1316,6 +1340,398 @@ std::string TDEngineOceanEx::parseJsonToString(Document &d)
     return buffer.GetString();
 }
 
+std::string TDEngineOceanEx::createMultiOrderString(const std::string ticker, const std::vector<OceanExOrder>& orders)
+{
+	StringBuffer s;
+	Writer<StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("market");
+    writer.String(ticker.c_str());
+
+	writer.Key("orders");
+    writer.StartArray();
+	for (size_t idx = 0; idx != orders.size(); idx++) {
+		writer.StartObject();
+	    writer.Key("side");
+	    writer.String(orders[idx].side.c_str());
+
+		writer.Key("volume");
+	    writer.Double(orders[idx].size);
+
+		writer.Key("price");
+	    writer.Double(orders[idx].price);		
+	    writer.EndObject();		           
+    }
+	writer.EndArray();
+	
+    writer.EndObject();
+    return s.GetString();
+}
+
+
+std::string TDEngineOceanEx::createCancelOrderString(const std::vector<int64_t>& orders)
+{
+	Document json;
+	Document::AllocatorType& allocator = json.GetAllocator();
+	json.SetObject();
+
+	Value array(rapidjson::kArrayType);
+	for (size_t idx = 0; idx != orders.size(); idx++) {
+		array.PushBack(orders[idx], allocator);
+	}
+	json.AddMember("ids", array, allocator);
+
+	StringBuffer s;
+	Writer<StringBuffer> writer(s);
+	json.Accept(writer);
+
+	return s.GetString();
+}
+
+void TDEngineOceanEx::sendMultiOrders(const std::string ticker, AccountUnitOceanEx& unit, const std::vector<OceanExOrder>& orders, Document& json)
+{
+    KF_LOG_INFO(logger, "[send_order]");
+
+    int retry_times = 0;
+    cpr::Response response;
+    bool should_retry = false;
+	
+    do {
+        should_retry = false;
+
+        std::string requestPath = "/orders/multi";
+        response = Post(requestPath,createMultiOrderString(ticker, orders), unit);
+
+        KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
+                                                  " (response.error.message) " << response.error.message <<
+                                                  " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
+
+        //json.Clear();
+        getResponse(response.status_code, response.text, response.error.message, json);
+        //has error and find the 'error setting certificate verify locations' error, should retry
+        if(shouldRetry(json)) {
+            should_retry = true;
+            retry_times++;
+            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
+        }
+    } while(should_retry && retry_times < max_rest_retry_times);
+
+    KF_LOG_INFO(logger, "[sendMultiOrders] out_retry (response.status_code) " << response.status_code <<
+                                         " (response.error.message) " << response.error.message <<
+                                         " (response.text) " << response.text.c_str() );
+
+	return;
+}
+
+
+void TDEngineOceanEx::cancelMultiOrders(const std::string ticker, AccountUnitOceanEx& unit, const std::vector<int64_t>& orders, Document& json)
+{
+	KF_LOG_INFO(logger, "[cancelMultiOrders]");
+
+    int retry_times = 0;
+    cpr::Response response;
+    bool should_retry = false;
+    do {
+        should_retry = false;
+
+        std::string requestPath = "/order/delete/multi";
+        //std::string queryString= construct_request_body(unit, "{\"id\":" + orderId + "}");
+        response = Post(requestPath, createCancelOrderString(orders), unit);
+
+        //json.Clear();
+        getResponse(response.status_code, response.text, response.error.message, json);
+        //has error and find the 'error setting certificate verify locations' error, should retry
+        if(shouldRetry(json)) {
+            should_retry = true;
+            retry_times++;
+            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
+        }
+    } while(should_retry && retry_times < max_rest_retry_times);
+
+
+    KF_LOG_INFO(logger, "[cancel_order] out_retry " << retry_times << " (response.status_code) " << response.status_code <<
+                                                   " (response.error.message) " << response.error.message <<
+                                                   " (response.text) " << response.text.c_str() );
+
+	return;												 
+
+}
+
+
+/***
+{
+  "data": [
+    {
+      "trades_count": 0,
+      "id": 473797,
+      "market": "ocevet",
+      "executed_volume": "0.0",
+      "volume": "0.2",
+      "avg_price": "0.0",
+      "side": "buy",
+      "state": "wait",
+      "ord_type": "limit",
+      "price": "1001.0",
+      "remaining_volume": "0.2",
+      "created_at": "2018-10-18T00:38:18Z"
+    },
+    {
+      "trades_count": 0,
+      "id": 473798,
+      "market": "ocevet",
+      "executed_volume": "0.0",
+      "volume": "0.2",
+      "avg_price": "0.0",
+      "side": "sell",
+      "state": "wait",
+      "ord_type": "limit",
+      "price": "1002.0",
+      "remaining_volume": "0.2",
+      "created_at": "2018-10-18T00:38:18Z"
+    }
+  ],
+  "message": "Operation is successful",
+  "code": 0
+}
+***/
+void TDEngineOceanEx::send_multi_orders(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
+{
+    AccountUnitOceanEx& unit = account_units[account_index];
+    KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
+                                              << " (APIKey)" << unit.api_key
+                                              << " (Tid)" << data->InstrumentID
+                                              << " (Volume)" << data->Volume
+                                              << " (LimitPrice)" << data->LimitPrice
+                                              << " (OrderRef)" << data->OrderRef);
+    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, DEF_TYPE_LF_ORDER_OCEANEX, 1, requestId);
+
+    int errorId = 0;
+    std::string errorMsg = "";
+
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
+    if(ticker.length() == 0) {
+        errorId = 200;
+        errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
+        KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList, ignore it  (rid)" << requestId <<
+                                                     " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, DEF_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    }
+    KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
+
+	Document doc;
+	int64_t fixedPrice = data->LimitPrice;
+	int code = 0;
+	
+	OceanExOrder newOrder;
+	newOrder.side = GetType(data->OrderPriceType);
+	newOrder.price = fixedPrice*1.0/scale_offset;
+	newOrder.size = data->Volume*1.0/scale_offset;
+	requestNewOrders.push_back(newOrder);
+
+	//1. not meet multi new orders count, omit it
+	if (requestNewOrders.size() < MULTI_NEW_ORDERS_COUNT) return;
+
+	//2. send orders
+	sendMultiOrders(ticker, unit, requestNewOrders, doc);
+
+	//3. exception response
+	if(doc.HasParseError() || !doc.IsObject()) {
+		errorId = 100;
+		errorMsg = "send_order http response has parse error or is not json. please check the log";
+		KF_LOG_ERROR(logger, "[send_multi_orders] send_order error!	(rid)" << requestId << " (errorId)" <<
+														             errorId << " (errorMsg) " << errorMsg);
+	} 
+
+	if(doc.HasMember("code")) {
+		code = doc["code"].GetInt();
+	    errorId = code;
+        if(doc.HasMember("message") && doc["message"].IsString()) {
+            errorMsg = doc["message"].GetString();
+        }
+        KF_LOG_ERROR(logger, "[send_multi_orders] send_order error!  (rid)" << requestId << " (errorId)" <<
+                                                          errorId << " (errorMsg) " << errorMsg);
+	}
+
+	if(errorId != 0) {
+        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, 
+        					DEF_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+
+		return;
+    }
+	
+	//4. success handle
+	rapidjson::Value & jsonArray = doc["data"];
+	if (jsonArray.IsArray()) {
+		for (size_t i = 0; i < jsonArray.Capacity(); ++i) {			
+			//on_rtn_oder
+			rapidjson::Value &dataRsp = jsonArray[i];
+			int64_t remoteOrderId = dataRsp["id"].GetInt64();
+			//fix defect of use the old value
+			localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
+			KF_LOG_INFO(logger, "[req_order_insert] after send	(rid)" << requestId << " (OrderRef) " <<
+											 	data->OrderRef << " (remoteOrderId) "  << remoteOrderId);
+			
+			LFRtnOrderField rtn_order;
+			memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+			
+			rtn_order.OrderStatus = LF_CHAR_NotTouched;
+			rtn_order.VolumeTraded = std::round(
+					std::stod(dataRsp["executed_volume"].GetString()) * scale_offset);
+			
+			//first send onRtnOrder about the status change or VolumeTraded change
+			strcpy(rtn_order.ExchangeID, "oceanex");
+			strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+			strncpy(rtn_order.InstrumentID, ticker.c_str(), 31);
+			rtn_order.Direction = GetDirection(dataRsp["side"].GetString());
+			//No this setting on OceanEx
+			rtn_order.TimeCondition = LF_CHAR_GTC;
+			rtn_order.OrderPriceType = GetPriceType(dataRsp["ord_type"].GetString());
+			strncpy(rtn_order.OrderRef, data->OrderRef, 13);
+			rtn_order.VolumeTotalOriginal = std::round(std::stod(dataRsp["volume"].GetString()) * scale_offset);
+			rtn_order.LimitPrice = std::round(std::stod(dataRsp["price"].GetString()) * scale_offset);
+			rtn_order.VolumeTotal = std::round(
+					std::stod(dataRsp["remaining_volume"].GetString()) * scale_offset);
+			
+			on_rtn_order(&rtn_order);
+			raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField), source_id, DEF_TYPE_LF_RTN_ORDER_OCEANEX,
+										1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
+						
+			char noneStatus = LF_CHAR_NotTouched;
+			addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
+		}
+	}	
+
+	//success, only record raw data
+	requestNewOrders.clear();
+	raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, DEF_TYPE_LF_ORDER_OCEANEX, 1,
+								  requestId, errorId, errorMsg.c_str());
+	return;
+}
+
+
+/**
+method_url = base_url + "/order/delete/multi"
+data = {
+    "ids": [473797, 473798]
+}
+
+{
+  "data": [
+    {
+      "trades_count": 1,
+      "id": 473797,
+      "market": "ocevet",
+      "executed_volume": "0.2",
+      "volume": "0.2",
+      "avg_price": "1001.0",
+      "side": "buy",
+      "state": "done",
+      "ord_type": "limit",
+      "price": "1001.0",
+      "remaining_volume": "0.0",
+      "created_at": "2018-10-18T00:38:18Z"
+    },
+    {
+      "trades_count": 0,
+      "id": 473798,
+      "market": "ocevet",
+      "executed_volume": "0.0",
+      "volume": "0.2",
+      "avg_price": "0.0",
+      "side": "sell",
+      "state": "wait",
+      "ord_type": "limit",
+      "price": "1002.0",
+      "remaining_volume": "0.2",
+      "created_at": "2018-10-18T00:38:18Z"
+    }
+  ],
+  "message": "Operation is successful",
+  "code": 0
+} **/
+void TDEngineOceanEx::cancel_multi_orders(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
+{
+	AccountUnitOceanEx& unit = account_units[account_index];
+    KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
+                                              << " (APIKey)" << unit.api_key
+                                              << " (Iid)" << data->InvestorID
+                                              << " (OrderRef)" << data->OrderRef
+                                              << " (KfOrderID)" << data->KfOrderID);
+
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, DEF_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId);
+
+    int errorId = 0;
+    std::string errorMsg = "";
+
+	//1. check ticker
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
+    if(ticker.length() == 0) {
+        errorId = 200;
+        errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
+        KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
+                                                                                       errorId << " (errorMsg) " << errorMsg);
+        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, 
+						DEF_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    }
+    KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
+
+	//2. find the remote order
+    std::map<std::string, int64_t>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
+    int64_t remoteOrderId = 0;
+    if(itr == localOrderRefRemoteOrderId.end()) {
+        errorId = 1;
+        std::stringstream ss;
+        ss << "[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef;
+        errorMsg = ss.str();
+        KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. "
+                << " (rid)" << requestId << " (orderRef)" << data->OrderRef << " (errorId)" 
+                												<< errorId << " (errorMsg) " << errorMsg);
+        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, 
+					DEF_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    } else {
+        remoteOrderId = itr->second;
+        KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) "
+                << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+    }
+
+	cancelOrders.push_back(remoteOrderId);
+	//not meet multi new orders count, omit it
+	if (cancelOrders.size() < MULTI_CANCEL_ORDERS_COUNT) return;
+
+	//3. cancel orders
+    Document doc;
+	cancelMultiOrders(ticker, unit, cancelOrders, doc);
+
+    if(!doc.HasParseError() && doc.HasMember("code") && doc["code"].GetInt() != 0) {
+        errorId = doc["code"].GetInt();
+        if(doc.HasMember("message") && doc["message"].IsString())
+        {
+            errorMsg = doc["message"].GetString();
+        }
+        KF_LOG_ERROR(logger, "[cancel_multi_orders] cancel_order failed!" << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+    }
+
+    if(errorId != 0) {
+        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+		raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, 
+						DEF_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+		return;
+    }
+
+	//clear cache
+	cancelOrders.clear();
+	
+	return;
+}
+
 
 inline int64_t TDEngineOceanEx::getTimestamp()
 {
@@ -1323,9 +1739,23 @@ inline int64_t TDEngineOceanEx::getTimestamp()
     return timestamp;
 }
 
+
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
 
+
 BOOST_PYTHON_MODULE(liboceanextd)
+{
+    using namespace boost::python;
+    class_<TDEngineOceanEx, boost::shared_ptr<TDEngineOceanEx> >("Engine")
+            .def(init<>())
+            .def("init", &TDEngineOceanEx::initialize)
+            .def("start", &TDEngineOceanEx::start)
+            .def("stop", &TDEngineOceanEx::stop)
+            .def("logout", &TDEngineOceanEx::logout)
+            .def("wait_for_stop", &TDEngineOceanEx::wait_for_stop);
+}
+
+BOOST_PYTHON_MODULE(liboceanex2td)
 {
     using namespace boost::python;
     class_<TDEngineOceanEx, boost::shared_ptr<TDEngineOceanEx> >("Engine")
