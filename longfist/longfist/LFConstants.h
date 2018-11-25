@@ -24,6 +24,7 @@ enum exchange_source_index : short
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
+    SOURCE_PROBIT = 27,
     SOURCE_UNKNOWN
 };
 
@@ -56,7 +57,9 @@ inline const char* get_str_from_source_index(exchange_source_index source)
         case SOURCE_OCEANEX:
             return "oceanex";
         case SOURCE_HUOBI:
-            return "HUOBI";
+            return "huobi";
+        case SOURCE_PROBIT:
+            return "probit";
 		default:
 			return "unknown";
 	}
@@ -115,6 +118,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     else if(exch_str == "huobi")
     {
         return SOURCE_HUOBI;
+    }
+    else if(exch_str == "probit")
+    {
+        return SOURCE_PROBIT;
     }
     else
     {

@@ -12,6 +12,8 @@ class SOURCE:
     BITMEX = 23
     HITBTC = 24
     OCEANEX = 25
+    HUOBI = 26
+    PROBIT = 27
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
