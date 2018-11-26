@@ -1219,7 +1219,7 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
         case AccountStatus::AS_AUTH:
         {
             KF_LOG_DEBUG(logger,"lws_write_subscribe do auth");
-            subscribe_msg = "{\"type\": \"authorize\", \"token\":" + accout.api_key + "}";
+            subscribe_msg = "{\"type\": \"authorization\", \"token\":" + accout.api_key + "}";
             break;
         }
         case AccountStatus::AS_OPEN_ORDER:
