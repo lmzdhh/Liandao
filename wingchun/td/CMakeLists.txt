@@ -27,7 +27,7 @@ SET(TD_SOURCE_FILES  ITDEngine.cpp ITDEngine.h ../base/IEngine.cpp ../base/IEngi
 #TARGET_LINK_LIBRARIES(xtptd journal kflog xtptraderapi ${Boost_LIBRARIES})
 #INSTALL(TARGETS xtptd DESTINATION "lib/wingchun")
 
-include_directories(${CMAKE_SOURCE_DIR}/utils/cpr/include ${CMAKE_SOURCE_DIR}/utils/rapidjson/include/ ${CMAKE_SOURCE_DIR}/utils/libwebsockets/include)
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/utils/cpr/include ${CMAKE_SOURCE_DIR}/utils/rapidjson/include/ ${CMAKE_SOURCE_DIR}/utils/libwebsockets/include)
 
 SET(BINANCE_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBinance.cpp TDEngineBinance.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
 ADD_LIBRARY(binancetd SHARED ${BINANCE_SOURCE_FILES})

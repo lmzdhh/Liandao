@@ -3,7 +3,7 @@
 #include "longfist/LFUtils.h"
 #include "TypeConvert.hpp"
 #include <boost/algorithm/string.hpp>
-
+#include <mutex>
 #include <writer.h>
 #include <stringbuffer.h>
 #include <document.h>
@@ -39,11 +39,11 @@ using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
-
+std::mutex  g_orderMutex;
 USING_WC_NAMESPACE
 
 int g_RequestGap=5*60;
-
+#define PARTIAL_TRADED "partialtraded"
 static TDEngineProbit* global_td = nullptr;
 
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
@@ -53,7 +53,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
     {
         case LWS_CALLBACK_CLIENT_ESTABLISHED:
         {
-            lws_callback_on_writable( wsi );
+            lws_callback_on_writable(wsi);
             break;
         }
         case LWS_CALLBACK_PROTOCOL_INIT:
@@ -111,21 +111,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
     return 0;
 }
 
-static struct lws_protocols protocols[] = {
-                {"md-protocol", ws_service_cb, 0, 65536},
-                { NULL, NULL, 0, 0 }
-};
-
-
-enum protocolList {
-    PROTOCOL_TEST,
-    PROTOCOL_LIST_COUNT
-};
-
-struct session_data {
-    int fd;
-};
-
+static struct lws_protocols protocols[] = {{"md-protocol", ws_service_cb, 0, 65536}, { NULL, NULL, 0, 0 }};
 
 
 TDEngineProbit::TDEngineProbit(): ITDEngine(SOURCE_BITMEX)
@@ -135,8 +121,7 @@ TDEngineProbit::TDEngineProbit(): ITDEngine(SOURCE_BITMEX)
 }
 
 TDEngineProbit::~TDEngineProbit()
-{
-}
+{}
 
 void TDEngineProbit::init()
 {
@@ -233,7 +218,7 @@ void TDEngineProbit::connect(long timeout_nsec)
             KF_LOG_INFO(logger, "[connect] get_products");
             printResponse(doc);
 
-            if(loadExchangeOrderFilters(unit, doc))
+            if(loadExchangeOrderFilters(unit))
             {
                 unit.logged_in = true;
             } else {
@@ -385,12 +370,17 @@ std::string TDEngineProbit::GetSide(const LfDirectionType& input) {
     }
 }
 
-LfDirectionType TDEngineProbit::GetDirection(std::string input) {
-    if ("Buy" == input) {
+LfDirectionType TDEngineProbit::GetDirection(const std::string& direct) {
+    if ("buy" == direct)
+    {
         return LF_CHAR_Buy;
-    } else if ("Sell" == input) {
+    }
+    else if ("sell" == direct)
+    {
         return LF_CHAR_Sell;
-    } else {
+    }
+    else
+    {
         return LF_CHAR_Buy;
     }
 }
@@ -405,39 +395,37 @@ std::string TDEngineProbit::GetType(const LfOrderPriceTypeType& input) {
     }
 }
 
-LfOrderPriceTypeType TDEngineProbit::GetPriceType(std::string input) {
-    if ("Limit" == input) {
+LfOrderPriceTypeType TDEngineProbit::GetPriceType(const std::string& type)
+{
+    if ("limit" == type)
+    {
         return LF_CHAR_LimitPrice;
-    } else if ("Market" == input) {
+    }
+    else if ("market" == type)
+    {
         return LF_CHAR_AnyPrice;
-    } else {
+    }
+    else
+    {
         return '0';
     }
 }
-//订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-LfOrderStatusType TDEngineProbit::GetOrderStatus(std::string input) {
-
-    if("Pending New" == input)
+//订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）
+LfOrderStatusType TDEngineProbit::GetOrderStatus(const std::string& type)
+{
+    if("open" == type)
     {
-        return LF_CHAR_Unknown;
+        return LF_CHAR_NoTradeQueueing;
     }
-    else if("New" == input)
-    {
-        return LF_CHAR_NotTouched;
-    }
-    else if ("Partially filled" == input)
-    {
-        return LF_CHAR_PartTradedQueueing;
-    } else if ("Filled" == input)
+    else if("filled" == type)
     {
         return LF_CHAR_AllTraded;
-    } else if ("Canceled" == input)
+    }
+    else if ("cancelled" == type)
     {
         return LF_CHAR_Canceled;
-    } else if ("Rejected" == input)
-    {
-        return LF_CHAR_NoTradeNotQueueing;
-    } else
+    }
+    else if(PARTIAL_TRADED == type)
     {
         return LF_CHAR_NotTouched;
     }
@@ -467,7 +455,7 @@ void TDEngineProbit::req_investor_position(const LFQryPositionField* data, int a
         }
         KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
-    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BITMEX, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_PROBIT, 1, requestId);
 
     LFRspPositionField pos;
     memset(&pos, 0, sizeof(LFRspPositionField));
@@ -524,7 +512,7 @@ void TDEngineProbit::req_investor_position(const LFQryPositionField* data, int a
     }
     if(errorId != 0)
     {
-        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITMEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_PROBIT, 1, requestId, errorId, errorMsg.c_str());
     }
 }
 
@@ -583,7 +571,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
                                               << " (Volume)" << data->Volume
                                               << " (LimitPrice)" << data->LimitPrice
                                               << " (OrderRef)" << data->OrderRef);
-    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1/*ISLAST*/, requestId);
+    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1/*ISLAST*/, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -596,7 +584,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList, ignore it  (rid)" << requestId <<
                                                                                       " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
@@ -644,7 +632,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
             char noneStatus = GetOrderStatus(d["ordStatus"].GetString());//none
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0,requestId);
             //success, only record raw data
-            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1, requestId, errorId, errorMsg.c_str());
+            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
     }
     else if (d.HasMember("code") && d["code"].IsNumber())
     {
@@ -663,7 +651,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1, requestId, errorId, errorMsg.c_str());
+    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
 }
 
 
@@ -676,7 +664,7 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
                                               << " (OrderRef)" << data->OrderRef
                                               << " (KfOrderID)" << data->KfOrderID);
 
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITMEX, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -689,7 +677,7 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
         KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
                                                                                        errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITMEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
@@ -707,7 +695,7 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
                             " (errorId)" << errorId << \
                             " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITMEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     std::string remoteOrderId;
@@ -735,13 +723,13 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITMEX, 1, requestId, errorId, errorMsg.c_str());
+    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
 }
 
 
 void TDEngineProbit::moveNewtoPending(AccountUnit& unit)
 {
-    std::lock_guard<std::mutex> guard_mutex(m_orderMutex);
+    std::lock_guard<std::mutex> guard_mutex(g_orderMutex);
 
     std::vector<PendingOrderStatus>::iterator newOrderStatusIterator;
     for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
@@ -757,7 +745,7 @@ void TDEngineProbit::addNewQueryOrdersAndTrades(AccountUnit& unit, const char_31
                                                  const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded,int reqID)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
-    std::lock_guard<std::mutex> guard_mutex(m_orderMutex);
+    std::lock_guard<std::mutex> guard_mutex(g_orderMutex);
 
     PendingOrderStatus status;
     memset(&status, 0, sizeof(PendingOrderStatus));
@@ -911,7 +899,7 @@ void TDEngineProbit::getResponse(int http_status_code, const std::string& respon
 }
 
 
-void TDEngineProbit::get_account(const AccountUnit& unit, const Document& json)
+void TDEngineProbit::get_account(const AccountUnit& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
     std::string Timestamp = std::to_string(getTimestamp()+g_RequestGap);
@@ -938,7 +926,7 @@ void TDEngineProbit::get_account(const AccountUnit& unit, const Document& json)
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-void TDEngineProbit::get_products(const AccountUnit& unit, const Document& json)
+void TDEngineProbit::get_products(const AccountUnit& unit,  Document& json)
 {
  /*
 [
@@ -978,7 +966,7 @@ void TDEngineProbit::get_products(const AccountUnit& unit, const Document& json)
 
 //https://www.bitmex.com/api/explorer/#!/Order/Order_new
 void TDEngineProbit::send_order(const AccountUnit& unit, const char *code,
-                                     const char *side, const char *type, double size, double price, const std::string& orderRef, const Document& json)
+                                     const char *side, const char *type, double size, double price, const std::string& orderRef,  Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
 
@@ -1071,7 +1059,7 @@ void TDEngineProbit::send_order(const AccountUnit& unit, const char *code,
 }
 
 
-void TDEngineProbit::cancel_all_orders(const AccountUnit& unit,const Document& json)
+void TDEngineProbit::cancel_all_orders(const AccountUnit& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
     std::string Timestamp = std::to_string(getTimestamp()+g_RequestGap);
@@ -1099,7 +1087,7 @@ void TDEngineProbit::cancel_all_orders(const AccountUnit& unit,const Document& j
 }
 
 
-void TDEngineProbit::cancel_order(const AccountUnit& unit, const std::string& orderId, const Document& json)
+void TDEngineProbit::cancel_order(const AccountUnit& unit, const std::string& orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
     std::string Timestamp = std::to_string(getTimestamp()+g_RequestGap);
@@ -1153,60 +1141,6 @@ inline int64_t TDEngineProbit::getTimestamp()
     return timestamp/1000;
 }
 
-
-
-
-void TDEngineProbit::on_lws_connection_error(struct lws* conn)
-{
-    KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_connection_error.");
-    //market logged_in false;
-    AccountUnit& unit = findAccountUnitByWebsocketConn(conn);
-    unit.logged_in = false;
-    KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_connection_error. login again.");
-
-    long timeout_nsec = 0;
-    unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
-    lws_login(unit, timeout_nsec);
-}
-
-int TDEngineProbit::lws_write_subscribe(struct lws* conn)
-{
-    KF_LOG_INFO(logger,"TDEngineProbit::lws_write_subscribe");
-    auto& unit = findAccountUnitByWebsocketConn(conn);
-    std::string reqMsg,args;
-    if(unit.wsStatus == 0)
-    {
-		args = getLwsAuthReq(unit);
-		reqMsg = "{\"op\": \"authKeyExpires\", \"args\": [" + args + "]}";
-    }
-	else if (unit.wsStatus == 1)
-	{
-		args = getLwsSubscribe();
-		reqMsg = "{\"op\": \"subscribe\", \"args\": [" + args + "]}";
-	}
-	else
-    {
-	    return 0;
-		args = getLwsSubscribe();
-		reqMsg = "{\"op\": \"unsubscribe\", \"args\": [" + args + "]}";
-    }
-	int length = reqMsg.length();
-    unsigned char *msg  = new unsigned char[LWS_PRE+ length];
-    memset(&msg[LWS_PRE], 0, length);
-    KF_LOG_INFO(logger, "TDEngineBitfinex::lws_write_subscribe: " + reqMsg);
-  
-
-    strncpy((char *)msg+LWS_PRE, reqMsg.c_str(), length);
-    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
-
-    if(unit.wsStatus == 0)
-    {    //still has pending send data, emit a lws_callback_on_writable()
-        lws_callback_on_writable( conn );
-    }
-	unit.wsStatus += 1;
-    return ret;
-}
-
 void TDEngineProbit::lws_login(AccountUnit& unit, long timeout_nsec)
 {
     KF_LOG_INFO(logger, "TDEngineProbit::lws_login:");
@@ -1245,18 +1179,13 @@ void TDEngineProbit::lws_login(AccountUnit& unit, long timeout_nsec)
     int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
     lws_set_log_level(logs, NULL);
 
-    struct lws_client_connect_info ccinfo = {0};
-
-    static std::string host  = "demo-api.probit.com";
-    static std::string path = "/api/exchange/v1/ws";
-    static int port = 443;
-
+    struct lws_client_connect_info ccinfo = { 0 };
     ccinfo.context 	= context;
-    ccinfo.address 	= host.c_str();
-    ccinfo.port 	= port;
-    ccinfo.path 	= path.c_str();
-    ccinfo.host 	= host.c_str();
-    ccinfo.origin 	= host.c_str();
+    ccinfo.address 	= "demo-api.probit.com";
+    ccinfo.port 	= 443;
+    ccinfo.path 	= "/api/exchange/v1/ws";
+    ccinfo.host 	= "demo-api.probit.com";
+    ccinfo.origin 	= "demo-api.probit.com";
     ccinfo.ietf_version_or_minus_one = -1;
     ccinfo.protocol = "wss://";
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
@@ -1273,34 +1202,249 @@ void TDEngineProbit::lws_login(AccountUnit& unit, long timeout_nsec)
 }
 
 
+void TDEngineProbit::on_lws_connection_error(struct lws* conn)
+{
+    KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_connection_error.");
+    //market logged_in false;
+    AccountUnit& unit = findAccountUnitByWebsocketConn(conn);
+    unit.logged_in = false;
+    KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_connection_error. login again.");
+    unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
+    lws_login(unit, 0);
+}
+
+void TDEngineProbit::lws_write_subscribe(struct lws* conn)
+{
+    KF_LOG_DEBUG(logger,"lws_write_subscribe");
+    auto& accout = findAccountUnitByWebsocketConn(conn);
+    std::string subscribe_msg;
+    switch (accout.status)
+    {
+        case AccountStatus::AS_AUTH:
+        {
+            subscribe_msg = "{\"type\": \"authorization\", \"token\":" + accout.api_key + "}";
+            break;
+        }
+        case AccountStatus::AS_OPEN_ORDER:
+        {
+            subscribe_msg = "{\"type\": \"subscribe\", \"channel\":open_order}";
+            accout.status = AccountStatus::AS_TRADE_HISTORY;
+            break;
+        }
+        case AccountStatus::AS_TRADE_HISTORY:
+        {
+            subscribe_msg = "{\"type\": \"subscribe\", \"channel\":trade_history}";
+            accout.status = AccountStatus::AS_BALANCE;
+            break;
+        }
+        case AccountStatus::AS_BALANCE:
+        {
+            subscribe_msg = "{\"type\": \"subscribe\", \"channel\":balance}";
+            accout.status = AccountStatus::AS_OVER;
+            break;
+        }
+        default:
+            return ;
+    }
+    sendMessage(std::move(subscribe_msg), conn);
+    if(accout.status != AccountStatus::AS_OVER)
+    {
+        lws_callback_on_writable(conn);
+    }
+    KF_LOG_DEBUG(logger, "lws_write_subscribe: " + subscribe_msg);
+}
+
 void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     AccountUnit &unit = findAccountUnitByWebsocketConn(conn);
-    KF_LOG_INFO(logger, "TDEngineProbit::on_lws_data: " << data);
+    KF_LOG_DEBUG(logger, "TDEngineProbit::on_lws_data: " << data);
     Document json;
     json.Parse(data,len);
     if (json.HasParseError() || !json.IsObject())
     {
-        KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data. parse json error: " << data);
+        KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error");
+        return;
     }
-	else if (json.HasMember("error"))
+	if (!json.HasMember("channel") || !json["channel"].IsString())
 	{
-		KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data. subscribe error: " << json["error"].GetString());
+        KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error:json string has no member \"channel\"");
+        return;
 	}
-	else if(json.HasMember("subscribe"))
-	{
-		KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data. subscribe sucess ");
+    std::string channel = json["channel"].GetString();
+    if(channel == "authorization")
+    {
+        if(!json.HasMember("result") || !json["result"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error:json string has no member \"result\"");
+            return;
+        }
+        if ("ok" != json["result"].GetString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, probit authorize failed" << data);
+            return;
+        }
+        unit.status = AccountStatus::AS_OPEN_ORDER;
+        lws_callback_on_writable(conn);
+    }
+    else if(channel == "open_order" )
+    {
+        onOrder(conn, json);
 	}
-	else if(json.HasMember("table"))
+	else if(channel == "trade_history")
+    {
+        onTrade(conn, json);
+    }
+}
+
+void TDEngineProbit::onOrder(struct lws* conn, Document& json)
+{
+    if (!json.HasMember("result") || !json["result"].IsArray())
+    {
+        KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"data\"");
+        return;
+    }
+    AccountUnit &unit = findAccountUnitByWebsocketConn(conn);
+    std::unique_lock<std::mutex> l(g_orderMutex);
+    auto& orderData = json["data"];
+    for (SizeType index = 0; index < orderData.Size(); ++index)
+    {
+        auto& order = orderData[index];
+        if(!order.HasMember("client_order_id") || !order["client_order_id"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"client_order_id\"");
+            return;
+        }
+        auto orderRef = order["client_order_id"].GetString();
+        auto orderIter = unit.ordersMap.find(orderRef);
+        if (orderIter == unit.ordersMap.end())
+        {
+            continue;
+        }
+        if (!order.HasMember("id") || !order["id"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"id\"");
+            return;
+        }
+        auto exchangeOrderID = order["id"].GetString();
+        unit.ordersMapByExchID[exchangeOrderID] = &orderIter->second;
+        //kungfu order
+        LFRtnOrderField& rtn_order = orderIter->second;
+        strncpy(rtn_order.OrderRef, orderRef, sizeof(sizeof(rtn_order.OrderRef))-1);
+
+        if (!order.HasMember("filled_quantity") || !order["filled_quantity"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_quantity\"");
+            return;
+        }
+        rtn_order.VolumeTraded = (int64_t)(std::atof(order["filled_quantity"].GetString())*scale_offset);
+
+        if (!order.HasMember("quantity") || !order["quantity"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"quantity\"");
+            return;
+        }
+        rtn_order.VolumeTotalOriginal = (int64_t)(std::atof(order["quantity"].GetString())*scale_offset);
+
+        if (!order.HasMember("status") || !order["status"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"status\"");
+            return;
+        }
+        rtn_order.OrderStatus = GetOrderStatus(order["status"].GetString());
+        if (rtn_order.VolumeTraded >0 && rtn_order.VolumeTraded < rtn_order.VolumeTotalOriginal)
+        {
+            rtn_order.OrderStatus = GetOrderStatus(PARTIAL_TRADED);
+        }
+        if (!order.HasMember("side") || !order["side"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"side\"");
+            return;
+        }
+        rtn_order.Direction = GetDirection(order["side"].GetString());
+        if (!order.HasMember("type") || !order["type"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"type\"");
+            return;
+        }
+        rtn_order.OrderPriceType = GetPriceType(order["type"].GetString());
+        if (!order.HasMember("limit_price") || !order["limit_price"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"limit_price\"");
+            return;
+        }
+        rtn_order.LimitPrice =  (int64_t)(std::atof(order["limit_price"].GetString()) * scale_offset);
+        if (!order.HasMember("open_quantity") || !order["open_quantity"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"open_quantity\"");
+            return;
+        }
+        rtn_order.VolumeTotal = (int64_t)(std::atof(order["open_quantity"].GetString()) * scale_offset);
+        // do writer
+        on_rtn_order(&rtn_order);
+        //do raw writer
+        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
+        if (rtn_order.OrderStatus == LF_CHAR_AllTraded ||
+            rtn_order.OrderStatus == LF_CHAR_PartTradedNotQueueing ||
+            rtn_order.OrderStatus == LF_CHAR_Canceled ||
+            rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing ||
+            rtn_order.OrderStatus == LF_CHAR_Error)
+        {
+            unit.ordersMap.erase(orderIter);
+            unit.ordersMapByExchID.erase(exchangeOrderID);
+        }
+    }
+}
+
+void TDEngineProbit::onTrade(struct lws * conn, Document& json)
+{
+	if (json.HasMember("result") && json["result"].IsArray())
 	{
-		std::string  tablename = json["table"].GetString();
-		if (tablename == "order")
+        AccountUnit &unit = findAccountUnitByWebsocketConn(conn);
+        std::unique_lock<std::mutex> l(g_orderMutex);
+		auto& tradeData = json["data"];
+		for (SizeType index = 0; index < tradeData.Size(); ++index)
 		{
-			onOrder(conn, json);
-		}
-		else if (tablename == "execution")
-		{
-			onTrade(conn, json);
+			
+			auto& trade = tradeData[index];
+			LFRtnTradeField rtn_trade;
+			memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+			if (!trade.HasMember("id") || !trade["id"].IsString())
+            {
+                KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"id\"");
+                return;
+            }
+            auto exchIter = unit.ordersMapByExchID.find(trade["id"].GetString());
+            if (exchIter == unit.ordersMapByExchID.end())
+            {
+                continue;
+            }
+			strncpy(rtn_trade.OrderRef, exchIter->second->OrderRef, sizeof(rtn_trade.OrderRef)-1);
+			auto orderIter = unit.ordersMap.find(rtn_trade.OrderRef);
+			if (orderIter == unit.ordersMap.end())
+			{
+				continue;
+			}
+			auto& order = orderIter->second;
+			strcpy(rtn_trade.ExchangeID, "ProBit");
+			strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+			strncpy(rtn_trade.InstrumentID, orderIter->second.InstrumentID, 31);
+			rtn_trade.Direction = order.Direction;
+            if (!trade.HasMember("quantity") || !trade["quantity"].IsString())
+            {
+                KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no quantity \"id\"");
+                return;
+            }
+			rtn_trade.Volume = (int64_t)(std::atof(trade["quantity"].GetString())*scale_offset);
+			if (!trade.HasMember("price") || !trade["price"].IsString())
+            {
+                KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no price \"id\"");
+                return;
+            }
+            rtn_trade.Price = (int64_t)(std::atof(trade["price"].GetString())*scale_offset);
+            // do writer
+			on_rtn_trade(&rtn_trade);
+            //do raw writer
+			raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField), source_id, MSG_TYPE_LF_RTN_TRADE_PROBIT, 1, -1);
 		}
 	}
 }
@@ -1317,96 +1461,6 @@ AccountUnit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * websock
     }
     return account_units[0];
 }
-
-
-
-
-
-void TDEngineProbit::onOrder(struct lws* conn, Document& json)
-{
-
-    if (json.HasMember("data") && json["data"].IsArray())
-    {
-        AccountUnit &unit = findAccountUnitByWebsocketConn(conn);
-		auto& arrayData = json["data"];
-		for (SizeType index = 0; index < arrayData.Size(); ++index)
-		{
-			auto& order = arrayData[index];			
-			std::string OrderRef= order["clOrdID"].GetString();
-			auto it = unit.ordersMap.find(OrderRef);
-			if (it == unit.ordersMap.end())
-			{
-				continue;
-			}
-			LFRtnOrderField& rtn_order = it->second;
-			if (order.HasMember("ordStatus"))
-				rtn_order.OrderStatus = GetOrderStatus(order["ordStatus"].GetString());
-			if (order.HasMember("leavesQty"))
-				rtn_order.VolumeTraded = int64_t(order["leavesQty"].GetDouble()*scale_offset);	
-			if (order.HasMember("side"))
-				rtn_order.Direction = GetDirection(order["side"].GetString());
-			if (order.HasMember("ordType"))
-				rtn_order.OrderPriceType = GetPriceType(order["ordType"].GetString());
-			if (order.HasMember("orderQty"))
-				rtn_order.VolumeTotalOriginal = int64_t(order["orderQty"].GetDouble()*scale_offset);
-			if (order.HasMember("price"))
-				rtn_order.LimitPrice = order["price"].GetDouble()*scale_offset;
-			if (order.HasMember("cumQty"))
-				rtn_order.VolumeTotal = int64_t(order["cumQty"].GetDouble()*scale_offset);
-
-			on_rtn_order(&rtn_order);
-			raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-				source_id, MSG_TYPE_LF_RTN_ORDER_BITMEX,
-				1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
-			if (rtn_order.OrderStatus == LF_CHAR_AllTraded || rtn_order.OrderStatus == LF_CHAR_PartTradedNotQueueing ||
-				rtn_order.OrderStatus == LF_CHAR_Canceled || rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing || rtn_order.OrderStatus == LF_CHAR_Error)
-			{
-				unit.ordersMap.erase(it);
-			}
-		}
-       
-    }
-
-}
-void TDEngineProbit::onTrade(struct lws * websocketConn, Document& json)
-{
-	if(json.HasMember("action") && json["action"].GetString() == std::string("insert"))
-	if (json.HasMember("data") && json["data"].IsArray())
-	{
-        AccountUnit &unit = findAccountUnitByWebsocketConn(websocketConn);
-		auto& arrayData = json["data"];
-		for (SizeType index = 0; index < arrayData.Size(); ++index)
-		{
-			
-			auto& trade = arrayData[index];
-			//send OnRtnTrade
-			LFRtnTradeField rtn_trade;
-			memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-			strncpy(rtn_trade.OrderRef, trade["clOrdID"].GetString(), 13);
-			auto it = unit.ordersMap.find(rtn_trade.OrderRef);
-			if (it == unit.ordersMap.end())
-			{
-				continue;
-			}
-			auto& order = it->second;
-			strcpy(rtn_trade.ExchangeID, "BitMEX");
-			strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-			strncpy(rtn_trade.InstrumentID, it->second.InstrumentID, 31);
-			rtn_trade.Direction = order.Direction;
-			
-			if(trade.HasMember("lastQty"))
-				rtn_trade.Volume = int64_t(trade["lastQty"].GetDouble()*scale_offset);
-			if (trade.HasMember("lastPx"))
-			rtn_trade.Price = int64_t(trade["lastPx"].GetDouble()*scale_offset);
-
-			on_rtn_trade(&rtn_trade);
-			raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-				source_id, MSG_TYPE_LF_RTN_TRADE_BITMEX, 1, -1);
-		}
-	}
-}
-
-
 
 std::string TDEngineProbit::createAuthJsonString(AccountUnit& unit )
 {
@@ -1462,6 +1516,12 @@ std::string TDEngineProbit::createOrderJsonString()
     writer.EndObject();
     writer.EndObject();
     return s.GetString();
+}
+
+void TDEngineProbit::sendMessage(std::string &&msg, struct lws * conn)
+{
+    msg.insert(msg.begin(),  LWS_PRE, 0x00);
+    lws_write(conn, (uint8_t*)(msg.data() + LWS_PRE), msg.size() - LWS_PRE, LWS_WRITE_TEXT);
 }
 
 

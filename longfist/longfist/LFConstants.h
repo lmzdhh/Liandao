@@ -165,7 +165,7 @@ const short MSG_TYPE_LF_BAR_MD        = 110;
 const short MSG_TYPE_LF_QRY_POS       = 201;
 const short MSG_TYPE_LF_RSP_POS       = 202;
 const short MSG_TYPE_LF_ORDER         = 204;
-const short MSG_TYPE_LF_RTN_ORDER     = 205;
+const short     MSG_TYPE_LF_RTN_ORDER     = 205;
 const short MSG_TYPE_LF_RTN_TRADE     = 206;
 const short MSG_TYPE_LF_ORDER_ACTION  = 207;
 const short MSG_TYPE_LF_QRY_ACCOUNT   = 208;
@@ -278,6 +278,15 @@ const short MSG_TYPE_LF_RTN_ORDER_OCEANEX = 25205;
 const short MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206;
 const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207;
 
+
+//probit, idx=26
+const short MSG_TYPE_LF_MD_PROBIT        = 26101;
+const short MSG_TYPE_LF_QRY_POS_PROBIT   = 26201;
+const short MSG_TYPE_LF_RSP_POS_PROBIT   = 26202;
+const short MSG_TYPE_LF_ORDER_PROBIT     = 26204;
+const short MSG_TYPE_LF_RTN_ORDER_PROBIT = 26205;
+const short MSG_TYPE_LF_RTN_TRADE_PROBIT = 26206;
+const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 26207;
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
 ///////////////////////////////////
