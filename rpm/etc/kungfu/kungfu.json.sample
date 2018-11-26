@@ -118,7 +118,7 @@
         "eth_u18": "ETHU18"
       },
       "rest_get_interval_ms": 500
-    }
+    },
     "huobi":
         {
           "protocol":"wss://",
@@ -133,8 +133,7 @@
           },
           "rest_get_interval_ms": 500
         }
-      }
-  },
+   },
   "td":
   {
   "probit":
@@ -144,12 +143,11 @@
               {
                 "info":
                 {
-                  "APIKey": "your-api-key",
-                  "SecretKey": "your-secret-key",
-                  "passphrase": "your-passphrase",
-                  "baseUrl": "https://demo-api.probit.com/api/exchange/v1/trade",
+                  "APIKey": "E9F5ED1E85566A8C",
+                  "SecretKey": "39BFD739E9447F7BFEBED03E56F3",
+                  "passphrase": "EFF9EBF0",
+                  "baseUrl": "bot-test1@demo.probit.com",
                   "whiteLists": {
-                                  "strategy_coinpair(base_quote)": "exchange_coinpair",
                                   "btc_usdt": "XBTUSD"
                                 },
                   "rest_get_interval_ms": 2000

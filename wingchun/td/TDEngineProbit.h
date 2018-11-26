@@ -42,7 +42,6 @@ enum class AccountStatus
     AS_AUTH,
     AS_OPEN_ORDER,
     AS_TRADE_HISTORY,
-    AS_BALANCE,
     AS_OVER
 };
 struct AccountUnit

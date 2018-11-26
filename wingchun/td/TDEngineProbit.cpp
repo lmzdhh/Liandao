@@ -135,12 +135,8 @@ void TDEngineProbit::init()
     struct tm* tm = std::localtime(&baseNow);
     tm->tm_sec += 30;
     std::time_t next = std::mktime(tm);
-
     std::cout << "std::to_string(next):" << std::to_string(next)<< std::endl;
-
     std::cout << "getTimestamp:" << std::to_string(getTimestamp())<< std::endl;
-
-
 
 }
 
@@ -1215,43 +1211,40 @@ void TDEngineProbit::on_lws_connection_error(struct lws* conn)
 
 void TDEngineProbit::lws_write_subscribe(struct lws* conn)
 {
-    KF_LOG_DEBUG(logger,"lws_write_subscribe");
+    KF_LOG_DEBUG(logger,"lws_write_subscribe start");
     auto& accout = findAccountUnitByWebsocketConn(conn);
     std::string subscribe_msg;
     switch (accout.status)
     {
         case AccountStatus::AS_AUTH:
         {
-            subscribe_msg = "{\"type\": \"authorization\", \"token\":" + accout.api_key + "}";
+            KF_LOG_DEBUG(logger,"lws_write_subscribe do auth");
+            subscribe_msg = "{\"type\": \"authorize\", \"token\":" + accout.api_key + "}";
             break;
         }
         case AccountStatus::AS_OPEN_ORDER:
         {
+            KF_LOG_DEBUG(logger,"lws_write_subscribe open order");
             subscribe_msg = "{\"type\": \"subscribe\", \"channel\":open_order}";
             accout.status = AccountStatus::AS_TRADE_HISTORY;
             break;
         }
         case AccountStatus::AS_TRADE_HISTORY:
         {
+            KF_LOG_DEBUG(logger,"lws_write_subscribe trade history");
             subscribe_msg = "{\"type\": \"subscribe\", \"channel\":trade_history}";
-            accout.status = AccountStatus::AS_BALANCE;
-            break;
-        }
-        case AccountStatus::AS_BALANCE:
-        {
-            subscribe_msg = "{\"type\": \"subscribe\", \"channel\":balance}";
             accout.status = AccountStatus::AS_OVER;
             break;
         }
         default:
             return ;
     }
+    KF_LOG_DEBUG(logger, "lws_write_subscribe: " << subscribe_msg);
     sendMessage(std::move(subscribe_msg), conn);
     if(accout.status != AccountStatus::AS_OVER)
     {
         lws_callback_on_writable(conn);
     }
-    KF_LOG_DEBUG(logger, "lws_write_subscribe: " + subscribe_msg);
 }
 
 void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
@@ -1263,6 +1256,11 @@ void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
     if (json.HasParseError() || !json.IsObject())
     {
         KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error");
+        return;
+    }
+    if (json.HasMember("errorCode") && json["errorCode"].IsString())
+    {
+        KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data," << data);
         return;
     }
 	if (!json.HasMember("channel") || !json["channel"].IsString())
