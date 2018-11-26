@@ -108,6 +108,10 @@ mkdir -p $KUNGFU_JOURNAL_DIR/TD_SEND/HUOBI
 mkdir -p $KUNGFU_JOURNAL_DIR/TD_RAW/HUOBI
 mkdir -p $KUNGFU_JOURNAL_DIR/TD_Q/HUOBI
 
+mkdir -p $KUNGFU_JOURNAL_DIR/MD/PROBIT
+mkdir -p $KUNGFU_JOURNAL_DIR/MD_RAW/PROBIT
+
+
 chown -R bruce:bruce $KUNGFU_DATA_DIR
 
 chmod +x /opt/kungfu/master/bin/*

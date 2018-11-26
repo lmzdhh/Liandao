@@ -42,6 +42,6 @@ LINK_DIRECTORIES(/opt/kungfu/master/lib/yijinjing)
 LINK_DIRECTORIES(/opt/kungfu/master/lib/wingchun)
 
 ############################################################
-SET(STRATEGY_SOURCE_FILE coinmex_demo_strategy.cpp)
+SET(STRATEGY_SOURCE_FILE probit_demo_strategy.cpp)
 ADD_EXECUTABLE(${PROJECT_NAME} ${STRATEGY_SOURCE_FILE})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} wingchunstrategy python journal kflog log4cplus ${Boost_LIBRARIES})
