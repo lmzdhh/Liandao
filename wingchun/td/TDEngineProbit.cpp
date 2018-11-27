@@ -168,7 +168,7 @@ TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
     unit.secret_key = secret_key;
     unit.baseUrl = baseUrl;
 	unit.authUrl = acountUrl;
-	unit.wsUrl = "wss://demo-api.probit.com/api/exchange/v1/ws";
+	unit.wsUrl = "wss://demo-api.probit.com";
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
@@ -565,7 +565,7 @@ std::string TDEngineProbit::TimeToFormatISO8601(int64_t timestamp)
 	gmtime_r(&timestamp, &utc_time);
 	char timeStr[50];
 	sprintf(timeStr, "%04d-%02d-%02dT%02d:%02d:%02d.%03d", utc_time.tm_year + 1900, utc_time.tm_mon + 1, utc_time.tm_mday,
-		utc_time.tm_hour, utc_time.tm_min, utc_time.tm_sec);
+		utc_time.tm_hour, utc_time.tm_min, utc_time.tm_sec,ms);
 	return std::string(timeStr);
 }
 
@@ -1185,7 +1185,7 @@ void TDEngineProbit::lws_login(AccountUnitProbit& unit, long timeout_nsec)
     ccinfo.host 	= unit.wsUrl.c_str();
     ccinfo.origin 	= unit.wsUrl.c_str();
     ccinfo.ietf_version_or_minus_one = -1;
-    ccinfo.protocol = "wss://";
+    ccinfo.protocol = protocols[0].name;
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 
     unit.websocketConn = lws_client_connect_via_info(&ccinfo);
@@ -1470,8 +1470,8 @@ std::string TDEngineProbit::getAuthToken(const AccountUnitProbit& unit )
 	if (m_tokenExpireTime < (getTimestamp() - 60000))
 	{
 		std::string requestPath = "/token ";
-		std::string body = R"("grant_type":"client_credentials ")";
-		std::string msg = "{\"" + unit.api_key + "\":\"" + unit.secret_key + "\"}";
+		std::string body = R"({"grant_type":"client_credentials"})";
+		std::string msg = unit.api_key + ":" + unit.secret_key;
 		std::string authEncode = base64_encode((const unsigned char*)msg.c_str(), msg.length());
 		string url = unit.authUrl + requestPath;
 		const auto response = Post(Url{ url },
