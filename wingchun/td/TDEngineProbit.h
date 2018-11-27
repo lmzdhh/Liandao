@@ -143,8 +143,8 @@ private:
     void onTrade(struct lws * websocketConn, Document& json);
     void wsloop();
     //void addWebsocketPendingSendMsg(AccountUnitBitmex& unit, std::string msg);
-    std::string createAuthJsonString(AccountUnitProbit& unit );
-    std::string createOrderJsonString();
+    //std::string createAuthJsonString(AccountUnitProbit& unit );
+    //std::string createOrderJsonString();
 
     struct lws_context *context = nullptr;
     ThreadPtr ws_thread;

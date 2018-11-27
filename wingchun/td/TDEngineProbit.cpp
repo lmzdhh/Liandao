@@ -1207,7 +1207,7 @@ void TDEngineProbit::on_lws_connection_error(struct lws* conn)
     AccountUnitProbit& unit = findAccountUnitByWebsocketConn(conn);
     unit.logged_in = false;
     KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_connection_error. login again.");
-    unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
+    //unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
     lws_login(unit, 0);
 }
 
@@ -1518,7 +1518,11 @@ std::string TDEngineProbit::getAuthToken(const AccountUnitProbit& unit )
 }
 
 
-
+void TDEngineProbit::sendMessage(std::string &&msg, struct lws * conn)
+{
+    msg.insert(msg.begin(),  LWS_PRE, 0x00);
+    lws_write(conn, (uint8_t*)(msg.data() + LWS_PRE), msg.size() - LWS_PRE, LWS_WRITE_TEXT);
+}
 
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
