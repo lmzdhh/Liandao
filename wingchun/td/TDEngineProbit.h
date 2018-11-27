@@ -44,11 +44,13 @@ enum class AccountStatus
     AS_TRADE_HISTORY,
     AS_OVER
 };
-struct AccountUnit
+struct AccountUnitProbit
 {
     string api_key;
     string secret_key;
     string baseUrl;
+	string authUrl;
+	string wsUrl;
     // internal flags
     bool    logged_in;
     std::vector<PendingOrderStatus> newOrderStatus;
@@ -65,6 +67,7 @@ struct AccountUnit
     AccountStatus status = AccountStatus::AS_AUTH;
     std::map<std::string/*client_order_id*/, LFRtnOrderField> ordersMap;
     std::map<std::string/*order_id*/, LFRtnOrderField*>       ordersMapByExchID;
+    int gpTimes = 24 * 60 * 60*1000;
 };
 
 
@@ -87,7 +90,7 @@ public:
     virtual void release_api();
     virtual bool is_connected() const;
     virtual bool is_logged_in() const;
-    virtual string name() const { return "TDEngineBitmex"; };
+    virtual string name() const { return "TDEngineProbit"; };
 
     // req functions
     virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
@@ -103,16 +106,17 @@ public:
     void on_lws_data(struct lws* conn, const char* data, size_t len);
     void on_lws_connection_error(struct lws* conn);
     void lws_write_subscribe(struct lws* conn);
-    void lws_login(AccountUnit& unit, long timeout_nsec);
+    void lws_login(AccountUnitProbit& unit, long timeout_nsec);
     
     int Round(std::string tickSizeStr);
-
+		//2018-01-01T00:00:00.000Z
+	  std::string TimeToFormatISO8601(int64_t timestamp);
 private:
     void sendMessage(std::string&& msg,struct lws * conn);
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
-    vector<AccountUnit> account_units;
+    vector<AccountUnitProbit> account_units;
 
     virtual void set_reader_thread() override;
 
@@ -123,9 +127,9 @@ private:
     LfOrderStatusType GetOrderStatus(const std::string&);
 
     std::vector<std::string> split(std::string str, std::string token);
-    void addNewQueryOrdersAndTrades(AccountUnit& unit, const char_31 InstrumentID, const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID);
+    void addNewQueryOrdersAndTrades(AccountUnitProbit& unit, const char_31 InstrumentID, const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID);
 
-    void moveNewtoPending(AccountUnit& unit);
+    void moveNewtoPending(AccountUnitProbit& unit);
     static constexpr int scale_offset = 1e8;
 
     int rest_get_interval_ms = 500;
@@ -134,42 +138,45 @@ private:
 
 
 //websocket
-    AccountUnit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
+    AccountUnitProbit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onOrder(struct lws * websocketConn, Document& json);
     void onTrade(struct lws * websocketConn, Document& json);
     void wsloop();
     //void addWebsocketPendingSendMsg(AccountUnitBitmex& unit, std::string msg);
-    std::string createAuthJsonString(AccountUnit& unit );
+    std::string createAuthJsonString(AccountUnitProbit& unit );
     std::string createOrderJsonString();
 
     struct lws_context *context = nullptr;
     ThreadPtr ws_thread;
+    
+    std::string getAuthToken(const AccountUnitProbit& unit );
+    int64_t m_tokenExpireTime = 0;
+    std::string m_authToken;
 
 private:
     int HTTP_RESPONSE_OK = 200;
 
-    void get_account(const AccountUnit& unit,  Document& json);
+    void get_account(const AccountUnitProbit& unit,  Document& json);
 
-    void get_products(const AccountUnit& unit,  Document& json);
-    void send_order(const AccountUnit& unit, const char *code, const char *side, const char *type, double size, double price, const std::string& orderRef, Document& json);
+    void get_products(const AccountUnitProbit& unit, Document& json);
+    void send_order(const AccountUnitProbit& unit, const char *code,
+                        const char *side, const char *type, double size, double price,double cost, const std::string& orderRef, Document& json);
 
-    void cancel_all_orders(const AccountUnit& unit, Document& json);
-    void cancel_order(const AccountUnit& unit, const std::string& orderId, Document& json);
-
-    void query_order(AccountUnit& unit, std::string code, std::string orderId, Document& json);
+    void cancel_all_orders(AccountUnitProbit& unit);
+    void cancel_order(const AccountUnitProbit& unit, const std::string& orderId, const std::string& marketID,double quantity, Document& json);
+ 
     void getResponse(int http_status_code, const std::string& responseText, const std::string& errorMsg, Document& json);
     void printResponse(const Document& d);
 
-    std::string getLwsAuthReq(const AccountUnit& unit);
-    std::string getLwsSubscribe();
 
     inline int64_t getTimestamp();
 
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
-    bool loadExchangeOrderFilters(AccountUnit& unit);
+    bool loadExchangeOrderFilters(AccountUnitProbit& unit);
     void debug_print(const std::map<std::string, SendOrderFilter>&);
-    SendOrderFilter getSendOrderFilter(const AccountUnit& unit, const char *symbol);
+    SendOrderFilter getSendOrderFilter(const AccountUnitProbit& unit, const char *symbol);
 
+	bool OpenOrderToLFOrder(AccountUnitProbit& unit,  rapidjson::Value& json, LFRtnOrderField& order);
 };
 
 WC_NAMESPACE_END
