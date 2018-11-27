@@ -147,10 +147,10 @@
                   "SecretKey": "39BFD739E9447F7BFEBED03E56F3",
                   "passphrase": "EFF9EBF0",
                   "baseUrl": "demo-api.probit.com",
-		  "acountUrl": "demo-accounts.probit.com",
+		              "acountUrl": "demo-accounts.probit.com",
                   "whiteLists": {
-                                  "btc_usdt": "XBTUSD"
-				  "xrp_usdt":"XRP-USDT"
+                                  "btc_usdt": "XBTUSD",
+				                          "xrp_usdt":"XRP-USDT"
                                 },
                   "rest_get_interval_ms": 2000
                 },
