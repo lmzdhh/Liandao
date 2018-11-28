@@ -471,23 +471,23 @@ void TDEngineProbit::req_investor_position(const LFQryPositionField* data, int a
     [{"available":"0.099","balance":"0.099","currencyCode":"BTC","hold":"0","id":83906},{"available":"188","balance":"188","currencyCode":"MVP","hold":"0","id":83906}]
  * */
     std::vector<LFRspPositionField> tmp_vector;
-    if(d.IsArray())
+    if(d.HasMember("data") && d["data"].IsArray())
     {
-        size_t len = d.Size();
+		auto& dataArray = d["data"];
+        size_t len = dataArray.Size();
         KF_LOG_INFO(logger, "[req_investor_position] (asset.length)" << len);
-        for(int i = 0; i < len; i++)
+        for(size_t i = 0; i < len; i++)
         {
-            std::string symbol = d.GetArray()[i]["currency_id"].GetString();
+            std::string symbol = dataArray[i]["currency_id"].GetString();
             std::string ticker = unit.positionWhiteList.GetKeyByValue(symbol);
             if(ticker.length() > 0)
             {
                 strncpy(pos.InstrumentID, ticker.c_str(), 31);
-                pos.Position = std::round(std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset);
+                pos.Position = std::round(std::stod(dataArray[i]["available"].GetString()) * scale_offset);
                 tmp_vector.push_back(pos);
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
                                                                           << " available:" << d.GetArray()[i]["available"].GetString()
-                                                                          << " balance: " << d.GetArray()[i]["balance"].GetString()
-                                                                          << " hold: " << d.GetArray()[i]["hold"].GetString());
+                                                                          << " total: " << d.GetArray()[i]["total"].GetString());
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
             }
         }
