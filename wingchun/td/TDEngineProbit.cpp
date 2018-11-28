@@ -1207,6 +1207,7 @@ void TDEngineProbit::on_lws_connection_error(struct lws* conn)
     //market logged_in false;
     AccountUnitProbit& unit = findAccountUnitByWebsocketConn(conn);
     unit.logged_in = false;
+    unit.status = AccountStatus::AS_AUTH;
     KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_connection_error. login again.");
     //unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
     lws_login(unit, 0);
@@ -1292,7 +1293,8 @@ void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
             KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error:json string has no member \"result\","<< data);
             return;
         }
-        if ("ok" == json["result"].GetString())
+        std::string result = json["result"].GetString();
+        if (std::string("ok") == result)
         {
             AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
             unit.status = AccountStatus::AS_OPEN_ORDER;
