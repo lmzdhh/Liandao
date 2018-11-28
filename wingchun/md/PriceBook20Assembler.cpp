@@ -4,6 +4,10 @@
 
 #include "PriceBook20Assembler.h"
 
+PriceBook20Assembler::PriceBook20Assembler() : m_level(20)
+{
+}
+
 PriceBook20Assembler::~PriceBook20Assembler()
 {
     clearPriceBook();
@@ -26,7 +30,7 @@ void PriceBook20Assembler::EraseAskPrice(std::string ticker, int64_t price)
 
         if(itr != priceBooks->end()) {
             //find the price
-            if (idx < 20) {
+            if (idx < m_level) {
                 iter->second->hasLevel20AskChanged = true;
             }
             priceBooks->erase(itr);
@@ -51,7 +55,7 @@ void PriceBook20Assembler::EraseBidPrice(std::string ticker, int64_t price)
 
         if(itr != priceBooks->end()) {
             //find the price
-            if (idx < 20) {
+            if (idx < m_level) {
                 iter->second->hasLevel20BidChanged = true;
             }
             priceBooks->erase(itr);
@@ -86,7 +90,7 @@ void PriceBook20Assembler::UpdateAskPrice(std::string ticker, int64_t price, uin
         //exist price replace volume
         if(price == itr.base()->price) {
             itr.base()->volume = volume;
-            if (idx < 20) {
+            if (idx < m_level) {
                 priceLevelBook->hasLevel20AskChanged = true;
             }
             return;
@@ -97,7 +101,7 @@ void PriceBook20Assembler::UpdateAskPrice(std::string ticker, int64_t price, uin
     pv.price = price;
     pv.volume = volume;
     asksPriceAndVolume->insert(itr, pv);
-    if (idx < 20) {
+    if (idx < m_level) {
         priceLevelBook->hasLevel20AskChanged = true;
     }
 }
@@ -130,7 +134,7 @@ void PriceBook20Assembler::UpdateBidPrice(std::string ticker, int64_t price, uin
         //exist price replace volume
         if(price == itr.base()->price) {
             itr.base()->volume = volume;
-            if (idx < 20) {
+            if (idx < m_level) {
                 priceLevelBook->hasLevel20BidChanged = true;
             }
             return;
@@ -141,7 +145,7 @@ void PriceBook20Assembler::UpdateBidPrice(std::string ticker, int64_t price, uin
     pv.price = price;
     pv.volume = volume;
     bidsPriceAndVolume->insert(itr, pv);
-    if (idx < 20) {
+    if (idx < m_level) {
         priceLevelBook->hasLevel20BidChanged = true;
     }
 }
@@ -164,7 +168,7 @@ bool PriceBook20Assembler::Assembler(std::string ticker, LFPriceBook20Field &md)
     }
 
     int askTotalSize = asksPriceAndVolume->size();
-    auto size = std::min(askTotalSize, 20);
+    auto size = std::min(askTotalSize, m_level);
 
     for(int i = 0; i < size; ++i)
     {
@@ -175,7 +179,7 @@ bool PriceBook20Assembler::Assembler(std::string ticker, LFPriceBook20Field &md)
     md.AskLevelCount = size;
 
     int bidTotalSize = bidsPriceAndVolume->size();
-    size = std::min(bidTotalSize, 20);
+    size = std::min(bidTotalSize, m_level);
 
     for(int i = 0; i < size; ++i)
     {
@@ -228,6 +232,19 @@ void PriceBook20Assembler::clearPriceBook()
         delete iter->second;
         iter = tickerPriceMap.erase(iter);
     }
+}
+
+void PriceBook20Assembler::SetLevel(int level)
+{
+    if (level > 0 && level <= 20)
+    {
+        m_level = level;
+    }
+}
+
+int PriceBook20Assembler::GetLevel()
+{
+    return m_level;
 }
 
 void PriceBook20Assembler::testPriceBook20Assembler() {

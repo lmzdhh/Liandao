@@ -35,6 +35,7 @@ class PriceBook20Assembler {
 
 
 public:
+    PriceBook20Assembler();
     ~PriceBook20Assembler();
     void EraseAskPrice(std::string ticker, int64_t price);
     void UpdateAskPrice(std::string ticker, int64_t price, uint64_t volume);
@@ -45,6 +46,8 @@ public:
 
     void clearPriceBook(std::string ticker);
     void clearPriceBook();
+    void SetLevel(int level);
+    int GetLevel();
 private:
     void testPriceBook20Assembler();
     /*Vector follows this order: (from Binance MD)
@@ -67,6 +70,7 @@ private:
  * */
 
     std::unordered_map<std::string, PriceLevelBooks*> tickerPriceMap;
+    int m_level;
 };
 
 
