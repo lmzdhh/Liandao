@@ -1243,7 +1243,7 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
     }
     KF_LOG_INFO(logger, "lws_write_subscribe: " << subscribe_msg);
     sendMessage(std::move(subscribe_msg), conn);
-    if(accout.status != AccountStatus::AS_OVER && accout.status != AccountStatus::AS_AUTH)
+    if(accout.status != AccountStatus::AS_OVER || accout.status != AccountStatus::AS_AUTH)
     {
         lws_callback_on_writable(conn);
     }
