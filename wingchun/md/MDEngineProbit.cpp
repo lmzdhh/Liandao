@@ -137,9 +137,14 @@ MDEngineProbit::MDEngineProbit(): IMDEngine(SOURCE_PROBIT)
 
 void MDEngineProbit::load(const json& j_config)
 {
+    book_depth_count = j_config["book_depth_count"].get<int>();
+    trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
-    KF_LOG_INFO(logger, "MDEngineProbit:: rest_get_interval_ms: " << rest_get_interval_ms);
+    KF_LOG_INFO(logger, "MDEngineProbit::load:" << "book_depth_count=" << book_depth_count <<
+                                                  "trade_count=" << trade_count <<
+                                                  "rest_get_interval_ms=" << rest_get_interval_ms);
 
+    priceBook20Assembler.SetLevel(book_depth_count);
     coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     coinPairWhiteList.Debug_print();
 
@@ -209,8 +214,10 @@ void MDEngineProbit::makeWebsocketSubscribeJsonString()
     int count = coinBaseQuotes.size();
     for (int i = 0; i < count; i++)
     {
+        CoinBaseQuote coinBaseQuote = coinBaseQuotes[i];
+        std::string baseQuote = coinBaseQuote.base + "-" + coinBaseQuote.quote;
         //get ready websocket subscrube json strings
-        std::string jsonDepthString = createMarketDataJsonString();
+        std::string jsonDepthString = createMarketDataJsonString(baseQuote);
         websocketSubscribeJsonString.push_back(jsonDepthString);
         //std::string jsonFillsString = createFillsJsonString(coinBaseQuotes[i].base, coinBaseQuotes[i].quote);
         //websocketSubscribeJsonString.push_back(jsonFillsString);
@@ -461,14 +468,25 @@ void MDEngineProbit::onMarketData(Document& json)
     {
         status = json["lag"].GetInt();
     }
+    bool reset = false;
+    if(json.HasMember("reset") && json["reset"].IsBool()) 
+    {
+        reset = json["reset"].GetBool();
+        KF_LOG_INFO(logger, "MDEngineProbit::onMarketData:" << "reset : " << reset);
+    }
     std::string ticker = coinPairWhiteList.GetKeyByValue(market_id);
     if(ticker.length() == 0) 
     {
         KF_LOG_INFO(logger, "MDEngineCoinmex::onMarketData: market_id not in WhiteList , ignore it:" << "market_id : " << market_id);
         return;
     }
-    KF_LOG_INFO(logger, "MDEngineProbit::onMarketData:" << "channel : " << channel << "  market_id: " << market_id << "  status: " << status << "  lag: " << lag << "  ticker: " << ticker);
+    KF_LOG_INFO(logger, "MDEngineProbit::onMarketData:" << "channel : " << channel << 
+                                                            "  market_id: " << market_id << 
+                                                            "  status: " << status << 
+                                                            "  lag: " << lag << 
+                                                            "  ticker: " << ticker);
 
+    /*
     if(json.HasMember("ticker") && json["ticker"].IsObject()) 
     {
         std::string ticker_time="";
@@ -545,6 +563,10 @@ void MDEngineProbit::onMarketData(Document& json)
             KF_LOG_INFO(logger, "MDEngineProbit::onMarketData:" << "rt_side : " << rt_side << "  rt_price: " << rt_price << "  rt_quantity: " << rt_quantity << "  rt_tick_direction: " << rt_tick_direction << "  rt_time: " << rt_time);
         }
     }
+    */
+
+    static int buy_Cnt = 0;
+    static int sell_Cnt = 0;
 	if(json.HasMember("order_books") && json["order_books"].IsArray()) 
 	{
         int len = json["order_books"].Size();
@@ -571,45 +593,68 @@ void MDEngineProbit::onMarketData(Document& json)
 
                 int64_t price = std::round(stod(ob_price) * scale_offset);
                 uint64_t volume = std::round(stod(ob_quantity) * scale_offset);
-                if(strcmp(ob_side.c_str(), "buy") == 0)
+
+                if (reset)
                 {
-                    if (volume == 0)
+                    //first order book data is a snapshot
+                    if(strcmp(ob_side.c_str(), "buy") == 0)
                     {
-                        priceBook20Assembler.EraseAskPrice(ticker, price);
-                        KF_LOG_INFO(logger, "MDEngineCoinmex::onMarketData: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
+                        if (buy_Cnt < book_depth_count)
+                        {
+                            priceBook20Assembler.UpdateAskPrice(ticker, price, volume);
+                            ++buy_Cnt;
+                        }
                     }
-                    else
+                    else if(strcmp(ob_side.c_str(), "sell") == 0)
                     {
-                        priceBook20Assembler.UpdateAskPrice(ticker, price, volume);    
-                    }                    
+                        if (sell_Cnt < book_depth_count)
+                        {
+                            priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
+                            ++sell_Cnt;
+                        }
+                    }
                 }
-                else if(strcmp(ob_side.c_str(), "sell") == 0)
+                else
                 {
-                    if (volume == 0)
+                    //incremental quotation
+                    if(strcmp(ob_side.c_str(), "buy") == 0)
                     {
-                        priceBook20Assembler.EraseBidPrice(ticker, price);
-                        KF_LOG_INFO(logger, "MDEngineCoinmex::onMarketData: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
+                        if (volume == 0)
+                        {
+                            --buy_Cnt;
+                            priceBook20Assembler.EraseAskPrice(ticker, price);
+                            KF_LOG_INFO(logger, "MDEngineCoinmex::onMarketData: #####asksPriceAndVolume volume == 0##### price:" << price<<  "  volume:"<< volume);
+                        }
+                        else
+                        {
+                            priceBook20Assembler.UpdateAskPrice(ticker, price, volume);    
+                        }                    
                     }
-                    else
+                    else if(strcmp(ob_side.c_str(), "sell") == 0)
                     {
-                        priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
+                        if (volume == 0)
+                        {
+                            --sell_Cnt;
+                            priceBook20Assembler.EraseBidPrice(ticker, price);
+                            KF_LOG_INFO(logger, "MDEngineCoinmex::onMarketData: #####bidsPriceAndVolume volume == 0##### price:" << price<<  "  volume:"<< volume);
+                        }
+                        else
+                        {
+                            priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
+                        }
                     }
                 }
             }
             KF_LOG_INFO(logger, "MDEngineProbit::onMarketData:" << "ob_side : " << ob_side << "  ob_price: " << ob_price << "  ob_quantity: " << ob_quantity);
         }
     }
-    bool reset = false;
-	if(json.HasMember("reset") && json["reset"].IsBool()) 
-	{
-        reset = json["reset"].GetBool();
-        KF_LOG_INFO(logger, "MDEngineProbit::onMarketData:" << "reset : " << reset);
-    }
+    
 
     // has any update
     LFPriceBook20Field md;
     memset(&md, 0, sizeof(md));
-    if(priceBook20Assembler.Assembler(ticker, md)) {
+    if(priceBook20Assembler.Assembler(ticker, md)) 
+    {
         strcpy(md.ExchangeID, "probit");
 
         KF_LOG_INFO(logger, "MDEngineProbit::onMarketData: on_price_book_update");
@@ -650,7 +695,7 @@ Example
 	{"type":"unsubscribe","channel":"marketdata","market_id":"ETH-BTC"}
 	{"type":"unsubscribe","channel":"exchange_rate"}
  * */
-std::string MDEngineProbit::createMarketDataJsonString()
+std::string MDEngineProbit::createMarketDataJsonString(std::string base_quote)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);
@@ -660,13 +705,11 @@ std::string MDEngineProbit::createMarketDataJsonString()
 	writer.Key("channel");
     writer.String("marketdata");
 	writer.Key("market_id");
-    writer.String("BTC-USDT");
+    writer.String(base_quote.c_str());
 	writer.Key("interval");
-    writer.Int(100);
+    writer.Int(rest_get_interval_ms);
     writer.Key("filter");
     writer.StartArray();
-    writer.String("ticker");
-	writer.String("recent_trades");
     writer.String("order_books");
     writer.EndArray();
     writer.EndObject();
