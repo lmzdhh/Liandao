@@ -1228,6 +1228,7 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
         {
             KF_LOG_INFO(logger,"lws_write_subscribe open order");
             subscribe_msg = "{\"type\": \"subscribe\", \"channel\":\"open_order\"}";
+            accout.status = AccountStatus::AS_TRADE_HISTORY;
             break;
         }
         case AccountStatus::AS_TRADE_HISTORY:
@@ -1242,7 +1243,7 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
     }
     KF_LOG_INFO(logger, "lws_write_subscribe: " << subscribe_msg);
     sendMessage(std::move(subscribe_msg), conn);
-    if(accout.status != AccountStatus::AS_OVER)
+    if(accout.status != AccountStatus::AS_OVER && accout.status != AccountStatus::AS_AUTH)
     {
         lws_callback_on_writable(conn);
     }
@@ -1309,7 +1310,6 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         return;
     }
     AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
-    unit.status = AccountStatus::AS_TRADE_HISTORY;
     std::unique_lock<std::mutex> l(g_orderMutex);
     auto& orderData = json["data"];
     for (SizeType index = 0; index < orderData.Size(); ++index)
