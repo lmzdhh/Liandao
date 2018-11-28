@@ -1222,14 +1222,12 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
         {
             KF_LOG_INFO(logger,"lws_write_subscribe do auth");
             subscribe_msg = "{\"type\": \"authorization\", \"token\":\"" + getAuthToken(accout) + "\"}";
-	    accout.status = AccountStatus::AS_OPEN_ORDER;
             break;
         }
         case AccountStatus::AS_OPEN_ORDER:
         {
             KF_LOG_INFO(logger,"lws_write_subscribe open order");
             subscribe_msg = "{\"type\": \"subscribe\", \"channel\":\"open_order\"}";
-            accout.status = AccountStatus::AS_TRADE_HISTORY;
             break;
         }
         case AccountStatus::AS_TRADE_HISTORY:
@@ -1252,13 +1250,12 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
 
 void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
-    AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
     KF_LOG_DEBUG(logger, "TDEngineProbit::on_lws_data: " << data);
     Document json;
     json.Parse(data,len);
     if (json.HasParseError() || !json.IsObject())
     {
-        KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error");
+        KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error," << data);
         return;
     }
     if (json.HasMember("errorCode") )
@@ -1266,35 +1263,42 @@ void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
         KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data," << data);
         return;
     }
-	if (!json.HasMember("type") || !json["type"].IsString())
-	{
-        KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error:json string has no member \"channel\"");
-        return;
-	}
-    std::string type = json["type"].GetString();
-    if(type == "authorization")
+    if(json.HasMember("channel") && json["channel"].IsString())
     {
+        std::string channel = json["channel"].GetString();
+        if(channel== "open_order" )
+        {
+            onOrder(conn, json);
+        }
+        else if(channel == "trade_history")
+        {
+            onTrade(conn, json);
+        }
+        return;
+    }
+    if (json.HasMember("type") && json["type"].IsString())
+	{
+        std::string type = json["type"].GetString();
+        if(type != "authorization")
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error:json string has no member \"authorization\","<< data);
+            return;
+        }
         if(!json.HasMember("result") || !json["result"].IsString())
         {
-            KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error:json string has no member \"result\"");
+            KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error:json string has no member \"result\","<< data);
             return;
         }
-        if ("ok" != json["result"].GetString())
+        if ("ok" == json["result"].GetString())
         {
-            KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, probit authorize failed" << data);
+            AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
+            unit.status = AccountStatus::AS_OPEN_ORDER;
+            lws_callback_on_writable(conn);
+            KF_LOG_INFO(logger, "TDEngineProbit::on_lws_data, probit authorize success,"<< data);
             return;
         }
-        unit.status = AccountStatus::AS_OPEN_ORDER;
-        lws_callback_on_writable(conn);
-    }
-    else if(type== "open_order" )
-    {
-        onOrder(conn, json);
+        KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, probit authorize failed,"<< data);
 	}
-	else if(type == "trade_history")
-    {
-        onTrade(conn, json);
-    }
 }
 
 void TDEngineProbit::onOrder(struct lws* conn, Document& json)
@@ -1305,6 +1309,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         return;
     }
     AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
+    unit.status = AccountStatus::AS_TRADE_HISTORY;
     std::unique_lock<std::mutex> l(g_orderMutex);
     auto& orderData = json["data"];
     for (SizeType index = 0; index < orderData.Size(); ++index)

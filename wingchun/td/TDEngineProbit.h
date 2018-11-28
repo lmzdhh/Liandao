@@ -64,7 +64,7 @@ struct AccountUnitProbit
     std::vector<std::string> pendingSendMsg;
     struct lws * websocketConn;
     int wsStatus=0;
-    AccountStatus status = AccountStatus::AS_AUTH;
+    volatile  AccountStatus status;
     std::map<std::string/*client_order_id*/, LFRtnOrderField> ordersMap;
     std::map<std::string/*order_id*/, LFRtnOrderField*>       ordersMapByExchID;
     int gpTimes = 24 * 60 * 60*1000;
