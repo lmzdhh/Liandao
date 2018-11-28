@@ -40,6 +40,7 @@ struct SendOrderFilter
 enum class AccountStatus
 {
     AS_AUTH,
+    AS_WAITING,
     AS_OPEN_ORDER,
     AS_TRADE_HISTORY,
     AS_OVER
