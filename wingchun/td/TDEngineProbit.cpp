@@ -1215,7 +1215,7 @@ void TDEngineProbit::on_lws_connection_error(struct lws* conn)
 
 void TDEngineProbit::lws_write_subscribe(struct lws* conn)
 {
-    KF_LOG_INFO(logger,"lws_write_subscribe start");
+    KF_LOG_DEBUG(logger,"lws_write_subscribe start");
     auto& accout = findAccountUnitByWebsocketConn(conn);
     std::string subscribe_msg;
     switch (accout.status)
@@ -1241,15 +1241,18 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
             accout.status = AccountStatus::AS_OVER;
             break;
         }
+        case AccountStatus ::AS_WAITING:
+        {
+            KF_LOG_INFO(logger, "lws_write_subscribe: wait for auth response" );
+            break;
+        }
+        case AccountStatus ::AS_OVER:
+            KF_LOG_INFO(logger, "lws_write_subscribe over");
         default:
             return ;
     }
-    KF_LOG_INFO(logger, "lws_write_subscribe: " << subscribe_msg);
     sendMessage(std::move(subscribe_msg), conn);
-    if(accout.status == AccountStatus::AS_OPEN_ORDER || accout.status == AccountStatus::AS_TRADE_HISTORY)
-    {
-        lws_callback_on_writable(conn);
-    }
+    KF_LOG_DEBUG(logger, "lws_write_subscribe end");
 }
 
 void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
@@ -1293,8 +1296,7 @@ void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
             KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error:json string has no member \"result\","<< data);
             return;
         }
-        std::string result = json["result"].GetString();
-        if (std::string("ok") == result)
+        if (std::string("ok") == json["result"].GetString())
         {
             AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
             unit.status = AccountStatus::AS_OPEN_ORDER;
