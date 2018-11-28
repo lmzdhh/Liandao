@@ -1222,6 +1222,7 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
         {
             KF_LOG_INFO(logger,"lws_write_subscribe do auth");
             subscribe_msg = "{\"type\": \"authorization\", \"token\":\"" + getAuthToken(accout) + "\"}";
+            accout.status = AccountStatus::AS_WAITING;
             break;
         }
         case AccountStatus::AS_OPEN_ORDER:
@@ -1243,7 +1244,7 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
     }
     KF_LOG_INFO(logger, "lws_write_subscribe: " << subscribe_msg);
     sendMessage(std::move(subscribe_msg), conn);
-    if(accout.status != AccountStatus::AS_OVER || accout.status != AccountStatus::AS_AUTH)
+    if(accout.status == AccountStatus::AS_OPEN_ORDER || accout.status == AccountStatus::AS_TRADE_HISTORY)
     {
         lws_callback_on_writable(conn);
     }
