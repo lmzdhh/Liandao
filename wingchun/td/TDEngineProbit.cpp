@@ -1213,36 +1213,36 @@ void TDEngineProbit::on_lws_connection_error(struct lws* conn)
 
 void TDEngineProbit::lws_write_subscribe(struct lws* conn)
 {
-    KF_LOG_DEBUG(logger,"lws_write_subscribe start");
+    KF_LOG_INFO(logger,"lws_write_subscribe start");
     auto& accout = findAccountUnitByWebsocketConn(conn);
     std::string subscribe_msg;
     switch (accout.status)
     {
         case AccountStatus::AS_AUTH:
         {
-            KF_LOG_DEBUG(logger,"lws_write_subscribe do auth");
+            KF_LOG_INFO(logger,"lws_write_subscribe do auth");
             subscribe_msg = "{\"type\": \"authorization\", \"token\":\"" + getAuthToken(accout) + "\"}";
 	    accout.status = AccountStatus::AS_OPEN_ORDER;
             break;
         }
         case AccountStatus::AS_OPEN_ORDER:
         {
-            KF_LOG_DEBUG(logger,"lws_write_subscribe open order");
-            subscribe_msg = "{\"type\": \"subscribe\", \"channel\":open_order}";
+            KF_LOG_INFO(logger,"lws_write_subscribe open order");
+            subscribe_msg = "{\"type\": \"subscribe\", \"channel\":\"open_order\"}";
             accout.status = AccountStatus::AS_TRADE_HISTORY;
             break;
         }
         case AccountStatus::AS_TRADE_HISTORY:
         {
-            KF_LOG_DEBUG(logger,"lws_write_subscribe trade history");
-            subscribe_msg = "{\"type\": \"subscribe\", \"channel\":trade_history}";
+            KF_LOG_INFO(logger,"lws_write_subscribe trade history");
+            subscribe_msg = "{\"type\": \"subscribe\", \"channel\":\"trade_history\"}";
             accout.status = AccountStatus::AS_OVER;
             break;
         }
         default:
             return ;
     }
-    KF_LOG_DEBUG(logger, "lws_write_subscribe: " << subscribe_msg);
+    KF_LOG_INFO(logger, "lws_write_subscribe: " << subscribe_msg);
     sendMessage(std::move(subscribe_msg), conn);
     if(accout.status != AccountStatus::AS_OVER)
     {
@@ -1261,18 +1261,18 @@ void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
         KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error");
         return;
     }
-    if (json.HasMember("errorCode") && json["errorCode"].IsString())
+    if (json.HasMember("errorCode") )
     {
         KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data," << data);
         return;
     }
-	if (!json.HasMember("channel") || !json["channel"].IsString())
+	if (!json.HasMember("type") || !json["type"].IsString())
 	{
         KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, parse json error:json string has no member \"channel\"");
         return;
 	}
-    std::string channel = json["channel"].GetString();
-    if(channel == "authorization")
+    std::string type = json["type"].GetString();
+    if(type == "authorization")
     {
         if(!json.HasMember("result") || !json["result"].IsString())
         {
@@ -1287,11 +1287,11 @@ void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
         unit.status = AccountStatus::AS_OPEN_ORDER;
         lws_callback_on_writable(conn);
     }
-    else if(channel == "open_order" )
+    else if(type== "open_order" )
     {
         onOrder(conn, json);
 	}
-	else if(channel == "trade_history")
+	else if(type == "trade_history")
     {
         onTrade(conn, json);
     }
