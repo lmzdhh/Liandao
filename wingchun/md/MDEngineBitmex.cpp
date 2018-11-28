@@ -273,9 +273,8 @@ void MDEngineBitmex::createSubscribeJsonStrings()
     for( ; iter != whiteList.GetKeyIsStrategyCoinpairWhiteList().end(); iter++)
     {
         KF_LOG_DEBUG(logger, "creating subscribe json string for strategy symbol " << iter->first << ", market symbol " << iter->second);
-        //subscribeJsonStrings.push_back(createOrderbookJsonString(iter->second));
-        //subscribeJsonStrings.push_back(createQuoteBinsJsonString(iter->second));
-        //subscribeJsonStrings.push_back(createTradeJsonString(iter->second));
+        subscribeJsonStrings.push_back(createOrderbookJsonString(iter->second));
+        subscribeJsonStrings.push_back(createTradeJsonString(iter->second));
         subscribeJsonStrings.push_back(createTradeBinsJsonString(iter->second));
     }
 }
