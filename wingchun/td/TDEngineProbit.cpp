@@ -168,7 +168,7 @@ TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
     unit.secret_key = secret_key;
     unit.baseUrl = baseUrl;
 	unit.authUrl = acountUrl;
-	unit.wsUrl = "wss://demo-api.probit.com";
+	unit.wsUrl = "demo-api.probit.com";
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
@@ -1222,6 +1222,7 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
         {
             KF_LOG_DEBUG(logger,"lws_write_subscribe do auth");
             subscribe_msg = "{\"type\": \"authorization\", \"token\":\"" + getAuthToken(accout) + "\"}";
+	    accout.status = AccountStatus::AS_OPEN_ORDER;
             break;
         }
         case AccountStatus::AS_OPEN_ORDER:
