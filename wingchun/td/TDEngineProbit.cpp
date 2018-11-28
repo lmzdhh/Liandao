@@ -560,11 +560,12 @@ int TDEngineProbit::Round(std::string tickSizeStr)
 
 std::string TDEngineProbit::TimeToFormatISO8601(int64_t timestamp)
 {
-	time_t ms = timestamp % 1000;
+	int ms = timestamp % 1000;
 	tm utc_time;
-	gmtime_r(&timestamp, &utc_time);
+	time_t time = timestamp/1000;
+	gmtime_r(&time, &utc_time);
 	char timeStr[50];
-	sprintf(timeStr, "%04d-%02d-%02dT%02d:%02d:%02d.%03d", utc_time.tm_year + 1900, utc_time.tm_mon + 1, utc_time.tm_mday,
+	sprintf(timeStr, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_time.tm_year + 1900, utc_time.tm_mon + 1, utc_time.tm_mday,
 		utc_time.tm_hour, utc_time.tm_min, utc_time.tm_sec,ms);
 	return std::string(timeStr);
 }
@@ -1046,7 +1047,7 @@ void TDEngineProbit::cancel_all_orders(AccountUnitProbit& unit)
 	int64_t timeStamp = getTimestamp();
 	std::string startTime = TimeToFormatISO8601(timeStamp - unit.gpTimes);
 	std::string endTime = TimeToFormatISO8601(timeStamp);
-	std::string reqParams = "start_time=\"" + startTime + "\"&end_time=\"" + endTime + "\"&limit = 1000";
+	std::string reqParams = "start_time=" + startTime + "&end_time=" + endTime + "&limit=1000";
 	string url = unit.baseUrl + requestPath + "?" + reqParams;
 
     const auto response = Get(Url{url},
