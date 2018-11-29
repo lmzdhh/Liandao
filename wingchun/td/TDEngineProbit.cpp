@@ -644,6 +644,13 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
 	   // addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0,requestId);
 		//success, only record raw data
 		raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
+		//
+
+		// do writer
+		on_rtn_order(&order);
+		//do raw writer
+		raw_writer->write_frame(&order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, requestId);
+
 	}
     else if (d.HasMember("code") && d["code"].IsNumber())
     {
