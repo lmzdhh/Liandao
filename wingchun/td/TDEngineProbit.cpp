@@ -716,7 +716,7 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
     KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef);
 	auto& oreder = remoteIter->second;
     Document d;
-	cancel_order(unit, oreder.OrderRef, oreder.InstrumentID, oreder.VolumeTotal*1.0/scale_offset, d);
+	cancel_order(unit, oreder.OrderRef, ticker, oreder.VolumeTotal*1.0/scale_offset, d);
 
     //cancel order response "" as resultText, it cause json.HasParseError() == true, and json.IsObject() == false.
     //it is not an error, so dont check it.
@@ -987,10 +987,12 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
      *
      * orderQty: Order quantity in units of the instrument (i.e. contracts).
      * */
+	rapidjson::Value nullObject(rapidjson::kNullType); 
 	if (strcmp(type, "limit") == 0)
-	{
-		document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
-		document.AddMember("cost", StringRef(""), allocator);
+	{     
+	      
+	      document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
+              document.AddMember("cost", nullObject,allocator); 
 	}
 	else
 	{
