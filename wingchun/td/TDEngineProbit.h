@@ -112,6 +112,7 @@ public:
     int Round(std::string tickSizeStr);
 		//2018-01-01T00:00:00.000Z
 	  std::string TimeToFormatISO8601(int64_t timestamp);
+	  void MyPost(std::string url, std::string auth, std::string body,Document& json);
 private:
     void sendMessage(std::string&& msg,struct lws * conn);
 private:

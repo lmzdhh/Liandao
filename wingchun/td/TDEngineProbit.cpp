@@ -22,7 +22,6 @@ using cpr::Body;
 using cpr::Header;
 using cpr::Parameters;
 using cpr::Payload;
-using cpr::Post;
 using cpr::Timeout;
 
 using rapidjson::StringRef;
@@ -1021,20 +1020,20 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
 	std::string authToken = getAuthToken(unit);
 	string url = unit.baseUrl + requestPath;
 
+	MyPost(url, "Bearer " + authToken, body, json);
+    //const auto response = Post(Url{url},
+    //                           Header{
+				//				   {"Content-Type", "application/json"},
+				//				   {"authorization", "Bearer " + authToken }
+				//				},
+    //                           Body{body}, Timeout{30000});
 
-    const auto response = Post(Url{url},
-                               Header{
-								   {"Content-Type", "application/json"},
-								   {"authorization", "Bearer " + authToken }
-								},
-                               Body{body}, Timeout{30000});
 
-
-    //{ "error": {"message": "Authorization Required","name": "HTTPError"} }
-    KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
-                                              " (response.error.message) " << response.error.message <<
-                                              " (response.text) " << response.text.c_str());
-    getResponse(response.status_code, response.text, response.error.message, json);
+    ////{ "error": {"message": "Authorization Required","name": "HTTPError"} }
+    //KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
+    //                                          " (response.error.message) " << response.error.message <<
+    //                                          " (response.text) " << response.text.c_str());
+    //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
 
@@ -1475,6 +1474,22 @@ AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * w
     return account_units[0];
 }
 
+void TDEngineProbit::MyPost(std::string url, std::string auth, std::string body, Document& json)
+{
+	const auto response = Post(Url{ url },
+		Header{
+			{ "Content-Type", "application/json" },
+		{ "authorization", auth }
+		},
+		Body{ body }, Timeout{ 30000 });
+
+	//{ "error": {"message": "Authorization Required","name": "HTTPError"} }
+	KF_LOG_INFO(logger, "[Post] (url) " << url << " (body) " << body << "(msg)" << auth << " (response.status_code) " << response.status_code <<
+		" (response.error.message) " << response.error.message <<
+		" (response.text) " << response.text.c_str());
+	getResponse(response.status_code, response.text, response.error.message, json);
+}
+
 
 std::string TDEngineProbit::getAuthToken(const AccountUnitProbit& unit )
 {
@@ -1486,21 +1501,20 @@ std::string TDEngineProbit::getAuthToken(const AccountUnitProbit& unit )
 		std::string msg = unit.api_key + ":" + unit.secret_key;
 		std::string authEncode = base64_encode((const unsigned char*)msg.c_str(), msg.length());
 		string url = unit.authUrl + requestPath;
-		const auto response = Post(Url{ url },
-			Header{
-				{ "Content-Type", "application/json" },
-			{ "authorization", "Basic " + authEncode }
-			},
-			Body{ body }, Timeout{ 30000 });
+		//const auto response = Post(Url{ url },
+		//	Header{
+		//		{ "Content-Type", "application/json" },
+		//	{ "authorization", "Basic " + authEncode }
+		//	},
+		//	Body{ body }, Timeout{ 30000 });
 
-
-		//{ "error": {"message": "Authorization Required","name": "HTTPError"} }
-		KF_LOG_INFO(logger, "[getAuthToken] (url) " << url << " (body) " << body << "(msg)" << authEncode << " (response.status_code) " << response.status_code <<
-			" (response.error.message) " << response.error.message <<
-			" (response.text) " << response.text.c_str());
+		////{ "error": {"message": "Authorization Required","name": "HTTPError"} }
+		//KF_LOG_INFO(logger, "[getAuthToken] (url) " << url << " (body) " << body << "(msg)" << authEncode << " (response.status_code) " << response.status_code <<
+		//	" (response.error.message) " << response.error.message <<
+		//	" (response.text) " << response.text.c_str());
 		Document json;
-		getResponse(response.status_code, response.text, response.error.message, json);
-
+		//getResponse(response.status_code, response.text, response.error.message, json);
+		MyPost(url, "Basic " + authEncode, body, json);
 		if (json.HasParseError() || !json.IsObject())
 		{
 			int errorId = 100;
