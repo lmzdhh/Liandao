@@ -1476,7 +1476,7 @@ AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * w
 
 void TDEngineProbit::MyPost(std::string url, std::string auth, std::string body, Document& json)
 {
-	const auto response = Post(Url{ url },
+	const auto response = cpr::Post(Url{ url },
 		Header{
 			{ "Content-Type", "application/json" },
 		{ "authorization", auth }
