@@ -1339,25 +1339,27 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
 	for (SizeType index = 0; index < orderData.Size(); ++index)
 	{
 		auto& order = orderData[index];
-		if (!order.HasMember("client_order_id") || !order["client_order_id"].IsString())
-		{
-			KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"client_order_id\"");
-			return;
-		}
-		auto orderRef = order["client_order_id"].GetString();
 		if (isReset)
 		{//init, cancel all open order
-			
-			if (order.HasMember("market_id") && order["market_id"].IsString() && order.HasMember("open_quantity") && order["open_quantity"].IsString())
+
+			if (order.HasMember("id") && order["id"].IsString() && order.HasMember("market_id") && order["market_id"].IsString() && order.HasMember("open_quantity") && order["open_quantity"].IsString())
 			{
+				std::string order_id = order["id"].GetString();
 				std::string market_id = order["market_id"].GetString();
 				double open_quantity = atof(order["open_quantity"].GetString());
 				Document json;
-				cancel_order(unit, orderRef, market_id, open_quantity, json);
-			}		
-		}
+				cancel_order(unit, order_id, market_id, open_quantity, json);
+			}
+		}						
 		else
 		{
+			
+			if (!order.HasMember("client_order_id") || !order["client_order_id"].IsString())
+			{
+				KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"client_order_id\"");
+				return;
+			}
+			auto orderRef = order["client_order_id"].GetString();
 			auto orderIter = unit.ordersMap.find(orderRef);
 			if (orderIter == unit.ordersMap.end())
 			{
