@@ -426,7 +426,10 @@ LfOrderStatusType TDEngineProbit::GetOrderStatus(const std::string& type)
         return LF_CHAR_PartTradedQueueing;
     }
 }
-
+LfTimeConditionType TDEngineProbit::GetTimeCondition(const std::string&)
+{
+	return LF_CHAR_GTC;
+}
 /**
  * req functions
  */
@@ -979,6 +982,7 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
     /*Order type. Valid options: Market, Limit, Stop, StopLimit, MarketIfTouched, LimitIfTouched, MarketWithLeftOverAsLimit, Pegged. Defaults to 'Limit' when price is specified. Defaults to 'Stop' when stopPx is specified. Defaults to 'StopLimit' when price and stopPx are specified.
      * */
     document.AddMember("type", StringRef(type), allocator);
+	document.AddMember("time_in_force", StringRef("gtc"), allocator);
     /*simpleOrderQty:   Order quantity in units of the underlying instrument (i.e. Bitcoin).
      *
      * orderQty: Order quantity in units of the instrument (i.e. contracts).

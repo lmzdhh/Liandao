@@ -127,7 +127,7 @@ private:
     std::string GetType(const LfOrderPriceTypeType&);
     LfOrderPriceTypeType GetPriceType(const std::string& );
     LfOrderStatusType GetOrderStatus(const std::string&);
-
+	LfTimeConditionType GetTimeCondition(const std::string&);
     std::vector<std::string> split(std::string str, std::string token);
     void addNewQueryOrdersAndTrades(AccountUnitProbit& unit, const char_31 InstrumentID, const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID);
 
