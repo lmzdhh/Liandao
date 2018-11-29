@@ -69,16 +69,14 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         }
         case LWS_CALLBACK_CLIENT_CLOSED:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED, reason = " << reason << std::endl;
-            if(global_td) {
-                std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
+            if(global_td)
+            {
                 global_td->on_lws_connection_error(wsi);
             }
             break;
         }
         case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_RECEIVE_PONG, reason = " << reason << std::endl;
             break;
         }
         case LWS_CALLBACK_CLIENT_WRITEABLE:
@@ -96,7 +94,6 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         case LWS_CALLBACK_CLOSED:
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_CLOSED/LWS_CALLBACK_CLIENT_CONNECTION_ERROR writeable, reason = " << reason << std::endl;
             if(global_td)
             {
                 global_td->on_lws_connection_error(wsi);
@@ -823,30 +820,8 @@ void TDEngineProbit::wsloop()
     KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
     while(isRunning)
     {
-        int n = lws_service( context, rest_get_interval_ms );
-        //std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
+        lws_service( context, rest_get_interval_ms );
     }
-}
-
-std::vector<std::string> TDEngineProbit::split(std::string str, std::string token)
-{
-    std::vector<std::string>result;
-    while (str.size())
-    {
-        size_t index = str.find(token);
-        if (index != std::string::npos)
-        {
-            result.push_back(str.substr(0, index));
-            str = str.substr(index + token.size());
-            if (str.size() == 0)result.push_back(str);
-        }
-        else
-        {
-            result.push_back(str);
-            str = "";
-        }
-    }
-    return result;
 }
 
 void TDEngineProbit::printResponse(const Document& d)
@@ -1509,7 +1484,7 @@ AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * w
     return account_units[0];
 }
 
-void TDEngineProbit::MyPost(std::string url, std::string auth, std::string body, Document& json)
+void TDEngineProbit::MyPost(const std::string& url,const std::string& auth, const std::string& body, Document& json)
 {
 	const auto response = cpr::Post(Url{ url },
 		Header{
