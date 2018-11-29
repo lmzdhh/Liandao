@@ -1127,7 +1127,7 @@ void TDEngineProbit::cancel_order(const AccountUnitProbit& unit, const std::stri
     std::string requestPath = "/api/exchange/v1/cancel_order";
 	char strQuantity[20];
 	sprintf(strQuantity, "%.4f", quantity);
-	std::string body = "{\"market_id\":\"" + marketID + "\",\"order_id\":\"" + orderId + "\",\"limit_open_quantity\":\"" + std::string(strQuantity) + "\"}";
+	std::string body = "{\"market_id\":\"" + marketID + "\",\"order_id\":\"" + orderId + "\",\"limit_open_quantity\":\"0\"}";
 	std::string authToken = getAuthToken(unit);
     string url = unit.baseUrl + requestPath;
 
