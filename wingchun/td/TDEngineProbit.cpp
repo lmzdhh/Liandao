@@ -641,6 +641,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
 			data->OrderRef << " (remoteOrderId) " << remoteOrderId);
 		LFRtnOrderField order;
 		OpenOrderToLFOrder(unit, dataJson, order);
+		std::lock_guard<std::mutex> guard_mutex(g_orderMutex);
 		unit.ordersMap.insert(std::make_pair(data->OrderRef, order));
 		//char noneStatus = GetOrderStatus(d["status"].GetString());//none
 	   // addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0,requestId);
@@ -1320,96 +1321,117 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"data\"");
         return;
     }
+
+	bool isReset = false;
+	if (json.HasMember("reset") && json["reset"].IsBool())
+	{
+		isReset = json["reset"].GetBool();
+	}
     AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
+
     std::unique_lock<std::mutex> l(g_orderMutex);
     auto& orderData = json["data"];
-    for (SizeType index = 0; index < orderData.Size(); ++index)
-    {
-        auto& order = orderData[index];
-        if(!order.HasMember("client_order_id") || !order["client_order_id"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"client_order_id\"");
-            return;
-        }
-        auto orderRef = order["client_order_id"].GetString();
-        auto orderIter = unit.ordersMap.find(orderRef);
-        if (orderIter == unit.ordersMap.end())
-        {
-            continue;
-        }
-        if (!order.HasMember("id") || !order["id"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"id\"");
-            return;
-        }
-        auto exchangeOrderID = order["id"].GetString();
-        unit.ordersMapByExchID[exchangeOrderID] = &orderIter->second;
-        //kungfu order
-        LFRtnOrderField& rtn_order = orderIter->second;
-        strncpy(rtn_order.OrderRef, orderRef, sizeof(sizeof(rtn_order.OrderRef))-1);
+	for (SizeType index = 0; index < orderData.Size(); ++index)
+	{
+		auto& order = orderData[index];
+		if (!order.HasMember("client_order_id") || !order["client_order_id"].IsString())
+		{
+			KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"client_order_id\"");
+			return;
+		}
+		auto orderRef = order["client_order_id"].GetString();
+		if (isReset)
+		{//init, cancel all open order
+			
+			if (order.HasMember("market_id") && order["market_id"].IsString() && order.HasMember("open_quantity") && order["open_quantity"].IsString())
+			{
+				std::string market_id = order["market_id"].GetString();
+				double open_quantity = atof(order["open_quantity"].GetString());
+				Document json;
+				cancel_order(unit, orderRef, market_id, open_quantity, json);
+			}		
+		}
+		else
+		{
+			auto orderIter = unit.ordersMap.find(orderRef);
+			if (orderIter == unit.ordersMap.end())
+			{
+				continue;
+			}
+			if (!order.HasMember("id") || !order["id"].IsString())
+			{
+				KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"id\"");
+				return;
+			}
+			auto exchangeOrderID = order["id"].GetString();
+			unit.ordersMapByExchID[exchangeOrderID] = &orderIter->second;
+			//kungfu order
+			LFRtnOrderField& rtn_order = orderIter->second;
+			strncpy(rtn_order.OrderRef, orderRef, sizeof(sizeof(rtn_order.OrderRef)) - 1);
 
-        if (!order.HasMember("filled_quantity") || !order["filled_quantity"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_quantity\"");
-            return;
-        }
-        rtn_order.VolumeTraded = (int64_t)(std::atof(order["filled_quantity"].GetString())*scale_offset);
+			if (!order.HasMember("filled_quantity") || !order["filled_quantity"].IsString())
+			{
+				KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_quantity\"");
+				return;
+			}
+			rtn_order.VolumeTraded = (int64_t)(std::atof(order["filled_quantity"].GetString())*scale_offset);
 
-        if (!order.HasMember("quantity") || !order["quantity"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"quantity\"");
-            return;
-        }
-        rtn_order.VolumeTotalOriginal = (int64_t)(std::atof(order["quantity"].GetString())*scale_offset);
+			if (!order.HasMember("quantity") || !order["quantity"].IsString())
+			{
+				KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"quantity\"");
+				return;
+			}
+			rtn_order.VolumeTotalOriginal = (int64_t)(std::atof(order["quantity"].GetString())*scale_offset);
 
-        if (!order.HasMember("status") || !order["status"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"status\"");
-            return;
-        }
-        rtn_order.OrderStatus = GetOrderStatus(order["status"].GetString());
-        if (rtn_order.VolumeTraded >0 && rtn_order.VolumeTraded < rtn_order.VolumeTotalOriginal)
-        {
-            rtn_order.OrderStatus = GetOrderStatus(PARTIAL_TRADED);
-        }
-        if (!order.HasMember("side") || !order["side"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"side\"");
-            return;
-        }
-        rtn_order.Direction = GetDirection(order["side"].GetString());
-        if (!order.HasMember("type") || !order["type"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"type\"");
-            return;
-        }
-        rtn_order.OrderPriceType = GetPriceType(order["type"].GetString());
-        if (!order.HasMember("limit_price") || !order["limit_price"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"limit_price\"");
-            return;
-        }
-        rtn_order.LimitPrice =  (int64_t)(std::atof(order["limit_price"].GetString()) * scale_offset);
-        if (!order.HasMember("open_quantity") || !order["open_quantity"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"open_quantity\"");
-            return;
-        }
-        rtn_order.VolumeTotal = (int64_t)(std::atof(order["open_quantity"].GetString()) * scale_offset);	
-        // do writer
-        on_rtn_order(&rtn_order);
-        //do raw writer
-        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
-        if (rtn_order.OrderStatus == LF_CHAR_AllTraded ||
-            rtn_order.OrderStatus == LF_CHAR_PartTradedNotQueueing ||
-            rtn_order.OrderStatus == LF_CHAR_Canceled ||
-            rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing ||
-            rtn_order.OrderStatus == LF_CHAR_Error)
-        {
-            unit.ordersMap.erase(orderIter);
-            //unit.ordersMapByExchID.erase(exchangeOrderID);
-        }
-    }
+			if (!order.HasMember("status") || !order["status"].IsString())
+			{
+				KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"status\"");
+				return;
+			}
+			rtn_order.OrderStatus = GetOrderStatus(order["status"].GetString());
+			if (rtn_order.VolumeTraded > 0 && rtn_order.VolumeTraded < rtn_order.VolumeTotalOriginal)
+			{
+				rtn_order.OrderStatus = GetOrderStatus(PARTIAL_TRADED);
+			}
+			if (!order.HasMember("side") || !order["side"].IsString())
+			{
+				KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"side\"");
+				return;
+			}
+			rtn_order.Direction = GetDirection(order["side"].GetString());
+			if (!order.HasMember("type") || !order["type"].IsString())
+			{
+				KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"type\"");
+				return;
+			}
+			rtn_order.OrderPriceType = GetPriceType(order["type"].GetString());
+			if (!order.HasMember("limit_price") || !order["limit_price"].IsString())
+			{
+				KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"limit_price\"");
+				return;
+			}
+			rtn_order.LimitPrice = (int64_t)(std::atof(order["limit_price"].GetString()) * scale_offset);
+			if (!order.HasMember("open_quantity") || !order["open_quantity"].IsString())
+			{
+				KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"open_quantity\"");
+				return;
+			}
+			rtn_order.VolumeTotal = (int64_t)(std::atof(order["open_quantity"].GetString()) * scale_offset);
+			// do writer
+			on_rtn_order(&rtn_order);
+			//do raw writer
+			raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
+			if (rtn_order.OrderStatus == LF_CHAR_AllTraded ||
+				rtn_order.OrderStatus == LF_CHAR_PartTradedNotQueueing ||
+				rtn_order.OrderStatus == LF_CHAR_Canceled ||
+				rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing ||
+				rtn_order.OrderStatus == LF_CHAR_Error)
+			{
+				unit.ordersMap.erase(orderIter);
+				//unit.ordersMapByExchID.erase(exchangeOrderID);
+			}
+		}
+	}
 }
 
 void TDEngineProbit::onTrade(struct lws * conn, Document& json)
