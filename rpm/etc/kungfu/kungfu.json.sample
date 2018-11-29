@@ -146,7 +146,7 @@
                   "APIKey": "E9F5ED1E85566A8C",
                   "SecretKey": "39BFD739E9447F7BFEBED03E56F3",
                   "passphrase": "EFF9EBF0",
-                  "baseUrl": "demo-api.probit.com",
+                  "baseUrl": "https://demo-api.probit.com",
 		              "acountUrl": "demo-accounts.probit.com",
                   "whiteLists": {
                                   "btc_usdt": "XBTUSD",
