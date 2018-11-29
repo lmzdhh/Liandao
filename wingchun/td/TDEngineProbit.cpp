@@ -696,8 +696,9 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
-    auto remoteIter = unit.ordersMap.find(data->OrderRef);
-    if(remoteIter == unit.ordersMap.end())
+    auto remoteIter = localOrderRefRemoteOrderId.find(data->OrderRef);
+	auto orderIter = unit.ordersMap.find(data->OrderRef);
+    if(remoteIter == localOrderRefRemoteOrderId.end() || orderIter == unit.ordersMap.end())
     {
         errorId = 1;
         std::stringstream ss;
@@ -715,9 +716,12 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
    
     
     KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef);
-	auto& oreder = remoteIter->second;
+	auto remoteID = remoteIter->second;
+	auto order = orderIter->second;
+	//
+
     Document d;
-	cancel_order(unit, oreder.OrderRef, ticker, oreder.VolumeTotal*1.0/scale_offset, d);
+	cancel_order(unit, remoteID, ticker, order.VolumeTotal*1.0/scale_offset, d);
 
     //cancel order response "" as resultText, it cause json.HasParseError() == true, and json.IsObject() == false.
     //it is not an error, so dont check it.
@@ -734,7 +738,7 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
     }
 	else
 	{
-		KF_LOG_ERROR(logger, "[req_order_action] cancel_order success!" << " (rid)" << requestId <<"(order ref)"<< oreder.OrderRef);
+		KF_LOG_ERROR(logger, "[req_order_action] cancel_order success!" << " (rid)" << requestId <<"(order ref)"<< data->OrderRef);
 	}
 	
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
@@ -1046,6 +1050,7 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
 
 void TDEngineProbit::cancel_all_orders(AccountUnitProbit& unit)
 {
+	return;
 	//
     KF_LOG_INFO(logger, "[cancel_all_orders](get history open order)");
     std::string requestPath = "/api/exchange/v1/order_history";
