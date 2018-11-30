@@ -1340,6 +1340,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         auto orderIter = unit.ordersMap.find(orderRef);
         if (orderIter == unit.ordersMap.end())
         {
+            KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, can not find orderRef:" << orderRef);
             continue;
         }
         if (!order.HasMember("id") || !order["id"].IsString())
