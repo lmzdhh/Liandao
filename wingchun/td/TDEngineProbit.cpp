@@ -1403,7 +1403,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             return;
         }
         rtn_order.VolumeTotal = (int64_t)(std::atof(order["open_quantity"].GetString()) * scale_offset);
-
+        rtn_order.RequestID = orderIter->second.RequestID;
         KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, ON_RTN_ORDER");
         // do writer
         on_rtn_order(&rtn_order);
@@ -1462,13 +1462,13 @@ void TDEngineProbit::onTrade(struct lws * conn, Document& json)
 			rtn_trade.Direction = order.Direction;
             if (!trade.HasMember("quantity") || !trade["quantity"].IsString())
             {
-                KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no quantity \"id\"");
+                KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no \"quantity\"");
                 return;
             }
 			rtn_trade.Volume = (int64_t)(std::atof(trade["quantity"].GetString())*scale_offset);
 			if (!trade.HasMember("price") || !trade["price"].IsString())
             {
-                KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no price \"id\"");
+                KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no \"price\"");
                 return;
             }
             rtn_trade.Price = (int64_t)(std::atof(trade["price"].GetString())*scale_offset);
