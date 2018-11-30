@@ -596,7 +596,9 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
     LFRtnOrderField order;
+    std::unique_lock<std::mutex> l(g_orderMutex);
     unit.ordersMap[data->OrderRef]=order;
+    l.unlock();
     double funds = 0;
     Document d;
 
@@ -669,6 +671,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+        std::unique_lock<std::mutex> l(g_orderMutex);
         unit.ordersMap.erase(data->OrderRef);
     }
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
@@ -785,7 +788,7 @@ void TDEngineProbit::addNewQueryOrdersAndTrades(AccountUnitProbit& unit, const c
                                                  const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded,int reqID)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
-    std::lock_guard<std::mutex> guard_mutex(g_orderMutex);
+    //std::lock_guard<std::mutex> guard_mutex(g_orderMutex);
 
     PendingOrderStatus status;
     memset(&status, 0, sizeof(PendingOrderStatus));
@@ -1315,7 +1318,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
 	}
     AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
 
-    std::unique_lock<std::mutex> l(g_orderMutex);
+    
     auto& orderData = json["data"];
 	for (SizeType index = 0; index < orderData.Size(); ++index)
 	{
@@ -1417,6 +1420,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing ||
             rtn_order.OrderStatus == LF_CHAR_Error)
         {
+            std::unique_lock<std::mutex> l(g_orderMutex);
             unit.ordersMap.erase(orderIter);
             //unit.ordersMapByExchID.erase(exchangeOrderID);
         }
@@ -1429,7 +1433,7 @@ void TDEngineProbit::onTrade(struct lws * conn, Document& json)
 	if (json.HasMember("result") && json["result"].IsArray())
 	{
         AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
-        std::unique_lock<std::mutex> l(g_orderMutex);
+        //std::unique_lock<std::mutex> l(g_orderMutex);
 		auto& tradeData = json["result"];
 		for (SizeType index = 0; index < tradeData.Size(); ++index)
 		{
