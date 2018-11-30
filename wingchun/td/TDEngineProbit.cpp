@@ -1208,7 +1208,6 @@ void TDEngineProbit::on_lws_connection_error(struct lws* conn)
 
 void TDEngineProbit::lws_write_subscribe(struct lws* conn)
 {
-    KF_LOG_DEBUG(logger,"lws_write_subscribe start");
     auto& accout = findAccountUnitByWebsocketConn(conn);
     switch (accout.status)
     {
@@ -1244,7 +1243,6 @@ void TDEngineProbit::lws_write_subscribe(struct lws* conn)
         default:
             break;
     }
-    KF_LOG_DEBUG(logger, "lws_write_subscribe end");
 }
 
 void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
@@ -1477,9 +1475,9 @@ void TDEngineProbit::onTrade(struct lws * conn, Document& json)
             //do raw writer
 			raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField), source_id, MSG_TYPE_LF_RTN_TRADE_PROBIT, 1, -1);
 			unit.ordersMapByExchID.erase(exchIter);
-            KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade end" );
 		}
 	}
+    KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade end" );
 }
 
 AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * websocketConn)
