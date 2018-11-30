@@ -279,7 +279,7 @@ const short MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206;
 const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207;
 
 
-//probit, idx=26
+//probit, idx=27
 const short MSG_TYPE_LF_MD_PROBIT        = 27101;
 const short MSG_TYPE_LF_QRY_POS_PROBIT   = 27201;
 const short MSG_TYPE_LF_RSP_POS_PROBIT   = 27202;
