@@ -595,7 +595,8 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
-
+    LFRtnOrderField order;
+    unit.ordersMap[data->OrderRef]=order;
     double funds = 0;
     Document d;
 
@@ -636,10 +637,10 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
 		localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
 		KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
 			data->OrderRef << " (remoteOrderId) " << remoteOrderId);
-		LFRtnOrderField order;
+		
 		OpenOrderToLFOrder(unit, dataJson, order);
-		std::lock_guard<std::mutex> guard_mutex(g_orderMutex);
-		unit.ordersMap.insert(std::make_pair(data->OrderRef, order));
+		//std::lock_guard<std::mutex> guard_mutex(g_orderMutex);
+		unit.ordersMap[data->OrderRef]=order;
 		//char noneStatus = GetOrderStatus(d["status"].GetString());//none
 	   // addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0,requestId);
 		//success, only record raw data
@@ -668,6 +669,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+        unit.ordersMap.erase(data->OrderRef);
     }
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
 }
