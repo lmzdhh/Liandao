@@ -24,7 +24,7 @@ enum exchange_source_index : short
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
-    SOURCE_PROBIT = 28,
+    SOURCE_PROBIT = 27,
     SOURCE_UNKNOWN
 };
 
@@ -279,14 +279,14 @@ const short MSG_TYPE_LF_RTN_ORDER_OCEANEX = 25205;
 const short MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206;
 const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207;
 
-//PROBIT, idx=28
-const short MSG_TYPE_LF_MD_PROBIT        	= 28101;
-const short MSG_TYPE_LF_QRY_POS_PROBIT   	= 28201;
-const short MSG_TYPE_LF_RSP_POS_PROBIT   	= 28202;
-const short MSG_TYPE_LF_ORDER_PROBIT     	= 28204;
-const short MSG_TYPE_LF_RTN_ORDER_PROBIT 	= 28205;
-const short MSG_TYPE_LF_RTN_TRADE_PROBIT 	= 28206;
-const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 28207;
+//PROBIT, idx=27
+const short MSG_TYPE_LF_MD_PROBIT        	= 27101;
+const short MSG_TYPE_LF_QRY_POS_PROBIT   	= 27201;
+const short MSG_TYPE_LF_RSP_POS_PROBIT   	= 27202;
+const short MSG_TYPE_LF_ORDER_PROBIT     	= 27204;
+const short MSG_TYPE_LF_RTN_ORDER_PROBIT 	= 27205;
+const short MSG_TYPE_LF_RTN_TRADE_PROBIT 	= 27206;
+const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 27207;
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
