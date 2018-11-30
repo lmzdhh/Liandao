@@ -1424,6 +1424,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
 
 void TDEngineProbit::onTrade(struct lws * conn, Document& json)
 {
+    KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade, start");
 	if (json.HasMember("result") && json["result"].IsArray())
 	{
         AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
@@ -1435,20 +1436,23 @@ void TDEngineProbit::onTrade(struct lws * conn, Document& json)
 			auto& trade = tradeData[index];
 			LFRtnTradeField rtn_trade;
 			memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-			if (!trade.HasMember("id") || !trade["id"].IsString())
+			if (!trade.HasMember("order_id") || !trade["order_id"].IsString())
             {
-                KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"id\"");
+                KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"order_id\"");
                 return;
             }
-            auto exchIter = unit.ordersMapByExchID.find(trade["order_id"].GetString());
+            auto order_id = trade["order_id"].GetString();
+            auto exchIter = unit.ordersMapByExchID.find(order_id);
             if (exchIter == unit.ordersMapByExchID.end())
             {
+                KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade, can not find orderId:" << order_id);
                 continue;
             }
 			strncpy(rtn_trade.OrderRef, exchIter->second->OrderRef, sizeof(rtn_trade.OrderRef)-1);
 			auto orderIter = unit.ordersMap.find(rtn_trade.OrderRef);
 			if (orderIter == unit.ordersMap.end())
 			{
+                KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade, can not find order by orderRef:" << rtn_trade.OrderRef);
 				continue;
 			}
 			auto& order = orderIter->second;
@@ -1473,6 +1477,7 @@ void TDEngineProbit::onTrade(struct lws * conn, Document& json)
             //do raw writer
 			raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField), source_id, MSG_TYPE_LF_RTN_TRADE_PROBIT, 1, -1);
 			unit.ordersMapByExchID.erase(exchIter);
+            KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade end" );
 		}
 	}
 }
