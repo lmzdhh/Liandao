@@ -1133,7 +1133,7 @@ void TDEngineProbit::lws_login(AccountUnitProbit& unit, long timeout_nsec)
     ccinfo.host 	= unit.wsUrl.c_str();
     ccinfo.origin 	= unit.wsUrl.c_str();
     ccinfo.ietf_version_or_minus_one = -1;
-    ccinfo.protocol = "ws://";
+    ccinfo.protocol = "wss://";
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 
     unit.websocketConn = lws_client_connect_via_info(&ccinfo);
