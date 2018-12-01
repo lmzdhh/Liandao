@@ -573,7 +573,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
-    LFRtnOrderField order;
+    OrderFieldEx order;
     memset(&order, 0x00, sizeof(order));
     std::unique_lock<std::mutex> l(g_orderMutex);
     unit.ordersMap[data->OrderRef] = order;
@@ -773,7 +773,6 @@ void TDEngineProbit::addNewQueryOrdersAndTrades(AccountUnitProbit& unit, const c
 	strncpy(order.UserID, unit.api_key.c_str(), 16);
 	order.TimeCondition = LF_CHAR_GTC;
 
-	unit.ordersMap.insert(std::make_pair(OrderRef, order));
     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << InstrumentID
                                                                        << " (OrderRef) " << OrderRef
                                                                        << "(VolumeTraded)" << VolumeTraded);
@@ -1027,9 +1026,10 @@ void TDEngineProbit::cancel_all_orders(AccountUnitProbit& unit)
 				LFRtnOrderField order;
 				memset(&order, 0, sizeof(order));
 				bool isOk = OpenOrderToLFOrder(unit, item, order);
+                OrderFieldEx orderEx;
 				if (isOk)
 				{
-					unit.ordersMap.insert(std::make_pair(order.OrderRef, order));
+					unit.ordersMap.insert(std::make_pair(order.OrderRef, orderEx));
 				}
 			}
 			
@@ -1289,7 +1289,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             return;
         }
         //kungfu order
-        LFRtnOrderField& rtn_order = orderIter->second;
+        OrderFieldEx& rtn_order = orderIter->second;
 
         strncpy(rtn_order.OrderRef, orderRef, sizeof(sizeof(rtn_order.OrderRef)) - 1);
 
@@ -1341,9 +1341,9 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             return;
         }
         int64_t total_filledCost = (int64_t)(std::atof(order["filled_cost"].GetString())*scale_offset);
-        int64_t cur_filledCost = total_filledCost - unit.preFilledCost;
-        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, total_filledCost:"<<total_filledCost<< ", preFilledCost:" << unit.preFilledCost);
-        unit.preFilledCost = total_filledCost;
+        int64_t cur_filledCost = total_filledCost - rtn_order.preFilledCost;
+        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, total_filledCost:"<<total_filledCost<< ", preFilledCost:" << rtn_order.preFilledCost);
+        rtn_order.preFilledCost = total_filledCost;
         if (!order.HasMember("open_quantity") || !order["open_quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"open_quantity\"");
@@ -1385,6 +1385,10 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, cur_filledCost:"<< cur_filledCost << ", cur_quantity:" << cur_quantity);
             int64_t cur_price = (cur_filledCost / (int64_t)cur_quantity) * scale_offset;
             onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_price);
+        }
+        if(rtn_order.OrderStatus == LF_CHAR_Canceled ||  rtn_order.OrderStatus == LF_CHAR_AllTraded )
+        {
+            unit.ordersMap.erase(orderIter);
         }
 	}
 }

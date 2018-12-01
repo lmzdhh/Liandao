@@ -45,6 +45,10 @@ enum class AccountStatus
     AS_TRADE_HISTORY,
     AS_OVER
 };
+struct OrderFieldEx:public LFRtnOrderField
+{
+    int64_t preFilledCost = 0;
+};
 struct AccountUnitProbit
 {
     string api_key;
@@ -66,9 +70,9 @@ struct AccountUnitProbit
     struct lws * websocketConn;
     int wsStatus=0;
     volatile  AccountStatus status;
-    std::map<std::string/*client_order_id*/, LFRtnOrderField> ordersMap;
+    std::map<std::string/*client_order_id*/, OrderFieldEx> ordersMap;
     int gpTimes = 24 * 60 * 60*1000;
-    int64_t preFilledCost = 0;
+
 };
 
 class TDEngineProbit: public ITDEngine
