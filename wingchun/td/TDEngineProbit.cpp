@@ -573,7 +573,8 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
-    LFRtnOrderField order {};
+    LFRtnOrderField order;
+    memset(&order, 0x00, sizeof(order));
     std::unique_lock<std::mutex> l(g_orderMutex);
     unit.ordersMap[data->OrderRef] = order;
 
@@ -1381,6 +1382,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         // on_rtn_trade
         if (cur_quantity > 0)
         {
+            KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, cur_filledCost:"<<cur_filledCost<< ", cur_quantity:" << cur_quantity);
             auto cur_price = (cur_filledCost / cur_quantity) * scale_offset;
             onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_price);
         }
