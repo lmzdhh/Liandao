@@ -1288,7 +1288,6 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"id\"");
             return;
         }
-        auto exchangeOrderID = order["id"].GetString();
         //kungfu order
         LFRtnOrderField& rtn_order = orderIter->second;
 
@@ -1341,9 +1340,10 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_cost\"");
             return;
         }
-
-        auto cur_filledCost = (int64_t)(std::atof(order["filled_cost"].GetString())*scale_offset) - unit.preFilledCost;
-        unit.preFilledCost = (int64_t)(std::atof(order["filled_cost"].GetString())*scale_offset);
+        auto total_filledCost = (int64_t)(std::atof(order["filled_cost"].GetString())*scale_offset);
+        auto cur_filledCost = total_filledCost - unit.preFilledCost;
+        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, total_filledCost:"<<total_filledCost<< ", preFilledCost:" << unit.preFilledCost);
+        unit.preFilledCost = total_filledCost;
         if (!order.HasMember("open_quantity") || !order["open_quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"open_quantity\"");
