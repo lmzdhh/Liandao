@@ -1340,8 +1340,8 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_cost\"");
             return;
         }
-        auto total_filledCost = (int64_t)(std::atof(order["filled_cost"].GetString())*scale_offset);
-        auto cur_filledCost = total_filledCost - unit.preFilledCost;
+        int64_t total_filledCost = (int64_t)(std::atof(order["filled_cost"].GetString())*scale_offset);
+        int64_t cur_filledCost = total_filledCost - unit.preFilledCost;
         KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, total_filledCost:"<<total_filledCost<< ", preFilledCost:" << unit.preFilledCost);
         unit.preFilledCost = total_filledCost;
         if (!order.HasMember("open_quantity") || !order["open_quantity"].IsString())
@@ -1382,8 +1382,8 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         // on_rtn_trade
         if (cur_quantity > 0)
         {
-            KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, cur_filledCost:"<<cur_filledCost<< ", cur_quantity:" << cur_quantity);
-            auto cur_price = (cur_filledCost / cur_quantity) * scale_offset;
+            KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, cur_filledCost:"<< cur_filledCost << ", cur_quantity:" << cur_quantity);
+            int64_t cur_price = (cur_filledCost / (int64_t)cur_quantity) * scale_offset;
             onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_price);
         }
 	}
