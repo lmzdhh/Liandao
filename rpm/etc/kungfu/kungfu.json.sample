@@ -143,16 +143,17 @@
               {
                 "info":
                 {
-                  "APIKey": "E9F5ED1E85566A8C",
-                  "SecretKey": "39BFD739E9447F7BFEBED03E56F3",
+                  "APIKey": "D81508AB2EE22C68",
+                  "SecretKey": "412D577DF51116A653B56A2AD4A9",
                   "passphrase": "EFF9EBF0",
                   "baseUrl": "https://demo-api.probit.com",
-		              "acountUrl": "demo-accounts.probit.com",
+		          "acountUrl": "https://demo-accounts.probit.com",
+                  "wsUrl":"demo-api.probit.com",
                   "whiteLists": {
                                   "btc_usdt": "XBTUSD",
-				                          "xrp_usdt":"XRP-USDT"
+				                   "xrp_usdt":"XRP-USDT"
                                 },
-                  "rest_get_interval_ms": 2000
+                  "rest_get_interval_ms": 500
                 },
                 "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
                 "is_default": true

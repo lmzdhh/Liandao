@@ -150,30 +150,18 @@ void TDEngineProbit::resize_accounts(int account_num)
 TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
-    // internal load
-    string api_key = j_config["APIKey"].get<string>();
-    string secret_key = j_config["SecretKey"].get<string>();
-
-    string baseUrl = j_config["baseUrl"].get<string>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
-    string acountUrl = j_config["acountUrl"].get<string>();
-    //string baseUrl = j_config["baseUrl"].get<string>();
-
     AccountUnitProbit& unit = account_units[idx];
-    unit.api_key = api_key;
-    unit.secret_key = secret_key;
-    unit.baseUrl = baseUrl;
-	unit.authUrl = acountUrl;
-	unit.wsUrl = "demo-api.probit.com";
-    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
-
+    unit.api_key = j_config["APIKey"].get<string>();
+    unit.secret_key = j_config["SecretKey"].get<string>();
+    unit.baseUrl = j_config["baseUrl"].get<string>();
+	unit.authUrl = j_config["acountUrl"].get<string>();
+    unit.wsUrl = j_config["wsUrl"].get<string>();
+    KF_LOG_INFO(logger, "[load_account] (api_key)" << unit.api_key  << " (baseUrl)" << unit.baseUrl);
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
-
     unit.positionWhiteList.ReadWhiteLists(j_config, "positionWhiteLists");
     unit.positionWhiteList.Debug_print();
-
-    //display usage:
     if(unit.coinPairWhiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "TDEngineProbit::load_account: please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
@@ -182,15 +170,12 @@ TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
         KF_LOG_ERROR(logger, "     \"etc_eth\": \"ETC_ETH\"");
         KF_LOG_ERROR(logger, "},");
     }
-
-    //cancel all openning orders on TD startup
     cancel_all_orders(unit);
-
     // set up
     TradeAccount account = {};
     //partly copy this fields
-    strncpy(account.UserID, api_key.c_str(), 16);
-    strncpy(account.Password, secret_key.c_str(), 21);
+    strncpy(account.UserID, unit.api_key .c_str(), 16);
+    strncpy(account.Password, unit.secret_key.c_str(), 21);
     return account;
 }
 
@@ -210,13 +195,7 @@ void TDEngineProbit::connect(long timeout_nsec)
             get_products(unit, doc);
             KF_LOG_INFO(logger, "[connect] get_products");
             printResponse(doc);
-
-            if(loadExchangeOrderFilters(unit))
-            {
-                unit.logged_in = true;
-            } else {
-                KF_LOG_ERROR(logger, "[connect] logged_in = false for loadExchangeOrderFilters return false");
-            }
+            loadExchangeOrderFilters(unit);
             debug_print(unit.sendOrderFilters);
 			lws_login(unit, 0);
             unit.logged_in = true;
@@ -494,10 +473,9 @@ void TDEngineProbit::req_investor_position(const LFQryPositionField* data, int a
 
     bool findSymbolInResult = false;
     //send the filtered position
-    int position_count = tmp_vector.size();
-    for (int i = 0; i < position_count; i++)
+    for (int i = 0; i < tmp_vector.size(); i++)
     {
-        on_rsp_position(&tmp_vector[i], i == (position_count - 1), requestId, errorId, errorMsg.c_str());
+        on_rsp_position(&tmp_vector[i], i == (tmp_vector.size()- 1), requestId, errorId, errorMsg.c_str());
         findSymbolInResult = true;
     }
 
@@ -597,8 +575,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
     LFRtnOrderField order;
     std::unique_lock<std::mutex> l(g_orderMutex);
-    unit.ordersMap[data->OrderRef]=order;
-    l.unlock();
+    //unit.ordersMap[data->OrderRef]=order;
     double funds = 0;
     Document d;
 
@@ -611,8 +588,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
                                                                      " (ticksize)" << filter.ticksize <<
                                                                      " (fixedPrice)" << fixedPrice);
 
-	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
-		GetType(data->OrderPriceType).c_str(), data->Volume*1.0 / scale_offset, fixedPrice*1.0 / scale_offset, 0, data->OrderRef, d);
+	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), data->Volume*1.0 / scale_offset, fixedPrice*1.0 / scale_offset, 0, data->OrderRef, d);
 
     /*
      {"orderID":"18eb8aeb-3a29-b546-b2fe-1b55f24ef63f","clOrdID":"5","clOrdLinkID":"","account":272991,"symbol":"XBTUSD","side":"Buy",
@@ -671,7 +647,6 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        std::unique_lock<std::mutex> l(g_orderMutex);
         unit.ordersMap.erase(data->OrderRef);
     }
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
@@ -706,6 +681,7 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
     auto remoteIter = localOrderRefRemoteOrderId.find(data->OrderRef);
+    std::unique_lock<std::mutex> l(g_orderMutex);
 	auto orderIter = unit.ordersMap.find(data->OrderRef);
     if(remoteIter == localOrderRefRemoteOrderId.end() || orderIter == unit.ordersMap.end())
     {
@@ -938,8 +914,7 @@ void TDEngineProbit::get_products(const AccountUnitProbit& unit, Document& json)
 	return;
 }
 
-void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
-                                     const char *side, const char *type, double size, double price,double cost, const std::string& orderRef,  Document& json)
+void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code, const char *side, const char *type, double size, double price,double cost, const std::string& orderRef,  Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
 
@@ -984,7 +959,7 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
 	{     
 	      
 	      document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
-              document.AddMember("cost", nullObject,allocator); 
+	      document.AddMember("cost", nullObject,allocator);
 	}
 	else
 	{
@@ -1019,19 +994,6 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
 	string url = unit.baseUrl + requestPath;
 
 	MyPost(url, "Bearer " + authToken, body, json);
-    //const auto response = Post(Url{url},
-    //                           Header{
-				//				   {"Content-Type", "application/json"},
-				//				   {"authorization", "Bearer " + authToken }
-				//				},
-    //                           Body{body}, Timeout{30000});
-
-
-    ////{ "error": {"message": "Authorization Required","name": "HTTPError"} }
-    //KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
-    //                                          " (response.error.message) " << response.error.message <<
-    //                                          " (response.text) " << response.text.c_str());
-    //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
 
@@ -1184,11 +1146,11 @@ void TDEngineProbit::lws_login(AccountUnitProbit& unit, long timeout_nsec)
     ccinfo.host 	= unit.wsUrl.c_str();
     ccinfo.origin 	= unit.wsUrl.c_str();
     ccinfo.ietf_version_or_minus_one = -1;
-    ccinfo.protocol = protocols[0].name;
+    ccinfo.protocol = "ws://";
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 
     unit.websocketConn = lws_client_connect_via_info(&ccinfo);
-    KF_LOG_INFO(logger, "TDEngineProbit::lws_login: Connecting to " <<  ccinfo.host << ":" << ccinfo.port << ":" << ccinfo.path);
+    KF_LOG_INFO(logger, "TDEngineProbit::lws_login: Connecting to "<< ccinfo.protocol <<  ccinfo.host << ":" << ccinfo.port << ":" << ccinfo.path);
 
     if (unit.websocketConn == NULL)
     {
@@ -1325,7 +1287,6 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
 		auto& order = orderData[index];
 		if (isReset)
 		{//init, cancel all open order
-
 			if (order.HasMember("id") && order["id"].IsString() && order.HasMember("market_id") && order["market_id"].IsString() && order.HasMember("open_quantity") && order["open_quantity"].IsString())
 			{
 				std::string order_id = order["id"].GetString();
@@ -1341,6 +1302,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"client_order_id\"");
             return;
         }
+        std::unique_lock<std::mutex> l(g_orderMutex);
         auto orderRef = order["client_order_id"].GetString();
         auto orderIter = unit.ordersMap.find(orderRef);
         if (orderIter == unit.ordersMap.end())
@@ -1420,7 +1382,6 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing ||
             rtn_order.OrderStatus == LF_CHAR_Error)
         {
-            std::unique_lock<std::mutex> l(g_orderMutex);
             unit.ordersMap.erase(orderIter);
             //unit.ordersMapByExchID.erase(exchangeOrderID);
         }
@@ -1433,7 +1394,7 @@ void TDEngineProbit::onTrade(struct lws * conn, Document& json)
 	if (json.HasMember("result") && json["result"].IsArray())
 	{
         AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
-        //std::unique_lock<std::mutex> l(g_orderMutex);
+        std::unique_lock<std::mutex> l(g_orderMutex);
 		auto& tradeData = json["result"];
 		for (SizeType index = 0; index < tradeData.Size(); ++index)
 		{
@@ -1527,17 +1488,6 @@ std::string TDEngineProbit::getAuthToken(const AccountUnitProbit& unit )
 		std::string msg = unit.api_key + ":" + unit.secret_key;
 		std::string authEncode = base64_encode((const unsigned char*)msg.c_str(), msg.length());
 		string url = unit.authUrl + requestPath;
-		//const auto response = Post(Url{ url },
-		//	Header{
-		//		{ "Content-Type", "application/json" },
-		//	{ "authorization", "Basic " + authEncode }
-		//	},
-		//	Body{ body }, Timeout{ 30000 });
-
-		////{ "error": {"message": "Authorization Required","name": "HTTPError"} }
-		//KF_LOG_INFO(logger, "[getAuthToken] (url) " << url << " (body) " << body << "(msg)" << authEncode << " (response.status_code) " << response.status_code <<
-		//	" (response.error.message) " << response.error.message <<
-		//	" (response.text) " << response.text.c_str());
 		Document json;
 		//getResponse(response.status_code, response.text, response.error.message, json);
 		MyPost(url, "Basic " + authEncode, body, json);
