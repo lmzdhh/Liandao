@@ -244,7 +244,7 @@ void MDEngineProbit::login(long timeout_nsec) {
     KF_LOG_INFO(logger, "MDEngineProbit::login:");
     global_md = this;
 
-    char inputURL[300] = "wss://demo-api.probit.com/api/exchange/v1/ws";
+    char inputURL[300] = "wss://api.probit.com/api/exchange/v1/ws";
 
     const char *urlProtocol, *urlTempPath;
     char urlPath[300];
