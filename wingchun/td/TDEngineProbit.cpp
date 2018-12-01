@@ -1306,15 +1306,17 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_quantity\"");
             return;
         }
-        int64_t filled_quantity =  (int64_t)(std::atof(order["filled_quantity"].GetString())*scale_offset);
-        auto cur_quantity = filled_quantity - rtn_order.VolumeTraded;
+        double fixed_filled_quantity = std::atof(order["filled_quantity"].GetString()) + 0.000000001;
+        uint64_t filled_quantity =  (uint64_t)(fixed_filled_quantity*scale_offset);
+        uint64_t cur_quantity = filled_quantity - rtn_order.VolumeTraded;
         rtn_order.VolumeTraded = filled_quantity;
         if (!order.HasMember("quantity") || !order["quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"quantity\"");
             return;
         }
-        rtn_order.VolumeTotalOriginal = (int64_t)(std::atof(order["quantity"].GetString())*scale_offset);
+        double fixed_quantity = std::atof(order["quantity"].GetString()) + 0.000000001;
+        rtn_order.VolumeTotalOriginal = (uint64_t)(fixed_quantity*scale_offset);
 
         if (!order.HasMember("side") || !order["side"].IsString())
         {
@@ -1348,7 +1350,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"open_quantity\"");
             return;
         }
-        rtn_order.VolumeTotal = (int64_t)(std::atof(order["open_quantity"].GetString()) * scale_offset);
+        rtn_order.VolumeTotal = (uint64_t)(std::atof(order["open_quantity"].GetString()) * scale_offset);
         rtn_order.RequestID = orderIter->second.RequestID;
         if (!order.HasMember("status") || !order["status"].IsString())
         {
@@ -1368,7 +1370,8 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"cancelled_quantity\"");
             return;
         }
-        auto cancelled_quantity = (int64_t)(std::atof(order["cancelled_quantity"].GetString()) * scale_offset);
+        double fixed_cancelled_quantity = std::atof(order["cancelled_quantity"].GetString()) + 0.000000001;
+        auto cancelled_quantity = (uint64_t)(fixed_cancelled_quantity * scale_offset);
         if(cancelled_quantity > 0)
         {
             rtn_order.OrderStatus = LF_CHAR_Canceled;
@@ -1380,12 +1383,13 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         // on_rtn_trade
         if (cur_quantity > 0)
         {
-            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_filledCost/cur_quantity);
+            auto cur_price = (cur_filledCost / cur_quantity) * scale_offset;
+            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_price);
         }
 	}
 }
 
-void TDEngineProbit::onTrade(struct lws * conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, int64_t volume, int64_t price)
+void TDEngineProbit::onTrade(struct lws * conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, uint64_t volume, int64_t price)
 {
     KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade, start");
     LFRtnTradeField rtn_trade;
