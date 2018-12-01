@@ -126,7 +126,7 @@ private:
 	//websocket
     AccountUnitProbit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onOrder(struct lws * websocketConn, Document& json);
-    void onTrade(struct lws * websocketConn, Document& json);
+    void onTrade(struct lws * conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, int64_t volume, int64_t price);
     void wsloop();
     struct lws_context *context = nullptr;
     ThreadPtr ws_thread;
