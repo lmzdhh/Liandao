@@ -67,7 +67,6 @@ struct AccountUnitProbit
     int wsStatus=0;
     volatile  AccountStatus status;
     std::map<std::string/*client_order_id*/, LFRtnOrderField> ordersMap;
-    std::map<std::string/*order_id*/, LFRtnOrderField*>       ordersMapByExchID;
     int gpTimes = 24 * 60 * 60*1000;
 };
 

@@ -573,9 +573,9 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
-    LFRtnOrderField order;
+    LFRtnOrderField order {};
     std::unique_lock<std::mutex> l(g_orderMutex);
-    unit.ordersMap[data->OrderRef]=order;
+    unit.ordersMap[data->OrderRef] = order;
 
     SendOrderFilter filter = getSendOrderFilter(unit, ticker.c_str());
 
@@ -1288,7 +1288,6 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             return;
         }
         auto exchangeOrderID = order["id"].GetString();
-        unit.ordersMapByExchID[exchangeOrderID] = &orderIter->second;
         //kungfu order
         LFRtnOrderField& rtn_order = orderIter->second;
 
