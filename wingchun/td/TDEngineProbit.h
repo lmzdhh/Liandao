@@ -68,6 +68,7 @@ struct AccountUnitProbit
     volatile  AccountStatus status;
     std::map<std::string/*client_order_id*/, LFRtnOrderField> ordersMap;
     int gpTimes = 24 * 60 * 60*1000;
+    int64_t preFilledCost = 0;
 };
 
 class TDEngineProbit: public ITDEngine

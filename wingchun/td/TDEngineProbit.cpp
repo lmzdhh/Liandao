@@ -586,7 +586,9 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
                                                                      " (ticksize)" << filter.ticksize <<
                                                                      " (fixedPrice)" << fixedPrice);
     Document rspjson;
-	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), data->Volume*1.0 / scale_offset, fixedPrice*1.0 / scale_offset, 0, data->OrderRef, rspjson);
+    double volume = data->Volume*1.0 / scale_offset + 0.000000001;
+    double price = fixedPrice*1.0 / scale_offset + 0.000000001;
+	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), volume, price, 0, data->OrderRef, rspjson);
     //not expected response
     if(rspjson.HasParseError() || !rspjson.IsObject())
     {
@@ -1332,6 +1334,15 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             return;
         }
         rtn_order.LimitPrice = (int64_t)(std::atof(order["limit_price"].GetString()) * scale_offset);
+
+        if (!order.HasMember("filled_cost") || !order["filled_cost"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_cost\"");
+            return;
+        }
+
+        auto cur_filledCost = (int64_t)(std::atof(order["filled_cost"].GetString())*scale_offset) - unit.preFilledCost;
+        unit.preFilledCost = (int64_t)(std::atof(order["filled_cost"].GetString())*scale_offset);
         if (!order.HasMember("open_quantity") || !order["open_quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"open_quantity\"");
@@ -1369,7 +1380,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         // on_rtn_trade
         if (cur_quantity > 0)
         {
-            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, rtn_order.LimitPrice);
+            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_filledCost/cur_quantity);
         }
 	}
 }
