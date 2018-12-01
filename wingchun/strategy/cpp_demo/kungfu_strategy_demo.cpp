@@ -6,11 +6,10 @@
 
 #include "IWCStrategy.h"
 #include <deque>
-
 USING_WC_NAMESPACE
 
-#define SOURCE_INDEX SOURCE_BINANCE
-#define M_TICKER "BTCUSTD"
+#define SOURCE_INDEX SOURCE_PROBIT
+#define M_TICKER "xrp_usdt"
 #define M_EXCHANGE EXCHANGE_SHFE
 #define TRADED_VOLUME_LIMIT 500
 
@@ -93,72 +92,6 @@ void Strategy::on_rsp_position(const PosHandlerPtr posMap, int request_id, short
     }
 }
 
-/*
-void Strategy::on_market_data(const LFMarketDataField* md, short source, long rcv_time)
-{
-    if (strcmp(M_TICKER, md->InstrumentID) == 0 && td_connected)
-    {
-        signal.TickPrice.push_back(md->LastPrice);
-        if (signal.TickPrice.size() > signal.look_back)
-            signal.TickPrice.pop_front();
-        md_num += 1;
-        if (md_num < signal.look_back + 2)
-            return;
-        // ============ prepare data ============
-        double rolling_min = 9999999;
-        double rolling_max = 0;
-        for (int i = 0; i < signal.param1; i++)
-        {
-            int idx = signal.look_back - 1 - signal.param2 - i; // delay
-            double curPrice = signal.TickPrice[idx];
-            rolling_max = (curPrice > rolling_max) ? curPrice: rolling_max;
-            rolling_min = (curPrice < rolling_min) ? curPrice: rolling_min;
-        }
-        bool long_entry_condition = rolling_max <= md->LastPrice;
-        bool short_entry_condition = rolling_min >= md->LastPrice;
-        bool exit_condition = rolling_max > md->LastPrice && rolling_min < md->LastPrice;
-        if (trade_completed)
-        {
-            if (long_entry_condition && !signal.has_open_position)
-            {
-                rid = util->insert_limit_order(SOURCE_INDEX, M_TICKER, M_EXCHANGE,
-                                               md->UpperLimitPrice, signal.trade_size,
-                                               LF_CHAR_Buy, LF_CHAR_Open);
-                if (rid > 0)
-                    trade_completed = false;
-            }
-            if (short_entry_condition && !signal.has_open_position)
-            {
-                rid = util->insert_limit_order(SOURCE_INDEX, M_TICKER, M_EXCHANGE,
-                                               md->LowerLimitPrice, signal.trade_size,
-                                               LF_CHAR_Sell, LF_CHAR_Open);
-                if (rid > 0)
-                    trade_completed = false;
-            }
-            if (exit_condition && signal.has_open_position)
-            {
-                if (signal.has_open_long_position)
-                {
-                    rid = util->insert_limit_order(SOURCE_INDEX, M_TICKER, M_EXCHANGE,
-                                                   md->LowerLimitPrice, signal.trade_size,
-                                                   LF_CHAR_Sell, LF_CHAR_CloseToday);
-                    if (rid > 0)
-                        trade_completed = false;
-                }
-                if (signal.has_open_short_position)
-                {
-                    rid = util->insert_limit_order(SOURCE_INDEX, M_TICKER, M_EXCHANGE,
-                                                   md->UpperLimitPrice, signal.trade_size,
-                                                   LF_CHAR_Buy, LF_CHAR_CloseToday);
-                    if (rid > 0)
-                        trade_completed = false;
-                }
-            }
-        }
-    }
-}
-*/
-
 void Strategy::on_rtn_trade(const LFRtnTradeField* rtn_trade, int request_id, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[TRADE]" << " (t)" << rtn_trade->InstrumentID << " (p)" << rtn_trade->Price
@@ -203,7 +136,7 @@ void Strategy::on_rsp_order(const LFInputOrderField* order, int request_id, shor
 
 int main(int argc, const char* argv[])
 {
-    Strategy str(string("cpp_test"));
+    Strategy str(string("YOUR_STRATEGY1"));
     str.init();
     str.start();
     str.block();

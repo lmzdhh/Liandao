@@ -586,9 +586,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
                                                                      " (ticksize)" << filter.ticksize <<
                                                                      " (fixedPrice)" << fixedPrice);
     Document rspjson;
-    double volume = data->Volume*1.0 / scale_offset + 0.000000001;
-    double price = fixedPrice*1.0 / scale_offset + 0.000000001;
-	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), volume, price, 0, data->OrderRef, rspjson);
+	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), data->Volume*1.0 / scale_offset , fixedPrice*1.0 / scale_offset, 0, data->OrderRef, rspjson);
     //not expected response
     if(rspjson.HasParseError() || !rspjson.IsObject())
     {
