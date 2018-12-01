@@ -84,12 +84,6 @@ WC_NAMESPACE_START
             std::vector<std::string> pendingSendMsg;
         };
 
-		struct OceanExOrder
-		{
-			string side;
-			double price;
-			double size;			
-		};
 
 /**
  * CTP trade engine
@@ -110,13 +104,7 @@ WC_NAMESPACE_START
             virtual void release_api();
             virtual bool is_connected() const;
             virtual bool is_logged_in() const;
-            virtual string name() const {
-				if (source_id == SOURCE_OCEANEX) {
-					return "TDEngineOceanEx";
-				} else {
-					return "TDEngineOceanEx2";
-				}
-			};
+            virtual string name() const { return "TDEngineOceanEx"; };
 
             // req functions
             virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
@@ -184,14 +172,6 @@ WC_NAMESPACE_START
 
             cpr::Response Get(const std::string& url,const std::string& body, AccountUnitOceanEx& unit);
             cpr::Response Post(const std::string& url,const std::string& body, AccountUnitOceanEx& unit);
-
-			std::string createMultiOrderString(const std::string ticker, const std::vector<OceanExOrder>& orders);
-			std::string createCancelOrderString(const std::vector<int64_t>& orders);
-			void cancelMultiOrders(const std::string ticker, AccountUnitOceanEx& unit, const std::vector<int64_t>& orders, Document& json);
-			void sendMultiOrders(const std::string ticker, AccountUnitOceanEx& unit, const std::vector<OceanExOrder>& orders, Document& json);
-			void send_multi_orders(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
-			void cancel_multi_orders(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
-			
         private:
 
             struct lws_context *context = nullptr;
@@ -216,11 +196,7 @@ WC_NAMESPACE_START
 
 
             std::vector<ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
-			std::vector<OceanExOrder>	requestNewOrders;
-			std::vector<int64_t>			cancelOrders;
-			
-			int MULTI_NEW_ORDERS_COUNT = 3;
-			int MULTI_CANCEL_ORDERS_COUNT = 3;
+
             int max_rest_retry_times = 3;
             int retry_interval_milliseconds = 1000;
             int orderaction_max_waiting_seconds = 30;

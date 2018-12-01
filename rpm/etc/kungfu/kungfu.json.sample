@@ -443,7 +443,6 @@
       }
     },
     "oceanex": {
-	  "exchange_source_index" : 25,
       "accounts": [
         {
           "info": {
@@ -487,7 +486,6 @@
       }
     },
     "oceanex2": {
-	  "exchange_source_index" : 27,
       "accounts": [
         {
           "info": {
