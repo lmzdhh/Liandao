@@ -1291,7 +1291,14 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         unit.ordersMapByExchID[exchangeOrderID] = &orderIter->second;
         //kungfu order
         LFRtnOrderField& rtn_order = orderIter->second;
+
         strncpy(rtn_order.OrderRef, orderRef, sizeof(sizeof(rtn_order.OrderRef)) - 1);
+
+        if (!order.HasMember("market_id") || !order["market_id"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"market_id\"");
+        }
+        strncpy(rtn_order.InstrumentID, order["market_id"].GetString(), sizeof(sizeof(rtn_order.InstrumentID)) - 1);
 
         if (!order.HasMember("filled_quantity") || !order["filled_quantity"].IsString())
         {
@@ -1299,7 +1306,8 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             return;
         }
         int64_t filled_quantity =  (int64_t)(std::atof(order["filled_quantity"].GetString())*scale_offset);
-        rtn_order.VolumeTraded += filled_quantity;
+        auto cur_quantity = filled_quantity - rtn_order.VolumeTraded;
+        rtn_order.VolumeTraded = filled_quantity;
         if (!order.HasMember("quantity") || !order["quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"quantity\"");
@@ -1338,21 +1346,31 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             return;
         }
         rtn_order.OrderStatus = GetOrderStatus(order["status"].GetString());
-        if (rtn_order.OrderStatus == LF_CHAR_NotTouched )
+        if (rtn_order.OrderStatus == LF_CHAR_NotTouched)
         {
             if (filled_quantity > 0)
             {
                 rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
             }
         }
+        if (!order.HasMember("cancelled_quantity") || !order["cancelled_quantity"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"cancelled_quantity\"");
+            return;
+        }
+        auto cancelled_quantity = (int64_t)(std::atof(order["cancelled_quantity"].GetString()) * scale_offset);
+        if(cancelled_quantity > 0)
+        {
+            rtn_order.OrderStatus = LF_CHAR_Canceled;
+        }
         KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, ON_RTN_ORDER");
         // on_rtn_order
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
         // on_rtn_trade
-        if (filled_quantity > 0)
+        if (cur_quantity > 0)
         {
-            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, filled_quantity, rtn_order.LimitPrice);
+            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, rtn_order.LimitPrice);
         }
 	}
 }
