@@ -39,6 +39,8 @@ using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
 std::mutex  g_orderMutex;
+std::mutex  g_postMutex; 
+
 USING_WC_NAMESPACE
 
 int g_RequestGap=5*60;
@@ -1425,6 +1427,7 @@ AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * w
 
 void TDEngineProbit::MyPost(const std::string& url,const std::string& auth, const std::string& body, Document& json)
 {
+    std::lock_guard<std::mutex> lck(g_postMutex);
 	const auto response = cpr::Post(Url{ url },
 		Header{
 			{ "Content-Type", "application/json" },
