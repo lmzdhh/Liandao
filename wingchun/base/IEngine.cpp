@@ -136,9 +136,12 @@ void IEngine::wait_for_stop()
         reader_thread.reset();
     }
 }
-
-void IEngine::initialize(const string& json_str)
+//conf_str = index + json
+void IEngine::initialize(const string& conf_str)
 {
+    std::string json_str = conf_str;
+    m_engineIndex = std::atoi(std::string(json_str[0],1).c_str());
+    json_str.erase(json_str.begin());
     // init reader / writer / logger first
     init();
     // record its status

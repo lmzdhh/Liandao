@@ -59,10 +59,19 @@ The most commonly used wingchun commands are:
     def run_engine(self, tp):
         engine_parser = argparse.ArgumentParser(
             description='Engine Parsing Tool',
-            usage='''wingchun td/md name''')
+            usage='''wingchun td/md name or wingchun td/md name index''')
         engine_parser.add_argument('name', help='name of engine')
-        args = engine_parser.parse_args(sys.argv[2:])
-        kungfu.wingchun.run_engine(args.name, tp)
+        name = None
+        index = '0'
+        if len(sys.argv) == 4:
+            engine_parser.add_argument('index', help='name of engine')
+            args = engine_parser.parse_args(sys.argv[2:])
+            name = args.name
+            index = args.index
+        else:
+            args = engine_parser.parse_args(sys.argv[2:])
+            name = args.name
+        kungfu.wingchun.run_engine([name, tp, index])
 
     def td(self):
         self.run_engine('td')

@@ -126,7 +126,7 @@ void TDEngineProbit::init()
     ITDEngine::init();
     JournalPair tdRawPair = getTdRawJournalPair(source_id);
     raw_writer = yijinjing::JournalWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
-    KF_LOG_INFO(logger, "[init]");
+    KF_LOG_INFO(logger, "[init],engineIndex:" << m_engineIndex);
 
 
     std::time_t baseNow = std::time(nullptr);
