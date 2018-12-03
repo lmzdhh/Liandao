@@ -1416,8 +1416,9 @@ void TDEngineProbit::genUniqueKey()
 {
     struct tm cur_time = getCurLocalTime();
     //SSMMHHDDN
-    m_uniqueKey.resize(10);
-    snprintf((char*)m_uniqueKey.data(), 10, "%02d%02d%02d%02d%1s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
+    char key[10]{0};
+    snprintf((char*)key, 9, "%02d%02d%02d%02d%1s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
+    m_uniqueKey = key;
 }
 
 //clientid =  m_uniqueKey+orderRef
