@@ -1419,16 +1419,16 @@ void TDEngineProbit::genUniqueKey()
     snprintf((char*)m_uniqueKey.data(), 10, "%02d%02d%02d%02d%1s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
 }
 
-//clientid = orderRef + m_uniqueKey
+//clientid =  m_uniqueKey+orderRef
 std::string TDEngineProbit::genClinetid(const std::string &orderRef)
 {
-    return orderRef + m_uniqueKey;
+    return m_uniqueKey + orderRef;
 }
 
-//pre 0-6 byte is orderRef
+//pre 9 byte is m_uniqueKey
 std::string TDEngineProbit::getOrderRef(const std::string &clinetID)
 {
-    return std::string(clinetID, 0, 6);
+    return std::string(clinetID, 8);
 }
 
 
