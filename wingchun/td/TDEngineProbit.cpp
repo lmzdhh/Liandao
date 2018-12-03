@@ -904,7 +904,8 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
     /*
      * clOrdID : Optional Client Order ID. This clOrdID will come back on the order and any related executions.
      * */
-    document.AddMember("client_order_id", StringRef(genClinetid(orderRef).c_str()), allocator);
+    std::string client_id = genClinetid(orderRef);
+    document.AddMember("client_order_id", StringRef(client_id.c_str()), allocator);
 
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
