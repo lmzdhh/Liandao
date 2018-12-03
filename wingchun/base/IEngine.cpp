@@ -140,8 +140,7 @@ void IEngine::wait_for_stop()
 void IEngine::initialize(const string& conf_str)
 {
     std::string json_str = conf_str;
-    m_engineIndex = std::atoi(std::string(json_str[0],1).c_str());
-    json_str.erase(json_str.begin());
+    cutEngineIndex(json_str);
     // init reader / writer / logger first
     init();
     // record its status
@@ -157,6 +156,12 @@ void IEngine::initialize(const string& conf_str)
     pre_load(j_config);
     // load config information
     load(j_config);
+}
+
+void IEngine::cutEngineIndex(std::string& str)
+{
+    m_engineIndex = str[0];
+    str.erase(0, 1);
 }
 
 static string utf8_error_msg;

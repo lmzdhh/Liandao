@@ -117,7 +117,9 @@ public:
     virtual string name() const = 0;
 
 protected:
-    int m_engineIndex = -1;
+    std::string m_engineIndex {};
+private:
+    void cutEngineIndex(std::string&);
 };
 
 DECLARE_PTR(IEngine);

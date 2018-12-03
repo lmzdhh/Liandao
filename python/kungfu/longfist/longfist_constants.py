@@ -124,6 +124,15 @@ class MsgTypes:
     MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206
     MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207
 
+
+    MSG_TYPE_LF_MD_PROBIT        = 27101
+    MSG_TYPE_LF_QRY_POS_PROBIT   = 27201
+    MSG_TYPE_LF_RSP_POS_PROBIT   = 27202
+    MSG_TYPE_LF_ORDER_PROBIT     = 27204
+    MSG_TYPE_LF_RTN_ORDER_PROBIT = 27205
+    MSG_TYPE_LF_RTN_TRADE_PROBIT = 27206
+    MSG_TYPE_LF_ORDER_ACTION_PROBIT = 27207
+
 ###################################
 # LfActionFlagType: 报单操作标志
 ###################################

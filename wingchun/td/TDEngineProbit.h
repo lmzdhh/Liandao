@@ -108,9 +108,13 @@ public:
     int Round(std::string tickSizeStr);
 		//2018-01-01T00:00:00.000Z
     std::string TimeToFormatISO8601(int64_t timestamp);
-	void MyPost(const std::string& url,const std::string& auth, const std::string& body,Document& json);
+	void PostRequest(const std::string& url,const std::string& auth, const std::string& body,Document& json);
 private:
     void sendMessage(std::string&& msg,struct lws * conn);
+    void genUniqueKey();
+    std::string m_uniqueKey;
+    std::string genClinetid(const std::string& orderRef);
+    std::string getOrderRef(const std::string& clinetID);
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
@@ -122,8 +126,6 @@ private:
     LfOrderPriceTypeType GetPriceType(const std::string& );
     LfOrderStatusType GetOrderStatus(const std::string&);
 	LfTimeConditionType GetTimeCondition(const std::string&);
-    void addNewQueryOrdersAndTrades(AccountUnitProbit& unit, const char_31 InstrumentID, const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID);
-    void moveNewtoPending(AccountUnitProbit& unit);
     static constexpr int scale_offset = 1e8;
     int rest_get_interval_ms = 500;
     std::map<std::string, std::string> localOrderRefRemoteOrderId;

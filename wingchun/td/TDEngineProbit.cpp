@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <cpr/cpr.h>
 #include <chrono>
+
 #include "../../utils/crypto/openssl_util.h"
 using cpr::Delete;
 using cpr::Get;
@@ -42,7 +43,7 @@ std::mutex  g_orderMutex;
 std::mutex  g_postMutex; 
 
 USING_WC_NAMESPACE
-
+USING_YJJ_NAMESPACE
 int g_RequestGap=5*60;
 #define PARTIAL_TRADED "partialtraded"
 static TDEngineProbit* global_td = nullptr;
@@ -124,18 +125,10 @@ TDEngineProbit::~TDEngineProbit()
 void TDEngineProbit::init()
 {
     ITDEngine::init();
-    JournalPair tdRawPair = getTdRawJournalPair(source_id);
-    raw_writer = yijinjing::JournalWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
-    KF_LOG_INFO(logger, "[init],engineIndex:" << m_engineIndex);
-
-
-    std::time_t baseNow = std::time(nullptr);
-    struct tm* tm = std::localtime(&baseNow);
-    tm->tm_sec += 30;
-    std::time_t next = std::mktime(tm);
-    std::cout << "std::to_string(next):" << std::to_string(next)<< std::endl;
-    std::cout << "getTimestamp:" << std::to_string(getTimestamp())<< std::endl;
-
+    JournalPair td_raw_pair = getTdRawJournalPair(source_id);
+    raw_writer = yijinjing::JournalWriter::create(td_raw_pair.first, td_raw_pair.second, "RAW_" + name());
+    genUniqueKey();
+    KF_LOG_INFO(logger, "[init], uniqueKey:" << m_uniqueKey << ",engineIndex:" << m_engineIndex);
 }
 
 void TDEngineProbit::pre_load(const json& j_config)
@@ -606,21 +599,6 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
 		std::string remoteOrderId = dataJson["id"].GetString();
 		localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
 		KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
-		
-		//OpenOrderToLFOrder(unit, dataJson, order);
-		//std::lock_guard<std::mutex> guard_mutex(g_orderMutex);
-
-		//char noneStatus = GetOrderStatus(d["status"].GetString());//none
-	   // addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0,requestId);
-		//success, only record raw data
-		//raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
-		//
-
-		// do writer
-		//on_rtn_order(&order);
-		//do raw writer
-        //raw_writer->write_frame(&order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, requestId);
-
 	}
     else if (rspjson.HasMember("code") && rspjson["code"].IsNumber())
     {
@@ -672,49 +650,42 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
     auto remoteIter = localOrderRefRemoteOrderId.find(data->OrderRef);
     std::unique_lock<std::mutex> l(g_orderMutex);
 	auto orderIter = unit.ordersMap.find(data->OrderRef);
-    if(remoteIter == localOrderRefRemoteOrderId.end() || orderIter == unit.ordersMap.end())
+    if(remoteIter != localOrderRefRemoteOrderId.end() && orderIter != unit.ordersMap.end())
     {
-        errorId = 1;
-        std::stringstream ss;
-        ss << "[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef;
-        errorMsg = ss.str();
-        KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. " <<
-                            " (rid)" << requestId << \
-                            " (orderRef)" << data->OrderRef << \
-                            " (errorId)" << errorId << \
-                            " (errorMsg) " << errorMsg);
-        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+        auto remoteID = remoteIter->second;
+        auto order = orderIter->second;
+        KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef);
+        Document d;
+        cancel_order(unit, remoteID, ticker, order.VolumeTotal*1.0/scale_offset, d);
+        //cancel order response "" as resultText, it cause json.HasParseError() == true, and json.IsObject() == false.
+        //it is not an error, so dont check it.
+        //not expected response
+        if(d.IsObject() && !d.HasParseError() && d.HasMember("code") && d["code"].IsNumber())
+        {
+            errorId = d["code"].GetInt();
+            if(d.HasMember("message") && d["message"].IsString())
+            {
+                errorMsg = d["message"].GetString();
+            }
+            KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);;
+            on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+            raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
+            return;
+        }
+        KF_LOG_ERROR(logger, "[req_order_action] cancel_order success!" << " (rid)" << requestId <<"(order ref)"<< data->OrderRef);
         raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
-   
-    
-    KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef);
-	auto remoteID = remoteIter->second;
-	auto order = orderIter->second;
-	//
-
-    Document d;
-	cancel_order(unit, remoteID, ticker, order.VolumeTotal*1.0/scale_offset, d);
-
-    //cancel order response "" as resultText, it cause json.HasParseError() == true, and json.IsObject() == false.
-    //it is not an error, so dont check it.
-    //not expected response
-    if(d.IsObject() && !d.HasParseError() && d.HasMember("code") && d["code"].IsNumber())
-    {
-        errorId = d["code"].GetInt();
-        if(d.HasMember("message") && d["message"].IsString())
-        {
-            errorMsg = d["message"].GetString();
-        }
-		KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);;
-		on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-    }
-	else
-	{
-		KF_LOG_ERROR(logger, "[req_order_action] cancel_order success!" << " (rid)" << requestId <<"(order ref)"<< data->OrderRef);
-	}
-	
+    errorId = 1;
+    std::stringstream ss;
+    ss << "[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef;
+    errorMsg = ss.str();
+    KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. " <<
+                                                                                            " (rid)" << requestId << \
+                            " (orderRef)" << data->OrderRef << \
+                            " (errorId)" << errorId << \
+                            " (errorMsg) " << errorMsg);
+    on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
 }
 
@@ -746,40 +717,6 @@ bool TDEngineProbit::OpenOrderToLFOrder(AccountUnitProbit& unit, rapidjson::Valu
 	}
 	return false;
 }
-
-
-
-void TDEngineProbit::addNewQueryOrdersAndTrades(AccountUnitProbit& unit, const char_31 InstrumentID,
-                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded,int reqID)
-{
-    //add new orderId for GetAndHandleOrderTradeResponse
-    //std::lock_guard<std::mutex> guard_mutex(g_orderMutex);
-
-    PendingOrderStatus status;
-    memset(&status, 0, sizeof(PendingOrderStatus));
-    strncpy(status.InstrumentID, InstrumentID, 31);
-    strncpy(status.OrderRef, OrderRef, 21);
-    status.OrderStatus = OrderStatus;
-    status.VolumeTraded = VolumeTraded;
-    status.averagePrice = 0.0;
-	status.requestID = reqID;
-    unit.newOrderStatus.push_back(status);
-
-	LFRtnOrderField order;	
-	order.OrderStatus = OrderStatus;
-	order.VolumeTraded = VolumeTraded;
-	strncpy(order.OrderRef, OrderRef, 21);
-	strncpy(order.InstrumentID, InstrumentID, 31);
-	order.RequestID = reqID;
-	strcpy(order.ExchangeID, "Probit");
-	strncpy(order.UserID, unit.api_key.c_str(), 16);
-	order.TimeCondition = LF_CHAR_GTC;
-
-    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << InstrumentID
-                                                                       << " (OrderRef) " << OrderRef
-                                                                       << "(VolumeTraded)" << VolumeTraded);
-}
-
 
 void TDEngineProbit::set_reader_thread()
 {
@@ -970,7 +907,7 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
     /*
      * clOrdID : Optional Client Order ID. This clOrdID will come back on the order and any related executions.
      * */
-    document.AddMember("client_order_id", StringRef(orderRef.c_str()), allocator);
+    document.AddMember("client_order_id", StringRef(genClinetid(orderRef).c_str()), allocator);
 
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
@@ -981,7 +918,7 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
 	std::string authToken = getAuthToken(unit);
 	string url = unit.baseUrl + requestPath;
 
-	MyPost(url, "Bearer " + authToken, body, json);
+    PostRequest(url, "Bearer " + authToken, body, json);
 }
 
 
@@ -1068,17 +1005,7 @@ void TDEngineProbit::cancel_order(const AccountUnitProbit& unit, const std::stri
 	std::string body = "{\"market_id\":\"" + marketID + "\",\"order_id\":\"" + orderId + "\",\"limit_open_quantity\":\"0\"}";
 	std::string authToken = getAuthToken(unit);
     string url = unit.baseUrl + requestPath;
-
-    const auto response = Post(Url{url},
-                                 Header{{"Content-Type", "application/json"},
-										{ "authorization", "Bearer " + authToken } },
-										Body{body},
-								Timeout{30000});
-
-    KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
-                                                " (response.error.message) " << response.error.message <<
-                                                " (response.text) " << response.text.c_str());
-    getResponse(response.status_code, response.text, response.error.message, json);
+    PostRequest(url, "Bearer " + authToken, body, json);
 }
 
 
@@ -1278,7 +1205,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             return;
         }
         std::unique_lock<std::mutex> l(g_orderMutex);
-        auto orderRef = order["client_order_id"].GetString();
+        auto orderRef = getOrderRef(order["client_order_id"].GetString()).c_str();
         auto orderIter = unit.ordersMap.find(orderRef);
         if (orderIter == unit.ordersMap.end())
         {
@@ -1425,7 +1352,7 @@ AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * w
     return account_units[0];
 }
 
-void TDEngineProbit::MyPost(const std::string& url,const std::string& auth, const std::string& body, Document& json)
+void TDEngineProbit::PostRequest(const std::string& url,const std::string& auth, const std::string& body, Document& json)
 {
     std::lock_guard<std::mutex> lck(g_postMutex);
 	const auto response = cpr::Post(Url{ url },
@@ -1455,7 +1382,7 @@ std::string TDEngineProbit::getAuthToken(const AccountUnitProbit& unit )
 		string url = unit.authUrl + requestPath;
 		Document json;
 		//getResponse(response.status_code, response.text, response.error.message, json);
-		MyPost(url, "Basic " + authEncode, body, json);
+        PostRequest(url, "Basic " + authEncode, body, json);
 		if (json.HasParseError() || !json.IsObject())
 		{
 			int errorId = 100;
@@ -1491,7 +1418,25 @@ void TDEngineProbit::sendMessage(std::string &&msg, struct lws * conn)
     lws_write(conn, (uint8_t*)(msg.data() + LWS_PRE), msg.size() - LWS_PRE, LWS_WRITE_TEXT);
 }
 
+void TDEngineProbit::genUniqueKey()
+{
+    struct tm cur_time = getCurLocalTime();
+    //SSMMHHDDN
+    m_uniqueKey.resize(9);
+    snprintf((char*)m_uniqueKey.data(), 9, "%02d%02d%02d%02d%01s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
+}
 
+//clientid = orderRef + m_uniqueKey
+std::string TDEngineProbit::genClinetid(const std::string &orderRef)
+{
+    return orderRef + m_uniqueKey;
+}
+
+//pre 0-6 byte is orderRef
+std::string TDEngineProbit::getOrderRef(const std::string &clinetID)
+{
+    return std::string(clinetID, 0, 6);
+}
 
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
