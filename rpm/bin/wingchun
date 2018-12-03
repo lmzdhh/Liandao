@@ -66,6 +66,9 @@ The most commonly used wingchun commands are:
         index = re.findall('\d{1}', name)
         if len(index) == 0:
             index = ['0']
+        else:
+            name = name[:-1]
+
         kungfu.wingchun.run_engine([name, tp, index[0]])
 
     def td(self):

@@ -32,7 +32,6 @@ class Engine(object):
         name = args[0]
         tp =  args[1]
         index = args[2]
-        print  'args, name:', name,',index:', index
         lib_name = 'lib{}{}'.format(name, tp)
         lib = None
         try:

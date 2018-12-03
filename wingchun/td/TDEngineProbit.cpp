@@ -561,8 +561,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     {
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
-        KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList, ignore it  (rid)" << requestId <<
-                                                                                      " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList, ignore it  (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
         return;
@@ -588,8 +587,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     {
         errorId = 100;
         errorMsg = "send_order http response has parse error or is not json. please check the log";
-        KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
-                                                                           errorId << " (errorMsg) " << errorMsg);
+        KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
 	else if (rspjson.HasMember("data"))
 	{
@@ -858,8 +856,7 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
 	convertCostStream << std::fixed << std::setprecision(8) << cost;
 	convertCostStream >> costStr;
 
-    KF_LOG_INFO(logger, "[send_order] (code) " << code << " (side) "<< side << " (type) " <<
-                                               type << " (size) "<< sizeStr << " (price) "<< priceStr);
+    KF_LOG_INFO(logger, "[send_order] (code) " << code << " (side) "<< side << " (type) " << type << " (size) "<< sizeStr << " (price) "<< priceStr);
 
     Document document;
     document.SetObject();
@@ -1355,17 +1352,13 @@ AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * w
 void TDEngineProbit::PostRequest(const std::string& url,const std::string& auth, const std::string& body, Document& json)
 {
     std::lock_guard<std::mutex> lck(g_postMutex);
-	const auto response = cpr::Post(Url{ url },
-		Header{
-			{ "Content-Type", "application/json" },
-		{ "authorization", auth }
-		},
-		Body{ body }, Timeout{ 30000 });
-
-	//{ "error": {"message": "Authorization Required","name": "HTTPError"} }
-	KF_LOG_INFO(logger, "[Post] (url) " << url << " (body) " << body << "(msg)" << auth << " (response.status_code) " << response.status_code <<
-		" (response.error.message) " << response.error.message <<
-		" (response.text) " << response.text.c_str());
+	const auto response = cpr::Post(Url{ url },Header{{ "Content-Type", "application/json" },{ "authorization", auth }},Body{ body }, Timeout{ 30000 });
+	KF_LOG_INFO(logger, "[Post] (url) " << url << \
+	          " (body) " << body << \
+	          " (msg) " << auth <<  \
+	          " (response.status_code) " << response.status_code << \
+	          " (response.error.message) " << response.error.message << \
+	          " (response.text) " << response.text.c_str());
 	getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1422,8 +1415,8 @@ void TDEngineProbit::genUniqueKey()
 {
     struct tm cur_time = getCurLocalTime();
     //SSMMHHDDN
-    m_uniqueKey.resize(9);
-    snprintf((char*)m_uniqueKey.data(), 9, "%02d%02d%02d%02d%01s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
+    m_uniqueKey.resize(10);
+    snprintf((char*)m_uniqueKey.data(), 10, "%02d%02d%02d%02d%1s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
 }
 
 //clientid = orderRef + m_uniqueKey
