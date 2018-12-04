@@ -13,6 +13,7 @@ class SOURCE:
     HITBTC = 24
     OCEANEX = 25
     PROBIT = 28
+    DAYBIT = 31
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
@@ -130,6 +131,14 @@ class MsgTypes:
     MSG_TYPE_LF_RTN_ORDER_PROBIT 		= 28205
     MSG_TYPE_LF_RTN_TRADE_PROBIT 		= 28206
     MSG_TYPE_LF_ORDER_ACTION_PROBIT		= 28207
+
+    MSG_TYPE_LF_MD_DAYBIT        		= 31101
+    MSG_TYPE_LF_QRY_POS_DAYBIT   		= 31201
+    MSG_TYPE_LF_RSP_POS_DAYBIT   		= 31202
+    MSG_TYPE_LF_ORDER_DAYBIT     		= 31204
+    MSG_TYPE_LF_RTN_ORDER_DAYBIT 		= 31205
+    MSG_TYPE_LF_RTN_TRADE_DAYBIT 		= 31206
+    MSG_TYPE_LF_ORDER_ACTION_DAYBIT		= 31207
 
 ###################################
 # LfActionFlagType: 报单操作标志

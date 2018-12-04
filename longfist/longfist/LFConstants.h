@@ -25,6 +25,7 @@ enum exchange_source_index : short
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
     SOURCE_PROBIT = 28,
+    SOURCE_DAYBIT = 31,
     SOURCE_UNKNOWN
 };
 
@@ -60,6 +61,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "HUOBI";
         case SOURCE_PROBIT:
             return "probit";
+        case SOURCE_DAYBIT:
+            return "daybit";
 		default:
 			return "unknown";
 	}
@@ -123,6 +126,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_PROBIT;
     }
+    else if(exch_str == "daybit")
+    {
+        return SOURCE_DAYBIT;
+    }
     else
     {
 	return SOURCE_UNKNOWN;
@@ -146,6 +153,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_OCEANEX "OCEANEX"
 #define EXCHANGE_HUOBI "HUOBI"
 #define EXCHANGE_PROBIT "PROBIT"
+#define EXCHANGE_DAYBIT "DAYBIT"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -288,6 +296,15 @@ const short MSG_TYPE_LF_RTN_ORDER_PROBIT 	= 28205;
 const short MSG_TYPE_LF_RTN_TRADE_PROBIT 	= 28206;
 const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 28207;
 
+
+//DAYBIT, idx=31
+const short MSG_TYPE_LF_MD_DAYBIT        	= 31101;
+const short MSG_TYPE_LF_QRY_POS_DAYBIT   	= 31201;
+const short MSG_TYPE_LF_RSP_POS_DAYBIT   	= 31202;
+const short MSG_TYPE_LF_ORDER_DAYBIT     	= 31204;
+const short MSG_TYPE_LF_RTN_ORDER_DAYBIT 	= 31205;
+const short MSG_TYPE_LF_RTN_TRADE_DAYBIT 	= 31206;
+const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
 ///////////////////////////////////

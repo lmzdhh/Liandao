@@ -151,10 +151,78 @@
             "btc_usdt": "BTC-USDT"
         },
       "rest_get_interval_ms": 500
-    }
+    },
+    "daybit":
+     {
+         "book_depth_count": 5,
+         "trade_count": 10,
+         "whiteLists":
+            {
+                "etc_eth": "ETC-ETH",
+                "ltc_btc": "LTC-BTC",
+                "ltc_usdt": "LTC-USDT",
+                "bch_btc": "BCH-BTC",
+                "bch_usdt": "BCH-USDT",
+                "etc_btc": "ETC-BTC",
+                "eth_btc": "ETH-BTC",
+                "etc_usdt": "ETC-USDT",
+                "eth_usdt": "ETH-USDT",
+                "btc_usdt": "BTC-USDT"
+         },
+         "rest_get_interval_ms": 500
+     }
   },
   "td":
   {
+      "daybit":
+      {
+        "accounts":
+          [
+            {
+              "info":
+              {
+                "APIKey": "your-api-key",
+                "SecretKey": "your-secret-key",
+                "whiteLists":{
+                  "etc_eth": "ETCETH",
+                  "trx_btc": "TRXBTC"
+                },
+                "positionWhiteLists":{
+                                "ETC": "ETC",
+                                "BTC": "BTC"
+                 },
+                "exchange_shift_ms": -2000,
+                "order_insert_recvwindow_ms": 5000,
+                "order_action_recvwindow_ms": 5000,
+                "max_rest_retry_times":3,
+                "retry_interval_milliseconds": 1000,
+                "rest_get_interval_ms": 2000,
+                "sync_time_interval": 10000
+              },
+              "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
+              "is_default": true
+            }
+          ],
+          "FeeSetup":
+          {
+            "stock":
+            {
+              "type": "amount",
+              "fee_multi": 0.0003,
+              "ctr_multi": 1,
+              "min_fee": 0
+            },
+            "future":
+            {
+              "type": "amount",
+              "fee_multi": [0.000023, 0.00069, 0.000023],
+              "ctr_multi": 200,
+              "min_fee": 0
+            },
+            "future_exotic": null
+          }
+
+      },
     "binance":
     {
       "accounts":

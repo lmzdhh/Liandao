@@ -334,9 +334,9 @@ wingchun_constants = [
                        ('BITMEX', 23, ''),
                        ('HITBTC', 24, ''),
                        ('OCEANEX', 25, ''),
-                       ('PROBIT', 28, '')
-                       ],
-     'source index'),
+                       ('PROBIT', 28, ''),
+                       ('DAYBIT', 31, '')
+                       ],'source index'),
     ('DIRECTION', 'char', [('Buy', '0', '买'),
                            ('Sell', '1', '卖')],
      'order direction type'),
