@@ -79,6 +79,7 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_OCEANEX);
     loadJournalInfo(SOURCE_HUOBI);
     loadJournalInfo(SOURCE_PROBIT);
+    loadJournalInfo(SOURCE_UPBIT);
 
     loadJournalInfo(0, getSystemJournalPair);
 

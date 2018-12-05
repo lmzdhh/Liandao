@@ -27,6 +27,7 @@ class SOURCE:
     HITBTC = 24
     OCEANEX = 25
     PROBIT = 28
+    UPBIT = 30
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所

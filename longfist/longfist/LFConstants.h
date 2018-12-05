@@ -25,6 +25,7 @@ enum exchange_source_index : short
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
     SOURCE_PROBIT = 28,
+    SOURCE_UPBIT = 30,
     SOURCE_UNKNOWN
 };
 
@@ -60,6 +61,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "HUOBI";
         case SOURCE_PROBIT:
             return "probit";
+        case SOURCE_UPBIT:
+            return "upbit";
 		default:
 			return "unknown";
 	}
@@ -123,9 +126,13 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_PROBIT;
     }
+    else if(exch_str == "upbit")
+    {
+        return SOURCE_UPBIT;
+    }
     else
     {
-	return SOURCE_UNKNOWN;
+        return SOURCE_UNKNOWN;
     }
 }
 
@@ -146,6 +153,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_OCEANEX "OCEANEX"
 #define EXCHANGE_HUOBI "HUOBI"
 #define EXCHANGE_PROBIT "PROBIT"
+#define EXCHANGE_UPBIT "UPBIT"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -287,6 +295,15 @@ const short MSG_TYPE_LF_ORDER_PROBIT     	= 28204;
 const short MSG_TYPE_LF_RTN_ORDER_PROBIT 	= 28205;
 const short MSG_TYPE_LF_RTN_TRADE_PROBIT 	= 28206;
 const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 28207;
+
+//UPBIT, idx=30
+const short MSG_TYPE_LF_MD_UPBIT        	= 30101;
+const short MSG_TYPE_LF_QRY_POS_UPBIT   	= 30201;
+const short MSG_TYPE_LF_RSP_POS_UPBIT   	= 30202;
+const short MSG_TYPE_LF_ORDER_UPBIT     	= 30204;
+const short MSG_TYPE_LF_RTN_ORDER_UPBIT 	= 30205;
+const short MSG_TYPE_LF_RTN_TRADE_UPBIT 	= 30206;
+const short MSG_TYPE_LF_ORDER_ACTION_UPBIT  = 30207;
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
