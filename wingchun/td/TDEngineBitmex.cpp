@@ -45,6 +45,14 @@ USING_WC_NAMESPACE
 int g_RequestGap=5*60;
 
 static TDEngineBitmex* global_td = nullptr;
+std::mutex g_reqMutex;
+
+
+AccountUnitBitmex::AccountUnitBitmex()
+{
+    wsStatus=0;
+    unit_mutex =new std::mutex();
+}
 
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
@@ -139,13 +147,11 @@ TDEngineBitmex::TDEngineBitmex(): ITDEngine(SOURCE_BITMEX)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.Bitmex");
     KF_LOG_INFO(logger, "[TDEngineBitmex]");
-
-    mutex_order_and_trade = new std::mutex();
+  
 }
 
 TDEngineBitmex::~TDEngineBitmex()
 {
-    if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
 }
 
 void TDEngineBitmex::init()
@@ -636,7 +642,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
                                                                      " (LimitPrice)" << data->LimitPrice <<
                                                                      " (ticksize)" << filter.ticksize <<
                                                                      " (fixedPrice)" << fixedPrice);
-
+	addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef,data->Direction, LF_CHAR_Unknown, 0, requestId);
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
             GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef, d);
 
@@ -665,7 +671,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
                                                                        data->OrderRef << " (remoteOrderId) " << remoteOrderId);
 
             char noneStatus = GetOrderStatus(d["ordStatus"].GetString());//none
-            addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0,requestId);
+            //addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0,requestId);
             //success, only record raw data
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1, requestId, errorId, errorMsg.c_str());
     }  else if (d.HasMember("code") && d["code"].IsNumber()) {
@@ -683,6 +689,8 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+		std::lock_guard<std::mutex> lck(*unit.unit_mutex);
+		unit.ordersMap.erase(data->OrderRef);
     }
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1, requestId, errorId, errorMsg.c_str());
 }
@@ -713,7 +721,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
-
+	std::unique_lock<std::mutex> lck(*unit.unit_mutex);
     std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
     std::string remoteOrderId;
     if(itr == localOrderRefRemoteOrderId.end()) {
@@ -731,7 +739,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
         KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) "
                              << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
     }
-
+	lck.unlock();
     Document d;
     cancel_order(unit, data->OrderRef, d);
 
@@ -758,7 +766,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
 
 void TDEngineBitmex::moveNewtoPending(AccountUnitBitmex& unit)
 {
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+    std::lock_guard<std::mutex> guard_mutex(*unit.unit_mutex);
 
     std::vector<PendingBitmexOrderStatus>::iterator newOrderStatusIterator;
     for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
@@ -771,10 +779,10 @@ void TDEngineBitmex::moveNewtoPending(AccountUnitBitmex& unit)
 
 
 void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const char_31 InstrumentID,
-                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded,int reqID)
+                                                 const char_21 OrderRef, LfDirectionType direction, const LfOrderStatusType OrderStatus,const uint64_t VolumeTraded,int reqID)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+    std::lock_guard<std::mutex> guard_mutex(*unit.unit_mutex);
 
     PendingBitmexOrderStatus status;
     memset(&status, 0, sizeof(PendingBitmexOrderStatus));
@@ -795,6 +803,7 @@ void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const c
 	strcpy(order.ExchangeID, "BitMEX");
 	strncpy(order.UserID, unit.api_key.c_str(), 16);
 	order.TimeCondition = LF_CHAR_GTC;
+	order.Direction = direction;
 
 	unit.ordersMap.insert(std::make_pair(OrderRef, order));
     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << InstrumentID
@@ -968,6 +977,7 @@ void TDEngineBitmex::get_products(AccountUnitBitmex& unit, Document& json)
     std::string body = "";
 
     string url = unit.baseUrl + requestPath;
+	std::lock_guard<std::mutex> lck(g_reqMutex);
     const auto response = Get(Url{url},
                               Header{
                                      {"Content-Type", "application/json"}},
@@ -1087,7 +1097,7 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
 
     std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
     string url = unit.baseUrl + requestPath;
-
+	std::lock_guard<std::mutex> lck(g_reqMutex);
     const auto response = Delete(Url{url},
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
@@ -1135,6 +1145,7 @@ void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, std::string orderId, 
 
     #
      * */
+	std::lock_guard<std::mutex> lck(g_reqMutex);
     const auto response = Delete(Url{url},
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
@@ -1322,9 +1333,9 @@ AccountUnitBitmex& TDEngineBitmex::findAccountUnitByWebsocketConn(struct lws * w
 
 void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 
-
     if (json.HasMember("data") && json["data"].IsArray()) {
 		AccountUnitBitmex &unit = findAccountUnitByWebsocketConn(conn);
+		std::lock_guard<std::mutex> lck(*unit.unit_mutex);
 		auto& arrayData = json["data"];
 		for (SizeType index = 0; index < arrayData.Size(); ++index)
 		{
@@ -1359,6 +1370,7 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 				rtn_order.OrderStatus == LF_CHAR_Canceled || rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing || rtn_order.OrderStatus == LF_CHAR_Error)
 			{
 				unit.ordersMap.erase(it);
+				localOrderRefRemoteOrderId.erase(OrderRef);
 			}
 		}
        
@@ -1370,6 +1382,7 @@ void TDEngineBitmex::onTrade(struct lws * websocketConn, Document& json)
 	if(json.HasMember("action") && json["action"].GetString() == std::string("insert"))
 	if (json.HasMember("data") && json["data"].IsArray()) {
 		AccountUnitBitmex &unit = findAccountUnitByWebsocketConn(websocketConn);
+		std::lock_guard<std::mutex> lck(*unit.unit_mutex);
 		auto& arrayData = json["data"];
 		for (SizeType index = 0; index < arrayData.Size(); ++index)
 		{

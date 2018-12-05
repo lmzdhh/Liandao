@@ -71,6 +71,8 @@ struct AccountUnitBitmex
     std::vector<std::string> pendingSendMsg;
     struct lws * websocketConn;
     int wsStatus=0;
+	std::mutex* unit_mutex;
+    AccountUnitBitmex();
 };
 
 
@@ -129,14 +131,13 @@ private:
 
     std::vector<std::string> split(std::string str, std::string token);
     void addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID);
+                                    const char_21 OrderRef, LfDirectionType direction,const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID);
 
     void moveNewtoPending(AccountUnitBitmex& unit);
     static constexpr int scale_offset = 1e8;
 
     int rest_get_interval_ms = 500;
 
-    std::mutex* mutex_order_and_trade = nullptr;
 
     std::map<std::string, std::string> localOrderRefRemoteOrderId;
 
