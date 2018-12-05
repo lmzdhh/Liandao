@@ -777,6 +777,7 @@ void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const c
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(unit_mutex);
+     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades]");
 
     PendingBitmexOrderStatus status;
     memset(&status, 0, sizeof(PendingBitmexOrderStatus));
@@ -787,7 +788,7 @@ void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const c
     status.averagePrice = 0.0;
 	status.requestID = reqID;
     unit.newOrderStatus.push_back(status);
-
+     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades2222]");
 	LFRtnOrderField order;
     memset(&order, 0, sizeof(LFRtnOrderField));
 	order.OrderStatus = OrderStatus;
@@ -1327,6 +1328,7 @@ AccountUnitBitmex& TDEngineBitmex::findAccountUnitByWebsocketConn(struct lws * w
 
 
 void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
+    KF_LOG_ERROR(logger, "TDEngineBitmex::onOrder");
 
     if (json.HasMember("data") && json["data"].IsArray()) {
 		AccountUnitBitmex &unit = findAccountUnitByWebsocketConn(conn);
@@ -1338,7 +1340,8 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 			std::string OrderRef= order["clOrdID"].GetString();
 			auto it = unit.ordersMap.find(OrderRef);
 			if (it == unit.ordersMap.end())
-			{
+			{ 
+				KF_LOG_ERROR(logger, "TDEngineBitmex::onOrder,no order match");
 				continue;
 			}
 			LFRtnOrderField& rtn_order = it->second;
@@ -1356,7 +1359,7 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 				rtn_order.LimitPrice = order["price"].GetDouble()*scale_offset;
 			if (order.HasMember("cumQty"))
 				rtn_order.VolumeTotal = int64_t(order["cumQty"].GetDouble()*scale_offset);
-
+			KF_LOG_ERROR(logger, "TDEngineBitmex::onOrder,rtn_order");	
 			on_rtn_order(&rtn_order);
 			raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
 				source_id, MSG_TYPE_LF_RTN_ORDER_BITMEX,
@@ -1373,8 +1376,9 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 
 }
 void TDEngineBitmex::onTrade(struct lws * websocketConn, Document& json)
-{
-	if(json.HasMember("action") && json["action"].GetString() == std::string("insert"))
+{ 
+	KF_LOG_ERROR(logger, "TDEngineBitmex::onTrade");
+	//if(json.HasMember("action") && json["action"].GetString() == std::string("insert"))
 	if (json.HasMember("data") && json["data"].IsArray()) {
 		AccountUnitBitmex &unit = findAccountUnitByWebsocketConn(websocketConn);
 		std::lock_guard<std::mutex> lck(unit_mutex);
@@ -1389,7 +1393,8 @@ void TDEngineBitmex::onTrade(struct lws * websocketConn, Document& json)
 			strncpy(rtn_trade.OrderRef, trade["clOrdID"].GetString(), 13);
 			auto it = unit.ordersMap.find(rtn_trade.OrderRef);
 			if (it == unit.ordersMap.end())
-			{
+			{	
+				KF_LOG_ERROR(logger, "TDEngineBitmex::onTrade,not match" << rtn_trade.OrderRef);
 				continue;
 			}
 			auto& order = it->second;
@@ -1398,11 +1403,15 @@ void TDEngineBitmex::onTrade(struct lws * websocketConn, Document& json)
 			strncpy(rtn_trade.InstrumentID, it->second.InstrumentID, 31);
 			rtn_trade.Direction = order.Direction;
 			
-			if(trade.HasMember("lastQty"))
+			if(trade.HasMember("lastQty") && trade["lastQty"].IsNumber())
 				rtn_trade.Volume = int64_t(trade["lastQty"].GetDouble()*scale_offset);
-			if (trade.HasMember("lastPx"))
-			rtn_trade.Price = int64_t(trade["lastPx"].GetDouble()*scale_offset);
-
+			else
+				continue;
+			if (trade.HasMember("lastPx") && trade["lastPx"].IsNumber())
+				rtn_trade.Price = int64_t(trade["lastPx"].GetDouble()*scale_offset);
+			else
+				continue;
+			KF_LOG_ERROR(logger, "TDEngineBitmex::onTrade,rtn_trade");
 			on_rtn_trade(&rtn_trade);
 			raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
 				source_id, MSG_TYPE_LF_RTN_TRADE_BITMEX, 1, -1);

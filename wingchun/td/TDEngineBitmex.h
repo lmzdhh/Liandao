@@ -29,7 +29,7 @@ struct PendingBitmexOrderStatus
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
     int64_t averagePrice;
-    std::string remoteOrderId;
+    //std::string remoteOrderId;
 	int requestID;
 };
 
