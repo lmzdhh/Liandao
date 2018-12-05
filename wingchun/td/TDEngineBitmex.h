@@ -71,8 +71,7 @@ struct AccountUnitBitmex
     std::vector<std::string> pendingSendMsg;
     struct lws * websocketConn;
     int wsStatus=0;
-	std::mutex* unit_mutex;
-    AccountUnitBitmex();
+
 };
 
 

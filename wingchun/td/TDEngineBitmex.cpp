@@ -46,13 +46,7 @@ int g_RequestGap=5*60;
 
 static TDEngineBitmex* global_td = nullptr;
 std::mutex g_reqMutex;
-
-
-AccountUnitBitmex::AccountUnitBitmex()
-{
-    wsStatus=0;
-    unit_mutex =new std::mutex();
-}
+std::mutex unit_mutex;
 
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
@@ -689,7 +683,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-		std::lock_guard<std::mutex> lck(*unit.unit_mutex);
+		std::lock_guard<std::mutex> lck(unit_mutex);
 		unit.ordersMap.erase(data->OrderRef);
     }
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITMEX, 1, requestId, errorId, errorMsg.c_str());
@@ -721,7 +715,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
-	std::unique_lock<std::mutex> lck(*unit.unit_mutex);
+	std::unique_lock<std::mutex> lck(unit_mutex);
     std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
     std::string remoteOrderId;
     if(itr == localOrderRefRemoteOrderId.end()) {
@@ -766,7 +760,7 @@ void TDEngineBitmex::req_order_action(const LFOrderActionField* data, int accoun
 
 void TDEngineBitmex::moveNewtoPending(AccountUnitBitmex& unit)
 {
-    std::lock_guard<std::mutex> guard_mutex(*unit.unit_mutex);
+    std::lock_guard<std::mutex> guard_mutex(unit_mutex);
 
     std::vector<PendingBitmexOrderStatus>::iterator newOrderStatusIterator;
     for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
@@ -782,7 +776,7 @@ void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const c
                                                  const char_21 OrderRef, LfDirectionType direction, const LfOrderStatusType OrderStatus,const uint64_t VolumeTraded,int reqID)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
-    std::lock_guard<std::mutex> guard_mutex(*unit.unit_mutex);
+    std::lock_guard<std::mutex> guard_mutex(unit_mutex);
 
     PendingBitmexOrderStatus status;
     memset(&status, 0, sizeof(PendingBitmexOrderStatus));
@@ -794,7 +788,8 @@ void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const c
 	status.requestID = reqID;
     unit.newOrderStatus.push_back(status);
 
-	LFRtnOrderField order;	
+	LFRtnOrderField order;
+    memset(&order, 0, sizeof(LFRtnOrderField));
 	order.OrderStatus = OrderStatus;
 	order.VolumeTraded = VolumeTraded;
 	strncpy(order.OrderRef, OrderRef, 21);
@@ -1335,7 +1330,7 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 
     if (json.HasMember("data") && json["data"].IsArray()) {
 		AccountUnitBitmex &unit = findAccountUnitByWebsocketConn(conn);
-		std::lock_guard<std::mutex> lck(*unit.unit_mutex);
+		std::lock_guard<std::mutex> lck(unit_mutex);
 		auto& arrayData = json["data"];
 		for (SizeType index = 0; index < arrayData.Size(); ++index)
 		{
@@ -1382,7 +1377,7 @@ void TDEngineBitmex::onTrade(struct lws * websocketConn, Document& json)
 	if(json.HasMember("action") && json["action"].GetString() == std::string("insert"))
 	if (json.HasMember("data") && json["data"].IsArray()) {
 		AccountUnitBitmex &unit = findAccountUnitByWebsocketConn(websocketConn);
-		std::lock_guard<std::mutex> lck(*unit.unit_mutex);
+		std::lock_guard<std::mutex> lck(unit_mutex);
 		auto& arrayData = json["data"];
 		for (SizeType index = 0; index < arrayData.Size(); ++index)
 		{
