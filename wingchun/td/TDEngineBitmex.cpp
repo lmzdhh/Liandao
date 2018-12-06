@@ -651,7 +651,7 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
     int nRetryTimes=0;
     while(ShouldRetry(d) && nRetryTimes < unit.maxRetryCount)
     {
-        end_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
+        send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
             GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef, d);
     }
     /*

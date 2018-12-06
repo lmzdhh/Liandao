@@ -56,9 +56,9 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                                direction=DIRECTION.Buy,
                                                                offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
-                print('will cancel it')
-                context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
-                print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
+                #print('will cancel it')
+                #context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
+                #print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
 
 
     else:
@@ -87,6 +87,7 @@ def on_tick(context, market_data, source, rcv_time):
         #     print("context.order_rid:", context.order_rid)
 
 def on_rtn_order(context, rtn_order, order_id, source, rcv_time):
+    print 'on_rtn_order ',order_id,' status',rtn_order.OrderStatus
     if order_id == context.order_rid and context.cancel_id < 0 and rtn_order.OrderStatus != 'a':
         context.cancel_id = context.cancel_order(source=source, order_id=order_id)
         print 'cancel (order_id)', order_id, ' (request_id)', context.cancel_id
