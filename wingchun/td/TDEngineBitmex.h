@@ -71,7 +71,7 @@ struct AccountUnitBitmex
     std::vector<std::string> pendingSendMsg;
     struct lws * websocketConn;
     int wsStatus=0;
-
+    int maxRetryCount=3;
 };
 
 

@@ -81,7 +81,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         }
         case LWS_CALLBACK_CLIENT_RECEIVE_PONG:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_CLIENT_RECEIVE_PONG, reason = " << reason << std::endl;
+            //std::cout << "3.1415926 LWS_CALLBACK_CLIENT_RECEIVE_PONG, reason = " << reason << std::endl;
             break;
         }
         case LWS_CALLBACK_CLIENT_WRITEABLE:
@@ -598,7 +598,16 @@ int TDEngineBitmex::Round(std::string tickSizeStr) {
     return oneAt - docAt;
 }
 
-
+bool ShouldRetry(const Document& json)
+{
+    if(json.IsObject() && json.HasMember("code") && json["code"].IsNumber())
+    {
+        int code = json["code"].GetInt();
+        if(code == 503)
+            return true;
+    }
+    return false;
+}
 void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     AccountUnitBitmex& unit = account_units[account_index];
@@ -639,7 +648,12 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
 	addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef,data->Direction, LF_CHAR_Unknown, 0, requestId);
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
             GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef, d);
-
+    int nRetryTimes=0;
+    while(ShouldRetry(d) && nRetryTimes < unit.maxRetryCount)
+    {
+        end_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
+            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef, d);
+    }
     /*
      {"orderID":"18eb8aeb-3a29-b546-b2fe-1b55f24ef63f","clOrdID":"5","clOrdLinkID":"","account":272991,"symbol":"XBTUSD","side":"Buy",
      "simpleOrderQty":null,"orderQty":10,"price":1,"displayQty":null,"stopPx":null,"pegOffsetValue":null,"pegPriceType":"","currency":"USD",
@@ -1181,7 +1195,7 @@ void TDEngineBitmex::on_lws_connection_error(struct lws* conn)
 
 int TDEngineBitmex::lws_write_subscribe(struct lws* conn)
 {
-    KF_LOG_INFO(logger,"TDEngineBitmex::lws_write_subscribe");
+    //KF_LOG_INFO(logger,"TDEngineBitmex::lws_write_subscribe");
     auto& unit = findAccountUnitByWebsocketConn(conn);
     std::string reqMsg,args;
     if(unit.wsStatus == 0)
