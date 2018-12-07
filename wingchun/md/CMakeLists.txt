@@ -77,6 +77,12 @@ ADD_LIBRARY(probitmd SHARED ${PROBIT_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(probitmd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS probitmd DESTINATION "lib/wingchun")
 
+SET(BITHUMB_SOURCE_FILES MDEngineBithumb.cpp MDEngineBithumb.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h PriceBook20Assembler.cpp PriceBook20Assembler.h)
+ADD_LIBRARY(bithumbmd SHARED ${BITHUMB_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(bithumbmd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS bithumbmd DESTINATION "lib/wingchun")
+
+
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/utils/cpr/lib/ DESTINATION "lib/wingchun")
 
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/utils/zlib/lib/ DESTINATION "lib/wingchun")
