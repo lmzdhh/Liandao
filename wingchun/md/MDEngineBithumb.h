@@ -4,48 +4,80 @@
 #include "IMDEngine.h"
 #include "longfist/LFConstants.h"
 #include "CoinPairWhiteList.h"
-#include "PriceBook20Assembler.h"
 #include <libwebsockets.h>
-#include <document.h>
 #include <map>
-#include <vector>
+#include <unordered_map>
 
 WC_NAMESPACE_START
-
-using rapidjson::Document;
-
 
 class MDEngineBithumb: public IMDEngine
 {
 public:
-    struct CoinBaseQuote
-    {
-        std::string base;
-        std::string quote;
-    };
+	
+	enum lws_event
+	{
+		trade,
+		depth5,
+		depth20
+	};
 
+public:
     /** load internal information from config json */
-    virtual void load(const json& j_config){return;}
-    virtual void connect(long timeout_nsec){return;}
-    virtual void login(long timeout_nsec){return;}
-    virtual void logout(){return;}
-    virtual void release_api(){return;}
-    virtual void subscribeMarketData(const vector<string>& instruments, const vector<string>& markets){return;}
-    virtual bool is_connected() const { return true; }
-    virtual bool is_logged_in() const { return true; };
+    virtual void load(const json& j_config);
+    virtual void connect(long timeout_nsec);
+    virtual void login(long timeout_nsec);
+    virtual void logout();
+    virtual void release_api();
+    virtual void subscribeMarketData(const vector<string>& instruments, const vector<string>& markets);
+    virtual bool is_connected() const { return connected; };
+    virtual bool is_logged_in() const { return logged_in; };
     virtual string name() const { return "MDEngineBithumb"; };
 
 public:
     MDEngineBithumb();
+	
+	void on_lws_data(struct lws* conn, const char* data, size_t len);
+	
+	void on_lws_connection_error(struct lws* conn);
 
-    void on_lws_data(struct lws* conn, const char* data, size_t len){return;}
-    void on_lws_connection_error(struct lws* conn){return ;}
-    int lws_write_subscribe(struct lws* conn){return 0;}
+private:
+    void GetAndHandleDepthResponse(const std::string& symbol, int limit);
+
+    void GetAndHandleTradeResponse(const std::string& symbol, int limit);
+	
+	void connect_lws(std::string t, lws_event e);
+    
+	void on_lws_market_trade(const char* data, size_t len);
+
+	void on_lws_book_update(const char* data, size_t len, const std::string& ticker);
+
+    void loop();
+
+    virtual void set_reader_thread() override;
+
+    CoinPairWhiteList coinPairWhiteList;
+
+private:
+    ThreadPtr rest_thread;
+    bool connected = false;
+    bool logged_in = false;
+
+    int book_depth_count = 5;
+    int trade_count = 10;
+    int rest_get_interval_ms = 500;
+
+    uint64_t last_rest_get_ts = 0;
+    uint64_t last_trade_id = 0;
+    static constexpr int scale_offset = 1e8;
+
+    struct lws_context *context = nullptr;
+  	
+    std::vector<std::string> symbols;
+	std::unordered_map<struct lws *,std::pair<std::string, lws_event> > lws_handle_map;
 };
 
-
-
 DECLARE_PTR(MDEngineBithumb);
+
 
 WC_NAMESPACE_END
 
