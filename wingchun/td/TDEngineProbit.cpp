@@ -1432,7 +1432,7 @@ std::string TDEngineProbit::getOrderRef(const std::string &clinetID)
 {
     if(clinetID.size() > 9)
     {
-        return std::string(clinetID, 8);
+        return std::string(clinetID, 9);
     }
     return std::string{};
 }
