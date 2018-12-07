@@ -1416,8 +1416,8 @@ void TDEngineProbit::genUniqueKey()
 {
     struct tm cur_time = getCurLocalTime();
     //SSMMHHDDN
-    char key[10]{0};
-    snprintf((char*)key, 9, "%02d%02d%02d%02d%1s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
+    char key[11]{0};
+    snprintf((char*)key, 11, "%02d%02d%02d%02d%1s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
     m_uniqueKey = key;
 }
 
