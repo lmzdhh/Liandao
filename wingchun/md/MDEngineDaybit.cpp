@@ -27,7 +27,7 @@ static  struct lws_protocols  lwsProtocols [] {{"md-protocol", lwsEventCallback,
 
 MDEngineDaybit* MDEngineDaybit::m_instance = nullptr;
 
-MDEngineDaybit::MDEngineDaybit(): IMDEngine(SOURCE_HUOBI)
+MDEngineDaybit::MDEngineDaybit(): IMDEngine(SOURCE_DAYBIT)
 {
 	
     logger = yijinjing::KfLog::getLogger("MdEngine.Daybit");
@@ -43,7 +43,7 @@ MDEngineDaybit::~MDEngineDaybit()
             m_thread->join();
         }
     }
-    KF_LOG_DEBUG(logger, "MDEngineHuobi deconstruct");
+    KF_LOG_DEBUG(logger, "MDEngineDaybit deconstruct");
 }
 
 void MDEngineDaybit::set_reader_thread()
@@ -110,7 +110,7 @@ void MDEngineDaybit::genSubscribeJson()
 	
     if(m_subscribeJson.empty())
     {
-        KF_LOG_INFO(logger, "genSubscribeRef failed, {error:has no white list}");
+        KF_LOG_INFO(logger, "genSubscribeJson failed, {error:has no white list}");
         exit(0);
     }
 }
