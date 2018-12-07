@@ -1427,7 +1427,7 @@ std::string TDEngineProbit::genClinetid(const std::string &orderRef)
     return m_uniqueKey + orderRef;
 }
 
-//pre 9 byte is m_uniqueKey
+//the first 9 bytes are m_uniqueKey,the last N bytes are orderRef
 std::string TDEngineProbit::getOrderRef(const std::string &clinetID)
 {
     if(clinetID.size() > 9)
