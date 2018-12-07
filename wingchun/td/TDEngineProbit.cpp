@@ -204,68 +204,23 @@ bool TDEngineProbit::loadExchangeOrderFilters(AccountUnitProbit& unit)
     KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
     //changelog 2018-07-20. use hardcode mode
     /*
-    BTC_USDT	0.0001		4
-    ETH_USDT	0.0001		4
-    LTC_USDT	0.0001		4
-    BCH_USDT	0.0001		4
-    ETC_USDT	0.0001		4
-    ETC_ETH	0.00000001		8
-    LTC_BTC	0.00000001		8
-    BCH_BTC	0.00000001		8
-    ETH_BTC	0.00000001		8
-    ETC_BTC	0.00000001		8
+    BTC_USDT	0.1		    1
+    ETH_USDT	0.01		2
+    EOS-USDT	0.0001		4
      * */
     SendOrderFilter afilter;
 
     strncpy(afilter.InstrumentID, "BTC_USDT", 31);
-    afilter.ticksize = 4;
+    afilter.ticksize = 1;
     unit.sendOrderFilters.insert(std::make_pair("BTC_USDT", afilter));
 
     strncpy(afilter.InstrumentID, "ETH_USDT", 31);
-    afilter.ticksize = 4;
+    afilter.ticksize = 2;
     unit.sendOrderFilters.insert(std::make_pair("ETH_USDT", afilter));
 
-    strncpy(afilter.InstrumentID, "LTC_USDT", 31);
+    strncpy(afilter.InstrumentID, "EOS-USDT", 31);
     afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("LTC_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "BCH_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("BCH_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "ETC_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("ETC_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "ETC_ETH", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("ETC_ETH", afilter));
-
-    strncpy(afilter.InstrumentID, "LTC_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("LTC_BTC", afilter));
-
-    strncpy(afilter.InstrumentID, "BCH_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("BCH_BTC", afilter));
-
-    strncpy(afilter.InstrumentID, "ETH_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("ETH_BTC", afilter));
-
-    strncpy(afilter.InstrumentID, "ETC_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("ETC_BTC", afilter));
-
-    //parse bitmex json
-    /*
-     [{"baseCurrency":"LTC","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"LTC_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     {"baseCurrency":"BCH","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"BCH_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     {"baseCurrency":"ETH","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"ETH_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     {"baseCurrency":"ETC","baseMaxSize":"100000.00","baseMinSize":"0.01","code":"ETC_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     ...
-     ]
-     */
+    unit.sendOrderFilters.insert(std::make_pair("EOS-USDT", afilter));
     return true;
 }
 
@@ -468,7 +423,7 @@ void TDEngineProbit::req_investor_position(const LFQryPositionField* data, int a
 
     bool findSymbolInResult = false;
     //send the filtered position
-    for (int i = 0; i < tmp_vector.size(); i++)
+    for (size_t i = 0; i < tmp_vector.size(); i++)
     {
         on_rsp_position(&tmp_vector[i], i == (tmp_vector.size()- 1), requestId, errorId, errorMsg.c_str());
         findSymbolInResult = true;
@@ -492,27 +447,24 @@ void TDEngineProbit::req_qry_account(const LFQryAccountField *data, int account_
 
 int64_t TDEngineProbit::fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy)
 {
-    if(keepPrecision == 8) return price;
+    if(keepPrecision == 8)
+    {
+        return price;
+    }
 
-    int removePrecisions = (8 - keepPrecision);
+    int removePrecisions = 8 - keepPrecision;
     double cutter = pow(10, removePrecisions);
 
-    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 1(price)" << std::fixed  << std::setprecision(9) << price);
+    KF_LOG_DEBUG(logger, "[fixPriceTickSize input]" << " 1(price)" << std::fixed  << std::setprecision(9) << price);
     double new_price = price/cutter;
-    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 2(price/cutter)" << std::fixed  << std::setprecision(9) << new_price);
-    if(isBuy)
+    KF_LOG_DEBUG(logger, "[fixPriceTickSize input]" << " 2(price/cutter)" << std::fixed  << std::setprecision(9) << new_price);
+    if(!isBuy)
     {
-        new_price += 0.9;
-        new_price = std::floor(new_price);
-        KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 3(price is buy)" << std::fixed  << std::setprecision(9) << new_price);
+        new_price += 1;
+        KF_LOG_DEBUG(logger, "[fixPriceTickSize input]" << " 3(price is sell)" << std::fixed  << std::setprecision(9) << new_price);
     }
-    else
-    {
-        new_price = std::floor(new_price);
-        KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 3(price is sell)" << std::fixed  << std::setprecision(9) << new_price);
-    }
-    int64_t  ret_price = new_price * cutter;
-    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 4(new_price * cutter)" << std::fixed  << std::setprecision(9) << new_price);
+    int64_t ret_price = new_price * cutter;
+    KF_LOG_DEBUG(logger, "[fixPriceTickSize input]" << " 4(new_price * cutter)" << std::fixed  << std::setprecision(9) << new_price);
     return ret_price;
 }
 
@@ -1310,7 +1262,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         if (cur_quantity > 0)
         {
             KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, cur_filledCost:"<< cur_filledCost << ", cur_quantity:" << cur_quantity);
-            int64_t cur_price = (cur_filledCost / (int64_t)cur_quantity) * scale_offset;
+            int64_t cur_price = ((double)cur_filledCost / (double)cur_quantity)* scale_offset;
             onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_price);
         }
         if(rtn_order.OrderStatus == LF_CHAR_Canceled ||  rtn_order.OrderStatus == LF_CHAR_AllTraded )
