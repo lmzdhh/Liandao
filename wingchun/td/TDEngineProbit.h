@@ -116,7 +116,7 @@ private:
 	//websocket
     AccountUnitProbit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onOrder(struct lws* websocketConn, Document& json);
-    void onTrade(struct lws* conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, uint64_t volume, int64_t price);
+    void onTrade(struct lws* conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, uint64_t volume, int64_t price,int requestid);
     void wsloop();
     std::string getAuthToken(const AccountUnitProbit& unit );
     int                 m_restIntervalms  = 500;

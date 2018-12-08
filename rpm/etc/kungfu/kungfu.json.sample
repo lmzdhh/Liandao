@@ -150,12 +150,12 @@
 		          "acountUrl": "https://demo-accounts.probit.com",
                   "wsUrl":"demo-api.probit.com",
                   "whiteLists": {
-                                  "btc_usdt": "XBTUSD",
-				                   "xrp_usdt":"XRP-USDT"
+                                  "btc_usdt": "BTC_USDT",
+				                  "xrp_usdt":"XRP-USDT"
                                 },
                   "rest_get_interval_ms": 500
                 },
-                "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
+                "clients": ["mm_strategy1","mm_strategy2","mm_strategy3"],
                 "is_default": true
               }
           ],

@@ -527,6 +527,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
     OrderFieldEx order {};
+    order.RequestID = requestId;
     std::unique_lock<std::mutex> l(g_orderMutex);
     unit.ordersMap[data->OrderRef] = order;
     SendOrderFilter filter = getSendOrderFilter(unit, ticker.c_str());
@@ -1180,7 +1181,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         {
             int64_t cur_price = ((double)cur_filledCost / (double)cur_quantity)* scale_offset;
             // on_rtn_trade
-            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_price);
+            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_price, rtn_order.RequestID);
         }
         if(rtn_order.OrderStatus == LF_CHAR_Canceled ||  rtn_order.OrderStatus == LF_CHAR_AllTraded )
         {
@@ -1190,9 +1191,9 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
 	}
 }
 
-void TDEngineProbit::onTrade(struct lws * conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, uint64_t volume, int64_t price)
+void TDEngineProbit::onTrade(struct lws * conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, uint64_t volume, int64_t price, int requestid)
 {
-    KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade, start");
+    KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade, start,requestId:" << requestid);
     LFRtnTradeField rtn_trade;
     memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
     strncpy(rtn_trade.OrderRef, orderRef, sizeof(rtn_trade.OrderRef)-1);
@@ -1204,7 +1205,7 @@ void TDEngineProbit::onTrade(struct lws * conn, const char* orderRef, const char
     rtn_trade.Price = price;
     on_rtn_trade(&rtn_trade);
     raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField), source_id, MSG_TYPE_LF_RTN_TRADE_PROBIT, 1, -1);
-    KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade end" );
+    KF_LOG_DEBUG(logger, "TDEngineProbit::onTrade end,requestId:" << requestid);
 }
 
 AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * websocketConn)
@@ -1378,7 +1379,7 @@ void TDEngineProbit::getCancelOrder(std::vector<CancelOrderReq>& requests)
         auto orderIter = order.find(req.data.OrderRef);
         if(orderIter == order.end())
         {
-            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap can not find OrderRef:" << req.data.OrderRef << ",RequestId:" << req.data.RequestID << ",AccountIndex:" << req.account_index);
+            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap can not find OrderRef:" << req.data.OrderRef << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
             continue;
         }
         if (!orderIter->second.remoteOrderRef.empty())
@@ -1387,11 +1388,12 @@ void TDEngineProbit::getCancelOrder(std::vector<CancelOrderReq>& requests)
             new_req = req;
             new_req.cancelVolume = orderIter->second.VolumeTotal;
             new_req.remoteOrderRef = orderIter->second.remoteOrderRef;
-            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap OrderRef:" << req.data.OrderRef << ",RequestId:" << req.data.RequestID << ",AccountIndex:" << req.account_index << ",RemoteOrderRef:"<< new_req.remoteOrderRef);
+            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap OrderRef:" << req.data.OrderRef << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index << ",RemoteOrderRef:"<< new_req.remoteOrderRef);
             requests.push_back(std::move(new_req));
             m_cancelOrders.pop_front();
+            continue;
         }
-        KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap RemoteOrderRef is empty, OrderRef:" << req.data.OrderRef << ",RequestId:" << req.data.RequestID << ",AccountIndex:" << req.account_index);
+        KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap RemoteOrderRef is empty, OrderRef:" << req.data.OrderRef << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
     }
 }
 
