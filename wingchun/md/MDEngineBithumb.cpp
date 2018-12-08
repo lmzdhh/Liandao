@@ -353,7 +353,7 @@ void MDEngineBithumb::subscribeMarketData(const vector<string>& instruments, con
 
 void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int limit) 
 {
-    std::string static url = "https://api.bithumb.com/public/orderbook/";
+    std::string url = "https://api.bithumb.com/public/orderbook/";
     url += symbol;
     const auto response = Get(Url{url.c_str()}, Parameters{{"group_orders", to_string(0)},
                                                         {"count",  to_string(limit)}});
@@ -364,7 +364,7 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
     std::string strStatus = d["status"].GetString();
     if(strStatus != "0000")
     {
-        KF_LOG_ERROR(logger,"MDEngineBithumb::GetAndHandleDepthResponse:Error Code[" << strStatus << "]");	
+        KF_LOG_ERROR(logger,"MDEngineBithumb::GetAndHandleDepthResponse:Error Code[" << strStatus << "],url[" << url.c_str() << "],group_orders[" << to_string(0) << "],count[" << to_string(limit) << "]");	
         return ;
     }
 	LFPriceBook20Field md;
@@ -414,14 +414,14 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
         strcpy(md.InstrumentID, symbol.c_str());
 	    strcpy(md.ExchangeID, "bithumb");
 	//md.UpdateMillisec = last_rest_get_ts;
-
+	KF_LOG_INFO(logger,"Bid:" << md.BidLevels[0].price << "," << md.BidLevels[0].volume << "  Ask:" << md.AskLevels[0].price << "," << md.AskLevels[0].volume << std::endl);
 	on_price_book_update(&md);
     } 
 }
 
 void MDEngineBithumb::GetAndHandleTradeResponse(const std::string& symbol, int limit)
 {
-    std::string static url = "https://api.bithumb.com/public/transaction_history/";
+    std::string url = "https://api.bithumb.com/public/transaction_history/";
     url += symbol;
     long long static cont_no = std::numeric_limits<long long>::max();
     const auto response = Get(Url{url.c_str()}, Parameters{{"cont_no", to_string(cont_no)},{"count", to_string(limit)}});
@@ -431,7 +431,7 @@ void MDEngineBithumb::GetAndHandleTradeResponse(const std::string& symbol, int l
     std::string strStatus = d["status"].GetString();
     if(strStatus != "0000")
     {
-	KF_LOG_ERROR(logger,"MDEnginebithumb::GetAndHandleTradeResponse:error code[" << strStatus << "]");
+	KF_LOG_ERROR(logger,"MDEnginebithumb::GetAndHandleTradeResponse:ErrorCode[" << strStatus << "],url[" << url.c_str() << "],cont_no[" << to_string(cont_no) << "],count[" << to_string(limit) << "]");
      	return;
     }
     if(d.IsArray())
@@ -462,6 +462,8 @@ void MDEngineBithumb::GetAndHandleTradeResponse(const std::string& symbol, int l
 			    trade.Volume = std::stod(ele["qty"].GetString()) * scale_offset;
 			    trade.OrderBSFlag[0] = ele["type"] == "bid" ? 'B' : 'S';
 			    on_trade(&trade);
+
+			    KF_LOG_INFO(logger,"Trade:" << trade.Price << "," << trade.Volume << std::endl);
 		    }
 	    }
     }   
