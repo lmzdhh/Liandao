@@ -1373,18 +1373,21 @@ void TDEngineProbit::getCancelOrder(std::vector<CancelOrderReq>& requests)
         }
     }
     std::unique_lock<std::mutex> l(g_requestMutex);
-    for (const auto& req : m_cancelOrders)
+    for (auto reqIter = m_cancelOrders.begin(); reqIter != m_cancelOrders.end(); )
     {
+        auto req = *reqIter;
         if( req.account_index >= curAccountOrders.size() ||  req.account_index < 0)
         {
-            m_cancelOrders.pop_front();
+            reqIter = m_cancelOrders.erase(reqIter);
             continue;
         }
+
         auto& order = curAccountOrders[req.account_index];
         std::string clientId = genClinetid(req.data.OrderRef);
         auto orderIter = order.find(clientId);
         if(orderIter == order.end())
         {
+            ++reqIter;
             KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap can not find, ClientOrderId:" << clientId << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
             continue;
         }
@@ -1396,9 +1399,10 @@ void TDEngineProbit::getCancelOrder(std::vector<CancelOrderReq>& requests)
             new_req.remoteOrderRef = orderIter->second.remoteOrderRef;
             KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap ClientOrderId:" << clientId << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index << ",RemoteOrderRef:"<< new_req.remoteOrderRef);
             requests.push_back(std::move(new_req));
-            m_cancelOrders.pop_front();
+            reqIter = m_cancelOrders.erase(reqIter);
             continue;
         }
+        ++reqIter;
         KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap RemoteOrderRef is empty, ClientOrderId:" << clientId << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
     }
 }
