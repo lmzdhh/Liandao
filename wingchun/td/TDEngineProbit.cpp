@@ -40,13 +40,14 @@ using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
 std::mutex  g_orderMutex;
-std::mutex  g_postMutex; 
-
+std::mutex  g_postMutex;
+std::mutex  g_requestMutex;
+std::condition_variable g_requestCond;
 USING_WC_NAMESPACE
 USING_YJJ_NAMESPACE
-
-int g_RequestGap=5*60;
-
+const int HTTP_RESPONSE_OK = 200;
+const int g_RequestGap = 5*60;
+const int scale_offset = 1e8;
 #define PARTIAL_TRADED "partialtraded"
 
 static TDEngineProbit* global_td = nullptr;
@@ -122,7 +123,24 @@ TDEngineProbit::TDEngineProbit(): ITDEngine(SOURCE_PROBIT)
 }
 
 TDEngineProbit::~TDEngineProbit()
-{}
+{
+    isRunning = false;
+    if(m_wsLoopThread)
+    {
+        if (m_wsLoopThread->joinable())
+        {
+            m_wsLoopThread->join();
+        }
+    }
+    if(m_requestThread)
+    {
+        g_requestCond.notify_all();
+        if (m_requestThread->joinable())
+        {
+            m_requestThread->join();
+        }
+    }
+}
 
 void TDEngineProbit::init()
 {
@@ -147,7 +165,7 @@ void TDEngineProbit::resize_accounts(int account_num)
 TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
-    rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
+    m_restIntervalms = j_config["rest_get_interval_ms"].get<int>();
     AccountUnitProbit& unit = account_units[idx];
     unit.api_key = j_config["APIKey"].get<string>();
     unit.secret_key = j_config["SecretKey"].get<string>();
@@ -169,13 +187,12 @@ TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
     }
     cancel_all_orders(unit);
     // set up
-    TradeAccount account = {};
+    TradeAccount account {};
     //partly copy this fields
     strncpy(account.UserID, unit.api_key .c_str(), 16);
     strncpy(account.Password, unit.secret_key.c_str(), 21);
     return account;
 }
-
 
 void TDEngineProbit::connect(long timeout_nsec)
 {
@@ -548,51 +565,12 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
 
 void TDEngineProbit::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
 {
-    AccountUnitProbit& unit = account_units[account_index];
-    KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId << " (APIKey)" << unit.api_key << " (Iid)" << data->InvestorID << " (OrderRef)" << data->OrderRef << " (KfOrderID)" << data->KfOrderID);
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId);
-    int errorId = 0;
-    std::string errorMsg {};
-    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
-    if(ticker.length() == 0)
-    {
-        errorId = 200;
-        errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
-        KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
-        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
-        return;
-    }
-    KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
-    std::unique_lock<std::mutex> l(g_orderMutex);
-	auto orderIter = unit.ordersMap.find(data->OrderRef);
-    if(orderIter != unit.ordersMap.end())
-    {
-        auto order = orderIter->second;
-        KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef);
-        Document d;
-        cancel_order(unit, orderIter->second.remoteOrderRef, ticker, order.VolumeTotal*1.0/scale_offset, d);
-        if(d.IsObject() && !d.HasParseError() && d.HasMember("code") && d["code"].IsNumber())
-        {
-            errorId = d["code"].GetInt();
-            if(d.HasMember("message") && d["message"].IsString())
-            {
-                errorMsg = d["message"].GetString();
-            }
-            KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);;
-            on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-            raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
-            return;
-        }
-        KF_LOG_ERROR(logger, "[req_order_action] cancel_order success!" << " (rid)" << requestId <<"(order ref)"<< data->OrderRef);
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
-        return;
-    }
-    errorId = 1;
-    errorMsg = std::string("[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) ") + data->OrderRef;
-    KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. " << " (rid)" << requestId << " (orderRef)" << data->OrderRef << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
-    on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
+    CancelOrderReq req;
+    req.data = *data;
+    req.account_index = account_index;
+    req.requestId = requestId;
+    req.rcv_time = rcv_time;
+    pushCancelTask(std::move(req));
 }
 
 bool TDEngineProbit::OpenOrderToLFOrder(AccountUnitProbit& unit, rapidjson::Value& json, LFRtnOrderField& order)
@@ -625,19 +603,51 @@ bool TDEngineProbit::OpenOrderToLFOrder(AccountUnitProbit& unit, rapidjson::Valu
 void TDEngineProbit::set_reader_thread()
 {
     ITDEngine::set_reader_thread();
+    m_wsLoopThread = ThreadPtr(new std::thread(std::bind(&TDEngineProbit::wsloop, this)));
+    m_requestThread =  ThreadPtr(new std::thread( [&]{
+        KF_LOG_INFO(logger, "request thread start");
+        while (isRunning)
+        {
+            {
+                std::unique_lock<std::mutex> l(g_requestMutex);
+                while (m_cancelOrders.empty())
+                {
+                    if(!isRunning)
+                    {
+                        return;
+                    }
+                    if (g_requestCond.wait_for(l,std::chrono::seconds(2)) == std::cv_status::timeout)
+                    {
+                        continue;
+                    }
+                }
+            }
 
-    KF_LOG_INFO(logger, "[set_reader_thread] ws_thread start on TDEngineProbit::wsloop");
-    ws_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineProbit::wsloop, this)));
+            if(isRunning)
+            {
+                //do action
+                std::vector<CancelOrderReq> cancelOrders;
+                getCancelOrder(cancelOrders);
+                for(const auto& order : cancelOrders)
+                {
+                    doCancelOrder(order);
+                }
+
+            }
+        }
+        KF_LOG_INFO(logger, "request thread exit");
+    }));
 
 }
 
 void TDEngineProbit::wsloop()
 {
-    KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
+    KF_LOG_INFO(logger, "ws loop thread start");
     while(isRunning)
     {
-        lws_service( context, rest_get_interval_ms );
+        lws_service( context, m_restIntervalms);
     }
+    KF_LOG_INFO(logger, "ws loop thread exit");
 }
 
 void TDEngineProbit::printResponse(const Document& d)
@@ -843,7 +853,7 @@ void TDEngineProbit::cancel_all_orders(AccountUnitProbit& unit)
 		for(auto& orderItem :unit.ordersMap)
 		{
 			Document json;
-			cancel_order(unit, orderItem.second.OrderRef, orderItem.second.InstrumentID,orderItem.second.VolumeTotal*1.0/ scale_offset,json);
+			//cancel_order(unit, orderItem.second.OrderRef, orderItem.second.InstrumentID,orderItem.second.VolumeTotal*1.0/ scale_offset,json);
 		}
 
 		//success, only record raw data
@@ -1294,6 +1304,97 @@ std::string TDEngineProbit::getOrderRef(const std::string &clinetID)
     }
     return std::string{};
 }
+
+void TDEngineProbit::doCancelOrder(const CancelOrderReq & req)
+{
+    auto& account_index = req.account_index;
+    auto  data          = &req.data;
+    auto& requestId     = req.requestId;
+    AccountUnitProbit& unit = account_units[account_index];
+    KF_LOG_DEBUG(logger, "[doCancelOrder]" << " (rid)" << requestId << " (APIKey)" << unit.api_key << " (Iid)" << data->InvestorID << " (OrderRef)" << data->OrderRef << " (KfOrderID)" << data->KfOrderID);
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId);
+    int errorId = 0;
+    std::string errorMsg {};
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
+    if(ticker.empty())
+    {
+        errorId = 200;
+        errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
+        KF_LOG_ERROR(logger, "[doCancelOrder]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    }
+    KF_LOG_DEBUG(logger, "[doCancelOrder] (exchange_ticker)" << ticker);
+    Document doc;
+    cancel_order(unit, req.remoteOrderRef, ticker, req.cancelVolume*1.0/scale_offset, doc);
+    if(doc.IsObject() && !doc.HasParseError() && doc.HasMember("code") && doc["code"].IsNumber())
+    {
+        errorId = doc["code"].GetInt();
+        if(doc.HasMember("message") && doc["message"].IsString())
+        {
+            errorMsg = doc["message"].GetString();
+        }
+        KF_LOG_ERROR(logger, "[doCancelOrder] cancel_order failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);;
+        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    }
+    KF_LOG_DEBUG(logger, "[doCancelOrder] cancel_order success!" << " (rid)" << requestId <<"(order ref)"<< data->OrderRef);
+    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
+}
+
+void TDEngineProbit::pushCancelTask(CancelOrderReq && req)
+{
+    std::unique_lock<std::mutex> l(g_requestMutex);
+    if(m_cancelOrders.size() > 1000)
+    {
+        m_cancelOrders.pop_front();
+        KF_LOG_ERROR(logger, "[pushCancelTask] cancel order size > 1000," << "RequestId:" << req.requestId <<",OrderRef:"<< req.data.OrderRef);
+    }
+    KF_LOG_DEBUG(logger, "[pushCancelTask] push cancel task," << "RequestId:" << req.requestId <<",OrderRef:"<< req.data.OrderRef);
+    m_cancelOrders.push_back(std::move(req));
+}
+
+void TDEngineProbit::getCancelOrder(std::vector<CancelOrderReq>& requests)
+{
+    std::vector<std::map<std::string/*client_order_id*/, OrderFieldEx>> curAccountOrders;
+    {
+        std::unique_lock<std::mutex> l(g_orderMutex);
+        for(const auto& unit : account_units)
+        {
+            curAccountOrders.push_back(unit.ordersMap);
+        }
+    }
+    std::unique_lock<std::mutex> l(g_requestMutex);
+    for (const auto& req : m_cancelOrders)
+    {
+        if( req.account_index >= curAccountOrders.size() ||  req.account_index < 0)
+        {
+            m_cancelOrders.pop_front();
+            continue;
+        }
+        auto& order = curAccountOrders[req.account_index];
+        auto orderIter = order.find(req.data.OrderRef);
+        if(orderIter == order.end())
+        {
+            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap can not find OrderRef:" << req.data.OrderRef << ",RequestId:" << req.data.RequestID << ",AccountIndex:" << req.account_index);
+            continue;
+        }
+        if (!orderIter->second.remoteOrderRef.empty())
+        {
+            CancelOrderReq new_req {};
+            new_req = req;
+            new_req.cancelVolume = orderIter->second.VolumeTotal;
+            new_req.remoteOrderRef = orderIter->second.remoteOrderRef;
+            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap OrderRef:" << req.data.OrderRef << ",RequestId:" << req.data.RequestID << ",AccountIndex:" << req.account_index << ",RemoteOrderRef:"<< new_req.remoteOrderRef);
+            requests.push_back(std::move(new_req));
+            m_cancelOrders.pop_front();
+        }
+        KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap RemoteOrderRef is empty, OrderRef:" << req.data.OrderRef << ",RequestId:" << req.data.RequestID << ",AccountIndex:" << req.account_index);
+    }
+}
+
 
 BOOST_PYTHON_MODULE(libprobittd)
 {

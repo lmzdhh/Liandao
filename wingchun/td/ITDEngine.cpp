@@ -299,8 +299,7 @@ void ITDEngine::on_rsp_order_action(const LFOrderActionField *action, int reques
     if (errorId == 0)
     {
         writer->write_frame(action, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION, true, requestId);
-        KF_LOG_DEBUG(logger, "[RspAction]" << " (rid)" << requestId
-                                           << " (ticker)" << action->InstrumentID);
+        KF_LOG_DEBUG(logger, "[RspAction]" << " (rid)" << requestId << " (ticker)" << action->InstrumentID);
     }
     else
     {

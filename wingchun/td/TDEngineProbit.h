@@ -12,25 +12,10 @@
 #include "Timer.h"
 #include <document.h>
 #include <libwebsockets.h>
-
+#include <list>
 using rapidjson::Document;
 
 WC_NAMESPACE_START
-
-/**
- * account information unit extra is here.
- */
-
-struct PendingOrderStatus
-{
-    char_31 InstrumentID;   //合约代码
-    char_21 OrderRef;       //报单引用
-    LfOrderStatusType OrderStatus;  //报单状态
-    uint64_t VolumeTraded;  //今成交数量
-    int64_t averagePrice;
-    std::string remoteOrderId;
-	int requestID;
-};
 
 struct SendOrderFilter
 {
@@ -42,13 +27,12 @@ enum class AccountStatus
     AS_AUTH,
     AS_WAITING,
     AS_OPEN_ORDER,
-    AS_TRADE_HISTORY,
     AS_OVER
 };
 struct OrderFieldEx:public LFRtnOrderField
 {
     int64_t     preFilledCost = 0;
-    std::string remoteOrderRef;
+    std::string remoteOrderRef {};
 
 };
 struct AccountUnitProbit
@@ -67,6 +51,15 @@ struct AccountUnitProbit
     std::map<std::string, SendOrderFilter> sendOrderFilters;
     std::map<std::string/*client_order_id*/, OrderFieldEx> ordersMap;
     int gpTimes = 24 * 60 * 60*1000;
+};
+struct CancelOrderReq
+{
+    LFOrderActionField data {};
+    int account_index;
+    int requestId;
+    long rcv_time;
+    std::string remoteOrderRef {};
+    uint64_t cancelVolume = 0;
 };
 
 class TDEngineProbit: public ITDEngine
@@ -126,20 +119,22 @@ private:
     void onTrade(struct lws* conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, uint64_t volume, int64_t price);
     void wsloop();
     std::string getAuthToken(const AccountUnitProbit& unit );
+    int                 m_restIntervalms  = 500;
     int64_t             m_tokenExpireTime = 0;
-    std::string         m_authToken;
+    std::string         m_authToken {};
     struct lws_context* context = nullptr;
-    ThreadPtr           ws_thread;
-    static constexpr int scale_offset = 1e8;
-    int rest_get_interval_ms = 500;
-    std::map<std::string, std::string> localOrderRefRemoteOrderId;
+    ThreadPtr           m_wsLoopThread = nullptr;
+    ThreadPtr                   m_requestThread = nullptr;
+    std::list<CancelOrderReq>   m_cancelOrders {};
 private:
-    int HTTP_RESPONSE_OK = 200;
+    void getCancelOrder(std::vector<CancelOrderReq>& requests);
+    void pushCancelTask(CancelOrderReq&&);
+    void doCancelOrder(const CancelOrderReq&);
     void get_account(const AccountUnitProbit& unit,  Document& json);
     void get_products(const AccountUnitProbit& unit, Document& json);
     void send_order(const AccountUnitProbit& unit, const char *code,const char *side, const char *type, double size, double price,double cost, const std::string& orderRef, Document& json);
     void cancel_all_orders(AccountUnitProbit& unit);
-    void cancel_order(const AccountUnitProbit& unit, const std::string& orderId, const std::string& marketID,double quantity, Document& json);
+    void cancel_order(const AccountUnitProbit& unit, const std::string& orderId, const std::string& marketID, double quantity, Document& json);
     void getResponse(int http_status_code, const std::string& responseText, const std::string& errorMsg, Document& json);
     void printResponse(const Document& d);
     inline int64_t getTimestamp();
@@ -147,7 +142,7 @@ private:
     bool loadExchangeOrderFilters(AccountUnitProbit& unit);
     void debug_print(const std::map<std::string, SendOrderFilter>&);
     SendOrderFilter getSendOrderFilter(const AccountUnitProbit& unit, const char *symbol);
-	bool OpenOrderToLFOrder(AccountUnitProbit& unit,  rapidjson::Value& json, LFRtnOrderField& order);
+	bool OpenOrderToLFOrder(AccountUnitProbit& unit, rapidjson::Value& json, LFRtnOrderField& order);
 };
 
 WC_NAMESPACE_END
