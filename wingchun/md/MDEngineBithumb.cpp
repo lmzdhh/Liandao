@@ -480,7 +480,7 @@ void MDEngineBithumb::loop()
 		}
 }
 
-BOOST_PYTHON_MODULE(libbinancemd)
+BOOST_PYTHON_MODULE(libbithumbmd)
 {
     using namespace boost::python;
     class_<MDEngineBithumb, boost::shared_ptr<MDEngineBithumb> >("Engine")
