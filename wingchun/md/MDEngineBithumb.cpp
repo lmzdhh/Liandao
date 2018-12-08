@@ -329,8 +329,9 @@ void MDEngineBithumb::on_lws_book_update(const char* data, size_t len, const std
 void MDEngineBithumb::set_reader_thread()
 {
 	IMDEngine::set_reader_thread();
-
+        
    	rest_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineBithumb::loop, this)));
+	KF_LOG_INFO(logger,"MDEngineBithumb::set_reader_thread:rest_thread begin");
 }
 
 void MDEngineBithumb::logout()
@@ -360,6 +361,12 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
     Document d;
     d.Parse(response.text.c_str());
 
+    std::string strStatus = d["status"].GetString();
+    if(strStatus != "0000")
+    {
+        KF_LOG_ERROR(logger,"MDEngineBithumb::GetAndHandleDepthResponse:Error Code[" << strStatus << "]");	
+        return ;
+    }
 	LFPriceBook20Field md;
 	memset(&md, 0, sizeof(md));
 
@@ -420,6 +427,13 @@ void MDEngineBithumb::GetAndHandleTradeResponse(const std::string& symbol, int l
     const auto response = Get(Url{url.c_str()}, Parameters{{"cont_no", to_string(cont_no)},{"count", to_string(limit)}});
     Document d;
     d.Parse(response.text.c_str());
+    
+    std::string strStatus = d["status"].GetString();
+    if(strStatus != "0000")
+    {
+	KF_LOG_ERROR(logger,"MDEnginebithumb::GetAndHandleTradeResponse:error code[" << strStatus << "]");
+     	return;
+    }
     if(d.IsArray())
     {
 	    LFL2TradeField trade;
