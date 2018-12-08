@@ -47,32 +47,26 @@ enum class AccountStatus
 };
 struct OrderFieldEx:public LFRtnOrderField
 {
-    int64_t preFilledCost = 0;
+    int64_t     preFilledCost = 0;
+    std::string remoteOrderRef;
+
 };
 struct AccountUnitProbit
 {
-    string api_key;
-    string secret_key;
-    string baseUrl;
-	string authUrl;
-	string wsUrl;
+    string                  api_key;
+    string                  secret_key;
+    string                  baseUrl;
+	string                  authUrl;
+	string                  wsUrl;
     // internal flags
-    bool    logged_in;
-    std::vector<PendingOrderStatus> newOrderStatus;
-    std::vector<PendingOrderStatus> pendingOrderStatus;
-    std::map<std::string, SendOrderFilter> sendOrderFilters;
-
-    CoinPairWhiteList coinPairWhiteList;
-    CoinPairWhiteList positionWhiteList;
-
-    std::vector<std::string> newPendingSendMsg;
-    std::vector<std::string> pendingSendMsg;
-    struct lws * websocketConn;
-    int wsStatus=0;
+    bool                    logged_in;
+    CoinPairWhiteList       coinPairWhiteList;
+    CoinPairWhiteList       positionWhiteList;
+    struct lws*             websocketConn;
     volatile  AccountStatus status;
+    std::map<std::string, SendOrderFilter> sendOrderFilters;
     std::map<std::string/*client_order_id*/, OrderFieldEx> ordersMap;
     int gpTimes = 24 * 60 * 60*1000;
-
 };
 
 class TDEngineProbit: public ITDEngine
@@ -126,19 +120,19 @@ private:
     LfOrderPriceTypeType GetPriceType(const std::string& );
     LfOrderStatusType GetOrderStatus(const std::string&);
 	LfTimeConditionType GetTimeCondition(const std::string&);
+	//websocket
+    AccountUnitProbit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
+    void onOrder(struct lws* websocketConn, Document& json);
+    void onTrade(struct lws* conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, uint64_t volume, int64_t price);
+    void wsloop();
+    std::string getAuthToken(const AccountUnitProbit& unit );
+    int64_t             m_tokenExpireTime = 0;
+    std::string         m_authToken;
+    struct lws_context* context = nullptr;
+    ThreadPtr           ws_thread;
     static constexpr int scale_offset = 1e8;
     int rest_get_interval_ms = 500;
     std::map<std::string, std::string> localOrderRefRemoteOrderId;
-	//websocket
-    AccountUnitProbit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
-    void onOrder(struct lws * websocketConn, Document& json);
-    void onTrade(struct lws * conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, uint64_t volume, int64_t price);
-    void wsloop();
-    struct lws_context *context = nullptr;
-    ThreadPtr ws_thread;
-    std::string getAuthToken(const AccountUnitProbit& unit );
-    int64_t m_tokenExpireTime = 0;
-    std::string m_authToken;
 private:
     int HTTP_RESPONSE_OK = 200;
     void get_account(const AccountUnitProbit& unit,  Document& json);
