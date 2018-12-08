@@ -528,13 +528,17 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
     OrderFieldEx order {};
     order.RequestID = requestId;
-    std::unique_lock<std::mutex> l(g_orderMutex);
-    unit.ordersMap[data->OrderRef] = order;
+
+    std::string clientId = genClinetid(data->OrderRef);
+    {
+        std::unique_lock<std::mutex> l(g_orderMutex);
+        unit.ordersMap[clientId] = order;
+    }
     SendOrderFilter filter = getSendOrderFilter(unit, ticker.c_str());
     int64_t fixedPrice = fixPriceTickSize(filter.ticksize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
     KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<" (LimitPrice)" << data->LimitPrice <<" (ticksize)" << filter.ticksize <<" (fixedPrice)" << fixedPrice);
     Document rspjson;
-	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), data->Volume*1.0 / scale_offset , fixedPrice*1.0 / scale_offset, 0, data->OrderRef, rspjson);
+	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), data->Volume*1.0 / scale_offset , fixedPrice*1.0 / scale_offset, 0, clientId, rspjson);
     if(rspjson.HasParseError() || !rspjson.IsObject())
     {
         errorId = 100;
@@ -559,7 +563,8 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        unit.ordersMap.erase(data->OrderRef);
+        std::unique_lock<std::mutex> l(g_orderMutex);
+        unit.ordersMap.erase(clientId);
     }
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
 }
@@ -741,7 +746,7 @@ void TDEngineProbit::get_products(const AccountUnitProbit& unit, Document& json)
 	return;
 }
 
-void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code, const char *side, const char *type, double size, double price,double cost, const std::string& orderRef,  Document& json)
+void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code, const char *side, const char *type, double size, double price,double cost, const std::string& clientId,  Document& json)
 {
     KF_LOG_DEBUG(logger, "[send_order]");
 
@@ -788,7 +793,7 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
 		}
 	}
     document.AddMember("limit_price", StringRef(priceStr.c_str()), allocator);
-    std::string client_id = genClinetid(orderRef);
+    std::string client_id = clientId;
     document.AddMember("client_order_id", StringRef(client_id.c_str()), allocator);
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
@@ -1074,11 +1079,11 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             return;
         }
         std::unique_lock<std::mutex> l(g_orderMutex);
-        auto orderRef = getOrderRef(order["client_order_id"].GetString()).c_str();
-        auto orderIter = unit.ordersMap.find(orderRef);
+        auto clientId = order["client_order_id"].GetString();
+        auto orderIter = unit.ordersMap.find(clientId);
         if (orderIter == unit.ordersMap.end())
         {
-            KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, can not find orderRef:" << orderRef);
+            KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder,ignore this order,ClientOrderId:" << clientId);
             continue;
         }
         if (!order.HasMember("id") || !order["id"].IsString())
@@ -1089,7 +1094,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         //kungfu order
         OrderFieldEx& rtn_order = orderIter->second;
         rtn_order.remoteOrderRef = order["id"].GetString();
-        strncpy(rtn_order.OrderRef, orderRef, sizeof(sizeof(rtn_order.OrderRef)) - 1);
+        strncpy(rtn_order.OrderRef, getOrderRef(clientId).c_str(), sizeof(sizeof(rtn_order.OrderRef)) - 1);
 
         if (!order.HasMember("market_id") || !order["market_id"].IsString())
         {
@@ -1376,10 +1381,11 @@ void TDEngineProbit::getCancelOrder(std::vector<CancelOrderReq>& requests)
             continue;
         }
         auto& order = curAccountOrders[req.account_index];
-        auto orderIter = order.find(req.data.OrderRef);
+        std::string clientId = genClinetid(req.data.OrderRef);
+        auto orderIter = order.find(clientId);
         if(orderIter == order.end())
         {
-            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap can not find OrderRef:" << req.data.OrderRef << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
+            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap can not find, ClientOrderId:" << clientId << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
             continue;
         }
         if (!orderIter->second.remoteOrderRef.empty())
@@ -1388,12 +1394,12 @@ void TDEngineProbit::getCancelOrder(std::vector<CancelOrderReq>& requests)
             new_req = req;
             new_req.cancelVolume = orderIter->second.VolumeTotal;
             new_req.remoteOrderRef = orderIter->second.remoteOrderRef;
-            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap OrderRef:" << req.data.OrderRef << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index << ",RemoteOrderRef:"<< new_req.remoteOrderRef);
+            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap ClientOrderId:" << clientId << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index << ",RemoteOrderRef:"<< new_req.remoteOrderRef);
             requests.push_back(std::move(new_req));
             m_cancelOrders.pop_front();
             continue;
         }
-        KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap RemoteOrderRef is empty, OrderRef:" << req.data.OrderRef << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
+        KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap RemoteOrderRef is empty, ClientOrderId:" << clientId << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
     }
 }
 
