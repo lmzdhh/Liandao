@@ -174,6 +174,7 @@ private:
     SendOrderFilter getSendOrderFilter(AccountUnitBinance& unit, const char *symbol);
 
     bool shouldRetry(int http_status_code, std::string errorMsg, std::string text);
+    bool order_count_over_limit();
 private:
     static constexpr int scale_offset = 1e8;
     ThreadPtr rest_thread;
@@ -182,6 +183,8 @@ private:
 
     uint64_t order_insert_recvwindow_ms = 5000;
     uint64_t order_action_recvwindow_ms = 5000;
+    uint64_t order_count_per_second = 5;
+    uint64_t order_total_count = 0;
     std::mutex* mutex_order_and_trade = nullptr;
 
     int SYNC_TIME_DEFAULT_INTERVAL = 10000;

@@ -94,13 +94,17 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     if(j_config.find("order_insert_recvwindow_ms") != j_config.end()) {
         order_insert_recvwindow_ms = j_config["order_insert_recvwindow_ms"].get<int>();
     }
-    KF_LOG_INFO(logger, "[load_account] (order_insert_recvwindow_ms)" << order_insert_recvwindow_ms);
+    KF_LOG_INFO(logger, "[load_account] (order_count_per_second)" << order_count_per_second);
 
     if(j_config.find("order_action_recvwindow_ms") != j_config.end()) {
         order_action_recvwindow_ms = j_config["order_action_recvwindow_ms"].get<int>();
     }
     KF_LOG_INFO(logger, "[load_account] (order_action_recvwindow_ms)" << order_action_recvwindow_ms);
 
+    if(j_config.find("order_count_per_second") != j_config.end()) {
+        order_count_per_second = j_config["order_count_per_second"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (order_count_per_second)" << order_count_per_second);
 
     if(j_config.find("max_rest_retry_times") != j_config.end()) {
         max_rest_retry_times = j_config["max_rest_retry_times"].get<int>();
@@ -1404,16 +1408,22 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
             queryString.append( to_string( recvWindow) );
         }
 
-
         queryString.append("&timestamp=");
         queryString.append(Timestamp);
-
 
         std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
         queryString.append( "&signature=");
         queryString.append( signature );
 
         string url = requestPath + queryString;
+
+        if (order_count_over_limit())
+        {
+            //send err msg to strategy
+            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 10000 limit.\"}";
+            json.Parse(strErr.c_str());
+            return;
+        }
 
         response = Post(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
@@ -1453,6 +1463,37 @@ bool TDEngineBinance::shouldRetry(int http_status_code, std::string errorMsg, st
         return true;
     }
     return false;
+}
+
+bool TDEngineBinance::order_count_over_limit()
+{
+    if (order_total_count >= 10000)
+    {
+        return false;
+    }
+    static uint64_t order_count = 0;
+    static long long startTime = 0;
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    if (startTime == 0)
+    {            
+        startTime = timestamp;
+    }
+    if(order_count > order_count_per_second)
+    {
+        //over limit count
+        int order_time_diff_ms = timestamp - startTime;
+        if (order_time_diff_ms <= 1000)
+        {
+            usleep(1000 - timestamp);
+            order_total_count += order_count;
+            order_count = 0;
+            startTime = timestamp;
+            KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_time_diff_ms)" << order_time_diff_ms << " (order_total_count)" << order_total_count);
+        }
+    }
+
+    order_count++;
+    return true;
 }
 
 
@@ -1552,6 +1593,13 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
         queryString.append( signature );
 
         string url = requestPath + queryString;
+
+        if (order_count_over_limit())
+        {
+            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 10000 limit.\"}";
+            json.Parse(strErr.c_str());
+            return;
+        }
 
         response = Delete(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
