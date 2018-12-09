@@ -408,24 +408,19 @@
           {
             "info":
             {
-              "APIKey": "your-api-key",
-              "SecretKey": "your-secret-key",
+              "APIKey": "fHDwOC4W8PZezvNHkibrdKkY",
+              "SecretKey": "o7ihEtQth_2kEF_fRDT7UkOdEO3PFESWVarwy6S4Ljirz9Z2",
               "passphrase": "your-passphrase",
-              "baseUrl": "https://api.bitmex.com",
+              "baseUrl": "https://www.bitmex.com",
               "whiteLists": {
                 "strategy_coinpair(base_quote)": "exchange_coinpair",
-                "eth_btc": "tETHBTC",
-                "bch_btc": "tBCHBTC",
-                "ltc_btc": "tLTCBTC",
-                "bch_eth": "tBCHETH",
-                "eth_btc": "tETHBTC",
-                "ltc_eth": "tLTCETH"
+                "btc_usd": "XBTUSD"
               },
               "positionWhiteLists":{
                               "ETC": "ETC",
                               "BTC": "BTC"
                            },
-              "rest_get_interval_ms": 2000
+              "rest_get_interval_ms": 1000
             },
             "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
             "is_default": true
