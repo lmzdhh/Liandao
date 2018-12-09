@@ -49,7 +49,6 @@ struct AccountUnitProbit
     CoinPairWhiteList       positionWhiteList;
     struct lws*             websocketConn;
     volatile  AccountStatus status;
-    std::map<std::string, SendOrderFilter> sendOrderFilters;
     std::map<std::string/*client_order_id*/, OrderFieldEx> ordersMap;
     int gpTimes = 24 * 60 * 60*1000;
 };
@@ -127,6 +126,7 @@ private:
     ThreadPtr           m_wsLoopThread = nullptr;
     ThreadPtr                   m_requestThread = nullptr;
     std::list<CancelOrderReq>   m_cancelOrders {};
+    std::map<std::string, SendOrderFilter> m_sendOrderFilters;
 private:
     void getCancelOrder(std::vector<CancelOrderReq>& requests);
     void pushCancelTask(CancelOrderReq&&);
@@ -139,10 +139,11 @@ private:
     void getResponse(int http_status_code, const std::string& responseText, const std::string& errorMsg, Document& json);
     void printResponse(const Document& d);
     inline int64_t getTimestamp();
-    int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
-    bool loadExchangeOrderFilters(AccountUnitProbit& unit);
+    int64_t fixPriceTickSize(const std::string& ticker, int64_t price, bool isBuy);
+    int64_t convert(const std::string& ticker, double price);
+    bool loadExchangeOrderFilters();
     void debug_print(const std::map<std::string, SendOrderFilter>&);
-    SendOrderFilter getSendOrderFilter(const AccountUnitProbit& unit, const std::string& symbol);
+    SendOrderFilter getSendOrderFilter(const std::string& symbol);
 	bool OpenOrderToLFOrder(AccountUnitProbit& unit, rapidjson::Value& json, LFRtnOrderField& order);
 };
 

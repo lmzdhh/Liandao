@@ -213,20 +213,20 @@ void TDEngineProbit::connect(long timeout_nsec)
             get_products(unit, doc);
             KF_LOG_INFO(logger, "[connect] get_products");
             printResponse(doc);
-            loadExchangeOrderFilters(unit);
-            debug_print(unit.sendOrderFilters);
+            loadExchangeOrderFilters();
+            debug_print(m_sendOrderFilters);
 			lws_login(unit, 0);
             unit.logged_in = true;
         }
     }
 }
 
-bool TDEngineProbit::loadExchangeOrderFilters(AccountUnitProbit& unit)
+bool TDEngineProbit::loadExchangeOrderFilters()
 {
     SendOrderFilter filter;
-    unit.sendOrderFilters[PROBIT_BTC_USDT] = {PROBIT_BTC_USDT, 1};
-    unit.sendOrderFilters[PROBIT_ETH_USDT] = {PROBIT_ETH_USDT, 2};
-    unit.sendOrderFilters[PROBIT_EOS_USDT] = {PROBIT_EOS_USDT, 4};
+    m_sendOrderFilters[PROBIT_BTC_USDT] = {PROBIT_BTC_USDT, 1};
+    m_sendOrderFilters[PROBIT_ETH_USDT] = {PROBIT_ETH_USDT, 2};
+    m_sendOrderFilters[PROBIT_EOS_USDT] = {PROBIT_EOS_USDT, 4};
     return true;
 }
 
@@ -238,14 +238,14 @@ void TDEngineProbit::debug_print(const std::map<std::string, SendOrderFilter> &s
     }
 }
 
-SendOrderFilter TDEngineProbit::getSendOrderFilter(const AccountUnitProbit& unit, const std::string& symbol)
+SendOrderFilter TDEngineProbit::getSendOrderFilter(const std::string& symbol)
 {
-    auto filterIter = unit.sendOrderFilters.find(symbol);
-    if (filterIter != unit.sendOrderFilters.end())
+    auto filterIter = m_sendOrderFilters.find(symbol);
+    if (filterIter != m_sendOrderFilters.end())
     {
         return filterIter->second;
     }
-    return SendOrderFilter {"NotFound", 8};
+    return SendOrderFilter {"DefaultTicker", 8};
 }
 
 void TDEngineProbit::login(long timeout_nsec)
@@ -441,14 +441,15 @@ void TDEngineProbit::req_qry_account(const LFQryAccountField *data, int account_
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-int64_t TDEngineProbit::fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy)
+int64_t TDEngineProbit::fixPriceTickSize(const std::string& ticker, int64_t price, bool isBuy)
 {
-    if(keepPrecision == 8)
+    auto filter = getSendOrderFilter(ticker);
+    if(filter.ticksize == 8)
     {
         return price;
     }
-    int removePrecisions = 8 - keepPrecision;
-    int64_t cutter = pow(10, removePrecisions);
+    int divided = 8 - filter.ticksize;
+    int64_t cutter = pow(10, divided);
     int64_t new_price = price/cutter;
     if(!isBuy)
     {
@@ -509,9 +510,8 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         std::unique_lock<std::mutex> l(g_orderMutex);
         unit.ordersMap[clientId] = order;
     }
-    SendOrderFilter filter = getSendOrderFilter(unit, ticker);
-    int64_t fixedPrice = fixPriceTickSize(filter.ticksize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
-    KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<" (LimitPrice)" << data->LimitPrice <<" (TickSize)" << filter.ticksize <<" (FixedPrice)" << fixedPrice);
+    int64_t fixedPrice = fixPriceTickSize(ticker, data->LimitPrice, LF_CHAR_Buy == data->Direction);
+    KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<" (LimitPrice)" << data->LimitPrice <<" (FixedPrice)" << fixedPrice);
     Document rspjson;
 	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), data->Volume*1.0 / scale_offset , fixedPrice*1.0 / scale_offset, 0, clientId, rspjson);
     if(rspjson.HasParseError() || !rspjson.IsObject())
@@ -1160,7 +1160,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         if (cur_filled_quantity > 0.0)
         {
             double fixedPrice  = cur_filledCost / cur_filled_quantity;
-            int64_t cur_price = (int64_t )(fixedPrice * scale_offset);
+            int64_t cur_price = convert(rtn_order.InstrumentID, fixedPrice);
             // on_rtn_trade
             onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, (uint64_t)(cur_filled_quantity * scale_offset), cur_price, rtn_order.RequestID);
         }
@@ -1381,6 +1381,15 @@ void TDEngineProbit::getCancelOrder(std::vector<CancelOrderReq>& requests)
         ++reqIter;
         KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap RemoteOrderRef is empty, ClientOrderId:" << clientId << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
     }
+}
+
+int64_t TDEngineProbit::convert(const std::string &ticker, double price)
+{
+    auto filter = getSendOrderFilter(ticker);
+    int  divisor = pow(10, 8 - filter.ticksize);
+    price += pow(0.1, filter.ticksize+1);
+    int64_t dividend = price * 1e8;
+    return dividend / divisor * divisor;
 }
 
 
