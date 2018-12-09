@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <cpr/cpr.h>
 #include <chrono>
+#include <queue>
 #include "../../utils/crypto/openssl_util.h"
 
 using cpr::Delete;
@@ -94,7 +95,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     if(j_config.find("order_insert_recvwindow_ms") != j_config.end()) {
         order_insert_recvwindow_ms = j_config["order_insert_recvwindow_ms"].get<int>();
     }
-    KF_LOG_INFO(logger, "[load_account] (order_count_per_second)" << order_count_per_second);
+    KF_LOG_INFO(logger, "[load_account] (order_insert_recvwindow_ms)" << order_insert_recvwindow_ms);
 
     if(j_config.find("order_action_recvwindow_ms") != j_config.end()) {
         order_action_recvwindow_ms = j_config["order_action_recvwindow_ms"].get<int>();
@@ -1469,31 +1470,44 @@ bool TDEngineBinance::order_count_over_limit()
 {
     if (order_total_count >= 10000)
     {
-        return false;
+        return true;
     }
+    static std::queue<long long>time_queue;
     static uint64_t order_count = 0;
     static long long startTime = 0;
-    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    if (startTime == 0)
-    {            
-        startTime = timestamp;
-    }
-    if(order_count > order_count_per_second)
-    {
-        //over limit count
-        int order_time_diff_ms = timestamp - startTime;
-        if (order_time_diff_ms <= 1000)
-        {
-            usleep(1000 - timestamp);
-            order_total_count += order_count;
-            order_count = 0;
-            startTime = timestamp;
-            KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_time_diff_ms)" << order_time_diff_ms << " (order_total_count)" << order_total_count);
-        }
-    }
 
     order_count++;
-    return true;
+    order_total_count++;
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    time_queue.push(timestamp);
+    if (startTime == 0)
+    {            
+        startTime = time_queue.front();
+        time_queue.pop();
+    }
+
+    int order_time_diff_ms = timestamp - startTime;
+    if (order_time_diff_ms >= 1000)
+    {
+        //move receive window to next step
+        startTime = time_queue.front();
+        time_queue.pop();
+        order_count--;
+    }
+    else
+    {
+        if(order_count >= order_count_per_second)
+        {
+            //over limit count,sleep,move receive window to next step
+            usleep(1000 - order_time_diff_ms);
+            startTime = time_queue.front();
+            time_queue.pop();
+            order_count--;
+        }
+        
+        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_time_diff_ms)" << order_time_diff_ms << " (order_total_count)" << order_total_count);
+    }    
+    return false;
 }
 
 
