@@ -456,6 +456,7 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
 	//md.UpdateMillisec = last_rest_get_ts;
 	//KF_LOG_INFO(logger,"Bid:" << md.BidLevels[0].price << "," << md.BidLevels[0].volume << "  Ask:" << md.AskLevels[0].price << "," << md.AskLevels[0].volume << std::endl);
 	on_price_book_update(&md);
+        lastMD = md;
     }
     else
     {
