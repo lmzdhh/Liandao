@@ -1077,23 +1077,6 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         }
         strncpy(rtn_order.InstrumentID, order["market_id"].GetString(), sizeof(sizeof(rtn_order.InstrumentID)) - 1);
 
-        if (!order.HasMember("filled_quantity") || !order["filled_quantity"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_quantity\"");
-            return;
-        }
-        double fixed_filled_quantity = std::atof(order["filled_quantity"].GetString()) + 0.000000001;
-        uint64_t filled_quantity =  (uint64_t)(fixed_filled_quantity*scale_offset);
-        uint64_t cur_quantity = filled_quantity - rtn_order.VolumeTraded;
-        rtn_order.VolumeTraded = filled_quantity;
-        if (!order.HasMember("quantity") || !order["quantity"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"quantity\"");
-            return;
-        }
-        double fixed_quantity = std::atof(order["quantity"].GetString()) + 0.000000001;
-        rtn_order.VolumeTotalOriginal = (uint64_t)(fixed_quantity*scale_offset);
-
         if (!order.HasMember("side") || !order["side"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"side\"");
@@ -1106,22 +1089,6 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             return;
         }
         rtn_order.OrderPriceType = GetPriceType(order["type"].GetString());
-        if (!order.HasMember("limit_price") || !order["limit_price"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"limit_price\"");
-            return;
-        }
-        rtn_order.LimitPrice = (int64_t)(std::atof(order["limit_price"].GetString()) * scale_offset);
-
-        if (!order.HasMember("filled_cost") || !order["filled_cost"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_cost\"");
-            return;
-        }
-        int64_t total_filledCost = (int64_t)(std::atof(order["filled_cost"].GetString())*scale_offset);
-        int64_t cur_filledCost = total_filledCost - rtn_order.preFilledCost;
-        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, totalFilledCost:"<<total_filledCost<< ", preFilledCost:" << rtn_order.preFilledCost<<", requestId:" << rtn_order.RequestID);
-        rtn_order.preFilledCost = total_filledCost;
         if (!order.HasMember("open_quantity") || !order["open_quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"open_quantity\"");
@@ -1129,6 +1096,50 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         }
         rtn_order.VolumeTotal = (uint64_t)(std::atof(order["open_quantity"].GetString()) * scale_offset);
         rtn_order.RequestID = orderIter->second.RequestID;
+        if (!order.HasMember("cancelled_quantity") || !order["cancelled_quantity"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"cancelled_quantity\"");
+            return;
+        }
+        auto cancelled_quantity = (uint64_t)(std::atof(order["cancelled_quantity"].GetString()) * scale_offset);
+        if(cancelled_quantity > 0)
+        {
+            rtn_order.OrderStatus = LF_CHAR_Canceled;
+        }
+        //price
+        if (!order.HasMember("limit_price") || !order["limit_price"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"limit_price\"");
+            return;
+        }
+        rtn_order.LimitPrice = (int64_t)(std::atof(order["limit_price"].GetString()) * scale_offset);
+        if (!order.HasMember("filled_cost") || !order["filled_cost"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_cost\"");
+            return;
+        }
+        double total_filledCost = std::atof(order["filled_cost"].GetString());
+        double cur_filledCost = total_filledCost - rtn_order.preFilledCost;
+        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, totalFilledCost:"<<total_filledCost<< ", preFilledCost:" << rtn_order.preFilledCost<<", requestId:" << rtn_order.RequestID);
+        rtn_order.preFilledCost = total_filledCost;
+        //quantity
+        if (!order.HasMember("filled_quantity") || !order["filled_quantity"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_quantity\"");
+            return;
+        }
+        double total_filled_quantity = std::atof(order["filled_quantity"].GetString());
+        double cur_filled_quantity = total_filled_quantity - rtn_order.preFilledQuantity;
+        rtn_order.VolumeTraded = (uint64_t)(total_filled_quantity*scale_offset);
+        rtn_order.preFilledQuantity =  total_filled_quantity;
+        if (!order.HasMember("quantity") || !order["quantity"].IsString())
+        {
+            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"quantity\"");
+            return;
+        }
+        double quantity = std::atof(order["quantity"].GetString());
+        rtn_order.VolumeTotalOriginal = (uint64_t)(quantity*scale_offset);
+        //status
         if (!order.HasMember("status") || !order["status"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"status\"");
@@ -1137,32 +1148,21 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         rtn_order.OrderStatus = GetOrderStatus(order["status"].GetString());
         if (rtn_order.OrderStatus == LF_CHAR_NotTouched)
         {
-            if (filled_quantity > 0)
+            if (cur_filled_quantity > 0.0)
             {
                 rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
             }
         }
-        if (!order.HasMember("cancelled_quantity") || !order["cancelled_quantity"].IsString())
-        {
-            KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"cancelled_quantity\"");
-            return;
-        }
-        double fixed_cancelled_quantity = std::atof(order["cancelled_quantity"].GetString()) + 0.000000001;
-        auto cancelled_quantity = (uint64_t)(fixed_cancelled_quantity * scale_offset);
-        if(cancelled_quantity > 0)
-        {
-            rtn_order.OrderStatus = LF_CHAR_Canceled;
-        }
         // on_rtn_order
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
-        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, curFilledCost:"<< cur_filledCost << ", curQuantity:" << cur_quantity <<", requestId:" << rtn_order.RequestID);
-        if (cur_quantity > 0)
+        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, curFilledCost:"<< cur_filledCost << ", curQuantity:" << cur_filled_quantity <<", requestId:" << rtn_order.RequestID);
+        if (cur_filled_quantity > 0.0)
         {
-            double  fixedPrice  = ((double)cur_filledCost / (double)cur_quantity) + 0.000000001;
-            int64_t cur_price = fixedPrice * scale_offset;
+            double fixedPrice  = cur_filledCost / cur_filled_quantity;
+            int64_t cur_price = (int64_t )(fixedPrice * scale_offset);
             // on_rtn_trade
-            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_price, rtn_order.RequestID);
+            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, (uint64_t)(cur_filled_quantity * scale_offset), cur_price, rtn_order.RequestID);
         }
         if(rtn_order.OrderStatus == LF_CHAR_Canceled ||  rtn_order.OrderStatus == LF_CHAR_AllTraded )
         {
