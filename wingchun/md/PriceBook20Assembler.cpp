@@ -156,10 +156,10 @@ int64_t PriceBook20Assembler::GetBestAskPrice(std::string ticker)
     if(iter != tickerPriceMap.end()) {
         std::vector<PriceAndVolume>* asksPriceAndVolumes = iter->second->asksPriceAndVolumes;
         if(!asksPriceAndVolumes->empty())
-	{
-	    PriceAndVolume& bestAsk = asksPriceAndVolumes->front();
-	    return bestAsk.price;
-	}
+        {
+            PriceAndVolume& bestAsk = asksPriceAndVolumes->front();
+            return bestAsk.price;
+        }
     }
 
     return -1;
@@ -171,10 +171,10 @@ int64_t PriceBook20Assembler::GetBestBidPrice(std::string ticker)
     if(iter != tickerPriceMap.end()) {
         std::vector<PriceAndVolume>* bidsPriceAndVolumes = iter->second->bidsPriceAndVolumes;
         if(!bidsPriceAndVolumes->empty())
-	{
-	    PriceAndVolume& bestBid = bidsPriceAndVolumes->front();
-	    return bestBid.price;
-	}
+        {
+            PriceAndVolume& bestBid = bidsPriceAndVolumes->front();
+            return bestBid.price;
+        }
     }
 
     return -1;
@@ -202,7 +202,7 @@ bool PriceBook20Assembler::Assembler(std::string ticker, LFPriceBook20Field &md)
     {
         md.AskLevels[i].price = asksPriceAndVolume->at(i).price;
         md.AskLevels[i].volume = asksPriceAndVolume->at(i).volume;
-//        std::cout << "LFPriceBook20Field AskLevels: (i)" << i << "(price)" << md.AskLevels[i].price<<  "  (volume)"<< md.AskLevels[i].volume << std::endl;
+        //std::cout << "LFPriceBook20Field AskLevels: (i)" << i << "(price)" << md.AskLevels[i].price<<  "  (volume)"<< md.AskLevels[i].volume << std::endl;
     }
     md.AskLevelCount = size;
 
@@ -213,7 +213,7 @@ bool PriceBook20Assembler::Assembler(std::string ticker, LFPriceBook20Field &md)
     {
         md.BidLevels[i].price = bidsPriceAndVolume->at(i).price;
         md.BidLevels[i].volume = bidsPriceAndVolume->at(i).volume;
-//        std::cout << "LFPriceBook20Field BidLevels: (i) " << i << "(price)" << md.BidLevels[i].price<<  "  (volume)"<< md.BidLevels[i].volume << std::endl;
+        //std::cout << "LFPriceBook20Field BidLevels: (i) " << i << "(price)" << md.BidLevels[i].price<<  "  (volume)"<< md.BidLevels[i].volume << std::endl;
     }
     md.BidLevelCount = size;
 
