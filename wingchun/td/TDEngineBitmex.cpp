@@ -1039,7 +1039,10 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
     /*
      * Optional limit price for 'Limit', 'StopLimit', and 'LimitIfTouched' orders.
      * */
-    document.AddMember("price", StringRef(priceStr.c_str()), allocator);
+	if (strcmp(type, "Limit") == 0)
+	{
+		document.AddMember("price", StringRef(priceStr.c_str()), allocator);
+	}
     /*
      * clOrdID : Optional Client Order ID. This clOrdID will come back on the order and any related executions.
      * */
