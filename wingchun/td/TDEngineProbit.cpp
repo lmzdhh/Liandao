@@ -448,8 +448,8 @@ int64_t TDEngineProbit::fixPriceTickSize(int keepPrecision, int64_t price, bool 
         return price;
     }
     int removePrecisions = 8 - keepPrecision;
-    double cutter = pow(10, removePrecisions);
-    double new_price = price/cutter;
+    int64_t cutter = pow(10, removePrecisions);
+    int64_t new_price = price/cutter;
     if(!isBuy)
     {
         new_price += 1;
