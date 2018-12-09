@@ -460,7 +460,7 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
     }
     else
     {
-	KF_LOG_INFO(logger,response.text);
+	KF_LOG_INFO(logger,"Filter Data! preBid:" << lastMD.BidLevels[0].price << "," << lastMD.BidLevels[0].volume << "  lapreAsk:" << lastMD.AskLevels[0].price << "," << lastMD.AskLevels[0].volume << " preBidLevelCount:" << lastMD.BidLevelCount << " preAskLevelCount:" << lastMD.AskLevelCount << std::endl);
     } 
 }
 
