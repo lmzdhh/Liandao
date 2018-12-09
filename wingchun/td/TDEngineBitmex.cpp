@@ -939,8 +939,9 @@ void TDEngineBitmex::get_account(AccountUnitBitmex& unit, Document& json)
     string Message = Method + requestPath + queryString + Timestamp + body;
 
     std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
-    string url = unit.baseUrl + requestPath;
+    string url = unit.baseUrl + requestPath + queryString;
 
+	std::lock_guard<std::mutex> lck(g_reqMutex);
     const auto response = Get(Url{url},
                                  Header{{"api-key", unit.api_key},
                                         {"Content-Type", "application/json"},
