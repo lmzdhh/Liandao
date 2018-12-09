@@ -371,41 +371,44 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
 	memset(&md, 0, sizeof(md));
 
     bool has_update = false;	    	
-	if(d.HasMember("bids"))
+	if(d.HasMember("data"))
 	{
-		auto& bids = d["bids"];
-
-		if(bids.IsArray() && bids.Size() >0)
+		auto& data = d["data"];
+		if(data.HasMember("bids"))
 		{
-			auto size = std::min((int)bids.Size(), 20);
-		
-			for(int i = 0; i < size; ++i)
+			auto& bids = data["bids"];
+			if(bids.IsArray() && bids.Size() >0)
 			{
-				md.BidLevels[i].price = stod(bids.GetArray()[i]["price"].GetString()) * scale_offset;
-				md.BidLevels[i].volume = stod(bids.GetArray()[i]["quantity"].GetString()) * scale_offset;
-			}
-			md.BidLevelCount = size;
+				auto size = std::min((int)bids.Size(), 20);
+		
+				for(int i = 0; i < size; ++i)
+				{
+					md.BidLevels[i].price = stod(bids.GetArray()[i]["price"].GetString()) * scale_offset;
+					md.BidLevels[i].volume = stod(bids.GetArray()[i]["quantity"].GetString()) * scale_offset;
+				}
+				md.BidLevelCount = size;
 
-			has_update = true;
+				has_update = true;
+			}
 		}
-	}
 
-	if(d.HasMember("asks"))
-	{
-		auto& asks = d["asks"];
-
-		if(asks.IsArray() && asks.Size() >0)
+		if(data.HasMember("asks"))
 		{
-			auto size = std::min((int)asks.Size(), 20);
-		
-			for(int i = 0; i < size; ++i)
-			{
-				md.AskLevels[i].price = stod(asks.GetArray()[i]["price"].GetString()) * scale_offset;
-				md.AskLevels[i].volume = stod(asks.GetArray()[i]["quantity"].GetString()) * scale_offset;
-			}
-			md.AskLevelCount = size;
+			auto& asks = data["asks"];
 
-			has_update = true;
+			if(asks.IsArray() && asks.Size() >0)
+			{
+				auto size = std::min((int)asks.Size(), 20);
+		
+				for(int i = 0; i < size; ++i)
+				{
+					md.AskLevels[i].price = stod(asks.GetArray()[i]["price"].GetString()) * scale_offset;
+					md.AskLevels[i].volume = stod(asks.GetArray()[i]["quantity"].GetString()) * scale_offset;
+				}
+				md.AskLevelCount = size;
+
+				has_update = true;
+			}
 		}
 	}	
     
@@ -414,8 +417,12 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
         strcpy(md.InstrumentID, symbol.c_str());
 	    strcpy(md.ExchangeID, "bithumb");
 	//md.UpdateMillisec = last_rest_get_ts;
-	KF_LOG_INFO(logger,"Bid:" << md.BidLevels[0].price << "," << md.BidLevels[0].volume << "  Ask:" << md.AskLevels[0].price << "," << md.AskLevels[0].volume << std::endl);
+	//KF_LOG_INFO(logger,"Bid:" << md.BidLevels[0].price << "," << md.BidLevels[0].volume << "  Ask:" << md.AskLevels[0].price << "," << md.AskLevels[0].volume << std::endl);
 	on_price_book_update(&md);
+    }
+    else
+    {
+	KF_LOG_INFO(logger,response.text);
     } 
 }
 
@@ -434,22 +441,25 @@ void MDEngineBithumb::GetAndHandleTradeResponse(const std::string& symbol, int l
 	KF_LOG_ERROR(logger,"MDEnginebithumb::GetAndHandleTradeResponse:ErrorCode[" << strStatus << "],url[" << url.c_str() << "],cont_no[" << to_string(cont_no) << "],count[" << to_string(limit) << "]");
      	return;
     }
-    if(d.IsArray())
-    {
+    if(d.HasMember("data"))
+    {	
+        auto& data = d["data"];
+        if(data.IsArray())
+        {
 	    LFL2TradeField trade;
 	    memset(&trade, 0, sizeof(trade));
 	    strcpy(trade.InstrumentID, symbol.c_str());
 	    strcpy(trade.ExchangeID, "bithumb");
 
-	    for(int i = 0; i < d.Size(); ++i)
+	    for(int i = 0; i < data.Size(); ++i)
 	    {
-		    const auto& ele = d[i];
+		    const auto& ele = data[i];
 		    if(!ele.HasMember("cont_no"))
 		    {
 			continue;
 		    }
 		    
-  		    const auto trade_id = ele["cont_no"].GetUint64();
+  		    const auto trade_id = std::stoi(ele["cont_no"].GetString());
 		    if(trade_id <= last_trade_id)
 		    {
 		    	continue;
@@ -459,13 +469,18 @@ void MDEngineBithumb::GetAndHandleTradeResponse(const std::string& symbol, int l
 		    if(ele.HasMember("price") && ele.HasMember("units_traded") && ele.HasMember("type"))
 		    {
 			    trade.Price = std::stod(ele["price"].GetString()) * scale_offset;
-			    trade.Volume = std::stod(ele["qty"].GetString()) * scale_offset;
-			    trade.OrderBSFlag[0] = ele["type"] == "bid" ? 'B' : 'S';
+			    trade.Volume = std::stod(ele["units_traded"].GetString()) * scale_offset;
+			    trade.OrderBSFlag[0] = ele["type"].GetString() == "bid" ? 'B' : 'S';
 			    on_trade(&trade);
 
-			    KF_LOG_INFO(logger,"Trade:" << trade.Price << "," << trade.Volume << std::endl);
+			    //KF_LOG_INFO(logger,"Trade:" << trade.Price << "," << trade.Volume << std::endl);
 		    }
 	    }
+        }
+    }
+    else
+    {
+	KF_LOG_INFO(logger,response.text);
     }   
 }
 
