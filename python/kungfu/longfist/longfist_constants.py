@@ -10,6 +10,9 @@ class SOURCE:
     BITMAX = 21
     BITFINEX = 22
     BITMEX = 23
+    HITBTC = 24
+    OCEANEX = 25
+    PROBIT = 28
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
@@ -103,6 +106,30 @@ class MsgTypes:
     MSG_TYPE_LF_RTN_ORDER_BITMEX = 23205
     MSG_TYPE_LF_RTN_TRADE_BITMEX = 23206
     MSG_TYPE_LF_ORDER_ACTION_BITMEX = 23207
+
+    MSG_TYPE_LF_MD_HITBTC        = 24101
+    MSG_TYPE_LF_QRY_POS_HITBTC   = 24201
+    MSG_TYPE_LF_RSP_POS_HITBTC   = 24202
+    MSG_TYPE_LF_ORDER_HITBTC     = 24204
+    MSG_TYPE_LF_RTN_ORDER_HITBTC = 24205
+    MSG_TYPE_LF_RTN_TRADE_HITBTC = 24206
+    MSG_TYPE_LF_ORDER_ACTION_HITBTC = 24207
+
+    MSG_TYPE_LF_MD_OCEANEX        = 25101
+    MSG_TYPE_LF_QRY_POS_OCEANEX   = 25201
+    MSG_TYPE_LF_RSP_POS_OCEANEX   = 25202
+    MSG_TYPE_LF_ORDER_OCEANEX     = 25204
+    MSG_TYPE_LF_RTN_ORDER_OCEANEX = 25205
+    MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206
+    MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207
+
+    MSG_TYPE_LF_MD_PROBIT        		= 28101
+    MSG_TYPE_LF_QRY_POS_PROBIT   		= 28201
+    MSG_TYPE_LF_RSP_POS_PROBIT   		= 28202
+    MSG_TYPE_LF_ORDER_PROBIT     		= 28204
+    MSG_TYPE_LF_RTN_ORDER_PROBIT 		= 28205
+    MSG_TYPE_LF_RTN_TRADE_PROBIT 		= 28206
+    MSG_TYPE_LF_ORDER_ACTION_PROBIT		= 28207
 
 ###################################
 # LfActionFlagType: 报单操作标志
@@ -202,6 +229,7 @@ class LfOrderStatusType:
     Error = 'd' #废单错误（最终状态）
     OrderInserted = 'i' #订单已写入
     OrderAccepted = 'j' #前置已接受
+    PendingCancel = 'k'
 
 ###################################
 # LfPosiDirectionType: 持仓多空方向
@@ -387,6 +415,7 @@ LfOrderStatusTypeMap = {
     'd': 'Error',
     'i': 'OrderInserted',
     'j': 'OrderAccepted',
+    'k': 'PendingCancel',
 }
 
 LfPosiDirectionTypeMap = {

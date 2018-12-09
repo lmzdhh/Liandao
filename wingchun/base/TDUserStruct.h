@@ -48,7 +48,7 @@ struct TDOrderInfo
 /** for one single strategy,
  * how many available orders can be supported.
  * available order */
-#define AVAILABLE_ORDER_LIMIT  10000
+#define AVAILABLE_ORDER_LIMIT  20000
 /** enough space to store json for pos map */
 #define POS_JSON_STR_LENGTH  100000
 

@@ -6,6 +6,7 @@
 #include <document.h>
 #include "../../yijinjing/utils/json.hpp"
 #include "../../yijinjing/log/KfLog.h"
+#include "WC_DECLARE.h"
 
 WC_NAMESPACE_START
 

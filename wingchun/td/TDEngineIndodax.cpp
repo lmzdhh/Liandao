@@ -35,7 +35,7 @@ void TDEngineIndodax::init()
 {
     ITDEngine::init();
     JournalPair tdRawPair = getTdRawJournalPair(source_id);
-    raw_writer = yijinjing::JournalWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
+    raw_writer = yijinjing::JournalSafeWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
 }
 
 void TDEngineIndodax::pre_load(const json& j_config)

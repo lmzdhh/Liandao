@@ -4,7 +4,6 @@
 
 #ifndef KUNGFU_PRICEBOOK20ASSEMBLER_H
 #define KUNGFU_PRICEBOOK20ASSEMBLER_H
-
 #include <iostream>
 #include <algorithm>
 #include <map>
@@ -36,16 +35,21 @@ class PriceBook20Assembler {
 
 
 public:
+    PriceBook20Assembler();
     ~PriceBook20Assembler();
     void EraseAskPrice(std::string ticker, int64_t price);
     void UpdateAskPrice(std::string ticker, int64_t price, uint64_t volume);
+    int64_t GetBestAskPrice(std::string ticker);
     void EraseBidPrice(std::string ticker, int64_t price);
     void UpdateBidPrice(std::string ticker, int64_t price, uint64_t volume);
+    int64_t GetBestBidPrice(std::string ticker);
     //返回true是有效的更新; false是无效的更新,应该忽略这个LFPriceBook20Field
     bool Assembler(std::string ticker, LFPriceBook20Field &md);
 
     void clearPriceBook(std::string ticker);
     void clearPriceBook();
+    void SetLevel(int level);
+    int GetLevel();
 private:
     void testPriceBook20Assembler();
     /*Vector follows this order: (from Binance MD)
@@ -68,6 +72,7 @@ private:
  * */
 
     std::unordered_map<std::string, PriceLevelBooks*> tickerPriceMap;
+    int m_level;
 };
 
 

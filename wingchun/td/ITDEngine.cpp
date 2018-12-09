@@ -82,6 +82,7 @@ void ITDEngine::listening()
             short msg_type = frame->getMsgType();
             short msg_source = frame->getSource();
             cur_time = frame->getNano();
+            KF_LOG_INFO(logger, "[ITDEngine::listening] (msg_type)" << msg_type << " (cur_time)" << cur_time);
             if (msg_type == MSG_TYPE_LF_MD)
             {
                 void* fdata = frame->getData();
@@ -157,7 +158,7 @@ void ITDEngine::listening()
                 }
                 else if (msg_type == MSG_TYPE_SWITCH_TRADING_DAY)
                 {
-//                    std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY"<<std::endl;
+
                     user_helper->switch_day();
                     for (auto iter: clients)
                     {
@@ -165,7 +166,7 @@ void ITDEngine::listening()
                             iter.second.pos_handler->switch_day();
                     }
                     local_id = 1;
-//                    std::cout<< "#################################MSG_TYPE_SWITCH_TRADING_DAY (local_id)" << local_id <<std::endl;
+
                     on_switch_day();
                 }
             }
@@ -180,6 +181,7 @@ void ITDEngine::listening()
                 void* fdata = frame->getData();
                 int requestId = frame->getRequestId();
                 int idx = iter->second.account_index;
+                KF_LOG_INFO(logger, "[ITDEngine::listening] (msg_type)" << msg_type << " (cur_time)" << cur_time << " (requestId)" << requestId << " (name)" << name << " (idx)" << idx);
                 switch (msg_type)
                 {
                     case MSG_TYPE_LF_QRY_POS:
@@ -198,6 +200,7 @@ void ITDEngine::listening()
                         strcpy(order->UserID, accounts[idx].UserID);
                         strcpy(order->BusinessUnit, accounts[idx].BusinessUnit);
                         string order_ref = std::to_string(local_id);
+                        //通过orderRef来记录requestId(KfOrderID), InstrumentID
                         td_helper->record_order(local_id, requestId);
                         user_helper->record_order(name, local_id, requestId, order->InstrumentID);
                         local_id ++;
@@ -215,13 +218,13 @@ void ITDEngine::listening()
                         strcpy(order->BrokerID, accounts[idx].BrokerID);
                         strcpy(order->InvestorID, accounts[idx].InvestorID);
                         int order_id = order->KfOrderID;
-                        int local_id;
-//                        std::cout << "MSG_TYPE_LF_ORDER_ACTION: (name)"<<name  <<" (order_id)" << order_id << " (local_id)" << local_id <<std::endl;
-                        if (user_helper->get_order(name, order_id, local_id, order->InstrumentID))
+                        int local_id_order_action = 0;
+                        //通过KfOrderID来查找原始的 orderRef, InstrumentID
+                        if (user_helper->get_order(name, order_id, local_id_order_action, order->InstrumentID))
                         {
-                            string order_ref = std::to_string(local_id);
+                            string order_ref = std::to_string(local_id_order_action);
                             strcpy(order->OrderRef, order_ref.c_str());
-                            KF_LOG_DEBUG(logger, "[cancel_order] (rid)" << order_id << " (ticker)" << order->InstrumentID << " (ref)" << order_ref);
+                            KF_LOG_DEBUG(logger, "[cancel_order] (rid)" << order_id << " (ticker)" << order->InstrumentID << " (ref)" << order_ref << "(local_id_order_action)" << local_id_order_action);
                             req_order_action(order, idx, requestId, cur_time);
                         }
                         break;
@@ -462,12 +465,12 @@ bool ITDEngine::remove_client(const string &client_name, const json &j_request)
             action.VolumeChange = 0;
             strcpy(action.BrokerID, accounts[idx].BrokerID);
             strcpy(action.InvestorID, accounts[idx].InvestorID);
-            int local_id;
-            if (user_helper->get_order(client_name, order_id, local_id, action.InstrumentID))
+            int local_id_remove_client = 0;
+            if (user_helper->get_order(client_name, order_id, local_id_remove_client, action.InstrumentID))
             {
-                string order_ref = std::to_string(local_id);
+                string order_ref = std::to_string(local_id_remove_client);
                 strcpy(action.OrderRef, order_ref.c_str());
-                KF_LOG_DEBUG(logger, "[cancel_remain_order] (rid)" << order_id << " (ticker)" << action.InstrumentID << " (ref)" << order_ref);
+                KF_LOG_DEBUG(logger, "[cancel_remain_order] (rid)" << order_id << " (ticker)" << action.InstrumentID << " (ref)" << order_ref << " (local_id_remove_client)" << local_id_remove_client);
                 req_order_action(&action, iter->second.account_index, order_id, cur_time);
             }
         }

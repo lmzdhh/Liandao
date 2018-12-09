@@ -32,6 +32,13 @@ struct PendingCoinmexOrderStatus
     int64_t remoteOrderId;//coinmex sender_order response order id://{"orderId":19319936159776,"result":true}
 };
 
+struct OrderActionSentTime
+{
+    LFOrderActionField data;
+    int requestId;
+    int64_t sentNameTime;
+};
+
 struct ResponsedOrderStatus
 {
     int64_t averagePrice = 0;
@@ -147,11 +154,11 @@ private:
     void addNewQueryOrdersAndTrades(AccountUnitCoinmex& unit, const char_31 InstrumentID,
                                     const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                     const uint64_t VolumeTraded, int64_t remoteOrderId);
-
     void retrieveOrderStatus(AccountUnitCoinmex& unit);
     void moveNewOrderStatusToPending(AccountUnitCoinmex& unit);
 
     void handlerResponseOrderStatus(AccountUnitCoinmex& unit, std::vector<PendingCoinmexOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
+    void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
 
     inline int64_t getTimestamp();
     int64_t getTimeDiffOfExchange(AccountUnitCoinmex& unit);
@@ -166,6 +173,13 @@ private:
     std::string createOrderJsonString();
 
     std::string parseJsonToString(Document &d);
+
+    void handlerResponsedOrderStatus(AccountUnitCoinmex& unit);
+
+    void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, int64_t remoteOrderId);
+    void removeRemoteOrderIdOrderActionSentTime(int64_t remoteOrderId);
+    void loopOrderActionNoResponseTimeOut();
+    void orderActionNoResponseTimeOut();
 private:
     void get_exchange_time(AccountUnitCoinmex& unit, Document& json);
     void get_account(AccountUnitCoinmex& unit, Document& json);
@@ -182,7 +196,7 @@ private:
     void printResponse(const Document& d);
     inline std::string getTimestampString();
 
-    bool shouldRetry(int http_status_code, std::string errorMsg);
+    bool shouldRetry(int http_status_code, std::string errorMsg, std::string text);
 
 
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
@@ -199,20 +213,33 @@ private:
 
     ThreadPtr rest_thread;
     ThreadPtr ws_thread;
+    ThreadPtr orderaction_timeout_thread;
 
     uint64_t last_rest_get_ts = 0;
     uint64_t rest_get_interval_ms = 500;
     uint64_t ws_get_interval_ms = 500;
 
     std::mutex* mutex_order_and_trade = nullptr;
+    std::mutex* mutex_response_order_status = nullptr;
+    std::mutex* mutex_orderaction_waiting_response = nullptr;
 
     std::map<std::string, int64_t> localOrderRefRemoteOrderId;
-    std::map<int64_t, ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
 
-    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
+    //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
+    std::map<int64_t, OrderActionSentTime> remoteOrderIdOrderActionSentTime;
+
+
+
+    std::vector<ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
+
+    int sync_time_default_interval = 10000;
     int sync_time_interval;
     int64_t timeDiffOfExchange = 0;
     int exchange_shift_ms = 0;
+
+    int max_rest_retry_times = 3;
+    int retry_interval_milliseconds = 1000;
+    int orderaction_max_waiting_seconds = 30;
 };
 
 WC_NAMESPACE_END

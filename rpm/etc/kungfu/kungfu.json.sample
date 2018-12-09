@@ -92,14 +92,64 @@
       },
       "rest_get_interval_ms": 500
     },
-    "bitmex":
+    "hitbtc":
+    {
+      "book_depth_count": 25,
+      "trade_count": 10,
+      "whiteLists": {
+        "strategy_coinpair(base_quote)": "exchange_coinpair",
+        "eth_btc": "tETHBTC",
+        "bch_btc": "tBCHBTC",
+        "ltc_btc": "tLTCBTC",
+        "bch_eth": "tBCHETH",
+        "eth_btc": "tETHBTC",
+        "ltc_eth": "tLTCETH"
+      },
+      "rest_get_interval_ms": 500
+    },
+    "oceanex":
     {
       "book_depth_count": 5,
       "trade_count": 10,
       "whiteLists": {
-                      "strategy_coinpair(base_quote)": "exchange_coinpair",
-                      "btc_usdt": "XBTUSD"
-                    },
+        "strategy_coinpair(base_quote)": "exchange_coinpair",
+        "btc_usd": "XBTUSD",
+        "btc_u18": "XBTU18",
+        "eth_u18": "ETHU18"
+      },
+      "rest_get_interval_ms": 500
+    },
+    "huobi":
+        {
+          "protocol":"wss://",
+          "ip":"api.huobi.pro",
+          "port":443,
+          "path":"/ws",
+          "book_depth_count": 5,
+          "trade_count": 10,
+          "whiteLists": {
+            "btc_usd": "btcusdt",
+            "eth_usd": "etcusdt"
+          },
+          "rest_get_interval_ms": 500
+        },
+    "probit":
+    {
+      "book_depth_count": 5,
+      "trade_count": 10,
+      "whiteLists": 
+        {
+            "etc_eth": "ETC-ETH",
+            "ltc_btc": "LTC-BTC",
+            "ltc_usdt": "LTC-USDT",
+            "bch_btc": "BCH-BTC",
+            "bch_usdt": "BCH-USDT",
+            "etc_btc": "ETC-BTC",
+            "eth_btc": "ETH-BTC",
+            "etc_usdt": "ETC-USDT",
+            "eth_usdt": "ETH-USDT",
+            "btc_usdt": "BTC-USDT"
+        },
       "rest_get_interval_ms": 500
     }
   },
@@ -125,6 +175,8 @@
               "exchange_shift_ms": -2000,
               "order_insert_recvwindow_ms": 5000,
               "order_action_recvwindow_ms": 5000,
+              "max_rest_retry_times":3,
+              "retry_interval_milliseconds": 1000,
               "rest_get_interval_ms": 2000,
               "sync_time_interval": 10000
             },
@@ -175,6 +227,9 @@
                            },
               "exchange_shift_ms": 0,
               "use_restful_to_receive_status": 1,
+              "max_rest_retry_times":3,
+              "retry_interval_milliseconds": 1000,
+              "orderaction_max_waiting_seconds": 30,
               "rest_get_interval_ms": 2000,
               "sync_time_interval": 10000
             },
@@ -356,11 +411,118 @@
               "APIKey": "your-api-key",
               "SecretKey": "your-secret-key",
               "passphrase": "your-passphrase",
-              "baseUrl": "https://www.bitmex.com",
+              "baseUrl": "https://api.bitmex.com",
               "whiteLists": {
-                              "strategy_coinpair(base_quote)": "exchange_coinpair",
-                              "btc_usdt": "XBTUSD"
-                            },
+                "strategy_coinpair(base_quote)": "exchange_coinpair",
+                "eth_btc": "tETHBTC",
+                "bch_btc": "tBCHBTC",
+                "ltc_btc": "tLTCBTC",
+                "bch_eth": "tBCHETH",
+                "eth_btc": "tETHBTC",
+                "ltc_eth": "tLTCETH"
+              },
+              "positionWhiteLists":{
+                              "ETC": "ETC",
+                              "BTC": "BTC"
+                           },
+              "rest_get_interval_ms": 2000
+            },
+            "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
+            "is_default": true
+          }
+        ],
+        "FeeSetup":
+        {
+          "stock":
+          {
+            "type": "amount",
+            "fee_multi": 0.0003,
+            "ctr_multi": 1,
+            "min_fee": 0
+          },
+          "future":
+          {
+            "type": "amount",
+            "fee_multi": [0.000023, 0.00069, 0.000023],
+            "ctr_multi": 200,
+            "min_fee": 0
+          },
+          "future_exotic": null
+        }
+    },
+    "hitbtc":
+        {
+          "accounts":
+        [
+          {
+            "info":
+            {
+              "APIKey": "your-api-key",
+              "SecretKey": "your-secret-key",
+              "passphrase": "your-passphrase",
+              "baseUrl": "https://api.hitbtc.com",
+              "whiteLists": {
+                "strategy_coinpair(base_quote)": "exchange_coinpair",
+                "eth_btc": "tETHBTC",
+                "bch_btc": "tBCHBTC",
+                "ltc_btc": "tLTCBTC",
+                "bch_eth": "tBCHETH",
+                "eth_btc": "tETHBTC",
+                "ltc_eth": "tLTCETH"
+              },
+              "positionWhiteLists":{
+                              "ETC": "ETC",
+                              "BTC": "BTC"
+                           },
+              "rest_get_interval_ms": 2000
+            },
+            "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
+            "is_default": true
+          }
+        ],
+        "FeeSetup":
+        {
+          "stock":
+          {
+            "type": "amount",
+            "fee_multi": 0.0003,
+            "ctr_multi": 1,
+            "min_fee": 0
+          },
+          "future":
+          {
+            "type": "amount",
+            "fee_multi": [0.000023, 0.00069, 0.000023],
+            "ctr_multi": 200,
+            "min_fee": 0
+          },
+          "future_exotic": null
+        }
+    },
+    "oceanex":
+        {
+          "accounts":
+        [
+          {
+            "info":
+            {
+              "APIKey": "your-api-key",
+              "SecretKey": "your-secret-key",
+              "passphrase": "your-passphrase",
+              "baseUrl": "https://api.oceanex.com",
+              "whiteLists": {
+                "strategy_coinpair(base_quote)": "exchange_coinpair",
+                "eth_btc": "tETHBTC",
+                "bch_btc": "tBCHBTC",
+                "ltc_btc": "tLTCBTC",
+                "bch_eth": "tBCHETH",
+                "eth_btc": "tETHBTC",
+                "ltc_eth": "tLTCETH"
+              },
+              "positionWhiteLists":{
+                              "ETC": "ETC",
+                              "BTC": "BTC"
+                           },
               "rest_get_interval_ms": 2000
             },
             "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],

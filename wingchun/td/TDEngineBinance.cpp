@@ -59,7 +59,7 @@ void TDEngineBinance::init()
 {
     ITDEngine::init();
     JournalPair tdRawPair = getTdRawJournalPair(source_id);
-    raw_writer = yijinjing::JournalWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
+    raw_writer = yijinjing::JournalSafeWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
 }
 
 void TDEngineBinance::pre_load(const json& j_config)
@@ -100,6 +100,19 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
         order_action_recvwindow_ms = j_config["order_action_recvwindow_ms"].get<int>();
     }
     KF_LOG_INFO(logger, "[load_account] (order_action_recvwindow_ms)" << order_action_recvwindow_ms);
+
+
+    if(j_config.find("max_rest_retry_times") != j_config.end()) {
+        max_rest_retry_times = j_config["max_rest_retry_times"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (max_rest_retry_times)" << max_rest_retry_times);
+
+
+    if(j_config.find("retry_interval_milliseconds") != j_config.end()) {
+        retry_interval_milliseconds = j_config["retry_interval_milliseconds"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
+
 
     AccountUnitBinance& unit = account_units[idx];
     unit.api_key = api_key;
@@ -1326,84 +1339,120 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
                 Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
-    long recvWindow = order_insert_recvwindow_ms;
-    std::string Timestamp = getTimestampString();
-    std::string Method = "POST";
-    std::string requestPath = "https://api.binance.com/api/v3/order?";
-    std::string queryString("");
-    std::string body = "";
 
-    queryString.append( "symbol=" );
-    queryString.append( symbol );
+    int retry_times = 0;
+    cpr::Response response;
+    bool should_retry = false;
+    do {
+        should_retry = false;
 
-    queryString.append("&side=");
-    queryString.append( side );
+        long recvWindow = order_insert_recvwindow_ms;
+        std::string Timestamp = getTimestampString();
+        std::string Method = "POST";
+        std::string requestPath = "https://api.binance.com/api/v3/order?";
+        std::string queryString("");
+        std::string body = "";
 
-    queryString.append("&type=");
-    queryString.append( type );
-    //if MARKET,not send price or timeInForce
-    if(strcmp("MARKET", type) != 0)
-    {
-        queryString.append("&timeInForce=");
-        queryString.append( timeInForce );
-    }
+        queryString.append( "symbol=" );
+        queryString.append( symbol );
 
-    queryString.append("&quantity=");
-    queryString.append( to_string( quantity) );
+        queryString.append("&side=");
+        queryString.append( side );
 
-    if(strcmp("MARKET", type) != 0)
-    {
-        queryString.append("&price=");
-        std::string priceStr;
-        std::stringstream convertStream;
-        convertStream <<std::fixed << std::setprecision(8) << price;
-        convertStream >> priceStr;
+        queryString.append("&type=");
+        queryString.append( type );
+        //if MARKET,not send price or timeInForce
+        if(strcmp("MARKET", type) != 0)
+        {
+            queryString.append("&timeInForce=");
+            queryString.append( timeInForce );
+        }
 
-        KF_LOG_INFO(logger, "[send_order] (priceStr)" << priceStr);
+        queryString.append("&quantity=");
+        queryString.append( to_string( quantity) );
 
-        queryString.append( priceStr );
-    }
+        if(strcmp("MARKET", type) != 0)
+        {
+            queryString.append("&price=");
+            std::string priceStr;
+            std::stringstream convertStream;
+            convertStream <<std::fixed << std::setprecision(8) << price;
+            convertStream >> priceStr;
 
-    if ( strlen( newClientOrderId ) > 0 ) {
-        queryString.append("&newClientOrderId=");
-        queryString.append( newClientOrderId );
-    }
+            KF_LOG_INFO(logger, "[send_order] (priceStr)" << priceStr);
 
-    if ( stopPrice > 0.0 ) {
-        queryString.append("&stopPrice=");
-        queryString.append( to_string( stopPrice ) );
-    }
+            queryString.append( priceStr );
+        }
 
-    if ( icebergQty > 0.0 ) {
-        queryString.append("&icebergQty=");
-        queryString.append( to_string( icebergQty ) );
-    }
+        if ( strlen( newClientOrderId ) > 0 ) {
+            queryString.append("&newClientOrderId=");
+            queryString.append( newClientOrderId );
+        }
 
-    if ( recvWindow > 0 ) {
-        queryString.append("&recvWindow=");
-        queryString.append( to_string( recvWindow) );
-    }
+        if ( stopPrice > 0.0 ) {
+            queryString.append("&stopPrice=");
+            queryString.append( to_string( stopPrice ) );
+        }
+
+        if ( icebergQty > 0.0 ) {
+            queryString.append("&icebergQty=");
+            queryString.append( to_string( icebergQty ) );
+        }
+
+        if ( recvWindow > 0 ) {
+            queryString.append("&recvWindow=");
+            queryString.append( to_string( recvWindow) );
+        }
 
 
-    queryString.append("&timestamp=");
-    queryString.append(Timestamp);
+        queryString.append("&timestamp=");
+        queryString.append(Timestamp);
 
 
-    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
-    queryString.append( "&signature=");
-    queryString.append( signature );
+        std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
+        queryString.append( "&signature=");
+        queryString.append( signature );
 
-    string url = requestPath + queryString;
+        string url = requestPath + queryString;
 
-    const auto response = Post(Url{url},
-                              Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
+        response = Post(Url{url},
+                                  Header{{"X-MBX-APIKEY", unit.api_key}},
+                                  Body{body}, Timeout{100000});
 
-    KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                     " (response.error.message) " << response.error.message <<
-                                                     " (response.text) " << response.text.c_str());
+        KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                         " (response.error.message) " << response.error.message <<
+                                                         " (response.text) " << response.text.c_str());
+
+        if(shouldRetry(response.status_code, response.error.message, response.text)) {
+            should_retry = true;
+            retry_times++;
+            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
+        }
+    } while(should_retry && retry_times < max_rest_retry_times);
+
+    KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
+                                                                         " (response.error.message) " << response.error.message <<
+                                                                         " (response.text) " << response.text.c_str() );
 
     return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
+/*
+ * https://github.com/binance-exchange/binance-official-api-docs/blob/master/errors.md
+-1021 INVALID_TIMESTAMP
+Timestamp for this request is outside of the recvWindow.
+Timestamp for this request was 1000ms ahead of the server's time.
+
+
+ *  (response.status_code) 400 (response.error.message)  (response.text) {"code":-1021,"msg":"Timestamp for this request is outside of the recvWindow."}
+ * */
+bool TDEngineBinance::shouldRetry(int http_status_code, std::string errorMsg, std::string text)
+{
+    if( 400 == http_status_code && text.find(":-1021,") != std::string::npos )
+    {
+        return true;
+    }
+    return false;
 }
 
 
@@ -1459,52 +1508,70 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
                   long orderId, const char *origClientOrderId, const char *newClientOrderId, Document &json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
-    long recvWindow = order_action_recvwindow_ms;
-    std::string Timestamp = getTimestampString();
-    std::string Method = "DELETE";
-    std::string requestPath = "https://api.binance.com/api/v3/order?";
-    std::string queryString("");
-    std::string body = "";
+    int retry_times = 0;
+    cpr::Response response;
+    bool should_retry = false;
+    do {
+        should_retry = false;
 
-    queryString.append( "symbol=" );
-    queryString.append( symbol );
+        long recvWindow = order_action_recvwindow_ms;
+        std::string Timestamp = getTimestampString();
+        std::string Method = "DELETE";
+        std::string requestPath = "https://api.binance.com/api/v3/order?";
+        std::string queryString("");
+        std::string body = "";
 
-    if ( orderId > 0 ) {
-        queryString.append("&orderId=");
-        queryString.append( to_string( orderId ) );
-    }
+        queryString.append( "symbol=" );
+        queryString.append( symbol );
 
-    if ( strlen( origClientOrderId ) > 0 ) {
-        queryString.append("&origClientOrderId=");
-        queryString.append( origClientOrderId );
-    }
+        if ( orderId > 0 ) {
+            queryString.append("&orderId=");
+            queryString.append( to_string( orderId ) );
+        }
 
-    if ( strlen( newClientOrderId ) > 0 ) {
-        queryString.append("&newClientOrderId=");
-        queryString.append( newClientOrderId );
-    }
+        if ( strlen( origClientOrderId ) > 0 ) {
+            queryString.append("&origClientOrderId=");
+            queryString.append( origClientOrderId );
+        }
 
-    if ( recvWindow > 0 ) {
-        queryString.append("&recvWindow=");
-        queryString.append( std::to_string( recvWindow) );
-    }
+        if ( strlen( newClientOrderId ) > 0 ) {
+            queryString.append("&newClientOrderId=");
+            queryString.append( newClientOrderId );
+        }
 
-    queryString.append("&timestamp=");
-    queryString.append( Timestamp );
+        if ( recvWindow > 0 ) {
+            queryString.append("&recvWindow=");
+            queryString.append( std::to_string( recvWindow) );
+        }
 
-    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
-    queryString.append( "&signature=");
-    queryString.append( signature );
+        queryString.append("&timestamp=");
+        queryString.append( Timestamp );
 
-    string url = requestPath + queryString;
+        std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
+        queryString.append( "&signature=");
+        queryString.append( signature );
 
-    const auto response = Delete(Url{url},
-                              Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
+        string url = requestPath + queryString;
 
-    KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
-                                             " (response.error.message) " << response.error.message <<
-                                             " (response.text) " << response.text.c_str());
+        response = Delete(Url{url},
+                                  Header{{"X-MBX-APIKEY", unit.api_key}},
+                                  Body{body}, Timeout{100000});
+
+        KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                 " (response.error.message) " << response.error.message <<
+                                                 " (response.text) " << response.text.c_str());
+
+
+        if(shouldRetry(response.status_code, response.error.message, response.text)) {
+            should_retry = true;
+            retry_times++;
+            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
+        }
+    } while(should_retry && retry_times < max_rest_retry_times);
+
+    KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
+                                                                         " (response.error.message) " << response.error.message <<
+                                                                         " (response.text) " << response.text.c_str() );
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }

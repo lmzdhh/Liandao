@@ -122,6 +122,8 @@ private:
     std::string createCancelOrderCIdJsonString(int cid, std::string dateStr);
     std::string getDateStr();
 
+    void cancel_all_orders(AccountUnitBitfinex& unit, Document& json);
+
     void lws_login(AccountUnitBitfinex& unit, long timeout_nsec);
     void onInfo(Document& json);
     void onAuth(struct lws * websocketConn, Document& json);
@@ -167,6 +169,7 @@ private:
 
     std::unordered_map<int, OrderInsertData> CIDorderInsertData;
     std::unordered_map<int, OrderActionData> CIDorderActionData;
+    std::unordered_map<int, OrderActionData> pendingOrderActionData;
     std::unordered_map<int64_t, OrderActionData> RemoteOrderIDorderActionData;
 };
 
