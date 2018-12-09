@@ -6,7 +6,7 @@
 
 #include "IWCStrategy.h"
 #include <deque>
-
+#include <sstream>
 USING_WC_NAMESPACE
 
 #define SOURCE_INDEX SOURCE_BITHUMB
@@ -44,6 +44,7 @@ public:
     //virtual void on_rtn_trade(const LFRtnTradeField* data, int request_id, short source, long rcv_time);
     //virtual void on_rsp_order(const LFInputOrderField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
     virtual void on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time);
+    virtual void on_l2_trade(const LFL2TradeField* data, short source, long rcv_time);
 
 public:
     Strategy(const string& name);
@@ -108,15 +109,22 @@ void Strategy::on_market_data(const LFMarketDataField* md, short source, long rc
 
 void Strategy::on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time)
 {
-    std::cout << "LIBINGCHEN RECV[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID << std::endl
-              << " (bidcount)" << data->BidLevelCount << "(bidvolume)" << data->BidLevels[0].volume << "(bidprice)" << data->BidLevels[0].price << std::endl
-              << " (askcount)" << data->AskLevelCount << "(askvolume)" << data->AskLevels[0].volume << "(askprice)" << data->AskLevels[0].price << std::endl;
-    KF_LOG_INFO(logger, "LIBINGCHEN RECV[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID
-                                                        << " (bidcount)" << data->BidLevelCount
-                                                        << " (askcount)" << data->AskLevelCount);
+    std::stringstream ss;
+    ss << "LCK RECV[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID << std::endl
+        << " (bidcount)" << data->BidLevelCount << "(bidvolume)" << data->BidLevels[0].volume << "(bidprice)" << data->BidLevels[0].price << std::endl
+        << " (askcount)" << data->AskLevelCount << "(askvolume)" << data->AskLevels[0].volume << "(askprice)" << data->AskLevels[0].price << std::endl;
+    std::cout << ss.str();
+    KF_LOG_INFO(logger, ss.str());
 }
 
-
+void Strategy::on_l2_trade(const LFL2TradeField* data, short source, long rcv_time)
+{
+    std::stringstream ss ;
+    ss << "LCK RECV[on_l2_trade] (source)" << source << " (ticker)" << data->InstrumentID << std::endl
+	<< " (price)" << data->Price << " (Volume)" << data->Volume << " (OrderBSFlag)"<< data->OrderBsFlag << std::endl;
+    std::cout << ss.str();
+    KF_LOG_INFO(logger, ss.str());
+}
 
 int main(int argc, const char* argv[])
 {

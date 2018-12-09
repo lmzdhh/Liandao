@@ -364,13 +364,13 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
     std::string strStatus = d["status"].GetString();
     if(strStatus != "0000")
     {
-        KF_LOG_ERROR(logger,"MDEngineBithumb::GetAndHandleDepthResponse:Error Code[" << strStatus << "],url[" << url.c_str() << "],group_orders[" << to_string(0) << "],count[" << to_string(limit) << "]");	
+        KF_LOG_ERROR(logger,"MDEngineBithumb::GetAndHandleDepthResponse:Error Code[" << strStatus << "],url[" << url.c_str() << "],group_orders[" << to_string(1) << "],count[" << to_string(limit) << "]");	
         return ;
     }
 	LFPriceBook20Field md;
 	memset(&md, 0, sizeof(md));
 
-    bool has_update = false;	    	
+   // bool has_update = false;	    	
 	if(d.HasMember("data"))
 	{
 		auto& data = d["data"];
@@ -379,7 +379,7 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
 			auto& bids = data["bids"];
 			if(bids.IsArray() && bids.Size() >0)
 			{
-				auto size = std::min((int)bids.Size(), 20);
+				auto size = std::min((int)bids.Size(), limit);
 		
 				for(int i = 0; i < size; ++i)
 				{
@@ -388,7 +388,7 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
 				}
 				md.BidLevelCount = size;
 
-				has_update = true;
+				//has_update = true;
 			}
 		}
 
@@ -398,7 +398,7 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
 
 			if(asks.IsArray() && asks.Size() >0)
 			{
-				auto size = std::min((int)asks.Size(), 20);
+				auto size = std::min((int)asks.Size(), limit);
 		
 				for(int i = 0; i < size; ++i)
 				{
@@ -407,10 +407,47 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
 				}
 				md.AskLevelCount = size;
 
-				has_update = true;
+				//has_update = true;
 			}
 		}
-	}	
+   	    if(data.HasMember("timestamp"))
+	    {
+		md.UpdateMicroSecond = std::stoull(data["timestamp"].GetString()) ;
+	    }
+	}
+	
+	bool has_update = false;
+	static LFPriceBook20Field lastMD = {0};
+        if(md.BidLevelCount != lastMD.BidLevelCount)
+        {
+            has_update = true;
+        }
+        else
+        {
+            for(int i = 0;i < md.BidLevelCount; ++i)
+            {
+                if(md.BidLevels[i].price != lastMD.BidLevels[i].price || md.BidLevels[i].volume != lastMD.BidLevels[i].volume)
+                {
+                    has_update = true;
+                    break;
+                }
+            }
+        }
+        if(!has_update && md.AskLevelCount != lastMD.AskLevelCount)
+        {
+            has_update = true;
+        }
+        else if(!has_update)
+        {
+            for(int i = 0;i < md.AskLevelCount ;++i)
+            {
+                if(md.AskLevels[i].price != lastMD.AskLevels[i].price || md.AskLevels[i].volume != lastMD.AskLevels[i].volume)
+                {
+                    has_update = true;
+                    break;
+                }
+            }
+        }	
     
     if(has_update)
     {
