@@ -19,7 +19,7 @@ WC_NAMESPACE_START
 
 struct SendOrderFilter
 {
-    char_31 InstrumentID;   //合约代码
+    std::string InstrumentID;   //合约代码
     int ticksize; //for price round.
 };
 enum class AccountStatus
@@ -141,7 +141,7 @@ private:
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
     bool loadExchangeOrderFilters(AccountUnitProbit& unit);
     void debug_print(const std::map<std::string, SendOrderFilter>&);
-    SendOrderFilter getSendOrderFilter(const AccountUnitProbit& unit, const char *symbol);
+    SendOrderFilter getSendOrderFilter(const AccountUnitProbit& unit, const std::string& symbol);
 	bool OpenOrderToLFOrder(AccountUnitProbit& unit, rapidjson::Value& json, LFRtnOrderField& order);
 };
 

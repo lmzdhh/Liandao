@@ -39,6 +39,10 @@ using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
+#define PROBIT_BTC_USDT      "BTC-USDT"
+#define PROBIT_ETH_USDT      "ETH-USDT"
+#define PROBIT_EOS_USDT      "EOS-USDT"
+
 std::mutex  g_orderMutex;
 std::mutex  g_postMutex;
 std::mutex  g_requestMutex;
@@ -217,29 +221,12 @@ void TDEngineProbit::connect(long timeout_nsec)
     }
 }
 
-//TODO
 bool TDEngineProbit::loadExchangeOrderFilters(AccountUnitProbit& unit)
 {
-    KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
-    //changelog 2018-07-20. use hardcode mode
-    /*
-    BTC_USDT	0.1		    1
-    ETH_USDT	0.01		2
-    EOS-USDT	0.0001		4
-     * */
-    SendOrderFilter afilter;
-
-    strncpy(afilter.InstrumentID, "BTC_USDT", 31);
-    afilter.ticksize = 1;
-    unit.sendOrderFilters.insert(std::make_pair("BTC_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "ETH_USDT", 31);
-    afilter.ticksize = 2;
-    unit.sendOrderFilters.insert(std::make_pair("ETH_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "EOS-USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("EOS-USDT", afilter));
+    SendOrderFilter filter;
+    unit.sendOrderFilters[PROBIT_BTC_USDT] = {PROBIT_BTC_USDT, 1};
+    unit.sendOrderFilters[PROBIT_ETH_USDT] = {PROBIT_ETH_USDT, 2};
+    unit.sendOrderFilters[PROBIT_EOS_USDT] = {PROBIT_EOS_USDT, 4};
     return true;
 }
 
@@ -251,19 +238,14 @@ void TDEngineProbit::debug_print(const std::map<std::string, SendOrderFilter> &s
     }
 }
 
-SendOrderFilter TDEngineProbit::getSendOrderFilter(const AccountUnitProbit& unit, const char *symbol)
+SendOrderFilter TDEngineProbit::getSendOrderFilter(const AccountUnitProbit& unit, const std::string& symbol)
 {
-    for(auto filterIter = unit.sendOrderFilters.begin(); filterIter != unit.sendOrderFilters.end();  ++filterIter)
+    auto filterIter = unit.sendOrderFilters.find(symbol);
+    if (filterIter != unit.sendOrderFilters.end())
     {
-        if(strcmp(filterIter->first.c_str(), symbol) == 0)
-        {
-            return filterIter->second;
-        }
+        return filterIter->second;
     }
-    SendOrderFilter defaultFilter;
-    defaultFilter.ticksize = 8;
-    strcpy(defaultFilter.InstrumentID, "notfound");
-    return defaultFilter;
+    return SendOrderFilter {"NotFound", 8};
 }
 
 void TDEngineProbit::login(long timeout_nsec)
@@ -465,21 +447,14 @@ int64_t TDEngineProbit::fixPriceTickSize(int keepPrecision, int64_t price, bool 
     {
         return price;
     }
-
     int removePrecisions = 8 - keepPrecision;
     double cutter = pow(10, removePrecisions);
-
-    KF_LOG_DEBUG(logger, "[fixPriceTickSize input]" << " 1(price)" << std::fixed  << std::setprecision(9) << price);
     double new_price = price/cutter;
-    KF_LOG_DEBUG(logger, "[fixPriceTickSize input]" << " 2(price/cutter)" << std::fixed  << std::setprecision(9) << new_price);
     if(!isBuy)
     {
         new_price += 1;
-        KF_LOG_DEBUG(logger, "[fixPriceTickSize input]" << " 3(price is sell)" << std::fixed  << std::setprecision(9) << new_price);
     }
-    int64_t ret_price = new_price * cutter;
-    KF_LOG_DEBUG(logger, "[fixPriceTickSize input]" << " 4(new_price * cutter)" << std::fixed  << std::setprecision(9) << new_price);
-    return ret_price;
+    return new_price * cutter;
 }
 
 int TDEngineProbit::Round(std::string tickSizeStr)
@@ -534,9 +509,9 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         std::unique_lock<std::mutex> l(g_orderMutex);
         unit.ordersMap[clientId] = order;
     }
-    SendOrderFilter filter = getSendOrderFilter(unit, ticker.c_str());
+    SendOrderFilter filter = getSendOrderFilter(unit, ticker);
     int64_t fixedPrice = fixPriceTickSize(filter.ticksize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
-    KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<" (LimitPrice)" << data->LimitPrice <<" (ticksize)" << filter.ticksize <<" (fixedPrice)" << fixedPrice);
+    KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<" (LimitPrice)" << data->LimitPrice <<" (TickSize)" << filter.ticksize <<" (FixedPrice)" << fixedPrice);
     Document rspjson;
 	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), data->Volume*1.0 / scale_offset , fixedPrice*1.0 / scale_offset, 0, clientId, rspjson);
     if(rspjson.HasParseError() || !rspjson.IsObject())
@@ -549,7 +524,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
 	{
 		auto& dataJson = rspjson["data"];
 		std::string remoteOrderId = dataJson["id"].GetString();
-		KF_LOG_INFO(logger, "[req_order_insert] rsp  (rid)" << requestId << " (OrderRef) " << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+        KF_LOG_DEBUG(logger, "[req_order_insert] rsp  (rid)" << requestId << " (OrderRef) " << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
 	}
     else if (rspjson.HasMember("code") && rspjson["code"].IsNumber())
     {
@@ -1388,7 +1363,7 @@ void TDEngineProbit::getCancelOrder(std::vector<CancelOrderReq>& requests)
         if(orderIter == order.end())
         {
             ++reqIter;
-            KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap can not find, ClientOrderId:" << clientId << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
+            //KF_LOG_DEBUG(logger, "[getCancelOrder] orderMap can not find, ClientOrderId:" << clientId << ",RequestId:" << req.requestId << ",AccountIndex:" << req.account_index);
             continue;
         }
         if (!orderIter->second.remoteOrderRef.empty())
