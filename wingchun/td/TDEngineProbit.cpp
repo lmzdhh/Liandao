@@ -595,7 +595,7 @@ void TDEngineProbit::set_reader_thread()
                 {
                     if(!isRunning)
                     {
-                        return;
+                        break;
                     }
                     if (g_requestCond.wait_for(l,std::chrono::seconds(2)) == std::cv_status::timeout)
                     {
