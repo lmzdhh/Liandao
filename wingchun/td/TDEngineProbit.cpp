@@ -1159,7 +1159,8 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, curFilledCost:"<< cur_filledCost << ", curQuantity:" << cur_quantity <<", requestId:" << rtn_order.RequestID);
         if (cur_quantity > 0)
         {
-            int64_t cur_price = ((double)cur_filledCost / (double)cur_quantity)* scale_offset;
+            double  fixedPrice  = ((double)cur_filledCost / (double)cur_quantity) + 0.000000001;
+            int64_t cur_price = fixedPrice * scale_offset;
             // on_rtn_trade
             onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, cur_quantity, cur_price, rtn_order.RequestID);
         }
