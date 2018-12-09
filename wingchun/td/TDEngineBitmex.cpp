@@ -448,41 +448,41 @@ void TDEngineBitmex::req_investor_position(const LFQryPositionField* data, int a
     pos.YdPosition = 0;
     pos.PositionCost = 0;
 
-
+	std::string ticker = unit.coinPairWhiteList.GetValueByKey(data->InstrumentID);
 /*
  # Response
     [{"available":"0.099","balance":"0.099","currencyCode":"BTC","hold":"0","id":83906},{"available":"188","balance":"188","currencyCode":"MVP","hold":"0","id":83906}]
  * */
-    std::vector<LFRspPositionField> tmp_vector;
+	bool findSymbolInResult = false;
     if(d.IsArray())
     {
-        size_t len = d.Size();
+        SizeType len = d.Size();
         KF_LOG_INFO(logger, "[req_investor_position] (asset.length)" << len);
-        for(int i = 0; i < len; i++)
+        for(SizeType i = 0; i < len; i++)
         {
-            std::string symbol = d.GetArray()[i]["currencyCode"].GetString();
-            std::string ticker = unit.positionWhiteList.GetKeyByValue(symbol);
-            if(ticker.length() > 0) {
-                strncpy(pos.InstrumentID, ticker.c_str(), 31);
-                pos.Position = std::round(std::stod(d.GetArray()[i]["available"].GetString()) * scale_offset);
-                tmp_vector.push_back(pos);
-                KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
-                                                                          << " available:" << d.GetArray()[i]["available"].GetString()
-                                                                          << " balance: " << d.GetArray()[i]["balance"].GetString()
-                                                                          << " hold: " << d.GetArray()[i]["hold"].GetString());
+            std::string symbol = d[i]["symbol"].GetString();          
+            if(symbol.length() > 0 && symbol == ticker) {
+                //strncpy(pos.InstrumentID, ticker.c_str(), 31);
+                pos.Position = std::round(d[i]["currentQty"].GetDouble() * scale_offset);
+               
+                //KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
+                //                                                         << " hold:" << d.GetArray()[i]["currentQty"].GetDouble()
+                //                                                          << " balance: " << d.GetArray()[i]["currentCost"].GetDouble());
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
+				on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
+				findSymbolInResult = true;
             }
         }
     }
 
-    bool findSymbolInResult = false;
+  
     //send the filtered position
-    int position_count = tmp_vector.size();
+    /*int position_count = tmp_vector.size();
     for (int i = 0; i < position_count; i++)
     {
         on_rsp_position(&tmp_vector[i], i == (position_count - 1), requestId, errorId, errorMsg.c_str());
         findSymbolInResult = true;
-    }
+    }*/
 
     if(!findSymbolInResult)
     {
@@ -503,7 +503,7 @@ void TDEngineBitmex::req_qry_account(const LFQryAccountField *data, int account_
 int64_t TDEngineBitmex::fixPriceTickSize(double keepPrecision, int64_t price, bool isBuy) {
 
 
-    int64_t tickSize = int64_t(keepPrecision+0.000000001* scale_offset);
+    int64_t tickSize = int64_t((keepPrecision+0.000000001)* scale_offset);
 
     KF_LOG_INFO(logger, "[fixPriceTickSize input]" << "(price)" << price);
     int64_t count = price/tickSize;
