@@ -455,12 +455,12 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
 	strcpy(md.ExchangeID, "bithumb");
         lastMD = md;
 	//md.UpdateMillisec = last_rest_get_ts;
-	KF_LOG_INFO(logger,"preBid:" << lastMD.BidLevels[0].price << "," << lastMD.BidLevels[0].volume << "  lapreAsk:" << lastMD.AskLevels[0].price << "," << lastMD.AskLevels[0].volume << " preBidLevelCount:" << lastMD.BidLevelCount << " preAskLevelCount:" << lastMD.AskLevelCount << std::endl);
+	//KF_LOG_INFO(logger,"preBid:" << lastMD.BidLevels[0].price << "," << lastMD.BidLevels[0].volume << "  lapreAsk:" << lastMD.AskLevels[0].price << "," << lastMD.AskLevels[0].volume << " preBidLevelCount:" << lastMD.BidLevelCount << " preAskLevelCount:" << lastMD.AskLevelCount << std::endl);
 	on_price_book_update(&md);
     }
     else
     {
-	KF_LOG_INFO(logger,"Filter Data! preBid:" << lastMD.BidLevels[0].price << "," << lastMD.BidLevels[0].volume << "  lapreAsk:" << lastMD.AskLevels[0].price << "," << lastMD.AskLevels[0].volume << " preBidLevelCount:" << lastMD.BidLevelCount << " preAskLevelCount:" << lastMD.AskLevelCount << std::endl);
+	//KF_LOG_INFO(logger,"Filter Data! preBid:" << lastMD.BidLevels[0].price << "," << lastMD.BidLevels[0].volume << "  lapreAsk:" << lastMD.AskLevels[0].price << "," << lastMD.AskLevels[0].volume << " preBidLevelCount:" << lastMD.BidLevelCount << " preAskLevelCount:" << lastMD.AskLevelCount << std::endl);
     } 
 }
 
@@ -512,7 +512,7 @@ void MDEngineBithumb::GetAndHandleTradeResponse(const std::string& symbol, int l
 			    trade.OrderBSFlag[0] = strTemp == "bid" ? 'B' : 'S';
 			    on_trade(&trade);
 
-			    KF_LOG_INFO(logger,"Trade:" << trade.Price << "," << trade.Volume << " type:" << strTemp << "," << trade.OrderBSFlag << " last_trade_id:" << last_trade_id<< std::endl);
+			    //KF_LOG_INFO(logger,"Trade:" << trade.Price << "," << trade.Volume << " type:" << strTemp << "," << trade.OrderBSFlag << " last_trade_id:" << last_trade_id<< std::endl);
 		    }
 	    }
         }
