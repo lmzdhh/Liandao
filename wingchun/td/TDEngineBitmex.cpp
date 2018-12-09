@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <cpr/cpr.h>
 #include <chrono>
+#include <algorithm>
 #include "../../utils/crypto/openssl_util.h"
 using cpr::Delete;
 using cpr::Get;
@@ -188,8 +189,8 @@ TradeAccount TDEngineBitmex::load_account(int idx, const json& j_config)
     string secret_key = j_config["SecretKey"].get<string>();
 
     string baseUrl = j_config["baseUrl"].get<string>();
-    rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
-
+    base_interval_ms = j_config["rest_get_interval_ms"].get<int>();
+    base_interval_ms = std::max(base_interval_ms,(int64_t)500);
 
     AccountUnitBitmex& unit = account_units[idx];
     unit.api_key = api_key;
@@ -257,96 +258,37 @@ void TDEngineBitmex::connect(long timeout_nsec)
 }
 
 //TODO
-bool TDEngineBitmex::loadExchangeOrderFilters(AccountUnitBitmex& unit, Document &doc)
-{
+bool TDEngineBitmex::loadExchangeOrderFilters(AccountUnitBitmex& unit, Document &doc) {
     KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
-    //changelog 2018-07-20. use hardcode mode
+//    //parse bitmex json
     /*
-    BTC_USDT	0.0001		4
-    ETH_USDT	0.0001		4
-    LTC_USDT	0.0001		4
-    BCH_USDT	0.0001		4
-    ETC_USDT	0.0001		4
-    ETC_ETH	0.00000001		8
-    LTC_BTC	0.00000001		8
-    BCH_BTC	0.00000001		8
-    ETH_BTC	0.00000001		8
-    ETC_BTC	0.00000001		8
-     * */
-    SendOrderFilter afilter;
-
-    strncpy(afilter.InstrumentID, "BTC_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("BTC_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "ETH_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("ETH_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "LTC_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("LTC_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "BCH_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("BCH_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "ETC_USDT", 31);
-    afilter.ticksize = 4;
-    unit.sendOrderFilters.insert(std::make_pair("ETC_USDT", afilter));
-
-    strncpy(afilter.InstrumentID, "ETC_ETH", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("ETC_ETH", afilter));
-
-    strncpy(afilter.InstrumentID, "LTC_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("LTC_BTC", afilter));
-
-    strncpy(afilter.InstrumentID, "BCH_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("BCH_BTC", afilter));
-
-    strncpy(afilter.InstrumentID, "ETH_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("ETH_BTC", afilter));
-
-    strncpy(afilter.InstrumentID, "ETC_BTC", 31);
-    afilter.ticksize = 8;
-    unit.sendOrderFilters.insert(std::make_pair("ETC_BTC", afilter));
-
-    //parse bitmex json
-    /*
-     [{"baseCurrency":"LTC","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"LTC_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     {"baseCurrency":"BCH","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"BCH_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     {"baseCurrency":"ETH","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"ETH_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     {"baseCurrency":"ETC","baseMaxSize":"100000.00","baseMinSize":"0.01","code":"ETC_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
-     ...
+//     [{"baseCurrency":"LTC","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"LTC_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
+//     {"baseCurrency":"BCH","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"BCH_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
+//     {"baseCurrency":"ETH","baseMaxSize":"100000.00","baseMinSize":"0.001","code":"ETH_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
+//     {"baseCurrency":"ETC","baseMaxSize":"100000.00","baseMinSize":"0.01","code":"ETC_BTC","quoteCurrency":"BTC","quoteIncrement":"8"},
+//     ...
      ]
-     * */
-//    if(doc.HasParseError() || doc.IsObject())
-//    {
-//        return false;
-//    }
-//    if(doc.IsArray())
-//    {
-//        int symbolsCount = doc.Size();
-//        for (int i = 0; i < symbolsCount; i++) {
-//            const rapidjson::Value& sym = doc.GetArray()[i];
-//            std::string symbol = sym["code"].GetString();
-//            std::string tickSizeStr =  sym["baseMinSize"].GetString();
-//            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
-//                                                                                       " (tickSizeStr)" << tickSizeStr);
-//            //0.0000100; 0.001;  1; 10
-//            SendOrderFilter afilter;
-//            strncpy(afilter.InstrumentID, symbol.c_str(), 31);
-//            afilter.ticksize = Round(tickSizeStr);
-//            unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
-//            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
-//                                                                                       " (tickSizeStr)" << tickSizeStr
-//                                                                                       <<" (tickSize)" << afilter.ticksize);
-//        }
-//    }
+//     * */
+    if (doc.HasParseError() || doc.IsObject()) {
+        return false;
+    }
+    if (doc.IsArray()) {
+        int symbolsCount = doc.Size();
+        for (SizeType i = 0; i < symbolsCount; i++) {
+            const rapidjson::Value &sym = doc[i];
+            if (sym.HasMember("symbol") && sym.HasMember("tickSize")) {
+                std::string symbol = sym["symbol"].GetString();
+                double tickSize = sym["tickSize"].GetDouble();
+                KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"
+                                                                                           << tickSize);
+                //0.0000100; 0.001;  1; 10
+                SendOrderFilter afilter;
+                afilter.InstrumentID = symbol;
+                afilter.ticksize = tickSize;
+                unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
+            }
+        }
+    }
 
     return true;
 }
@@ -356,26 +298,20 @@ void TDEngineBitmex::debug_print(std::map<std::string, SendOrderFilter> &sendOrd
     std::map<std::string, SendOrderFilter>::iterator map_itr = sendOrderFilters.begin();
     while(map_itr != sendOrderFilters.end())
     {
-        KF_LOG_INFO(logger, "[debug_print] sendOrderFilters (symbol)" << map_itr->first <<
+        KF_LOG_DEBUG(logger, "[debug_print] sendOrderFilters (symbol)" << map_itr->first <<
                                                                       " (tickSize)" << map_itr->second.ticksize);
         map_itr++;
     }
 }
 
-SendOrderFilter TDEngineBitmex::getSendOrderFilter(AccountUnitBitmex& unit, const char *symbol)
-{
-    std::map<std::string, SendOrderFilter>::iterator map_itr = unit.sendOrderFilters.begin();
-    while(map_itr != unit.sendOrderFilters.end())
-    {
-        if(strcmp(map_itr->first.c_str(), symbol) == 0)
-        {
-            return map_itr->second;
-        }
-        map_itr++;
+SendOrderFilter TDEngineBitmex::getSendOrderFilter(AccountUnitBitmex& unit, const std::string& symbol) {
+    std::map<std::string, SendOrderFilter>::iterator map_itr = unit.sendOrderFilters.find(symbol);
+    if (map_itr != unit.sendOrderFilters.end()) {
+        return map_itr->second;
     }
     SendOrderFilter defaultFilter;
-    defaultFilter.ticksize = 8;
-    strcpy(defaultFilter.InstrumentID, "notfound");
+    defaultFilter.ticksize = 0.00000001;
+    defaultFilter.InstrumentID = "";
     return defaultFilter;
 }
 
@@ -564,26 +500,24 @@ void TDEngineBitmex::req_qry_account(const LFQryAccountField *data, int account_
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-int64_t TDEngineBitmex::fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy) {
-    if(keepPrecision == 8) return price;
+int64_t TDEngineBitmex::fixPriceTickSize(double keepPrecision, int64_t price, bool isBuy) {
 
-    int removePrecisions = (8 - keepPrecision);
-    double cutter = pow(10, removePrecisions);
 
-    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 1(price)" << std::fixed  << std::setprecision(9) << price);
-    double new_price = price/cutter;
-    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 2(price/cutter)" << std::fixed  << std::setprecision(9) << new_price);
+    int64_t tickSize = int64_t(keepPrecision+0.000000001* scale_offset);
+
+    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << "(price)" << price);
+    int64_t count = price/tickSize;
+    int64_t new_price = tickSize * count;
     if(isBuy){
-        new_price += 0.9;
-        new_price = std::floor(new_price);
-        KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 3(price is buy)" << std::fixed  << std::setprecision(9) << new_price);
+        KF_LOG_INFO(logger, "[fixPriceTickSize output]" << "(price is buy)"  << new_price);
     } else {
-        new_price = std::floor(new_price);
-        KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 3(price is sell)" << std::fixed  << std::setprecision(9) << new_price);
+        if(price%tickSize > 0)
+        {
+            new_price+=tickSize;
+        }
+        KF_LOG_INFO(logger, "[fixPriceTickSize output]" << "(price is sell)" << new_price);
     }
-    int64_t  ret_price = new_price * cutter;
-    KF_LOG_INFO(logger, "[fixPriceTickSize input]" << " 4(new_price * cutter)" << std::fixed  << std::setprecision(9) << new_price);
-    return ret_price;
+    return new_price;
 }
 
 int TDEngineBitmex::Round(std::string tickSizeStr) {
@@ -598,13 +532,18 @@ int TDEngineBitmex::Round(std::string tickSizeStr) {
     return oneAt - docAt;
 }
 
-bool ShouldRetry(const Document& json)
+bool TDEngineBitmex::ShouldRetry(const Document& json)
 {
+	std::lock_guard<std::mutex> lck(unit_mutex);
     if(json.IsObject() && json.HasMember("code") && json["code"].IsNumber())
     {
         int code = json["code"].GetInt();
-        if(code == 503)
-            return true;
+		if (code == 503 || code == 429)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(rest_get_interval_ms));
+			return true;
+		}
+          
     }
     return false;
 }
@@ -837,7 +776,7 @@ void TDEngineBitmex::wsloop()
     KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
     while(isRunning)
     {
-        int n = lws_service( context, rest_get_interval_ms );
+        int n = lws_service( context, base_interval_ms );
         //std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
     }
 }
@@ -882,6 +821,62 @@ std::string TDEngineBitmex::getLwsSubscribe(AccountUnitBitmex& unit) {
     return R"("order","execution")";
 }
 
+void TDEngineBitmex::handleResponse(cpr::Response rsp, Document& json)
+{
+	std::lock_guard<std::mutex> lck(unit_mutex);
+	auto& header = rsp.header;
+	std::stringstream stream;
+	for (auto& item : header)
+	{
+		stream << item.first << ':' << item.second << ',';
+	}
+	KF_LOG_INFO(logger, "[handleResponse] (header) " << stream.str());
+    
+    if(rsp.status_code == HTTP_RESPONSE_OK)
+    {
+        auto iter = header.find("x-ratelimit-remaining");
+        if(iter != header.end())
+        {
+            m_limitRate_Remain = atoi(iter->second.c_str());
+        }
+        else
+            m_limitRate_Remain =300;
+        iter = header.find("x-ratelimit-reset");
+        if(iter != header.end())
+        {
+            m_TimeStamp_Reset = atoll(iter->second.c_str());
+            rest_get_interval_ms = (m_TimeStamp_Reset - getTimestamp())*1000;
+            rest_get_interval_ms = std::max(rest_get_interval_ms,base_interval_ms);
+
+        } 
+		else
+        {
+            m_TimeStamp_Reset =getTimestamp();
+            rest_get_interval_ms = 0;
+        }
+    } 
+	else if(rsp.status_code == 429)
+    {
+        auto iter  = header.find("Retry-After");
+        if(iter != header.end())
+        {
+            rest_get_interval_ms = atoll(iter->second.c_str());
+        }
+		else
+		{
+			rest_get_interval_ms = base_interval_ms;
+		}
+    }
+    else if(rsp.status_code == 503)
+    {
+        rest_get_interval_ms =base_interval_ms;
+	}
+	else
+	{
+		rest_get_interval_ms = 0;
+	}
+	return getResponse(rsp.status_code, rsp.text, rsp.error.message, json);
+}
 
 //an error:
 /*
@@ -957,7 +952,7 @@ void TDEngineBitmex::get_account(AccountUnitBitmex& unit, Document& json)
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
 
-    return getResponse(response.status_code, response.text, response.error.message, json);
+    return handleResponse(response,json);
 }
 
 void TDEngineBitmex::get_products(AccountUnitBitmex& unit, Document& json)
@@ -996,7 +991,8 @@ void TDEngineBitmex::get_products(AccountUnitBitmex& unit, Document& json)
     KF_LOG_INFO(logger, "[get_products] (url) " << url  << " (response.status_code) " << response.status_code <<
                                                      " (response.error.message) " << response.error.message <<
                                                      " (response.text) " << response.text.c_str());
-    return getResponse(response.status_code, response.text, response.error.message, json);
+
+	return handleResponse(response, json);
 }
 
 //https://www.bitmex.com/api/explorer/#!/Order/Order_new
@@ -1093,7 +1089,7 @@ void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
     KF_LOG_INFO(logger, "[send_order] (url) " << url << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                               " (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
-    getResponse(response.status_code, response.text, response.error.message, json);
+	return handleResponse(response, json);
 }
 
 
@@ -1121,7 +1117,7 @@ void TDEngineBitmex::cancel_all_orders(AccountUnitBitmex& unit, Document& json)
     KF_LOG_INFO(logger, "[cancel_all_orders] (url) " << url  << " (response.status_code) " << response.status_code <<
                                                      " (response.error.message) " << response.error.message <<
                                                      " (response.text) " << response.text.c_str());
-    getResponse(response.status_code, response.text, response.error.message, json);
+	return handleResponse(response, json);
 }
 
 
@@ -1169,7 +1165,7 @@ void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, std::string orderId, 
     KF_LOG_INFO(logger, "[cancel_order] (url) " << url  << " (body) "<< body << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
-    getResponse(response.status_code, response.text, response.error.message, json);
+	return handleResponse(response, json);
 }
 
 

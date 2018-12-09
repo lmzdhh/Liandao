@@ -13,7 +13,7 @@
 #include "Timer.h"
 #include <document.h>
 #include <libwebsockets.h>
-
+#include <cpr/cpr.h>
 using rapidjson::Document;
 
 WC_NAMESPACE_START
@@ -42,8 +42,8 @@ struct PendingBitmexTradeStatus
 
 struct SendOrderFilter
 {
-    char_31 InstrumentID;   //合约代码
-    int ticksize; //for price round.
+    std::string InstrumentID;   //合约代码
+    double ticksize; //for price round.
     //...other
 };
 
@@ -135,10 +135,11 @@ private:
     void moveNewtoPending(AccountUnitBitmex& unit);
     static constexpr int scale_offset = 1e8;
 
-    int rest_get_interval_ms = 500;
-
-
+    int64_t rest_get_interval_ms = 0;
+    int64_t base_interval_ms=500;
     std::map<std::string, std::string> localOrderRefRemoteOrderId;
+    int m_limitRate_Remain = 0;
+    int64_t m_TimeStamp_Reset;
 
 
 //websocket
@@ -165,20 +166,20 @@ private:
     void cancel_all_orders(AccountUnitBitmex& unit, Document& json);
     void cancel_order(AccountUnitBitmex& unit, std::string orderId, Document& json);
 
-    void query_order(AccountUnitBitmex& unit, std::string code, std::string orderId, Document& json);
+    //void query_order(AccountUnitBitmex& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
-
+    void handleResponse(cpr::Response rsp, Document& json);
     std::string getLwsAuthReq(AccountUnitBitmex& unit);
     std::string getLwsSubscribe(AccountUnitBitmex& unit);
 
     inline int64_t getTimestamp();
 
-    int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
+    int64_t fixPriceTickSize(double keepPrecision, int64_t price, bool isBuy);
     bool loadExchangeOrderFilters(AccountUnitBitmex& unit, Document &doc);
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
-    SendOrderFilter getSendOrderFilter(AccountUnitBitmex& unit, const char *symbol);
-
+    SendOrderFilter getSendOrderFilter(AccountUnitBitmex& unit, const std::string& symbol);
+	bool ShouldRetry(const Document& json);
 };
 
 WC_NAMESPACE_END
