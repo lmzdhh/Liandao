@@ -1156,7 +1156,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         // on_rtn_order
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
-        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, ticker" << rtn_order.InstrumentID <<",curFilledCost:"<< cur_filledCost << ", curQuantity:" << cur_filled_quantity <<", requestId:" << rtn_order.RequestID);
+        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, ticker:" << rtn_order.InstrumentID <<",curFilledCost:"<< cur_filledCost << ", curQuantity:" << cur_filled_quantity <<", requestId:" << rtn_order.RequestID);
         if (cur_filled_quantity > 0.0)
         {
             double fixedPrice  = cur_filledCost / cur_filled_quantity;
