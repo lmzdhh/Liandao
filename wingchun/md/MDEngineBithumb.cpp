@@ -508,11 +508,11 @@ void MDEngineBithumb::GetAndHandleTradeResponse(const std::string& symbol, int l
 		    {
 			    trade.Price = std::stod(ele["price"].GetString()) * scale_offset;
 			    trade.Volume = std::stod(ele["units_traded"].GetString()) * scale_offset;
-			    str::string strTemp = ele["type"].GetString();
+			    std::string strTemp = ele["type"].GetString();
 			    trade.OrderBSFlag[0] = strTemp == "bid" ? 'B' : 'S';
 			    on_trade(&trade);
 
-			    KF_LOG_INFO(logger,"Trade:" << trade.Price << "," << trade.Volume << " type:" << strTemp << "," << trade.OrderBSFlag << std::endl);
+			    KF_LOG_INFO(logger,"Trade:" << trade.Price << "," << trade.Volume << " type:" << strTemp << "," << trade.OrderBSFlag << " last_trade_id:" << last_trade_id<< std::endl);
 		    }
 	    }
         }
