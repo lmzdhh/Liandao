@@ -452,11 +452,11 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
     if(has_update)
     {
         strcpy(md.InstrumentID, symbol.c_str());
-	    strcpy(md.ExchangeID, "bithumb");
-	//md.UpdateMillisec = last_rest_get_ts;
-	//KF_LOG_INFO(logger,"Bid:" << md.BidLevels[0].price << "," << md.BidLevels[0].volume << "  Ask:" << md.AskLevels[0].price << "," << md.AskLevels[0].volume << std::endl);
-	on_price_book_update(&md);
+	strcpy(md.ExchangeID, "bithumb");
         lastMD = md;
+	//md.UpdateMillisec = last_rest_get_ts;
+	KF_LOG_INFO(logger,"preBid:" << lastMD.BidLevels[0].price << "," << lastMD.BidLevels[0].volume << "  lapreAsk:" << lastMD.AskLevels[0].price << "," << lastMD.AskLevels[0].volume << " preBidLevelCount:" << lastMD.BidLevelCount << " preAskLevelCount:" << lastMD.AskLevelCount << std::endl);
+	on_price_book_update(&md);
     }
     else
     {
@@ -508,10 +508,11 @@ void MDEngineBithumb::GetAndHandleTradeResponse(const std::string& symbol, int l
 		    {
 			    trade.Price = std::stod(ele["price"].GetString()) * scale_offset;
 			    trade.Volume = std::stod(ele["units_traded"].GetString()) * scale_offset;
-			    trade.OrderBSFlag[0] = ele["type"].GetString() == "bid" ? 'B' : 'S';
+			    str::string strTemp = ele["type"].GetString();
+			    trade.OrderBSFlag[0] = strTemp == "bid" ? 'B' : 'S';
 			    on_trade(&trade);
 
-			    //KF_LOG_INFO(logger,"Trade:" << trade.Price << "," << trade.Volume << std::endl);
+			    KF_LOG_INFO(logger,"Trade:" << trade.Price << "," << trade.Volume << " type:" << strTemp << "," << trade.OrderBSFlag << std::endl);
 		    }
 	    }
         }
