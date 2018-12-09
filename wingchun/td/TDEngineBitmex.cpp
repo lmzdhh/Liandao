@@ -1345,7 +1345,7 @@ AccountUnitBitmex& TDEngineBitmex::findAccountUnitByWebsocketConn(struct lws * w
 
 
 void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
-    KF_LOG_ERROR(logger, "TDEngineBitmex::onOrder");
+	KF_LOG_INFO(logger, "TDEngineBitmex::onOrder");
 
     if (json.HasMember("data") && json["data"].IsArray()) {
 		AccountUnitBitmex &unit = findAccountUnitByWebsocketConn(conn);
@@ -1372,11 +1372,11 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 				rtn_order.OrderPriceType = GetPriceType(order["ordType"].GetString());
 			if (order.HasMember("orderQty"))
 				rtn_order.VolumeTotalOriginal = int64_t(order["orderQty"].GetDouble()*scale_offset);
-			if (order.HasMember("price"))
+			if (order.HasMember("price") && order["price"].IsNumber())
 				rtn_order.LimitPrice = order["price"].GetDouble()*scale_offset;
 			if (order.HasMember("cumQty"))
 				rtn_order.VolumeTotal = int64_t(order["cumQty"].GetDouble()*scale_offset);
-			KF_LOG_ERROR(logger, "TDEngineBitmex::onOrder,rtn_order");	
+			KF_LOG_INFO(logger, "TDEngineBitmex::onOrder,rtn_order");
 			on_rtn_order(&rtn_order);
 			raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
 				source_id, MSG_TYPE_LF_RTN_ORDER_BITMEX,
