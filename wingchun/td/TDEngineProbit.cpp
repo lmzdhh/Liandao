@@ -1069,13 +1069,13 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         //kungfu order
         OrderFieldEx& rtn_order = orderIter->second;
         rtn_order.remoteOrderRef = order["id"].GetString();
-        strncpy(rtn_order.OrderRef, getOrderRef(clientId).c_str(), sizeof(sizeof(rtn_order.OrderRef)) - 1);
+        strncpy(rtn_order.OrderRef, getOrderRef(clientId).c_str(), sizeof(rtn_order.OrderRef) - 1);
 
         if (!order.HasMember("market_id") || !order["market_id"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"market_id\"");
         }
-        strncpy(rtn_order.InstrumentID, order["market_id"].GetString(), sizeof(sizeof(rtn_order.InstrumentID)) - 1);
+        strncpy(rtn_order.InstrumentID, order["market_id"].GetString(), sizeof(rtn_order.InstrumentID) - 1);
 
         if (!order.HasMember("side") || !order["side"].IsString())
         {
@@ -1156,7 +1156,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         // on_rtn_order
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
-        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, curFilledCost:"<< cur_filledCost << ", curQuantity:" << cur_filled_quantity <<", requestId:" << rtn_order.RequestID);
+        KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, ticker" << rtn_order.InstrumentID <<",curFilledCost:"<< cur_filledCost << ", curQuantity:" << cur_filled_quantity <<", requestId:" << rtn_order.RequestID);
         if (cur_filled_quantity > 0.0)
         {
             double fixedPrice  = cur_filledCost / cur_filled_quantity;
@@ -1388,7 +1388,7 @@ int64_t TDEngineProbit::convert(const std::string &ticker, double price)
     auto filter = getSendOrderFilter(ticker);
     int  divisor = pow(10, 8 - filter.ticksize);
     price += pow(0.1, filter.ticksize+1);
-    int64_t dividend = price * 1e8;
+    int64_t dividend = price * scale_offset;
     return dividend / divisor * divisor;
 }
 
