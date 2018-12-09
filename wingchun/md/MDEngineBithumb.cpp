@@ -355,7 +355,7 @@ void MDEngineBithumb::GetAndHandleDepthResponse(const std::string& symbol, int l
 {
     std::string url = "https://api.bithumb.com/public/orderbook/";
     url += symbol;
-    const auto response = Get(Url{url.c_str()}, Parameters{{"group_orders", to_string(0)},
+    const auto response = Get(Url{url.c_str()}, Parameters{{"group_orders", to_string(1)},
                                                         {"count",  to_string(limit)}});
     
     Document d;
