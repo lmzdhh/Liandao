@@ -60,7 +60,6 @@
         "bch_btc": "BCH/BTC",
         "ltc_btc": "LTC/BTC",
         "bch_eth": "BCH/ETH",
-        "eth_btc": "ETH/BTC",
         "ltc_eth": "LTC/ETH"
       },
       "rest_get_interval_ms": 500
@@ -75,7 +74,6 @@
         "bch_btc": "tBCHBTC",
         "ltc_btc": "tLTCBTC",
         "bch_eth": "tBCHETH",
-        "eth_btc": "tETHBTC",
         "ltc_eth": "tLTCETH"
       },
       "rest_get_interval_ms": 500
@@ -102,7 +100,6 @@
         "bch_btc": "tBCHBTC",
         "ltc_btc": "tLTCBTC",
         "bch_eth": "tBCHETH",
-        "eth_btc": "tETHBTC",
         "ltc_eth": "tLTCETH"
       },
       "rest_get_interval_ms": 500

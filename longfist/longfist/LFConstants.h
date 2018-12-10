@@ -57,7 +57,7 @@ inline const char* get_str_from_source_index(exchange_source_index source)
         case SOURCE_OCEANEX:
             return "oceanex";
         case SOURCE_HUOBI:
-            return "HUOBI";
+            return "huobi";
         case SOURCE_PROBIT:
             return "probit";
         default:
@@ -276,6 +276,15 @@ const short MSG_TYPE_LF_ORDER_OCEANEX     = 25204;
 const short MSG_TYPE_LF_RTN_ORDER_OCEANEX = 25205;
 const short MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206;
 const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207;
+
+//HUOBI, idx=26
+const short MSG_TYPE_LF_MD_HUOBI = 26101;
+const short MSG_TYPE_LF_QRY_POS_HUOBI = 26201;
+const short MSG_TYPE_LF_RSP_POS_HUOBI = 26202;
+const short MSG_TYPE_LF_ORDER_HUOBI = 26204;
+const short MSG_TYPE_LF_RTN_ORDER_HUOBI = 26205;
+const short MSG_TYPE_LF_RTN_TRADE_HUOBI = 26206;
+const short MSG_TYPE_LF_ORDER_ACTION_HUOBI = 26207;
 
 //PROBIT, idx=28
 const short MSG_TYPE_LF_MD_PROBIT        	= 28101;
