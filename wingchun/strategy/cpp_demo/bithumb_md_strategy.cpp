@@ -140,7 +140,7 @@ void Strategy::on_l2_trade(const LFL2TradeField* data, short source, long rcv_ti
 {
     std::stringstream ss ;
     ss << "LCK RECV[on_l2_trade] (source)" << source << " (ticker)" << data->InstrumentID << std::endl
-	<< " Price[" << data->Price << "] /t Volume[" << data->Volume << "] /t OrderBSFlag["<< data->OrderBsFlag << "]" << std::endl;
+	<< " Price[" << data->Price << "] /t Volume[" << data->Volume << "] /t OrderBSFlag["<< data->OrderBSFlag << "]" << std::endl;
     std::cout << ss.str();
     KF_LOG_INFO(logger, ss.str());
 }
