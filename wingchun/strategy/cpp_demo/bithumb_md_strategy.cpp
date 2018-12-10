@@ -110,9 +110,28 @@ void Strategy::on_market_data(const LFMarketDataField* md, short source, long rc
 void Strategy::on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time)
 {
     std::stringstream ss;
-    ss << "LCK RECV[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID << std::endl
-        << " (bidcount)" << data->BidLevelCount << "(bidvolume)" << data->BidLevels[0].volume << "(bidprice)" << data->BidLevels[0].price << std::endl
-        << " (askcount)" << data->AskLevelCount << "(askvolume)" << data->AskLevels[0].volume << "(askprice)" << data->AskLevels[0].price << std::endl;
+    ss << "LCK RECV[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID << std::endl;
+    for(int i = 0 ; i < data->BidLevelCount || i < data->AskLevelCount; ++i)
+    {
+        if(i < data->BidLevelCount)
+        {
+            ss << "BidPrice" << i+1 << "["<< data->BidLevels[i].price<<"]/t BidVolume" << i+1 << "["<< data->BidLevels[i].volume <<"]";
+        }
+        else
+        {
+            ss << "-- -- /t -- --";
+        }
+        ss << "/t";
+        if( i < data->AskLevelCount)
+        { 
+            ss << "AskPrice" << i+1 << "[" << data->AskLevels[i].price <<"]/t AskVolume" << i+1 << "[" << data->AskLevels[i].volume << "]" << std::endl;
+        }
+        else
+        {
+             ss << "-- -- /t -- --" << std::endl;
+        } 
+    }
+       
     std::cout << ss.str();
     KF_LOG_INFO(logger, ss.str());
 }
@@ -121,7 +140,7 @@ void Strategy::on_l2_trade(const LFL2TradeField* data, short source, long rcv_ti
 {
     std::stringstream ss ;
     ss << "LCK RECV[on_l2_trade] (source)" << source << " (ticker)" << data->InstrumentID << std::endl
-	<< " (price)" << data->Price << " (Volume)" << data->Volume << " (OrderBSFlag)"<< data->OrderBsFlag << std::endl;
+	<< " Price[" << data->Price << "] /t Volume[" << data->Volume << "] /t OrderBSFlag["<< data->OrderBsFlag << "]" << std::endl;
     std::cout << ss.str();
     KF_LOG_INFO(logger, ss.str());
 }
