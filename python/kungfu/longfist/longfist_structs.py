@@ -628,7 +628,10 @@ DataFieldMap = {
 		'BrokerID': 'c11',
 		'MiscInfo': 'c30',
 		'StopPrice': 'd',
-	},
+        'MassOrderSeqId':'i64',
+        'MassOrderIndex':'i',
+        'MassOrderTotalNum':'i',
+    },
 	'LFRtnOrderField': {
 		'InstrumentID': 'c31',
 		'ExchangeID': 'c11',
