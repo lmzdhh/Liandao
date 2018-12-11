@@ -176,6 +176,7 @@
               "order_insert_recvwindow_ms": 5000,
               "order_action_recvwindow_ms": 5000,
               "order_count_per_second": 5,
+              "request_weight_per_minute": 1000,
               "max_rest_retry_times":3,
               "retry_interval_milliseconds": 1000,
               "rest_get_interval_ms": 2000,

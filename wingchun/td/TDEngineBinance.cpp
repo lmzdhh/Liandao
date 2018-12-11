@@ -107,6 +107,11 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (order_count_per_second)" << order_count_per_second);
 
+    if(j_config.find("request_weight_per_minute") != j_config.end()) {
+        request_weight_per_minute = j_config["request_weight_per_minute"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (request_weight_per_minute)" << request_weight_per_minute);
+
     if(j_config.find("max_rest_retry_times") != j_config.end()) {
         max_rest_retry_times = j_config["max_rest_retry_times"].get<int>();
     }
@@ -1426,6 +1431,8 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
             return;
         }
 
+        //request_weight_handle(NewOrder_Type)
+
         response = Post(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
                                   Body{body}, Timeout{100000});
@@ -1470,46 +1477,77 @@ bool TDEngineBinance::order_count_over_limit()
 {
     if (order_total_count >= 10000)
     {
+        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " over 10000/day limit!");
         return true;
     }
-    static std::queue<long long>time_queue;
-    static uint64_t order_count = 0;
-    static long long startTime = 0;
-
-    order_count++;
-    order_total_count++;
+    
+    static std::queue<long long> time_queue;
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    time_queue.push(timestamp);
-    if (startTime == 0)
-    {            
-        startTime = time_queue.front();
-        time_queue.pop();
+    if (time_queue.size() <= 0)
+    {
+        time_queue.push(timestamp);
+        order_total_count++;
+        return false;
     }
 
+    long long startTime = time_queue.front();
     int order_time_diff_ms = timestamp - startTime;
-    if (order_time_diff_ms >= 1000)
+    KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_time_diff_ms)" << order_time_diff_ms 
+        << " (time_queue.size)" << time_queue.size()
+        << " (order_total_count)" << order_total_count
+        << " (order_count_per_second)" << order_count_per_second);
+    
+    if (order_time_diff_ms < 1000)
     {
-        //move receive window to next step
-        startTime = time_queue.front();
-        time_queue.pop();
-        order_count--;
-    }
-    else
-    {
-        if(order_count >= order_count_per_second)
+        //in second        
+        if(time_queue.size() < order_count_per_second)
         {
-            //over limit count,sleep,move receive window to next step
-            usleep(1000 - order_time_diff_ms);
-            startTime = time_queue.front();
-            time_queue.pop();
-            order_count--;
+            //do not reach limit in second
+            time_queue.push(timestamp);
+            order_total_count++;
+            return false;
         }
-        
-        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_time_diff_ms)" << order_time_diff_ms << " (order_total_count)" << order_total_count);
-    }    
+
+        //reach limit in second/over limit count, sleep
+        usleep(1000000 - order_time_diff_ms * 1000);
+        timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    //move receive window to next step
+    time_queue.pop();
+    time_queue.push(timestamp);
+    order_total_count++;
     return false;
 }
 
+bool TDEngineBinance::request_weight_handle(RequestWeightType type)
+{
+    static int request_weight_count = 0;
+    if (request_weight_per_minute >= 1200)
+    {
+        return true;
+    }
+
+    switch(type)
+    {
+        case NewOrder_Type:
+            request_weight_count++;
+            break;
+        case CancelOrder_Type:
+            request_weight_count++;
+            break;
+        case OpenOrder_Type:
+            request_weight_count++;
+            break;
+        case TradeList_Type:
+            request_weight_count = request_weight_count + 5;
+            break;
+        default:
+            break;
+    }
+    
+    return false;
+}
 
 void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json)
 {
@@ -1615,6 +1653,8 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
             return;
         }
 
+        //request_weight_handle(CancelOrder_Type)
+
         response = Delete(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
                                   Body{body}, Timeout{100000});
@@ -1674,6 +1714,8 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 
     string url = requestPath + queryString;
 
+    //request_weight_handle(TradeList_Type)
+
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
                               Body{body}, Timeout{100000});
@@ -1729,6 +1771,8 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
     queryString.append( signature );
 
     string url = requestPath + queryString;
+
+    //request_weight_handle(OpenOrder_Type)
 
     const auto response = Get(Url{url},
                                  Header{{"X-MBX-APIKEY", unit.api_key}},
