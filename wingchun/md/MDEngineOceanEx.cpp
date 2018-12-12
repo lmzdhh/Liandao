@@ -38,8 +38,6 @@ USING_WC_NAMESPACE
 
 static MDEngineOceanEx* global_md = nullptr;
 
-KfLogPtr logger1 =  yijinjing::KfLog::getLogger("MdEngine.OceanEx");
-
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
 
@@ -83,7 +81,6 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
                std:: stringstream ss;
                 ss << "connection_error:" << (char*)in << std::endl;
                 std::cout << ss.str();
-                KF_LOG_ERROR(logger1,ss.str());
             }
  			if(global_md)
 			{
