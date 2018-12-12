@@ -31,7 +31,7 @@ include_directories(${CMAKE_SOURCE_DIR}/utils/cpr/include ${CMAKE_SOURCE_DIR}/ut
 
 SET(BINANCE_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBinance.cpp TDEngineBinance.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h ../base/InterfaceMgr.cpp ../base/InterfaceMgr.h)
 ADD_LIBRARY(binancetd SHARED ${BINANCE_SOURCE_FILES})
-TARGET_LINK_LIBRARIES(binancetd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib2/libcpr.a ${CMAKE_SOURCE_DIR}/utils/cpr/lib2/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
+TARGET_LINK_LIBRARIES(binancetd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
 INSTALL(TARGETS binancetd DESTINATION "lib/wingchun")
 
 
