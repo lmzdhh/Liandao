@@ -18,6 +18,8 @@
 #include "cpr/timeout.h"
 #include "cpr/low_speed.h"
 #include "cpr/ssl_options.h"
+#include "cpr/interface.h"
+
 
 namespace cpr {
 
@@ -46,6 +48,7 @@ class Session {
     void SetBody(const Body& body);
     void SetLowSpeed(const LowSpeed& low_speed);
     void SetVerifySsl(const VerifySsl& verify);
+    void SetInterface(const Interface& interface);
 
     // Used in templated functions
     void SetOption(const Url& url);
@@ -68,6 +71,7 @@ class Session {
     void SetOption(const Body& body);
     void SetOption(const LowSpeed& low_speed);
     void SetOption(const VerifySsl& verify);
+    void SetOption(const Interface& interface);
 
     Response Delete();
     Response Get();
