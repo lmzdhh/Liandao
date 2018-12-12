@@ -78,7 +78,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		{
             if(in)
             {
-                stringstream ss;
+               std:: stringstream ss;
                 ss << "connection_error:" << (char*)in << std::endl;
                 std::cout << ss.str();
                 KF_LOG_ERROR(logger,ss.str());
