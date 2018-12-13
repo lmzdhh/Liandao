@@ -165,9 +165,9 @@ std::string makeMarketSub(const std::string& strCode,int nDepthCount)
         writer.Key("data");
         writer.StartObject();
         writer.Key("channel");
-        std::stringstream ss;
-        ss << "market-"  << strCode << "-" << nDepthCount << "global";
-        writer.String(ss.str());
+        char buf[128] = {0};
+        sprintf(buf,"market-%s-%d-global",strCode.c_str(),nDepthCount);
+        writer.String(buf);
         writer.EndObject();
         writer.EndObject();
         return s.GetString();
@@ -183,9 +183,9 @@ std::string makeTradeSub(const std::string& strCode)
         writer.Key("data");
         writer.StartObject();
         writer.Key("channel");
-        std::stringstream ss;
-        ss << "market-"  << strCode << "-trade-global";
-        writer.String(ss.str());
+        char buf[128] = {0};
+        sprintf(buf,"market-%s-trade-global",strCode.c_str());
+        writer.String(buf);
         writer.EndObject();
         writer.EndObject();
         return s.GetString();
