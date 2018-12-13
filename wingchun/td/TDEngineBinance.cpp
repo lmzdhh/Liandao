@@ -1450,7 +1450,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
         }
 
         //request_weight_handle(NewOrder_Type)
-		string interface = InterfaceMgr.getActiveInterface();
+		string interface = m_interfaceMgr.getActiveInterface();
         response = Post(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
                                   Body{body}, Timeout{100000}, Interface{interface});
@@ -1607,7 +1607,7 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
 
     string url = requestPath + queryString;
 
-	string interface = InterfaceMgr.getActiveInterface();
+	string interface = m_interfaceMgr.getActiveInterface();
 
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
@@ -1681,7 +1681,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
         }
 
         //request_weight_handle(CancelOrder_Type)
-		string interface = InterfaceMgr.getActiveInterface();
+		string interface = m_interfaceMgr.getActiveInterface();
 
         response = Delete(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
@@ -1747,7 +1747,7 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 
     //request_weight_handle(TradeList_Type)
 
-	string interface = InterfaceMgr.getActiveInterface();
+	string interface = m_interfaceMgr.getActiveInterface();
 
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
@@ -1810,7 +1810,7 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
     string url = requestPath + queryString;
 
     //request_weight_handle(OpenOrder_Type)
-	string interface = InterfaceMgr.getActiveInterface();
+	string interface = m_interfaceMgr.getActiveInterface();
 
     const auto response = Get(Url{url},
                                  Header{{"X-MBX-APIKEY", unit.api_key}},
