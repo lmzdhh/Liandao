@@ -26,6 +26,7 @@ using cpr::Parameters;
 using cpr::Payload;
 using cpr::Post;
 using cpr::Timeout;
+using cpr::Interface;
 
 using rapidjson::StringRef;
 using rapidjson::Writer;
@@ -41,7 +42,11 @@ using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
+
+#define HTTP_CONNECT_REFUSED 429
+
 USING_WC_NAMESPACE
+
 
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
 {
@@ -77,6 +82,19 @@ void TDEngineBinance::resize_accounts(int account_num)
 TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
+
+	string interfaces;
+	int interface_timeout = 0;
+	if(j_config.find("interfaces") != j_config.end()) {
+		interfaces = j_config["interfaces"].get<string>();
+	}
+
+	if(j_config.find("interface_timeout") != j_config.end()) {
+		interface_timeout = j_config["interface_timeout"].get<int>();
+	}
+	m_interfaceMgr.init(interfaces, interface_timeout);
+	m_interfaceMgr.print();
+	
     // internal load
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
@@ -1432,10 +1450,10 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
         }
 
         //request_weight_handle(NewOrder_Type)
-
+		string interface = InterfaceMgr.getActiveInterface();
         response = Post(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
-                                  Body{body}, Timeout{100000});
+                                  Body{body}, Timeout{100000}, Interface{interface});
 
         KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                          " (response.error.message) " << response.error.message <<
@@ -1451,7 +1469,10 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
                                                                          " (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
-
+	if (response.status_code == HTTP_CONNECT_REFUSED) {
+		m_interfaceMgr.disable(interface);
+	}
+	
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1586,13 +1607,19 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
 
     string url = requestPath + queryString;
 
+	string interface = InterfaceMgr.getActiveInterface();
+
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
+                              Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                               " (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
+
+	if (response.status_code == HTTP_CONNECT_REFUSED) {
+		m_interfaceMgr.disable(interface);
+	}
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1654,10 +1681,11 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
         }
 
         //request_weight_handle(CancelOrder_Type)
+		string interface = InterfaceMgr.getActiveInterface();
 
         response = Delete(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
-                                  Body{body}, Timeout{100000});
+                                  Body{body}, Timeout{100000}, Interface{interface});
 
         KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                  " (response.error.message) " << response.error.message <<
@@ -1674,6 +1702,9 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
                                                                          " (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
+	if (response.status_code == HTTP_CONNECT_REFUSED) {
+		m_interfaceMgr.disable(interface);	
+	}
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1716,13 +1747,19 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 
     //request_weight_handle(TradeList_Type)
 
+	string interface = InterfaceMgr.getActiveInterface();
+
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
+                              Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_my_trades] (url) " << url << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
+
+	if (response.status_code == HTTP_CONNECT_REFUSED) {
+		m_interfaceMgr.disable(interface);	
+	}
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1773,10 +1810,11 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
     string url = requestPath + queryString;
 
     //request_weight_handle(OpenOrder_Type)
+	string interface = InterfaceMgr.getActiveInterface();
 
     const auto response = Get(Url{url},
                                  Header{{"X-MBX-APIKEY", unit.api_key}},
-                                 Body{body}, Timeout{100000});
+                                 Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response.status_code) " << response.status_code <<
                                                  " (response.error.message) " << response.error.message <<
@@ -1801,6 +1839,11 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
       }
     ]
      * */
+
+	if (response.status_code == HTTP_CONNECT_REFUSED) {
+		m_interfaceMgr.disable(interface);	
+	}
+
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 

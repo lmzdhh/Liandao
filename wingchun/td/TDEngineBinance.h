@@ -5,6 +5,7 @@
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
 #include "CoinPairWhiteList.h"
+#include "InterfaceMgr.h"
 #include <vector>
 #include <algorithm>
 #include <iomanip>
@@ -110,6 +111,7 @@ private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
     vector<AccountUnitBinance> account_units;
+	InterfaceMgr m_interfaceMgr;
 
     std::string GetSide(const LfDirectionType& input);
     LfDirectionType GetDirection(std::string input);
