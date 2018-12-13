@@ -162,6 +162,8 @@
           {
             "info":
             {
+			  "interfaces": "10.0.0.22-10.0.0.104",
+			  "interface_timeout": 30,
               "APIKey": "your-api-key",
               "SecretKey": "your-secret-key",
               "whiteLists":{
