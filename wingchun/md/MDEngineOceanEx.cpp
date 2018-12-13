@@ -226,11 +226,11 @@ void MDEngineOceanEx::readWhiteLists(const json& j_config)
 
 				}
                 */
-                    std::string strMarketSub = makeMarketSub(it->second,book_depth_count);
-                    websocketSubscribeJsonString.push_back(std::move(strMarketSub);
+                    std::string strMarketSub = makeMarketSub(it.value,book_depth_count);
+                    websocketSubscribeJsonString.push_back(std::move(strMarketSub));
                     KF_LOG_INFO(logger, "[MDEngineOceanEx::readWhiteLists] makeMarketSub: " << strMarketSub);
-                    std::string strTradeSub = makeTradeSub(it->second);
-                    websocketSubscribeJsonString.push_back(std::move(strTradeSub);
+                    std::string strTradeSub = makeTradeSub(it.value);
+                    websocketSubscribeJsonString.push_back(std::move(strTradeSub));
                      KF_LOG_INFO(logger, "[MDEngineOceanEx::readWhiteLists] makeTradeSub: " << strTradeSub);
 			}
 		}
@@ -387,9 +387,9 @@ void MDEngineOceanEx::login(long timeout_nsec)
 	clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
 	clientConnectInfo.pwsi = &wsi;
 
-	KF_LOG_INFO(logger, "MDEngineOceanEx::login:" << "Connecting to " << urlProtocol << ":" <<
-												  clientConnectInfo.host << ":" <<
-												  clientConnectInfo.port << ":" << urlPath);
+	//KF_LOG_INFO(logger, "MDEngineOceanEx::login:" << "Connecting to " << urlProtocol << ":" <<
+	//											  clientConnectInfo.host << ":" <<
+	//											  clientConnectInfo.port << ":" << urlPath);
 
 	wsi = lws_client_connect_via_info(&clientConnectInfo);
 	if (wsi == NULL) {
