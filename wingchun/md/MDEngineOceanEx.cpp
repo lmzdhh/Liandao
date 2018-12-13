@@ -226,10 +226,10 @@ void MDEngineOceanEx::readWhiteLists(const json& j_config)
 
 				}
                 */
-                    std::string strMarketSub = makeMarketSub(it.value,book_depth_count);
+                    std::string strMarketSub = makeMarketSub(it.value(),book_depth_count);
                     websocketSubscribeJsonString.push_back(std::move(strMarketSub));
                     KF_LOG_INFO(logger, "[MDEngineOceanEx::readWhiteLists] makeMarketSub: " << strMarketSub);
-                    std::string strTradeSub = makeTradeSub(it.value);
+                    std::string strTradeSub = makeTradeSub(it.value());
                     websocketSubscribeJsonString.push_back(std::move(strTradeSub));
                      KF_LOG_INFO(logger, "[MDEngineOceanEx::readWhiteLists] makeTradeSub: " << strTradeSub);
 			}
