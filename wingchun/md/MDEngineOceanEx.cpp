@@ -260,7 +260,7 @@ void MDEngineOceanEx::login(long timeout_nsec)
 	KF_LOG_INFO(logger, "MDEngineOceanEx::login:");
 	global_md = this;
 
-	char inputURL[300] = "wss://websocket.coinmex.com";
+	char inputURL[300] = "wss://ws-slanger.oceanex.pro/app";
 	int inputPort = 8443;
 	const char *urlProtocol, *urlTempPath;
 	char urlPath[300];
