@@ -316,10 +316,10 @@ void MDEngineOceanEx::login(long timeout_nsec)
 	KF_LOG_INFO(logger, "MDEngineOceanEx::login:");
 	global_md = this;
 	int inputPort = 8443;
-	const char *urlProtocol, *urlTempPath;
+	//const char *urlProtocol, *urlTempPath;
 	int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
     std::string urlPath = "wss://ws-slanger.oceanex.pro/app/03e22cd99036bbfee126ce6b9725?protocol=7&version=4.3.1&flash=false&client=js";	
-
+  
 	struct lws_context_creation_info ctxCreationInfo;
 	struct lws_client_connect_info clientConnectInfo;
 	struct lws *wsi = NULL;
@@ -328,26 +328,24 @@ void MDEngineOceanEx::login(long timeout_nsec)
 	memset(&ctxCreationInfo, 0, sizeof(ctxCreationInfo));
 	memset(&clientConnectInfo, 0, sizeof(clientConnectInfo));
 
-	clientConnectInfo.port = 8443;
-
-	if (lws_parse_uri(urlPath.c_str(), &urlProtocol, &clientConnectInfo.address, &clientConnectInfo.port, &urlTempPath))
-	{
-		KF_LOG_ERROR(logger, "MDEngineOceanEx::connect: Couldn't parse URL. Please check the URL and retry: " << urlPath.c_str());
-		return;
-	}
+	//if (lws_parse_uri(urlPath.c_str(), &urlProtocol, &clientConnectInfo.address, &clientConnectInfo.port, &urlTempPath))
+	//{
+	//	KF_LOG_ERROR(logger, "MDEngineOceanEx::connect: Couldn't parse URL. Please check the URL and retry: " << urlPath.c_str());
+	//	return;
+	//}
 
 	// Fix up the urlPath by adding a / at the beginning, copy the temp path, and add a \0     at the end
 	
-    clientConnectInfo.path = urlPath.c_str(); // Set the info's path to the fixed up url path
-
+    
+/*
 	KF_LOG_INFO(logger, "MDEngineOceanEx::login:" << "urlProtocol=" << urlProtocol <<
 												  "address=" << clientConnectInfo.address <<
 												  "urlTempPath=" << urlTempPath <<
 												  "urlPath=" << urlPath);
-
+*/
 	ctxCreationInfo.port = CONTEXT_PORT_NO_LISTEN;
 	ctxCreationInfo.iface = NULL;
-	ctxCreationInfo.protocols = &protocol;
+	ctxCreationInfo.protocols = protocols;
 	ctxCreationInfo.ssl_cert_filepath = NULL;
 	ctxCreationInfo.ssl_private_key_filepath = NULL;
 	ctxCreationInfo.extensions = NULL;
@@ -378,11 +376,13 @@ void MDEngineOceanEx::login(long timeout_nsec)
 	}
 
 	// Set up the client creation info
+    clientConnectInfo.address = "ws-slanger.oceanex.pro";
+    clientConnectInfo.path = "/app/03e22cd99036bbfee126ce6b9725?protocol=7&version=4.3.1&flash=false&client=js"; // Set the info's path to the fixed up url path
 	clientConnectInfo.context = context;
 	clientConnectInfo.port = 8443;
 	clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-	clientConnectInfo.host = clientConnectInfo.address;
-	clientConnectInfo.origin = clientConnectInfo.address;
+	clientConnectInfo.host = lws_canonical_hostname( context );
+	clientConnectInfo.origin = "origin";
 	clientConnectInfo.ietf_version_or_minus_one = -1;
 	clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
 	clientConnectInfo.pwsi = &wsi;
