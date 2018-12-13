@@ -40,22 +40,26 @@ static MDEngineOceanEx* global_md = nullptr;
 
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
-
+    std::stringstream ss;
+    ss << "lws_callback,reason=" << reason << ",";
 	switch( reason )
 	{
 		case LWS_CALLBACK_CLIENT_ESTABLISHED:
 		{
-			std::cout << "callback client established, reason = " << reason << std::endl;
+            ss << "established.";
+            global_md->writeErrorLog(ss.str());
 			lws_callback_on_writable( wsi );
 			break;
 		}
 		case LWS_CALLBACK_PROTOCOL_INIT:{
-			std::cout << "init, reason = " << reason << std::endl;
+			 ss << "init.";
+            global_md->writeErrorLog(ss.str());
 			break;
 		}
 		case LWS_CALLBACK_CLIENT_RECEIVE:
 		{
-			std::cout << "on data, reason = " << reason << std::endl;
+		     ss << "on_data.";
+            global_md->writeErrorLog(ss.str());
 			if(global_md)
 			{
 				global_md->on_lws_data(wsi, (const char*)in, len);
@@ -64,7 +68,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		}
 		case LWS_CALLBACK_CLIENT_WRITEABLE:
 		{
-			std::cout << "writeable, reason = " << reason << std::endl;
+		     ss << "writeable.";
+            global_md->writeErrorLog(ss.str());
 			int ret = 0;
 			if(global_md)
 			{
@@ -74,14 +79,15 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 			break;
 		}
 		case LWS_CALLBACK_CLOSED:
+        {
+             ss << "close.";
+            global_md->writeErrorLog(ss.str());
+            break;
+        }
 		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
 		{
-            if(in)
-            {
-               std:: stringstream ss;
-                ss << "connection_error:" << (char*)in << std::endl;
-                std::cout << ss.str();
-            }
+            ss << "connect_error.";
+            global_md->writeErrorLog(ss.str());
  			if(global_md)
 			{
 				global_md->on_lws_connection_error(wsi);
@@ -122,11 +128,17 @@ MDEngineOceanEx::MDEngineOceanEx(): IMDEngine(SOURCE_OCEANEX)
     logger = yijinjing::KfLog::getLogger("MdEngine.OceanEx");
 }
 
+void MDEngineOceanEx::writeErrorLog(std::string strError)
+{
+    KF_LOG_ERROR(logger, strError);
+}
+
 void MDEngineOceanEx::load(const json& j_config)
 {
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineOceanEx:: rest_get_interval_ms: " << rest_get_interval_ms);
-
+    book_depth_count = j_config["book_depth_count"].get<int>();
+    KF_LOG_INFO(logger, "MDEngineOceanEx:: book_depth_count: " << book_depth_count);
     readWhiteLists(j_config);
 
     debug_print(subscribeCoinBaseQuote);
@@ -143,6 +155,42 @@ void MDEngineOceanEx::load(const json& j_config)
     }
 }
 
+std::string makeMarketSub(const std::string& strCode,int nDepthCount)
+{
+        StringBuffer s;
+        Writer<StringBuffer> writer(s);
+        writer.StartObject();
+        writer.Key("event");
+        writer.String("pusher:subscribe");
+        writer.Key("data");
+        writer.StartObject();
+        writer.Key("channel");
+        std::stringstream ss;
+        ss << "market-"  << strCode << "-" << nDepthCount << "global";
+        writer.String(ss.str());
+        writer.EndObject();
+        writer.EndObject();
+        return s.GetString();
+}
+
+std::string makeTradeSub(const std::string& strCode)
+{
+        StringBuffer s;
+        Writer<StringBuffer> writer(s);
+        writer.StartObject();
+        writer.Key("event");
+        writer.String("pusher:subscribe");
+        writer.Key("data");
+        writer.StartObject();
+        writer.Key("channel");
+        std::stringstream ss;
+        ss << "market-"  << strCode << "-trade-global";
+        writer.String(ss.str());
+        writer.EndObject();
+        writer.EndObject();
+        return s.GetString();
+}
+
 void MDEngineOceanEx::readWhiteLists(const json& j_config)
 {
 	KF_LOG_INFO(logger, "[readWhiteLists]");
@@ -154,7 +202,8 @@ void MDEngineOceanEx::readWhiteLists(const json& j_config)
 		if(whiteLists.is_object())
 		{
 			for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
-				std::string strategy_coinpair = it.key();
+				/*
+                std::string strategy_coinpair = it.key();
 				std::string exchange_coinpair = it.value();
 				KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
 				keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
@@ -176,6 +225,13 @@ void MDEngineOceanEx::readWhiteLists(const json& j_config)
                     websocketSubscribeJsonString.push_back(jsonFillsString);
 
 				}
+                */
+                    std::string strMarketSub = makeMarketSub(it->second,book_depth_count);
+                    websocketSubscribeJsonString.push_back(std::move(strMarketSub);
+                    KF_LOG_INFO(logger, "[MDEngineOceanEx::readWhiteLists] makeMarketSub: " << strMarketSub;
+                    std::string strTradeSub = makeTradeSub(it->second);
+                    websocketSubscribeJsonString.push_back(std::move(strTradeSub);
+                     KF_LOG_INFO(logger, "[MDEngineOceanEx::readWhiteLists] makeTradeSub: " << strTradeSub;
 			}
 		}
 	}
@@ -259,13 +315,10 @@ void MDEngineOceanEx::login(long timeout_nsec)
 {
 	KF_LOG_INFO(logger, "MDEngineOceanEx::login:");
 	global_md = this;
-
-	char inputURL[300] = "wss://ws-slanger.oceanex.pro/app";
 	int inputPort = 8443;
 	const char *urlProtocol, *urlTempPath;
-	char urlPath[300];
 	int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
-
+    std::string urlPath = "wss://ws-slanger.oceanex.pro/app/03e22cd99036bbfee126ce6b9725?protocol=7&version=4.3.1&flash=false&client=js";	
 
 	struct lws_context_creation_info ctxCreationInfo;
 	struct lws_client_connect_info clientConnectInfo;
@@ -277,17 +330,15 @@ void MDEngineOceanEx::login(long timeout_nsec)
 
 	clientConnectInfo.port = 8443;
 
-	if (lws_parse_uri(inputURL, &urlProtocol, &clientConnectInfo.address, &clientConnectInfo.port, &urlTempPath))
+	if (lws_parse_uri(urlPath.c_str(), &urlProtocol, &clientConnectInfo.address, &clientConnectInfo.port, &urlTempPath))
 	{
-		KF_LOG_ERROR(logger, "MDEngineOceanEx::connect: Couldn't parse URL. Please check the URL and retry: " << inputURL);
+		KF_LOG_ERROR(logger, "MDEngineOceanEx::connect: Couldn't parse URL. Please check the URL and retry: " << urlPath.c_str());
 		return;
 	}
 
 	// Fix up the urlPath by adding a / at the beginning, copy the temp path, and add a \0     at the end
-	urlPath[0] = '/';
-	strncpy(urlPath + 1, urlTempPath, sizeof(urlPath) - 2);
-	urlPath[sizeof(urlPath) - 1] = '\0';
-	clientConnectInfo.path = urlPath; // Set the info's path to the fixed up url path
+	
+    clientConnectInfo.path = urlPath.c_str(); // Set the info's path to the fixed up url path
 
 	KF_LOG_INFO(logger, "MDEngineOceanEx::login:" << "urlProtocol=" << urlProtocol <<
 												  "address=" << clientConnectInfo.address <<

@@ -77,7 +77,7 @@ public:
     void on_lws_data(struct lws* conn, const char* data, size_t len);
     void on_lws_connection_error(struct lws* conn);
     int lws_write_subscribe(struct lws* conn);
-
+    void writeErrorLog(std::string strError);
 private:
     void onDepth(Document& json);
     void onTickers(Document& json);
@@ -98,7 +98,7 @@ private:
     bool logged_in = false;
 
     int rest_get_interval_ms = 500;
-
+    int book_depth_count = 5;
     static constexpr int scale_offset = 1e8;
 
     struct lws_context *context = nullptr;
