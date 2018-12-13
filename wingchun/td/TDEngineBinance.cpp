@@ -1368,6 +1368,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 {
     KF_LOG_INFO(logger, "[send_order]");
 
+	string interface;
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
@@ -1450,7 +1451,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
         }
 
         //request_weight_handle(NewOrder_Type)
-		string interface = m_interfaceMgr.getActiveInterface();
+		interface = m_interfaceMgr.getActiveInterface();
         response = Post(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
                                   Body{body}, Timeout{100000}, Interface{interface});
@@ -1631,6 +1632,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
+	string interface;
     do {
         should_retry = false;
 
@@ -1681,7 +1683,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
         }
 
         //request_weight_handle(CancelOrder_Type)
-		string interface = m_interfaceMgr.getActiveInterface();
+		interface = m_interfaceMgr.getActiveInterface();
 
         response = Delete(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
