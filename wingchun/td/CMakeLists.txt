@@ -27,7 +27,7 @@ SET(TD_SOURCE_FILES  ITDEngine.cpp ITDEngine.h ../base/IEngine.cpp ../base/IEngi
 #TARGET_LINK_LIBRARIES(xtptd journal kflog xtptraderapi ${Boost_LIBRARIES})
 #INSTALL(TARGETS xtptd DESTINATION "lib/wingchun")
 
-include_directories(${CMAKE_SOURCE_DIR}/utils/cpr/include ${CMAKE_SOURCE_DIR}/utils/rapidjson/include/ ${CMAKE_SOURCE_DIR}/utils/libwebsockets/include)
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/utils/cpr/include ${CMAKE_SOURCE_DIR}/utils/rapidjson/include/ ${CMAKE_SOURCE_DIR}/utils/libwebsockets/include)
 
 SET(BINANCE_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBinance.cpp TDEngineBinance.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
 ADD_LIBRARY(binancetd SHARED ${BINANCE_SOURCE_FILES})
@@ -69,4 +69,10 @@ INSTALL(TARGETS hitbtctd DESTINATION "lib/wingchun")
 SET(OCEANEX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineOceanEx.cpp TDEngineOceanEx.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
 ADD_LIBRARY(oceanextd SHARED ${OCEANEX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(oceanextd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS oceanextd DESTINATION "lib/wingchun")
+
+SET(PROBIT_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineProbit.cpp TDEngineProbit.h  ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
+ADD_LIBRARY(probittd SHARED ${PROBIT_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(probittd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS probittd DESTINATION "lib/wingchun")
 INSTALL(TARGETS oceanextd DESTINATION "lib/wingchun")

@@ -82,7 +82,7 @@ void ITDEngine::listening()
             short msg_type = frame->getMsgType();
             short msg_source = frame->getSource();
             cur_time = frame->getNano();
-            KF_LOG_INFO(logger, "[ITDEngine::listening] (msg_type)" << msg_type << " (cur_time)" << cur_time);
+            KF_LOG_DEBUG(logger, "[ITDEngine::listening] (msg_type)" << msg_type <<" (msg_source)"<< msg_source << " (cur_time)" << cur_time);
             if (msg_type == MSG_TYPE_LF_MD)
             {
                 void* fdata = frame->getData();
@@ -101,9 +101,13 @@ void ITDEngine::listening()
                         json j_request = json::parse(content);
                         string client_name = j_request["name"].get<string>();
                         if (add_client(client_name, j_request))
+                        {
                             KF_LOG_INFO(logger, "[user] Accepted: " << client_name);
+                        }
                         else
+                        {
                             KF_LOG_INFO(logger, "[user] Rejected: " << client_name);
+                        }
                     }
                     catch (...)
                     {
@@ -118,7 +122,9 @@ void ITDEngine::listening()
                         json j_request = json::parse(content);
                         string client_name = j_request["name"].get<string>();
                         if (remove_client(client_name, j_request))
+                        {
                             KF_LOG_INFO(logger, "[user] Removed: " << client_name);
+                        }
                     }
                     catch (...)
                     {
@@ -135,8 +141,7 @@ void ITDEngine::listening()
                         user_helper->set_pos(client_name, j_request);
                         clients[client_name].pos_handler = PosHandler::create(source_id, content);
                         clients[client_name].pos_handler->set_fee(accounts[clients[client_name].account_index].fee_handler);
-                        KF_LOG_INFO(logger, "[user] set pos: (client)" << client_name
-                                                                       << " (pos)" << clients[client_name].pos_handler->to_string());
+                        KF_LOG_DEBUG(logger, "[user] set pos: (client)" << client_name << " (pos)" << clients[client_name].pos_handler->to_string());
                     }
                     catch (...)
                     {
@@ -176,12 +181,15 @@ void ITDEngine::listening()
                 string name = reader->getFrameName();
                 auto iter = clients.find(name);
                 if (iter == clients.end())
+                {
+                    KF_LOG_DEBUG(logger, "[ITDEngine::listening] (msg_type)" << msg_type << " (cur_time)" << cur_time << "can not find (name)" << name);
                     continue;
+                }
 
                 void* fdata = frame->getData();
                 int requestId = frame->getRequestId();
                 int idx = iter->second.account_index;
-                KF_LOG_INFO(logger, "[ITDEngine::listening] (msg_type)" << msg_type << " (cur_time)" << cur_time << " (requestId)" << requestId << " (name)" << name << " (idx)" << idx);
+                KF_LOG_DEBUG(logger, "[ITDEngine::listening] (msg_type)" << msg_type << " (cur_time)" << cur_time << " (requestId)" << requestId << " (name)" << name << " (idx)" << idx);
                 switch (msg_type)
                 {
                     case MSG_TYPE_LF_QRY_POS:
@@ -226,8 +234,9 @@ void ITDEngine::listening()
                             strcpy(order->OrderRef, order_ref.c_str());
                             KF_LOG_DEBUG(logger, "[cancel_order] (rid)" << order_id << " (ticker)" << order->InstrumentID << " (ref)" << order_ref << "(local_id_order_action)" << local_id_order_action);
                             req_order_action(order, idx, requestId, cur_time);
+                            break;
                         }
-                        break;
+                        KF_LOG_DEBUG(logger, "[cancel_order] can not find orderRef by (rid)" << order_id << " (ticker)" << order->InstrumentID);
                     }
                     case MSG_TYPE_LF_QRY_ACCOUNT:
                     {
@@ -299,8 +308,7 @@ void ITDEngine::on_rsp_order_action(const LFOrderActionField *action, int reques
     if (errorId == 0)
     {
         writer->write_frame(action, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION, true, requestId);
-        KF_LOG_DEBUG(logger, "[RspAction]" << " (rid)" << requestId
-                                           << " (ticker)" << action->InstrumentID);
+        KF_LOG_DEBUG(logger, "[RspAction]" << " (rid)" << requestId << " (ticker)" << action->InstrumentID);
     }
     else
     {

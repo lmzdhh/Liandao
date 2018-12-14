@@ -73,7 +73,7 @@ protected:
 public:
     /** initialize engine, pass-in parameters as json format
      * internally call init virtual function to further setup */
-    void initialize(const string& json_str);
+    void initialize(const string& conf_str);
     /** engine start, entrance */
     bool start();
     /** officially stop all threading */
@@ -115,6 +115,11 @@ public:
     virtual bool is_logged_in() const = 0;
     /** get engine's name */
     virtual string name() const = 0;
+
+protected:
+    std::string m_engineIndex {};
+private:
+    void cutEngineIndex(std::string&);
 };
 
 DECLARE_PTR(IEngine);

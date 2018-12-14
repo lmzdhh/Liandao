@@ -79,7 +79,7 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_OCEANEX);
     loadJournalInfo(SOURCE_HUOBI);
     loadJournalInfo(SOURCE_PROBIT);
-
+    
     loadJournalInfo(0, getSystemJournalPair);
 
     boost::filesystem::path bl_journal_folder(BL_BASE_FOLDER);

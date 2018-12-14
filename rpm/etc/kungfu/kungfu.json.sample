@@ -60,7 +60,6 @@
         "bch_btc": "BCH/BTC",
         "ltc_btc": "LTC/BTC",
         "bch_eth": "BCH/ETH",
-        "eth_btc": "ETH/BTC",
         "ltc_eth": "LTC/ETH"
       },
       "rest_get_interval_ms": 500
@@ -75,7 +74,6 @@
         "bch_btc": "tBCHBTC",
         "ltc_btc": "tLTCBTC",
         "bch_eth": "tBCHETH",
-        "eth_btc": "tETHBTC",
         "ltc_eth": "tLTCETH"
       },
       "rest_get_interval_ms": 500
@@ -102,7 +100,6 @@
         "bch_btc": "tBCHBTC",
         "ltc_btc": "tLTCBTC",
         "bch_eth": "tBCHETH",
-        "eth_btc": "tETHBTC",
         "ltc_eth": "tLTCETH"
       },
       "rest_get_interval_ms": 500
@@ -120,19 +117,19 @@
       "rest_get_interval_ms": 500
     },
     "huobi":
-        {
-          "protocol":"wss://",
-          "ip":"api.huobi.pro",
-          "port":443,
-          "path":"/ws",
-          "book_depth_count": 5,
-          "trade_count": 10,
-          "whiteLists": {
-            "btc_usd": "btcusdt",
-            "eth_usd": "etcusdt"
-          },
-          "rest_get_interval_ms": 500
+      {
+        "protocol":"wss://",
+        "ip":"api.huobi.pro",
+        "port":443,
+        "path":"/ws",
+        "book_depth_count": 5,
+        "trade_count": 10,
+        "whiteLists": {
+          "btc_usd": "btcusdt",
+          "eth_usd": "etcusdt"
         },
+        "rest_get_interval_ms": 500
+      },
     "probit":
     {
       "book_depth_count": 5,
@@ -155,6 +152,48 @@
   },
   "td":
   {
+  "probit":
+      {
+          "accounts":
+          [
+              {
+                "info":
+                {
+                  "APIKey": "D81508AB2EE22C68",
+                  "SecretKey": "412D577DF51116A653B56A2AD4A9",
+                  "passphrase": "EFF9EBF0",
+                  "baseUrl": "https://demo-api.probit.com",
+		          "acountUrl": "https://demo-accounts.probit.com",
+                  "wsUrl":"demo-api.probit.com",
+                  "whiteLists": {
+                                  "btc_usdt": "BTC_USDT",
+				                  "xrp_usdt":"XRP-USDT"
+                                },
+                  "rest_get_interval_ms": 500
+                },
+                "clients": ["mm_strategy1","mm_strategy2","mm_strategy3"],
+                "is_default": true
+              }
+          ],
+          "FeeSetup":
+          {
+              "stock":
+              {
+                "type": "amount",
+                "fee_multi": 0.0003,
+                "ctr_multi": 1,
+                "min_fee": 0
+              },
+              "future":
+              {
+                "type": "amount",
+                "fee_multi": [0.000023, 0.00069, 0.000023],
+                "ctr_multi": 200,
+                "min_fee": 0
+              },
+              "future_exotic": null
+          }
+      },
     "binance":
     {
       "accounts":
@@ -204,7 +243,6 @@
           },
           "future_exotic": null
         }
-
     },
     "coinmex":
     {
@@ -257,7 +295,6 @@
           },
           "future_exotic": null
         }
-
     },
     "mock":
     {
