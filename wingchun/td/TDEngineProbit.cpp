@@ -39,20 +39,23 @@ using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
+USING_WC_NAMESPACE
+USING_YJJ_NAMESPACE
+
 #define PROBIT_BTC_USDT      "BTC-USDT"
 #define PROBIT_ETH_USDT      "ETH-USDT"
 #define PROBIT_EOS_USDT      "EOS-USDT"
+#define PARTIAL_TRADED       "partialtraded"
 
 std::mutex  g_orderMutex;
 std::mutex  g_postMutex;
 std::mutex  g_requestMutex;
 std::condition_variable g_requestCond;
-USING_WC_NAMESPACE
-USING_YJJ_NAMESPACE
+
 const int HTTP_RESPONSE_OK = 200;
 const int g_RequestGap = 5*60;
 const int scale_offset = 1e8;
-#define PARTIAL_TRADED "partialtraded"
+const int g_gpTimes = 24 * 60 * 60*1000;
 
 static TDEngineProbit* global_td = nullptr;
 
@@ -197,23 +200,18 @@ TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
 
 void TDEngineProbit::connect(long timeout_nsec)
 {
-    KF_LOG_INFO(logger, "[connect]");
-    for (int idx = 0; idx < account_units.size(); idx ++)
+    for (int idx = 0; idx < account_units.size();  ++idx)
     {
         AccountUnitProbit& unit = account_units[idx];
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
-            //exchange infos
-            Document doc;
-            //TODO
+            /*Document doc;
             get_products(unit, doc);
-            KF_LOG_INFO(logger, "[connect] get_products");
-            printResponse(doc);
+            printResponse(doc);*/
             loadExchangeOrderFilters();
             debug_print(m_sendOrderFilters);
 			lws_login(unit, 0);
-            unit.logged_in = true;
         }
     }
 }
@@ -788,7 +786,7 @@ void TDEngineProbit::cancel_all_orders(AccountUnitProbit& unit)
     std::string requestPath = "/api/exchange/v1/order_history";
 	std::string authToken = getAuthToken(unit);	
 	int64_t timeStamp = getTimestamp();
-	std::string startTime = TimeToFormatISO8601(timeStamp - unit.gpTimes);
+	std::string startTime = TimeToFormatISO8601(timeStamp - g_gpTimes);
 	std::string endTime = TimeToFormatISO8601(timeStamp);
 	std::string reqParams = "start_time=" + startTime + "&end_time=" + endTime + "&limit=1000";
 	string url = unit.baseUrl + requestPath + "?" + reqParams;
@@ -880,7 +878,6 @@ void TDEngineProbit::lws_login(AccountUnitProbit& unit, long timeout_nsec)
     {
         struct lws_context_creation_info info;
         memset( &info, 0, sizeof(info) );
-
         info.port = CONTEXT_PORT_NO_LISTEN;
         info.protocols = protocols;
         info.iface = NULL;
@@ -923,6 +920,7 @@ void TDEngineProbit::lws_login(AccountUnitProbit& unit, long timeout_nsec)
         KF_LOG_ERROR(logger, "TDEngineProbit::lws_login: wsi create error.");
         return;
     }
+    unit.logged_in = true;
     KF_LOG_INFO(logger, "TDEngineProbit::lws_login: wsi create success.");
 }
 

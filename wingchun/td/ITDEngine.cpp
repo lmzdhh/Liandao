@@ -101,9 +101,13 @@ void ITDEngine::listening()
                         json j_request = json::parse(content);
                         string client_name = j_request["name"].get<string>();
                         if (add_client(client_name, j_request))
+                        {
                             KF_LOG_INFO(logger, "[user] Accepted: " << client_name);
+                        }
                         else
+                        {
                             KF_LOG_INFO(logger, "[user] Rejected: " << client_name);
+                        }
                     }
                     catch (...)
                     {
@@ -118,7 +122,9 @@ void ITDEngine::listening()
                         json j_request = json::parse(content);
                         string client_name = j_request["name"].get<string>();
                         if (remove_client(client_name, j_request))
+                        {
                             KF_LOG_INFO(logger, "[user] Removed: " << client_name);
+                        }
                     }
                     catch (...)
                     {
@@ -135,8 +141,7 @@ void ITDEngine::listening()
                         user_helper->set_pos(client_name, j_request);
                         clients[client_name].pos_handler = PosHandler::create(source_id, content);
                         clients[client_name].pos_handler->set_fee(accounts[clients[client_name].account_index].fee_handler);
-                        KF_LOG_DEBUG(logger, "[user] set pos: (client)" << client_name
-                                                                       << " (pos)" << clients[client_name].pos_handler->to_string());
+                        KF_LOG_DEBUG(logger, "[user] set pos: (client)" << client_name << " (pos)" << clients[client_name].pos_handler->to_string());
                     }
                     catch (...)
                     {

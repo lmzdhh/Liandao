@@ -43,14 +43,12 @@ struct AccountUnitProbit
     string                  baseUrl;
 	string                  authUrl;
 	string                  wsUrl;
-    // internal flags
-    bool                    logged_in;
+    volatile bool           logged_in;
     CoinPairWhiteList       coinPairWhiteList;
     CoinPairWhiteList       positionWhiteList;
     struct lws*             websocketConn;
     volatile  AccountStatus status;
     std::map<std::string/*client_order_id*/, OrderFieldEx> ordersMap;
-    int gpTimes = 24 * 60 * 60*1000;
 };
 struct CancelOrderReq
 {
