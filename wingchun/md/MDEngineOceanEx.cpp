@@ -51,7 +51,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 			lws_callback_on_writable( wsi );
 			break;
 		}
-		case LWS_CALLBACK_PROTOCOL_INIT:{
+		case LWS_CALLBACK_PROTOCOL_INIT:
+        {
 			 ss << "init.";
             global_md->writeErrorLog(ss.str());
 			break;
@@ -75,7 +76,6 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 			{
 				ret = global_md->lws_write_subscribe(wsi);
 			}
-			std::cout << "send depth result: " << ret << std::endl;
 			break;
 		}
 		case LWS_CALLBACK_CLOSED:
@@ -377,7 +377,7 @@ void MDEngineOceanEx::login(long timeout_nsec)
 
 	// Set up the client creation info
     clientConnectInfo.address = "ws-slanger.oceanex.pro";
-    clientConnectInfo.path = "/app/03e22cd99036bbfee126ce6b9725?protocol=7&version=4.3.1&flash=false&client=js"; // Set the info's path to the fixed up url path
+    clientConnectInfo.path = "/app/29919ce7dd12341830194898ead6?protocol=7&version=4.3.1&flash=false&client=js"; // Set the info's path to the fixed up url path
 	clientConnectInfo.context = context;
 	clientConnectInfo.port = 8443;
 	clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
