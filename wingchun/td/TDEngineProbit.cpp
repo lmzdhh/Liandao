@@ -181,13 +181,10 @@ TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
     unit.coinPairWhiteList.Debug_print();
     unit.positionWhiteList.ReadWhiteLists(j_config, "positionWhiteLists");
     unit.positionWhiteList.Debug_print();
-    if(unit.coinPairWhiteList.Size() == 0) {
-        KF_LOG_ERROR(logger, "TDEngineProbit::load_account: please add whiteLists in kungfu.json like this :");
-        KF_LOG_ERROR(logger, "\"whiteLists\":{");
-        KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
-        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"BTC_USDT\",");
-        KF_LOG_ERROR(logger, "     \"etc_eth\": \"ETC_ETH\"");
-        KF_LOG_ERROR(logger, "},");
+    if(unit.coinPairWhiteList.Size() == 0)
+    {
+        KF_LOG_ERROR(logger, "[load_account] CoinPairWhiteList is empty");
+        exit(0);
     }
     cancel_all_orders(unit);
     // set up
@@ -266,12 +263,15 @@ void TDEngineProbit::release_api()
 
 bool TDEngineProbit::is_logged_in() const
 {
-    KF_LOG_INFO(logger, "[is_logged_in]");
     for (auto& unit: account_units)
     {
         if (!unit.logged_in)
+        {
+            KF_LOG_DEBUG(logger, "[is_logged_in] TD logout");
             return false;
+        }
     }
+    KF_LOG_DEBUG(logger, "[is_logged_in] TD login");
     return true;
 }
 
