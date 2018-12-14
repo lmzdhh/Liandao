@@ -1453,7 +1453,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
         //request_weight_handle(NewOrder_Type)
 		interface = m_interfaceMgr.getActiveInterface();
         response = Post(Url{url},
-                                  Header{{"X-MBX-APIKEY", unit.api_key}},
+                                  Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                                   Body{body}, Timeout{100000}, Interface{interface});
 
         KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
@@ -1611,7 +1611,7 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
 	string interface = m_interfaceMgr.getActiveInterface();
 
     const auto response = Get(Url{url},
-                              Header{{"X-MBX-APIKEY", unit.api_key}},
+                              Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                               Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
@@ -1686,7 +1686,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 		interface = m_interfaceMgr.getActiveInterface();
 
         response = Delete(Url{url},
-                                  Header{{"X-MBX-APIKEY", unit.api_key}},
+                                  Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                                   Body{body}, Timeout{100000}, Interface{interface});
 
         KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
@@ -1752,7 +1752,7 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 	string interface = m_interfaceMgr.getActiveInterface();
 
     const auto response = Get(Url{url},
-                              Header{{"X-MBX-APIKEY", unit.api_key}},
+                              Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                               Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_my_trades] (url) " << url << " (response.status_code) " << response.status_code <<
@@ -1815,7 +1815,7 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
 	string interface = m_interfaceMgr.getActiveInterface();
 
     const auto response = Get(Url{url},
-                                 Header{{"X-MBX-APIKEY", unit.api_key}},
+                                 Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                                  Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response.status_code) " << response.status_code <<
