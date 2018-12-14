@@ -115,7 +115,6 @@ mkdir -p $KUNGFU_JOURNAL_DIR/TD_SEND/PROBIT
 mkdir -p $KUNGFU_JOURNAL_DIR/TD_RAW/PROBIT
 mkdir -p $KUNGFU_JOURNAL_DIR/TD_Q/PROBIT
 
-
 chown -R bruce:bruce $KUNGFU_DATA_DIR
 
 chmod +x /opt/kungfu/master/bin/*

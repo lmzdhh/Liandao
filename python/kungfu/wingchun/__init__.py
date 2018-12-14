@@ -16,9 +16,9 @@ limitations under the License.
 
 from engine import Engine
 from strategy import Strategy
-
-def run_engine(name, type):
-    engine = Engine(name, type)
+    #[name, type, index]
+def run_engine(args):
+    engine = Engine(args)
     engine.start()
 
 def run_strategy(name, path):

@@ -628,7 +628,10 @@ DataFieldMap = {
 		'BrokerID': 'c11',
 		'MiscInfo': 'c30',
 		'StopPrice': 'd',
-	},
+        'MassOrderSeqId':'i64',
+        'MassOrderIndex':'i',
+        'MassOrderTotalNum':'i',
+    },
 	'LFRtnOrderField': {
 		'InstrumentID': 'c31',
 		'ExchangeID': 'c11',
@@ -807,7 +810,16 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_ORDER_COINMEX: LFInputOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_COINMEX: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_COINMEX: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_COINMEX: LFOrderActionField
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_COINMEX: LFOrderActionField,
+
+    # probit
+    lf.MsgTypes.MSG_TYPE_LF_MD_PROBIT: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_PROBIT: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_PROBIT: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_PROBIT: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_PROBIT: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_PROBIT: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_PROBIT: LFOrderActionField
 }
 
 MsgType2LFStruct.update(SnifferMsgType2Struct)
