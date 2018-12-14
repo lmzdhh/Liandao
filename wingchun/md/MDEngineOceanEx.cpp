@@ -318,7 +318,7 @@ void MDEngineOceanEx::login(long timeout_nsec)
 	int inputPort = 8443;
 	//const char *urlProtocol, *urlTempPath;
 	int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
-    std::string urlPath = "wss://ws-slanger.oceanex.pro/app/03e22cd99036bbfee126ce6b9725?protocol=7&version=4.3.1&flash=false&client=js";	
+    char urlPath[256] = "wss://ws-slanger.oceanex.pro/app/29919ce7dd12341830194898ead6?protocol=7&version=4.3.1&flash=false&client=js";	
   
 	struct lws_context_creation_info ctxCreationInfo;
 	struct lws_client_connect_info clientConnectInfo;
@@ -376,7 +376,7 @@ void MDEngineOceanEx::login(long timeout_nsec)
 	}
 
 	// Set up the client creation info
-    clientConnectInfo.address = "ws-slanger.oceanex.pro";
+    clientConnectInfo.address = "wss://ws-slanger.oceanex.pro";
     clientConnectInfo.path = "/app/29919ce7dd12341830194898ead6?protocol=7&version=4.3.1&flash=false&client=js"; // Set the info's path to the fixed up url path
 	clientConnectInfo.context = context;
 	clientConnectInfo.port = 8443;
@@ -384,7 +384,7 @@ void MDEngineOceanEx::login(long timeout_nsec)
 	clientConnectInfo.host = lws_canonical_hostname( context );
 	clientConnectInfo.origin = "origin";
 	clientConnectInfo.ietf_version_or_minus_one = -1;
-	clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
+	clientConnectInfo.protocol = protocol;
 	clientConnectInfo.pwsi = &wsi;
 
 	//KF_LOG_INFO(logger, "MDEngineOceanEx::login:" << "Connecting to " << urlProtocol << ":" <<
