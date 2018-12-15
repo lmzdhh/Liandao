@@ -658,10 +658,10 @@ void MDEngineOceanEx::onDepth(Document& json)
 	}
 
     //make depth map
-    if(json.HasMember("data") && json["data"].IsObject()) {
-        if(json["data"].HasMember("asks") && json["data"]["asks"].IsArray()) {
-            int len = json["data"]["asks"].Size();
-            auto& asks = json["data"]["asks"];
+    if(json.HasMember("data")&&json["data"].HasMember("asks") && json["data"].HasMember("bids")) {
+        auto& asks = json["data"]["asks"];
+        if(asks .IsArray()) {
+            int len = asks.Size();
             for(int i = 0 ; i < len; i++)
             {
                 int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
@@ -678,10 +678,9 @@ void MDEngineOceanEx::onDepth(Document& json)
                 asks_update = true;
             }
         }
-
-        if(json["data"].HasMember("bids") && json["data"]["bids"].IsArray()) {
-            int len = json["data"]["bids"].Size();
-            auto& bids = json["data"]["bids"];
+        auto& bids = json["data"]["bids"];
+        if(bids.IsArray()) {
+            int len = bids.Size();
             for(int i = 0 ; i < len; i++)
             {
                 int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
@@ -698,6 +697,10 @@ void MDEngineOceanEx::onDepth(Document& json)
                 bids_update = true;
             }
         }
+    }
+    else
+    {
+          KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  data not found");
     }
     // has any update
     if(asks_update || bids_update)
@@ -753,6 +756,10 @@ void MDEngineOceanEx::onDepth(Document& json)
 
         KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: on_price_book_update," << strInstrumentID << ",oceanex");
         on_price_book_update(&md);
+    }
+    else
+    {
+          KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  data not update");
     }
 }
 
