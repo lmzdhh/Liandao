@@ -658,45 +658,55 @@ void MDEngineOceanEx::onDepth(Document& json)
 	}
 
     //make depth map
-    if(json.HasMember("data")&&json["data"].HasMember("asks") && json["data"].HasMember("bids")) {
-        auto& asks = json["data"]["asks"];
-        if(asks .IsArray()) {
-            int len = asks.Size();
-            for(int i = 0 ; i < len; i++)
-            {
-                int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
-                uint64_t volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
-                //if volume is 0, remove it
-                if(volume == 0) {
-                    asksPriceAndVolume->erase(price);
-                    KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
-                } else {
-					asksPriceAndVolume->erase(price);
-                    asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+    if(json.HasMember("data"))
+    {
+        auto& data =  json["data"];
+        if(data.IsObject() && data.HasMember("asks")) 
+        {
+            auto& asks = data["asks"];
+            if(asks .IsArray()) {
+                int len = asks.Size();
+                for(int i = 0 ; i < len; i++)
+                {
+                    int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
+                    uint64_t volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
+                    //if volume is 0, remove it
+                    if(volume == 0) {
+                        asksPriceAndVolume->erase(price);
+                        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
+                    } else {
+                        asksPriceAndVolume->erase(price);
+                        asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+                    }
+                   KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: asks price:" << price<<  "  volume:"<< volume);
+                    asks_update = true;
                 }
-//                KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: asks price:" << price<<  "  volume:"<< volume);
-                asks_update = true;
+                
             }
         }
-        auto& bids = json["data"]["bids"];
-        if(bids.IsArray()) {
-            int len = bids.Size();
-            for(int i = 0 ; i < len; i++)
-            {
-                int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
-                uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
-                if(volume == 0) {
-                    bidsPriceAndVolume->erase(price);
-                    KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
+        else { KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  asks not found");}
+        if(data.IsObject() && data.HasMember("bids"))
+       {
+            auto& bids = data["bids"];
+            if(bids.IsArray()) {
+                int len = bids.Size();
+                for(int i = 0 ; i < len; i++)
+                {
+                    int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
+                    uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
+                    if(volume == 0) {
+                        bidsPriceAndVolume->erase(price);
+                        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
 
-                } else {
-					bidsPriceAndVolume->erase(price);
-                    bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+                    } else {
+                        bidsPriceAndVolume->erase(price);
+                        bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+                    }
+                    KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: bids price:" << price<<  "  volume:"<< volume);
+                    bids_update = true;
                 }
-//                KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: bids price:" << price<<  "  volume:"<< volume);
-                bids_update = true;
             }
-        }
+       } else { KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  asks not found");}
     }
     else
     {
