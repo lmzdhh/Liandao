@@ -459,24 +459,24 @@ void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len
     Document json;
 	json.Parse(data);
 
-	if(!json.HasParseError() && json.IsObject() && json.HasMember("type") && json["type"].IsString())
+	if(!json.HasParseError() && json.IsObject() && json.HasMember("event") && json["event"].IsString())
 	{
 
-		if(strcmp(json["type"].GetString(), "depth") == 0)
+		if(strcmp(json["event"].GetString(), "update") == 0)
 		{
 			KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: is depth");
             onDepth(json);
 		}
 
-		if(strcmp(json["type"].GetString(), "fills") == 0)
+		if(strcmp(json["event"].GetString(), "trades") == 0)
 		{
 			KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: is fills");
             onFills(json);
 		}
-        if(strcmp(json["type"].GetString(), "tickers") == 0)
+        if(strcmp(json["event"].GetString(), "tickers") == 0)
         {
             KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: is tickers");
-            onTickers(json);
+            //onTickers(json);
         }
 	} else {
 		KF_LOG_ERROR(logger, "MDEngineOceanEx::on_lws_data . parse json error: " << data);
@@ -610,7 +610,7 @@ void MDEngineOceanEx::onDepth(Document& json)
 {
     bool asks_update = false;
     bool bids_update = false;
-
+    /*
     std::string base="";
     if(json.HasMember("base") && json["base"].IsString()) {
         base = json["base"].GetString();
@@ -621,13 +621,18 @@ void MDEngineOceanEx::onDepth(Document& json)
     }
 
     KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "base : " << base << "  quote: " << quote);
+    */
 
-    std::string ticker = getWhiteListCoinpairFrom(base + "_" +  quote);
+    std::string ticker;
+    if(json.HasMember("channel"))
+    {
+        ticker = json["channel"].GetString();
+    }
     if(ticker.length() == 0) {
-		KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: not in WhiteList , ignore it:" << "base : " << base << "  quote: " << quote);
+		KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: invaild data";
 		return;
     }
-
+ 
     KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "(ticker) " << ticker);
 	std::map<int64_t, uint64_t>*  asksPriceAndVolume;
 	std::map<int64_t, uint64_t>*  bidsPriceAndVolume;
@@ -703,11 +708,11 @@ void MDEngineOceanEx::onDepth(Document& json)
         memset(&md, 0, sizeof(md));
 
         sortMapByKey(*asksPriceAndVolume, sort_result, sort_price_desc);
-        std::cout<<"asksPriceAndVolume sorted desc:"<< std::endl;
-        for(int i=0; i<sort_result.size(); i++)
-        {
-            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-        }
+       // std::cout<<"asksPriceAndVolume sorted desc:"<< std::endl;
+        //for(int i=0; i<sort_result.size(); i++)
+        //{
+        //    std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
+        //}
         //asks 	卖方深度 from big to little
         int askTotalSize = (int)sort_result.size();
         auto size = std::min(askTotalSize, 20);
@@ -723,11 +728,11 @@ void MDEngineOceanEx::onDepth(Document& json)
 
         sort_result.clear();
         sortMapByKey(*bidsPriceAndVolume, sort_result, sort_price_asc);
-        std::cout<<"bidsPriceAndVolume sorted asc:"<< std::endl;
-        for(int i=0; i<sort_result.size(); i++)
-        {
-            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-        }
+        //std::cout<<"bidsPriceAndVolume sorted asc:"<< std::endl;
+        //for(int i=0; i<sort_result.size(); i++)
+        //{
+        //    std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
+        //}
         //bids 	买方深度 from big to little
         int bidTotalSize = (int)sort_result.size();
         size = std::min(bidTotalSize, 20);
@@ -741,11 +746,12 @@ void MDEngineOceanEx::onDepth(Document& json)
         md.BidLevelCount = size;
         sort_result.clear();
 
+        std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
+        strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
+        strcpy(md.InstrumentID, strInstrumentID.c_str());
+        strcpy(md.ExchangeID, "oceanex");
 
-        strcpy(md.InstrumentID, ticker.c_str());
-        strcpy(md.ExchangeID, "mock");
-
-        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: on_price_book_update");
+        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: on_price_book_update," << strInstrumentID << ",oceanex");
         on_price_book_update(&md);
     }
 }
