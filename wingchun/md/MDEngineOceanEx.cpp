@@ -453,9 +453,26 @@ int MDEngineOceanEx::lws_write_subscribe(struct lws* conn)
     return ret;
 }
 
+std::string MDEngineOceanEx::dealDataSprit(const char* src)
+{
+     std::string strData = src;
+     auto it = strData.begin();
+     while(it != strData.end())
+     {
+         if(*it == '\\')
+         {
+            it = strData.erase(it);
+         }
+         else
+         {
+            ++it;
+         }
+     }
+}
+
 void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
-    std::string strData = parseJsonToString(data);
+    std::string strData = dealDataSprit(data);
 	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << strData);
     Document json;
 	json.Parse(strData.c_str());

@@ -89,7 +89,7 @@ private:
     std::string createFillsJsonString(std::string base, std::string quote);
     void clearPriceBook();
     void loop();
-
+    std::string dealDataSprit(std::string strData);
 
     virtual void set_reader_thread() override;
 private:
