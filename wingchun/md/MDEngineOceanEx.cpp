@@ -456,17 +456,11 @@ int MDEngineOceanEx::lws_write_subscribe(struct lws* conn)
 std::string MDEngineOceanEx::dealDataSprit(const char* src)
 {
      std::string strData = src;
-     auto it = strData.begin();
-     while(it != strData.end())
+     auto nPos = strData.find("\\");
+     while(nPos != std::string::npos)
      {
-         if(*it == '\\')
-         {
-            it = strData.erase(it);
-         }
-         else
-         {
-            ++it;
-         }
+        strData.replace(nPos,1,"");
+        nPos = strData.find("\\");
      }
 
      return strData;
