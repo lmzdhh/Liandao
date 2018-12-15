@@ -468,6 +468,8 @@ std::string MDEngineOceanEx::dealDataSprit(const char* src)
             ++it;
          }
      }
+
+     return strData;
 }
 
 void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len)
