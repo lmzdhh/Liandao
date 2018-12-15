@@ -629,7 +629,7 @@ void MDEngineOceanEx::onDepth(Document& json)
         ticker = json["channel"].GetString();
     }
     if(ticker.length() == 0) {
-		KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: invaild data";
+		KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: invaild data");
 		return;
     }
  
