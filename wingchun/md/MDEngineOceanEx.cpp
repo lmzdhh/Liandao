@@ -376,15 +376,16 @@ void MDEngineOceanEx::login(long timeout_nsec)
 	}
 
 	// Set up the client creation info
-    clientConnectInfo.address = "wss://ws-slanger.oceanex.pro";
-    clientConnectInfo.path = "/app/29919ce7dd12341830194898ead6?protocol=7&version=4.3.1&flash=false&client=js"; // Set the info's path to the fixed up url path
+	std::string strAddress = "ws-slanger.oceanex.pro";
+    clientConnectInfo.address = strAddress.c_str();
+    clientConnectInfo.path = "/app/a4931d3a95e48863076c739e9527?protocol=7&client=js&version=4.3.1&flash=false"; // Set the info's path to the fixed up url path
 	clientConnectInfo.context = context;
-	clientConnectInfo.port = 8443;
+	clientConnectInfo.port = 443;
 	clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-	clientConnectInfo.host = lws_canonical_hostname( context );
-	clientConnectInfo.origin = "origin";
+	clientConnectInfo.host =strAddress.c_str();
+	clientConnectInfo.origin = strAddress.c_str();
 	clientConnectInfo.ietf_version_or_minus_one = -1;
-	clientConnectInfo.protocol = protocol;
+	clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
 	clientConnectInfo.pwsi = &wsi;
 
 	//KF_LOG_INFO(logger, "MDEngineOceanEx::login:" << "Connecting to " << urlProtocol << ":" <<
