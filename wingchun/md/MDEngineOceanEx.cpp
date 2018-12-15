@@ -455,9 +455,10 @@ int MDEngineOceanEx::lws_write_subscribe(struct lws* conn)
 
 void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
-	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
+    std::string strData = parseJsonToString(data);
+	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << strData);
     Document json;
-	json.Parse(data);
+	json.Parse(strData);
 
 	if(!json.HasParseError() && json.IsObject() && json.HasMember("event") && json["event"].IsString())
 	{
