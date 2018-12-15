@@ -458,7 +458,7 @@ void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len
     std::string strData = parseJsonToString(data);
 	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << strData);
     Document json;
-	json.Parse(strData);
+	json.Parse(strData.c_str());
 
 	if(!json.HasParseError() && json.IsObject() && json.HasMember("event") && json["event"].IsString())
 	{
