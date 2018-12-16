@@ -391,7 +391,7 @@ void MDEngineOceanEx::login(long timeout_nsec)
 	//KF_LOG_INFO(logger, "MDEngineOceanEx::login:" << "Connecting to " << urlProtocol << ":" <<
 	//											  clientConnectInfo.host << ":" <<
 	//											  clientConnectInfo.port << ":" << urlPath);
-
+    subscribe_index = 0;
 	wsi = lws_client_connect_via_info(&clientConnectInfo);
 	if (wsi == NULL) {
 		KF_LOG_ERROR(logger, "MDEngineOceanEx::login: wsi create error.");
@@ -431,7 +431,8 @@ int MDEngineOceanEx::lws_write_subscribe(struct lws* conn)
     //sub depth
     if(subscribe_index >= websocketSubscribeJsonString.size())
     {
-        subscribe_index = 0;
+        return 0;
+        //subscribe_index = 0;
     }
 
     unsigned char msg[512];
@@ -469,7 +470,7 @@ std::string MDEngineOceanEx::dealDataSprit(const char* src)
 void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
-	//KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
+	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
     Document json;
 	json.Parse(data);
 
