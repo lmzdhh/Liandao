@@ -585,17 +585,18 @@ void MDEngineOceanEx::onFills(Document& json)
     if(jsonData.HasMember("trades") && json["trades"].IsArray())
     {
         int len = jsonData["trades"].Size();
-        auto arrayTrades = jsonData["trades"].GetArray();
+        auto arrayTrades = jsonData["trades"];
         std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
         strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
+        KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : get trades"); 
         for(int i = 0 ; i < len; i++) {
             LFL2TradeField trade;
             memset(&trade, 0, sizeof(trade));
             strcpy(trade.InstrumentID, strInstrumentID.c_str());
             strcpy(trade.ExchangeID, "oceanex");
 
-            trade.Price = std::round(std::stod(arrayTrades[i]["price"].GetString()) * scale_offset);
-            trade.Volume = std::round(std::stod(arrayTrades[i]["amount"].GetString()) * scale_offset);
+            trade.Price = std::round(std::stod(arrayTrades.GetArray()[i]["price"].GetString()) * scale_offset);
+            trade.Volume = std::round(std::stod(arrayTrades.GetArray()[i]["amount"].GetString()) * scale_offset);
             trade.OrderBSFlag[0] = "buy" == arrayTrades[i]["type"].GetString() ? 'B' : 'S';
 
             KF_LOG_INFO(logger, "MDEngineOceanEx::[onFills] (ticker)" << ticker <<
@@ -605,6 +606,7 @@ void MDEngineOceanEx::onFills(Document& json)
             on_trade(&trade);
         }
     }
+    esle {   KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : nvaild data"); }
 }
 
 // {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],"bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
