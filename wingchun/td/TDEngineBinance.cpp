@@ -1156,6 +1156,10 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
         strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
         strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
         //must be Array
+        if (!resultTrade.IsArray()) {
+			KF_LOG_INFO(logger, "[retrieveTradeStatus] Binance interface bans or refused!");
+			continue;
+		}
         int len = resultTrade.Size();
         for(int i = 0 ; i < len; i++)
         {
