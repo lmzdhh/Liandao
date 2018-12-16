@@ -85,12 +85,12 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     KF_LOG_INFO(logger, "[load_account]");
 
 	string interfaces;
-	int interface_timeout = 0;
+	int interface_timeout = 300000;
 	if(j_config.find("interfaces") != j_config.end()) {
 		interfaces = j_config["interfaces"].get<string>();
 	}
 
-	if(j_config.find("interface_timeout") != j_config.end()) {
+	if(j_config.find("interface_timeout_ms") != j_config.end()) {
 		interface_timeout = j_config["interface_timeout_ms"].get<int>();
 	}
 	m_interfaceMgr.init(interfaces, interface_timeout);
