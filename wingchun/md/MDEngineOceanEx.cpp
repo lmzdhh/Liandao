@@ -585,7 +585,7 @@ void MDEngineOceanEx::onFills(Document& json)
     if(jsonData.HasMember("trades") && json["trades"].IsArray())
     {
         int len = jsonData["trades"].Size();
-        auto arrayTrades = jsonData["trades"];
+        auto& arrayTrades = jsonData["trades"];
         std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
         strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
         KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : get trades"); 
