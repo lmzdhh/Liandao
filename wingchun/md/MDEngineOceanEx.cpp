@@ -563,61 +563,47 @@ void MDEngineOceanEx::onTickers(Document& d)
 
 void MDEngineOceanEx::onFills(Document& json)
 {
-    /*
-     {
-  "base": "cel",
-  "zip": false,
-  "data": [[
-    "0.02"# 价格
-    "200"# 数量
-    "buy"#交易方向（buy:买|sell:卖）
-    1520318917765 #创建时间
-  ]],
-  "biz": "spot",
-  "quote": "btc",
-  "type": "fills"
-}
-
-     * */
-
-    if(!json.HasMember("data") || !json["data"].IsArray())
+    if(!json.HasMember("data"))
     {
         KF_LOG_ERROR(logger, "MDEngineOceanEx::[onFills] invalid market trade message");
         return;
     }
-
-    std::string base="";
-    if(json.HasMember("base") && json["base"].IsString()) {
-        base = json["base"].GetString();
+    
+   if(json.HasMember("channel"))
+    {
+        ticker = json["channel"].GetString();
     }
-    std::string quote="";
-    if(json.HasMember("quote") && json["quote"].IsString()) {
-        quote = json["quote"].GetString();
-    }
-
-    KF_LOG_INFO(logger, "MDEngineOceanEx::onFills:" << "base : " << base << "  quote: " << quote);
-
-    std::string ticker = getWhiteListCoinpairFrom(base + "_" +  quote);
     if(ticker.length() == 0) {
-        return;
+		KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: invaild data");
+		return;
     }
+    
+     auto strData =  json["data"].GetString();
+     Document jsonData;
+    //KF_LOG_INFO(logger, "strData:" << strData);
+	jsonData.Parse(strData);
+    if(jsonData.HasMember("trades") && json["trades"].IsArray())
+    {
+        int len = jsonData["data"].Size();
+        auto arrayTrades = jsonData["data"].GetArray();
+        std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
+        strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
+        for(int i = 0 ; i < len; i++) {
+            LFL2TradeField trade;
+            memset(&trade, 0, sizeof(trade));
+            strcpy(trade.InstrumentID, strInstrumentID.c_str());
+            strcpy(trade.ExchangeID, "oceanex");
 
-    int len = json["data"].Size();
+            trade.Price = std::round(std::stod(arrayTrades[i]["price"].GetString()) * scale_offset);
+            trade.Volume = std::round(std::stod(arrayTrades[i]["amount"].GetString()) * scale_offset);
+            trade.OrderBSFlag[0] = "buy" == arrayTrades[i]["type"].GetString() ? 'B' : 'S';
 
-    for(int i = 0 ; i < len; i++) {
-        LFL2TradeField trade;
-        memset(&trade, 0, sizeof(trade));
-        strcpy(trade.InstrumentID, ticker.c_str());
-        strcpy(trade.ExchangeID, "mock");
-
-        trade.Price = std::round(std::stod(json["data"].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
-        trade.Volume = std::round(std::stod(json["data"].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
-        trade.OrderBSFlag[0] = "buy" == json["data"].GetArray()[i].GetArray()[2].GetString() ? 'B' : 'S';
-
-        KF_LOG_INFO(logger, "MDEngineOceanEx::[onFills] (ticker)" << ticker <<
-                                                                    " (Price)" << trade.Price <<
-                                                                    " (trade.Volume)" << trade.Volume);
-        on_trade(&trade);
+            KF_LOG_INFO(logger, "MDEngineOceanEx::[onFills] (ticker)" << ticker <<
+                                                                        " (Price)" << trade.Price <<
+                                                                        " (Volume)" << trade.Volume) << 
+                                                                        "OrderBSFlag" << trade.OrderBSFlag;
+            on_trade(&trade);
+        }
     }
 }
 
