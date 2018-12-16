@@ -12,7 +12,7 @@ void InterfaceMgr::init(const std::string& interfaces)
 
 void InterfaceMgr::init(const std::string& interfaces, int timeout)
 {
-	m_timeout = timeout * 1000;
+	m_timeout = timeout;
 	this->initArray(interfaces);
 }
 
