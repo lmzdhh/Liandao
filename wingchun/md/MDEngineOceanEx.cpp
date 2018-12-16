@@ -580,12 +580,12 @@ void MDEngineOceanEx::onFills(Document& json)
     
      auto strData =  json["data"].GetString();
      Document jsonData;
-    //KF_LOG_INFO(logger, "strData:" << strData);
+    KF_LOG_INFO(logger, "strData:" << strData);
 	jsonData.Parse(strData);
     if(jsonData.HasMember("trades") && json["trades"].IsArray())
     {
-        int len = jsonData["data"].Size();
-        auto arrayTrades = jsonData["data"].GetArray();
+        int len = jsonData["trades"].Size();
+        auto arrayTrades = jsonData["trades"].GetArray();
         std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
         strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
         for(int i = 0 ; i < len; i++) {
