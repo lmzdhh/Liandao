@@ -582,14 +582,15 @@ void MDEngineOceanEx::onFills(Document& json)
      Document jsonData;
     KF_LOG_INFO(logger, "strData:" << strData);
 	jsonData.Parse(strData);
-    KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] :Parse:" << strData);
-    if(jsonData.HasMember("trades") && json["trades"].IsArray())
+    if(jsonData.HasMember("trades"))
     {
         int len = jsonData["trades"].Size();
+         KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : get trades 1"); 
         auto& arrayTrades = jsonData["trades"];
+         KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : get trades 2"); 
         std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
         strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
-        KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : get trades"); 
+        KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : get trades 3"); 
         for(int i = 0 ; i < len; i++) {
             LFL2TradeField trade;
             memset(&trade, 0, sizeof(trade));
