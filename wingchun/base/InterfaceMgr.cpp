@@ -4,6 +4,18 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 
+InterfaceMgr::InterfaceMgr()
+{
+	m_timeout = 0;
+	m_mutex = new std::mutex();
+}
+
+InterfaceMgr::~InterfaceMgr()
+{
+	m_timeout = 0;
+	if(m_mutex != nullptr) delete m_mutex;
+}
+
 void InterfaceMgr::init(const std::string& interfaces)
 {
 	m_timeout = 0;
@@ -50,7 +62,7 @@ void InterfaceMgr::initArray(const std::string& interfaces)
 
 void InterfaceMgr::disable(const std::string& interface)
 {
-	std::lock_guard<std::mutex> guard_mutex(m_mutex);
+	std::lock_guard<std::mutex> guard_mutex(*m_mutex);
 	
 	for(size_t i = 0; i < m_vector.size(); i++) {
 		if (m_vector[i].host == interface) {
@@ -79,7 +91,7 @@ std::string InterfaceMgr::getActiveInterface()
 	std::string hostName;
 	HostInterface item;
 
-	std::lock_guard<std::mutex> guard_mutex(m_mutex);
+	std::lock_guard<std::mutex> guard_mutex(*m_mutex);
 	//1. vector is empty
 	size = m_vector.size();
 	if (size == 0) return hostName;

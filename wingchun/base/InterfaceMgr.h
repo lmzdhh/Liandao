@@ -18,7 +18,8 @@ struct HostInterface
 
 class InterfaceMgr   {
 public:
-  	InterfaceMgr() {m_timeout = 0;}
+  	InterfaceMgr();
+	~InterfaceMgr();
   	void init(const std::string& interfaces);
 	void init(const std::string& interfaces, int timeout);
 
@@ -34,7 +35,7 @@ private:
 private:
 	std::vector<HostInterface> m_vector;
 	int m_timeout;
-	std::mutex m_mutex;
+	std::mutex* m_mutex = nullptr;
 };
 
 
