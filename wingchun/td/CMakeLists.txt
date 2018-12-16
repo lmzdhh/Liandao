@@ -70,3 +70,8 @@ SET(OCEANEX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineOceanEx.cpp TDEngineOceanEx.
 ADD_LIBRARY(oceanextd SHARED ${OCEANEX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(oceanextd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS oceanextd DESTINATION "lib/wingchun")
+
+SET(DAYBIT_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineDaybit.cpp TDEngineDaybit.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
+ADD_LIBRARY(daybittd SHARED ${DAYBIT_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(daybittd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS daybittd DESTINATION "lib/wingchun")

@@ -183,21 +183,16 @@
             {
               "info":
               {
-                "APIKey": "your-api-key",
-                "SecretKey": "your-secret-key",
+                "APIKey": "6nIg0pkRWfb0JhFtUsO9bM1GTpTYfgJs",
+                "SecretKey": "kQ4eMfse0TKsCe838iP_6AAw7gZNMpUh",
+                "baseUrl": "wss://api.staging.daybit.com/v1/user_api_socket/websocket",
                 "whiteLists":{
-                  "etc_eth": "ETCETH",
-                  "trx_btc": "TRXBTC"
+                  "btc_bat": "BTC-BAT"
                 },
                 "positionWhiteLists":{
-                                "ETC": "ETC",
+                                "BAT": "ETC",
                                 "BTC": "BTC"
                  },
-                "exchange_shift_ms": -2000,
-                "order_insert_recvwindow_ms": 5000,
-                "order_action_recvwindow_ms": 5000,
-                "max_rest_retry_times":3,
-                "retry_interval_milliseconds": 1000,
                 "rest_get_interval_ms": 2000,
                 "sync_time_interval": 10000
               },
