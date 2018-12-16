@@ -492,8 +492,9 @@ void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len
             KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: is tickers");
             //onTickers(json);
         }
-	} else {
-		KF_LOG_ERROR(logger, "MDEngineOceanEx::on_lws_data . parse json error: " << data);
+	} else 
+    {
+		KF_LOG_ERROR(logger, "MDEngineOceanEx::on_lws_data . parse json error: " << strData);
 	}
 }
 
@@ -674,10 +675,15 @@ void MDEngineOceanEx::onDepth(Document& json)
     //make depth map
     if(json.HasMember("data"))
     {
-        auto& data =  json["data"];
-        if(data.IsObject() && data.HasMember("asks")) 
+
+        auto& strData =  json["data"].GetString();
+        Document jsonData;
+        KF_LOG_INFO(logger, strData);
+	    jsonData.Parse(strData.c_str());
+        if(jsonData.IsObject() && jsonData.HasMember("asks")) 
         {
-            auto& asks = data["asks"];
+            
+            auto& asks = jsonData["asks"];
             if(asks .IsArray()) {
                 int len = asks.Size();
                 for(int i = 0 ; i < len; i++)
@@ -699,9 +705,9 @@ void MDEngineOceanEx::onDepth(Document& json)
             }
         }
         else { KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  asks not found");}
-        if(data.IsObject() && data.HasMember("bids"))
+        if(jsonData.IsObject() && jsonData.HasMember("bids"))
        {
-            auto& bids = data["bids"];
+            auto& bids = jsonData["bids"];
             if(bids.IsArray()) {
                 int len = bids.Size();
                 for(int i = 0 ; i < len; i++)
