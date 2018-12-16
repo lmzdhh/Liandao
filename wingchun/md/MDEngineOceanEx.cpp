@@ -607,6 +607,58 @@ void MDEngineOceanEx::onFills(Document& json)
     else {   KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : nvaild data"); }
 }
 
+bool shouldUpdateData(const LFPriceBook20Field& md)
+{
+    bool has_update = false;
+    static std::map<std::string,LFPriceBook20Field> mapLastData;
+    auto it = mapLastData.find (md.InstrumentID);
+    if(it == mapLastData.end())
+    {
+        mapLastData[md.InstrumentID] = md;
+         has_update = true;
+    }
+     else
+     {
+        LFPriceBook20Field& lastMD = it->second;
+        if(md.BidLevelCount != lastMD.BidLevelCount)
+        {
+            has_update = true;
+        }
+        else
+        {
+            for(int i = 0;i < md.BidLevelCount; ++i)
+            {
+                if(md.BidLevels[i].price != lastMD.BidLevels[i].price || md.BidLevels[i].volume != lastMD.BidLevels[i].volume)
+                {
+                    has_update = true;
+                    break;
+                }
+            }
+        }
+        if(!has_update && md.AskLevelCount != lastMD.AskLevelCount)
+        {
+            has_update = true;
+        }
+        else if(!has_update)
+        {
+            for(int i = 0;i < md.AskLevelCount ;++i)
+            {
+                if(md.AskLevels[i].price != lastMD.AskLevels[i].price || md.AskLevels[i].volume != lastMD.AskLevels[i].volume)
+                {
+                    has_update = true;
+                    break;
+                }
+            }
+        }
+        if(has_update)
+        {
+             mapLastData[md.InstrumentID] = md;
+        }
+    }	
+
+    return has_update;
+}
+
 // {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],"bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
 void MDEngineOceanEx::onDepth(Document& json)
 {
@@ -770,8 +822,11 @@ void MDEngineOceanEx::onDepth(Document& json)
         strcpy(md.InstrumentID, strInstrumentID.c_str());
         strcpy(md.ExchangeID, "oceanex");
 
-        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: on_price_book_update," << strInstrumentID << ",oceanex");
-        on_price_book_update(&md);
+        if(shouldUpdateData(md))
+        {
+            KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: on_price_book_update," << strInstrumentID << ",oceanex");
+            on_price_book_update(&md);
+        }else { KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: same data not update:" << json["data"].GetString());}
     }
     else
     {
