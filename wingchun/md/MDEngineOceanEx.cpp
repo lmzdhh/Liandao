@@ -679,7 +679,7 @@ void MDEngineOceanEx::onDepth(Document& json)
         auto& strData =  json["data"].GetString();
         Document jsonData;
         KF_LOG_INFO(logger, strData);
-	    jsonData.Parse(strData.c_str());
+	    jsonData.Parse(strData);
         if(jsonData.IsObject() && jsonData.HasMember("asks")) 
         {
             
