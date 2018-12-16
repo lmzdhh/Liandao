@@ -1474,7 +1474,8 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
     } while(should_retry && retry_times < max_rest_retry_times);
 
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
-                                                                         " (response.error.message) " << response.error.message <<
+																		"interface [" << interface <<
+                                                                         "] (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
 	if (response.status_code == HTTP_CONNECT_REFUSED) {
 		m_interfaceMgr.disable(interface);
@@ -1627,7 +1628,8 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
                               Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
-                                              " (response.error.message) " << response.error.message <<
+											  "interface [" << interface <<
+                                              "] (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
 
 	if (response.status_code == HTTP_CONNECT_REFUSED) {
@@ -1720,7 +1722,8 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
     } while(should_retry && retry_times < max_rest_retry_times);
 
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
-                                                                         " (response.error.message) " << response.error.message <<
+																	      "interface [" << interface <<
+                                                                         "] (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
 	if (response.status_code == HTTP_CONNECT_REFUSED) {
 		m_interfaceMgr.disable(interface);
@@ -1780,7 +1783,8 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
                               Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_my_trades] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                " (response.error.message) " << response.error.message <<
+												"interface [" << interface <<
+                                                "] (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
 
 	if (response.status_code == HTTP_CONNECT_REFUSED) {

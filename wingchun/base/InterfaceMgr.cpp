@@ -50,6 +50,8 @@ void InterfaceMgr::initArray(const std::string& interfaces)
 
 void InterfaceMgr::disable(const std::string& interface)
 {
+	std::lock_guard<std::mutex> guard_mutex(m_mutex);
+	
 	for(size_t i = 0; i < m_vector.size(); i++) {
 		if (m_vector[i].host == interface) {
 			m_vector[i].enable = false;
@@ -72,11 +74,12 @@ void InterfaceMgr::print()
 }
 
 std::string InterfaceMgr::getActiveInterface()
-{
+{	
 	size_t number, size;
 	std::string hostName;
 	HostInterface item;
 
+	std::lock_guard<std::mutex> guard_mutex(m_mutex);
 	//1. vector is empty
 	size = m_vector.size();
 	if (size == 0) return hostName;
