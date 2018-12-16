@@ -606,7 +606,7 @@ void MDEngineOceanEx::onFills(Document& json)
             on_trade(&trade);
         }
     }
-    esle {   KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : nvaild data"); }
+    else {   KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : nvaild data"); }
 }
 
 // {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],"bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
