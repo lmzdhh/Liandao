@@ -44,6 +44,7 @@ using utils::crypto::base64_encode;
 
 
 #define HTTP_CONNECT_REFUSED 429
+#define HTTP_CONNECT_BANS	418
 
 USING_WC_NAMESPACE
 
@@ -1474,10 +1475,10 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
     } while(should_retry && retry_times < max_rest_retry_times);
 
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
-																		"interface [" << interface <<
+																		 " interface [" << interface <<
                                                                          "] (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
-	if (response.status_code == HTTP_CONNECT_REFUSED) {
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
 		m_interfaceMgr.disable(interface);
 		KF_LOG_INFO(logger, "[send_order] interface [" << interface << "] is disabled!");
 	}
@@ -1628,11 +1629,11 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
                               Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
-											  "interface [" << interface <<
+											  " interface [" << interface <<
                                               "] (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
 
-	if (response.status_code == HTTP_CONNECT_REFUSED) {
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
 		m_interfaceMgr.disable(interface);
 		KF_LOG_INFO(logger, "[get_order] interface [" << interface << "] is disabled!");
 	}
@@ -1722,10 +1723,10 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
     } while(should_retry && retry_times < max_rest_retry_times);
 
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
-																	      "interface [" << interface <<
+																	     " interface [" << interface <<
                                                                          "] (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
-	if (response.status_code == HTTP_CONNECT_REFUSED) {
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
 		m_interfaceMgr.disable(interface);
 		KF_LOG_INFO(logger, "[cancel_order] interface [" << interface << "] is disabled!");
 	}
@@ -1783,11 +1784,11 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
                               Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_my_trades] (url) " << url << " (response.status_code) " << response.status_code <<
-												"interface [" << interface <<
+												" interface [" << interface <<
                                                 "] (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
 
-	if (response.status_code == HTTP_CONNECT_REFUSED) {
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
 		m_interfaceMgr.disable(interface);
 		KF_LOG_INFO(logger, "[get_my_trades] interface [" << interface << "] is disabled!");
 	}
