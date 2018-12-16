@@ -7,6 +7,7 @@
 InterfaceMgr::InterfaceMgr()
 {
 	m_timeout = 0;
+	m_index = 0;
 	m_mutex = new std::mutex();
 }
 
@@ -92,23 +93,24 @@ std::string InterfaceMgr::getActiveInterface()
 	HostInterface item;
 
 	std::lock_guard<std::mutex> guard_mutex(*m_mutex);
+	
 	//1. vector is empty
 	size = m_vector.size();
 	if (size == 0) return hostName;
 
+	if (m_index > 1000000) m_index = 0;
+	number = (m_index++) % size;
+
 	//2. not set timeout
 	int64_t currentTime = this->getTimestamp();
 	if (m_timeout <= 0) {
-		number = currentTime % size;
 		hostName = m_vector[number].host;
 		return hostName;
 	}
 
 	//3. set timeout
 	for(size_t i = 0; i < size; i++) {
-		number = (currentTime + i) % size;
 		item = m_vector[number];
-
 		if (item.enable) {
 			hostName = item.host;
 			break;
@@ -122,6 +124,9 @@ std::string InterfaceMgr::getActiveInterface()
 			
 			break;
 		}
+
+		if (m_index > 1000000) m_index = 0;
+		number = (m_index++) % size;
 	}
 
 	return hostName;

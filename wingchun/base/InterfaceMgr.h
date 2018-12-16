@@ -36,6 +36,7 @@ private:
 	std::vector<HostInterface> m_vector;
 	int m_timeout;
 	std::mutex* m_mutex = nullptr;
+	int m_index;
 };
 
 
