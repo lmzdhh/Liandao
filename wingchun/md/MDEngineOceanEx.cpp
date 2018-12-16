@@ -46,8 +46,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 	{
 		case LWS_CALLBACK_CLIENT_ESTABLISHED:
 		{
-            ss << "established.";
-            global_md->writeErrorLog(ss.str());
+            //ss << "established.";
+            //global_md->writeErrorLog(ss.str());
 			lws_callback_on_writable( wsi );
 			break;
 		}
@@ -59,8 +59,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		}
 		case LWS_CALLBACK_CLIENT_RECEIVE:
 		{
-		     ss << "on_data.";
-            global_md->writeErrorLog(ss.str());
+		     //ss << "on_data.";
+            //global_md->writeErrorLog(ss.str());
 			if(global_md)
 			{
 				global_md->on_lws_data(wsi, (const char*)in, len);
@@ -69,8 +69,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		}
 		case LWS_CALLBACK_CLIENT_WRITEABLE:
 		{
-		     ss << "writeable.";
-            global_md->writeErrorLog(ss.str());
+		    // ss << "writeable.";
+            //global_md->writeErrorLog(ss.str());
 			int ret = 0;
 			if(global_md)
 			{
@@ -80,7 +80,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		}
 		case LWS_CALLBACK_CLOSED:
         {
-             ss << "close.";
+            ss << "close.";
             global_md->writeErrorLog(ss.str());
             break;
         }
@@ -425,7 +425,7 @@ void MDEngineOceanEx::subscribeMarketData(const vector<string>& instruments, con
 
 int MDEngineOceanEx::lws_write_subscribe(struct lws* conn)
 {
-	KF_LOG_INFO(logger, "MDEngineOceanEx::lws_write_subscribe: (subscribe_index)" << subscribe_index);
+	//KF_LOG_INFO(logger, "MDEngineOceanEx::lws_write_subscribe: (subscribe_index)" << subscribe_index);
 
     if(websocketSubscribeJsonString.size() == 0) return 0;
     //sub depth
@@ -469,7 +469,7 @@ std::string MDEngineOceanEx::dealDataSprit(const char* src)
 void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
-	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
+	//KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
     Document json;
 	json.Parse(data);
 
@@ -678,11 +678,10 @@ void MDEngineOceanEx::onDepth(Document& json)
 
         auto strData =  json["data"].GetString();
         Document jsonData;
-        KF_LOG_INFO(logger, "strData:" << strData);
+        //KF_LOG_INFO(logger, "strData:" << strData);
 	    jsonData.Parse(strData);
         if(jsonData.IsObject() && jsonData.HasMember("asks")) 
-        {
-            
+        {      
             auto& asks = jsonData["asks"];
             if(asks .IsArray()) {
                 int len = asks.Size();
@@ -693,12 +692,12 @@ void MDEngineOceanEx::onDepth(Document& json)
                     //if volume is 0, remove it
                     if(volume == 0) {
                         asksPriceAndVolume->erase(price);
-                        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
+                       // KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
                     } else {
                         asksPriceAndVolume->erase(price);
                         asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
                     }
-                   KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: asks price:" << price<<  "  volume:"<< volume);
+                   //KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: asks price:" << price<<  "  volume:"<< volume);
                     asks_update = true;
                 }
                 
@@ -716,13 +715,13 @@ void MDEngineOceanEx::onDepth(Document& json)
                     uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
                     if(volume == 0) {
                         bidsPriceAndVolume->erase(price);
-                        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
+                       //KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
 
                     } else {
                         bidsPriceAndVolume->erase(price);
                         bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
                     }
-                    KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: bids price:" << price<<  "  volume:"<< volume);
+                    //KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: bids price:" << price<<  "  volume:"<< volume);
                     bids_update = true;
                 }
             }
@@ -748,7 +747,7 @@ void MDEngineOceanEx::onDepth(Document& json)
         //}
         //asks 	卖方深度 from big to little
         int askTotalSize = (int)sort_result.size();
-        auto size = std::min(askTotalSize, 20);
+        auto size = std::min(askTotalSize, book_depth_count);
 
         for(int i = 0; i < size; ++i)
         {
@@ -768,7 +767,7 @@ void MDEngineOceanEx::onDepth(Document& json)
         //}
         //bids 	买方深度 from big to little
         int bidTotalSize = (int)sort_result.size();
-        size = std::min(bidTotalSize, 20);
+        size = std::min(bidTotalSize, book_depth_count);
 
         for(int i = 0; i < size; ++i)
         {
