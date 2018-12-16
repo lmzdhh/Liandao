@@ -189,6 +189,7 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
     string secret_key = j_config["SecretKey"].get<string>();
 
     string baseUrl = j_config["baseUrl"].get<string>();
+    string path = j_config["path"].get<string>();
     base_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     base_interval_ms = std::max(base_interval_ms,(int64_t)500);
 
@@ -196,7 +197,7 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
     unit.api_key = api_key;
     unit.secret_key = secret_key;
     unit.baseUrl = baseUrl;
-
+    unit.path = path;
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
@@ -814,8 +815,8 @@ void TDEngineDaybit::lws_login(AccountUnitDaybit& unit, long timeout_nsec) {
 
     struct lws_client_connect_info ccinfo = {0};
 
-    static std::string host  = unit.baseUrl + "?api_key="+unit.api_key+"&api_secret="+unit.secret_key;
-    static std::string path = "";
+    static std::string host  = unit.baseUrl;
+    static std::string path = unit.path+ "?api_key="+unit.api_key+"&api_secret="+unit.secret_key;
     static int port = 443;
 
     ccinfo.context 	= context;
@@ -823,7 +824,7 @@ void TDEngineDaybit::lws_login(AccountUnitDaybit& unit, long timeout_nsec) {
     ccinfo.port 	= port;
     ccinfo.path 	= path.c_str();
     ccinfo.host 	= host.c_str();
-    ccinfo.origin 	= unit.baseUrl.c_str();
+    ccinfo.origin 	= host.c_str();
     ccinfo.ietf_version_or_minus_one = -1;
     ccinfo.protocol = protocols[0].name;
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
@@ -1100,7 +1101,7 @@ std::string TDEngineDaybit::createPhoenixMsg(int64_t joinref,const std::string& 
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
-    return doc.GetString();
+    return buffer.GetString();
 }
 
 std::string TDEngineDaybit::createNewOrderReq(int64_t joinref,double amount,double price,const std::string& symbol,bool isSell )

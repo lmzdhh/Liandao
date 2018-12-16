@@ -38,8 +38,9 @@ struct SendOrderFilter
 struct AccountUnitDaybit
 {
     string api_key;
-    string secret_key;
+    string secret_key; 
     string baseUrl;
+    string path;
     // internal flags
     bool    logged_in;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
