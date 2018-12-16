@@ -568,7 +568,7 @@ void MDEngineOceanEx::onFills(Document& json)
         KF_LOG_ERROR(logger, "MDEngineOceanEx::[onFills] invalid market trade message");
         return;
     }
-    
+     std::string ticker;
    if(json.HasMember("channel"))
     {
         ticker = json["channel"].GetString();
@@ -600,8 +600,8 @@ void MDEngineOceanEx::onFills(Document& json)
 
             KF_LOG_INFO(logger, "MDEngineOceanEx::[onFills] (ticker)" << ticker <<
                                                                         " (Price)" << trade.Price <<
-                                                                        " (Volume)" << trade.Volume) << 
-                                                                        "OrderBSFlag" << trade.OrderBSFlag;
+                                                                        " (Volume)" << trade.Volume << 
+                                                                        "(OrderBSFlag)" << trade.OrderBSFlag;
             on_trade(&trade);
         }
     }
