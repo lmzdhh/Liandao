@@ -601,7 +601,7 @@ void MDEngineOceanEx::onFills(Document& json)
             KF_LOG_INFO(logger, "MDEngineOceanEx::[onFills] (ticker)" << ticker <<
                                                                         " (Price)" << trade.Price <<
                                                                         " (Volume)" << trade.Volume << 
-                                                                        "(OrderBSFlag)" << trade.OrderBSFlag;
+                                                                        "(OrderBSFlag)" << trade.OrderBSFlag);
             on_trade(&trade);
         }
     }
