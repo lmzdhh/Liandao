@@ -1460,6 +1460,8 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 		KF_LOG_INFO(logger, "[send_order] interface: [" << interface << "].");
 		if (interface.empty()) {
 			KF_LOG_INFO(logger, "[send_order] interface is empty, decline message sending!");
+			std::string strRefused = "{\"code\":-1430,\"msg\":\"interface is empty.\"}";
+            json.Parse(strRefused.c_str());
 			return;
 		}
 		
@@ -1707,6 +1709,8 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 		KF_LOG_INFO(logger, "[cancel_order] interface: [" << interface << "].");
 		if (interface.empty()) {
 			KF_LOG_INFO(logger, "[cancel_order] interface is empty, decline message sending!");
+			std::string strRefused = "{\"code\":-1430,\"msg\":\"interface is empty.\"}";
+            json.Parse(strRefused.c_str());
 			return;
 		}
 
