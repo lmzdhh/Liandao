@@ -582,6 +582,7 @@ void MDEngineOceanEx::onFills(Document& json)
      Document jsonData;
     KF_LOG_INFO(logger, "strData:" << strData);
 	jsonData.Parse(strData);
+    KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] :Parse:" << strData);
     if(jsonData.HasMember("trades") && json["trades"].IsArray())
     {
         int len = jsonData["trades"].Size();
