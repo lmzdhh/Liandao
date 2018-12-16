@@ -788,7 +788,7 @@ void MDEngineOceanEx::onDepth(Document& json)
     }
     else
     {
-          KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  data not update");
+          KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  data not update:" << json["data"].GetString());
     }
 }
 
