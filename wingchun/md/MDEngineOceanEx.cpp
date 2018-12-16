@@ -468,10 +468,10 @@ std::string MDEngineOceanEx::dealDataSprit(const char* src)
 
 void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
-    std::string strData = dealDataSprit(data);
-	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << strData);
+    //std::string strData = dealDataSprit(data);
+	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
     Document json;
-	json.Parse(strData.c_str());
+	json.Parse(data);
 
 	if(!json.HasParseError() && json.IsObject() && json.HasMember("event") && json["event"].IsString())
 	{
@@ -494,7 +494,7 @@ void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len
         }
 	} else 
     {
-		KF_LOG_ERROR(logger, "MDEngineOceanEx::on_lws_data . parse json error: " << strData);
+		KF_LOG_ERROR(logger, "MDEngineOceanEx::on_lws_data . parse json error: " << data);
 	}
 }
 
@@ -678,7 +678,7 @@ void MDEngineOceanEx::onDepth(Document& json)
 
         auto strData =  json["data"].GetString();
         Document jsonData;
-        KF_LOG_INFO(logger, strData);
+        KF_LOG_INFO(logger, "strData:" << strData);
 	    jsonData.Parse(strData);
         if(jsonData.IsObject() && jsonData.HasMember("asks")) 
         {
