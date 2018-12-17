@@ -245,7 +245,7 @@ void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit)
     unit.mapSubscribeRef.insert(std::make_pair(TOPIC_TRADE,getJoinRef()));
     unit.listMessageToSend.push(createJoinReq(makeJoinRef(),TOPIC_API));
     unit.mapSubscribeRef.insert(std::make_pair(TOPIC_API,getJoinRef()));
-    //cancel_all_orders(unit);
+    std::cout << "InitSubscribeMsg, ref test " << getJoinRef() << " hhhhh " <<getJoinRef() << std::endl;
 }
 void TDEngineDaybit::connect(long timeout_nsec)
 {
@@ -698,6 +698,7 @@ std::string TDEngineDaybit::getResponse(Value& payload, Value& response)
             }
             else
             {
+                retMsg = "unkown error";
                 KF_LOG_ERROR(logger, "[getResponse] error (message) unkown error" );
             }
         }
