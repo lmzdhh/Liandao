@@ -687,7 +687,7 @@ std::string TDEngineDaybit::getResponse(Value& payload, Value& response)
      std::string  retMsg ="";
      if (payload.IsObject() && payload.HasMember("status") && payload.HasMember("response"))
      {
-		auto status = payload["status"].GetString();
+		std::string status = payload["status"].GetString();
         response = payload["response"].GetObject();
         if(status != "ok")
         {
@@ -971,7 +971,7 @@ void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& response)
                             rtn_order.VolumeTraded = int64_t(order["filled_quote"].GetDouble()*scale_offset);
                         }
 
-                        auto status = order["status"].GetString();
+                        std::string status = order["status"].GetString();
                         if(status == "closed")
                         {
                             rtn_order.OrderStatus = GetOrderStatus(order["close_type"].GetString());
