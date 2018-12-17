@@ -607,10 +607,9 @@ void MDEngineOceanEx::onFills(Document& json)
     else {   KF_LOG_INFO(logger, "iMDEngineOceanEx::[onFills] : nvaild data"); }
 }
 
-bool shouldUpdateData(const LFPriceBook20Field& md)
+bool MDEngineOceanEx::shouldUpdateData(const LFPriceBook20Field& md)
 {
     bool has_update = false;
-    static std::map<std::string,LFPriceBook20Field> mapLastData;
     auto it = mapLastData.find (md.InstrumentID);
     if(it == mapLastData.end())
     {
@@ -659,23 +658,10 @@ bool shouldUpdateData(const LFPriceBook20Field& md)
     return has_update;
 }
 
-// {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],"bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
 void MDEngineOceanEx::onDepth(Document& json)
 {
     bool asks_update = false;
     bool bids_update = false;
-    /*
-    std::string base="";
-    if(json.HasMember("base") && json["base"].IsString()) {
-        base = json["base"].GetString();
-    }
-    std::string quote="";
-    if(json.HasMember("quote") && json["quote"].IsString()) {
-        quote = json["quote"].GetString();
-    }
-
-    KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "base : " << base << "  quote: " << quote);
-    */
 
     std::string ticker;
     if(json.HasMember("channel"))
@@ -688,33 +674,10 @@ void MDEngineOceanEx::onDepth(Document& json)
     }
  
     KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "(ticker) " << ticker);
-	std::map<int64_t, uint64_t>*  asksPriceAndVolume;
-	std::map<int64_t, uint64_t>*  bidsPriceAndVolume;
-
-	auto iter = tickerAskPriceMap.find(ticker);
-	if(iter != tickerAskPriceMap.end()) {
-		asksPriceAndVolume = iter->second;
-//        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "ticker : " << ticker << "  get from map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
-	} else {
-        asksPriceAndVolume = new std::map<int64_t, uint64_t>();
-		tickerAskPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, asksPriceAndVolume));
-//        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "ticker : " << ticker << "  insert into map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
-	}
-
-	iter = tickerBidPriceMap.find(ticker);
-	if(iter != tickerBidPriceMap.end()) {
-		bidsPriceAndVolume = iter->second;
-//        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "ticker : " << ticker << "  get from map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
-	} else {
-        bidsPriceAndVolume = new std::map<int64_t, uint64_t>();
-		tickerBidPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t>*>(ticker, bidsPriceAndVolume));
-//        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:" << "ticker : " << ticker << "  insert into map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
-	}
-
-    //make depth map
+    LFPriceBook20Field md;
+    memset(&md, 0, sizeof(md));
     if(json.HasMember("data"))
     {
-
         auto strData =  json["data"].GetString();
         Document jsonData;
         //KF_LOG_INFO(logger, "strData:" << strData);
@@ -724,22 +687,15 @@ void MDEngineOceanEx::onDepth(Document& json)
             auto& asks = jsonData["asks"];
             if(asks .IsArray()) {
                 int len = asks.Size();
+                len = len <= book_depth_count ? len : book_depth_count;
                 for(int i = 0 ; i < len; i++)
                 {
                     int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
                     uint64_t volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
-                    //if volume is 0, remove it
-                    if(volume == 0) {
-                        asksPriceAndVolume->erase(price);
-                       // KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
-                    } else {
-                        asksPriceAndVolume->erase(price);
-                        asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
-                    }
-                   //KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: asks price:" << price<<  "  volume:"<< volume);
-                    asks_update = true;
+                    md.AskLevels[i].price = price;
+                    md.AskLevels[i].volume = volume;
                 }
-                
+                 md.AskLevelCount = len;  
             }
         }
         else { KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  asks not found");}
@@ -748,21 +704,15 @@ void MDEngineOceanEx::onDepth(Document& json)
             auto& bids = jsonData["bids"];
             if(bids.IsArray()) {
                 int len = bids.Size();
+                len = len <= book_depth_count ? len : book_depth_count;
                 for(int i = 0 ; i < len; i++)
                 {
                     int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
                     uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
-                    if(volume == 0) {
-                        bidsPriceAndVolume->erase(price);
-                       //KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:" << price<<  "  volume:"<< volume);
-
-                    } else {
-                        bidsPriceAndVolume->erase(price);
-                        bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
-                    }
-                    //KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: bids price:" << price<<  "  volume:"<< volume);
-                    bids_update = true;
+                    md.BidLevels[i].price = price;
+                    md.BidLevels[i].volume = volume;
                 }
+                md.BidLevelCount = len;
             }
        } else { KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  asks not found");}
     }
@@ -770,68 +720,17 @@ void MDEngineOceanEx::onDepth(Document& json)
     {
           KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  data not found");
     }
-    // has any update
-    if(asks_update || bids_update)
+    
+    std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
+    strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
+    strcpy(md.InstrumentID, strInstrumentID.c_str());
+    strcpy(md.ExchangeID, "oceanex");
+
+    if(shouldUpdateData(md))
     {
-        //create book update
-        std::vector<PriceAndVolume> sort_result;
-        LFPriceBook20Field md;
-        memset(&md, 0, sizeof(md));
-
-        sortMapByKey(*asksPriceAndVolume, sort_result, sort_price_desc);
-       // std::cout<<"asksPriceAndVolume sorted desc:"<< std::endl;
-        //for(int i=0; i<sort_result.size(); i++)
-        //{
-        //    std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-        //}
-        //asks 	卖方深度 from big to little
-        int askTotalSize = (int)sort_result.size();
-        auto size = std::min(askTotalSize, book_depth_count);
-
-        for(int i = 0; i < size; ++i)
-        {
-            md.AskLevels[i].price = sort_result[askTotalSize - i - 1].price;
-            md.AskLevels[i].volume = sort_result[askTotalSize - i - 1].volume;
-            KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  LFPriceBook20Field AskLevels: (i)" << i << "(price)" << md.AskLevels[i].price<<  "  (volume)"<< md.AskLevels[i].volume);
-        }
-        md.AskLevelCount = size;
-
-
-        sort_result.clear();
-        sortMapByKey(*bidsPriceAndVolume, sort_result, sort_price_asc);
-        //std::cout<<"bidsPriceAndVolume sorted asc:"<< std::endl;
-        //for(int i=0; i<sort_result.size(); i++)
-        //{
-        //    std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
-        //}
-        //bids 	买方深度 from big to little
-        int bidTotalSize = (int)sort_result.size();
-        size = std::min(bidTotalSize, book_depth_count);
-
-        for(int i = 0; i < size; ++i)
-        {
-            md.BidLevels[i].price = sort_result[bidTotalSize - i - 1].price;
-            md.BidLevels[i].volume = sort_result[bidTotalSize - i - 1].volume;
-            KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  LFPriceBook20Field BidLevels: (i) " << i << "(price)" << md.BidLevels[i].price<<  "  (volume)"<< md.BidLevels[i].volume);
-        }
-        md.BidLevelCount = size;
-        sort_result.clear();
-
-        std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
-        strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
-        strcpy(md.InstrumentID, strInstrumentID.c_str());
-        strcpy(md.ExchangeID, "oceanex");
-
-        if(shouldUpdateData(md))
-        {
-            KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: on_price_book_update," << strInstrumentID << ",oceanex");
-            on_price_book_update(&md);
-        }else { KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: same data not update:" << json["data"].GetString());}
-    }
-    else
-    {
-          KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth:  data not update:" << json["data"].GetString());
-    }
+        KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: on_price_book_update," << strInstrumentID << ",oceanex");
+        on_price_book_update(&md);
+    }else { KF_LOG_INFO(logger, "MDEngineOceanEx::onDepth: same data not update:" << json["data"].GetString());}
 }
 
 std::string MDEngineOceanEx::parseJsonToString(const char* in)

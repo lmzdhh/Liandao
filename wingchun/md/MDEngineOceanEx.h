@@ -112,7 +112,7 @@ private:
 private:
     void readWhiteLists(const json& j_config);
     std::string getWhiteListCoinpairFrom(std::string md_coinpair);
-
+    bool shouldUpdateData(const LFPriceBook20Field& md);
     void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
     void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
     void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
@@ -121,7 +121,7 @@ private:
     std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
 
     std::vector<std::string> websocketSubscribeJsonString;
-
+    std::map<std::string,LFPriceBook20Field> mapLastData;
     //in MD, lookup direction is:
     // incoming exchange coinpair ---> our strategy recognized coinpair
     //if coming data 's coinpair is not in this map ,ignore it
