@@ -595,7 +595,8 @@ void MDEngineOceanEx::onFills(Document& json)
 
             trade.Price = std::round(std::stod(arrayTrades.GetArray()[i]["price"].GetString()) * scale_offset);
             trade.Volume = std::round(std::stod(arrayTrades.GetArray()[i]["amount"].GetString()) * scale_offset);
-            trade.OrderBSFlag[0] = "buy" == arrayTrades[i]["type"].GetString() ? 'B' : 'S';
+            static const string strBuy = "buy" ;
+            trade.OrderBSFlag[0] = (strBuy == arrayTrades[i]["type"].GetString()) ? 'B' : 'S';
 
             KF_LOG_INFO(logger, "MDEngineOceanEx::[onFills] (ticker)" << ticker <<
                                                                         " (Price)" << trade.Price <<
