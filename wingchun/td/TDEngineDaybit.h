@@ -49,6 +49,7 @@ struct AccountUnitDaybit
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
     std::queue<std::string> listMessageToSend;
+    std::map<std::string, int64_t> mapSubscribeRef;
     std::vector<std::string> pendingSendMsg;
     struct lws * websocketConn;
     int maxRetryCount=3;
@@ -118,7 +119,7 @@ private:
 //websocket
     AccountUnitDaybit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onRtnOrder(struct lws * websocketConn, rapidjson::Value& json);
-    void onRspOrder(struct lws * websocketConn, rapidjson::Document& json);
+    void onRspOrder(struct lws * websocketConn, rapidjson::Value& json,int64_t ref);
     void onRtnTrade(struct lws * websocketConn, rapidjson::Value& json);
     void onRtnMarket(struct lws * websocketConn, rapidjson::Value& json);
     void wsloop();

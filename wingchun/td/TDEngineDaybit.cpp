@@ -39,8 +39,10 @@ using std::stoi;
 using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
-
-
+#define TOPIC_MARKET "/subscription:markets"
+#define TOPIC_TRADE "/subscription:my_trades"
+#define TOPIC_ORDER "/subscription:my_orders"
+#define TOPIC_API "/api"
 USING_WC_NAMESPACE
 
 int g_RequestGap=5*60;
@@ -232,13 +234,15 @@ void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit)
 {
     std::lock_guard<std::mutex> lck(unit_mutex);
     unit.listMessageToSend = std::queue<std::string>();
-    unit.listMessageToSend.push(createJoinReq(makeJoinRef(),"/subscription:markets"));
-    unit.listMessageToSend.push(createSubscribeMarketReq(getJoinRef()));
-    unit.listMessageToSend.push(createJoinReq(makeJoinRef(),"/subscription:my_orders"));
-    unit.listMessageToSend.push(createSubscribeOrderReq(getJoinRef()));
-    unit.listMessageToSend.push(createJoinReq(makeJoinRef(),"/subscription:my_trades"));
-    unit.listMessageToSend.push(createSubscribeTradeReq(getJoinRef()));
-    cancel_all_orders(unit);
+    unit.listMessageToSend.push(createJoinReq(makeJoinRef(),TOPIC_MARKET));
+    unit.mapSubscribeRef.insert(std::make_pair(TOPIC_MARKET,getJoinRef()));
+    unit.listMessageToSend.push(createJoinReq(makeJoinRef(),TOPIC_ORDER));
+    unit.mapSubscribeRef.insert(std::make_pair(TOPIC_ORDER,getJoinRef()));
+    unit.listMessageToSend.push(createJoinReq(makeJoinRef(),TOPIC_TRADE));
+    unit.mapSubscribeRef.insert(std::make_pair(TOPIC_TRADE,getJoinRef()));
+    unit.listMessageToSend.push(createJoinReq(makeJoinRef(),TOPIC_API));
+    unit.mapSubscribeRef.insert(std::make_pair(TOPIC_API,getJoinRef()));
+    //cancel_all_orders(unit);
 }
 void TDEngineDaybit::connect(long timeout_nsec)
 {
@@ -554,7 +558,7 @@ void TDEngineDaybit::req_order_insert(const LFInputOrderField* data, int account
                                                                      " (ticksize)" << filter.ticksize <<
                                                                      " (fixedPrice)" << fixedPrice);
     std::lock_guard<std::mutex> guard_mutex(unit_mutex);                                                            
-    unit.listMessageToSend.push(createJoinReq(getJoinRef(),"/api"));
+    //unit.listMessageToSend.push(createJoinReq(getJoinRef(),"/api"));
     unit.listMessageToSend.push(createNewOrderReq(getJoinRef(),data->Volume*1.0/scale_offset,fixedPrice*1.0/scale_offset,ticker,LF_CHAR_Sell == data->Direction));
 	addNewOrder(unit, data->InstrumentID, data->OrderRef,data->Direction, LF_CHAR_Unknown, data->Volume, requestId,getRef());
     //on_rsp_order_insert(data, requestId,errorId, errorMsg.c_str());
@@ -712,18 +716,17 @@ void TDEngineDaybit::get_account(AccountUnitDaybit& unit, Document& json)
 void TDEngineDaybit::cancel_all_orders(AccountUnitDaybit& unit)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
-    unit.listMessageToSend.push(createJoinReq(makeJoinRef(),"/api"));
+    
     auto req = createCancelAllOrdersReq(getJoinRef());
-     unit.listMessageToSend.push(req);
+    unit.listMessageToSend.push(req);
     KF_LOG_INFO(logger, "[cancel_all_orders] (joinref) " << getJoinRef() << " (ref)" << getRef() << "(msg) " << req);
 }
 
 
 void TDEngineDaybit::cancel_order(AccountUnitDaybit& unit, int64_t orderId)
 {
-    KF_LOG_INFO(logger, "[cancel_order]");
-   
-    unit.listMessageToSend.push(createJoinReq(makeJoinRef(),"/api"));
+    KF_LOG_INFO(logger, "[cancel_order]");  
+    //unit.listMessageToSend.push(createJoinReq(getJoinRef(),"/api"));
     auto req = createCancelOrderReq(getJoinRef(),orderId);
     unit.listMessageToSend.push(req);
     KF_LOG_INFO(logger, "[cancel_order] (joinref) " << getJoinRef() << " (ref)" << getRef() << "(msg) " << req);	
@@ -755,6 +758,8 @@ void TDEngineDaybit::on_lws_connection_error(struct lws* conn)
 
 int TDEngineDaybit::on_lws_write(struct lws* conn)
 {
+    
+    KF_LOG_INFO(logger, "TDEngineDaybit::on_lws_write");
     std::lock_guard<std::mutex> lck(unit_mutex);
     //KF_LOG_INFO(logger,"TDEngineDaybit::lws_write_subscribe");
     auto& unit = findAccountUnitByWebsocketConn(conn);
@@ -848,22 +853,31 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
     if (json.HasParseError() || !json.IsObject()) {
         KF_LOG_ERROR(logger, "TDEngineDaybit::on_lws_data. parse json error: " << data);        
     }
-	else if(json.HasMember("topic") && json.HasMember("payload"))
+	else if(json.HasMember("topic") && json.HasMember("payload") && json.HasMember("ref"))
 	{
 		std::string  topic = json["topic"].GetString();
         Value payload = json["payload"].GetObject();
-        
-		if (topic == "/subscription:my_orders")
-		{
-			onRtnOrder(conn, payload);
-		}
-		else if (topic == "/subscription:my_trades")
-		{
-			onRtnTrade(conn, payload);
-		}
-        else if(topic == "/api")
-        {
-            onRspOrder(conn,json);
+        int64_t ref = atoll(json["ref"].GetString());
+        Value response;
+        auto errorMsg = getResponse(payload,response);
+        if(errorMsg.empty())
+        {           
+            if (topic == TOPIC_ORDER)
+            {               
+                onRtnOrder(conn, response);
+            }
+            else if (topic == TOPIC_TRADE)
+            {
+                onRtnTrade(conn, response);
+            }
+            else if(topic == TOPIC_API)
+            {
+                onRspOrder(conn,response,ref);
+            }
+            else if(topic == TOPIC_MARKET)
+            {
+                onRtnMarket(conn,response);
+            }
         }
 	}
 }
@@ -882,14 +896,12 @@ AccountUnitDaybit& TDEngineDaybit::findAccountUnitByWebsocketConn(struct lws * w
 }
 
 
-void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& json)
+void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& response)
 {
     KF_LOG_INFO(logger, "TDEngineDaybit::onRtnOrder");
     AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(websocketConn);
     std::lock_guard<std::mutex> lck(unit_mutex);
-    Value response;
-    auto errorMsg = getResponse(json,response);
-    if(errorMsg.empty() && response.IsArray())
+    if(response.IsArray())
     {
 		for (SizeType index = 0; index < response.Size(); ++index)
 		{
@@ -957,52 +969,54 @@ void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& json)
             }
 		}
        
+    }    
+    else
+    {
+        auto it = unit.mapSubscribeRef.find(TOPIC_ORDER);
+        if(it != unit.mapSubscribeRef.end())
+        {
+            unit.listMessageToSend.push(createSubscribeOrderReq(it->second));
+             unit.mapSubscribeRef.erase(it);
+        }
+        else
+        {
+            KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnOrder unknown message");    
+        }
     }
 }
-void TDEngineDaybit::onRspOrder(struct lws* conn, Document& json) 
+void TDEngineDaybit::onRspOrder(struct lws* conn, Value& rsp,int64_t ref) 
 {
 	KF_LOG_INFO(logger, "TDEngineDaybit::onRspOrder");
     AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(conn);
 	std::lock_guard<std::mutex> lck(unit_mutex);
-    if (json.HasMember("ref") && json.HasMember("payload"))
+    
+    auto it = unit.ordersLocalMap.find(ref);
+    if(it == unit.ordersLocalMap.end())
     {
-        int64_t ref = json["ref"].GetInt64();
-        auto it = unit.ordersLocalMap.find(ref);
-        if(it == unit.ordersLocalMap.end())
-        {
-            KF_LOG_ERROR(logger, "TDEngineDaybit::onRspOrder,no order match (ref)" << ref);
-            return;
-        }
-        Value rsp;
-        auto errMsg = getResponse(json["payload"],rsp);
-        if(errMsg.empty() && rsp.IsObject() && rsp.HasMember("id"))
-        {
-            unit.ordersMap.insert(std::make_pair(rsp["id"].GetInt64(),it->second));
-            KF_LOG_INFO(logger, "TDEngineDaybit::onRspOrder,rtn_order");
-		    on_rtn_order(&it->second);
-			raw_writer->write_frame(&it->second, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_ORDER_DAYBIT,1, (it->second.RequestID > 0) ? it->second.RequestID : -1);
-            unit.ordersLocalMap.erase(it);
-        }
-        else
-        {
-            KF_LOG_ERROR(logger, "TDEngineDaybit::onRspOrder " << errMsg);
-            return;
-        }
+        KF_LOG_ERROR(logger, "TDEngineDaybit::onRspOrder,no order match (ref)" << ref);
+        return;
+    }
+    if(rsp.IsObject() && rsp.HasMember("id"))
+    {
+        unit.ordersMap.insert(std::make_pair(rsp["id"].GetInt64(),it->second));
+        KF_LOG_INFO(logger, "TDEngineDaybit::onRspOrder,rtn_order");
+		on_rtn_order(&it->second);
+		raw_writer->write_frame(&it->second, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_ORDER_DAYBIT,1, (it->second.RequestID > 0) ? it->second.RequestID : -1);
+        unit.ordersLocalMap.erase(it);
     }
     else
     {
-         KF_LOG_ERROR(logger, "TDEngineDaybit::onRspOrder,wrong format");
+        KF_LOG_ERROR(logger, "TDEngineDaybit::onRspOrder unknown message");       
     }
+    
 
 }
-void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& json)
+void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
 { 
 	KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnTrade");
 	AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(websocketConn);
 	std::lock_guard<std::mutex> lck(unit_mutex);
-    Value response;
-    auto errorMsg = getResponse(json,response);
-    if(errorMsg.empty() && response.IsArray())
+    if(response.IsArray())
     {
 		for (SizeType index = 0; index < response.Size(); ++index)
 		{
@@ -1049,16 +1063,42 @@ void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& json)
             }
 		}
 	}
+    else
+    {
+        auto it = unit.mapSubscribeRef.find(TOPIC_TRADE);
+        if(it != unit.mapSubscribeRef.end())
+        {
+            unit.listMessageToSend.push(createSubscribeTradeReq(it->second));
+             unit.mapSubscribeRef.erase(it);
+        }
+        else
+        {
+            KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnTrade unknown message");    
+        } 
+    }
 }
-void TDEngineDaybit::onRtnMarket(struct lws * websocketConn, Value& json)
+void TDEngineDaybit::onRtnMarket(struct lws * websocketConn, Value& response)
 {
     AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(websocketConn);
-    Value response;
-    auto errorMsg = getResponse(json,response);
-    if(errorMsg.empty())
+    if(response.IsObject() && !response.ObjectEmpty())
     {
         loadExchangeOrderFilters(unit,response);
     }
+    else
+    {
+         auto it = unit.mapSubscribeRef.find(TOPIC_MARKET);
+        if(it != unit.mapSubscribeRef.end())
+        {
+            unit.listMessageToSend.push(createSubscribeMarketReq(it->second));
+            unit.mapSubscribeRef.erase(it);
+            cancel_all_orders(unit);
+        }
+        else
+        {
+            KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnTrade unknown message");    
+        } 
+    }
+    
 }
 
 std::string TDEngineDaybit::createJoinReq(int64_t joinref,const std::string& topic)
