@@ -131,10 +131,10 @@ private:
 private:
     int64_t						m_joinRef = 0;
 	int64_t						m_ref = 0;
-	inline int64_t makeRef(){ return ++m_ref;}
-    inline int64_t getRef(){ return m_ref;}
-	inline int64_t makeJoinRef(){return ++m_joinRef;}
-    inline int64_t getJoinRef(){ return m_joinRef;}
+	int64_t makeRef();
+    int64_t getRef();
+	int64_t makeJoinRef();
+    int64_t getJoinRef();
     void get_account(AccountUnitDaybit& unit, Document& json);
 
     void cancel_all_orders(AccountUnitDaybit& unit);

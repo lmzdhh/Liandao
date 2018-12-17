@@ -150,7 +150,10 @@ TDEngineDaybit::TDEngineDaybit(): ITDEngine(SOURCE_DAYBIT)
 TDEngineDaybit::~TDEngineDaybit()
 {
 }
-
+int64_t TDEngineDaybit::makeRef(){ return ++m_ref;}
+int64_t TDEngineDaybit::getRef(){ return m_ref;}
+int64_t TDEngineDaybit::makeJoinRef(){return ++m_joinRef;}
+int64_t TDEngineDaybit::getJoinRef(){ return m_joinRef;}
 void TDEngineDaybit::init()
 {
     ITDEngine::init();
@@ -686,10 +689,17 @@ std::string TDEngineDaybit::getResponse(Value& payload, Value& response)
      {
 		auto status = payload["status"].GetString();
         response = payload["response"].GetObject();
-        if(status != "ok" && response.HasMember("error_code") && response.HasMember("message"))
+        if(status != "ok")
         {
-            retMsg = response["message"].GetString();
-            KF_LOG_ERROR(logger, "[getResponse] error (code)"<< response["error_code"].GetString() << ",(message)" << retMsg);
+            if(response.HasMember("error_code") && response.HasMember("message"))
+            {
+                retMsg = response["message"].GetString();
+                KF_LOG_ERROR(logger, "[getResponse] error (code)"<< response["error_code"].GetString() << ",(message)" << retMsg);
+            }
+            else
+            {
+                KF_LOG_ERROR(logger, "[getResponse] error (message) unkown error" );
+            }
         }
         else if(!response.HasMember("data"))
         {
