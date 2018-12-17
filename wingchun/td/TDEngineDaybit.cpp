@@ -693,8 +693,8 @@ std::string TDEngineDaybit::getResponse(Value& payload, Value& response)
         }
         else if(!response.HasMember("data"))
         {
-            retMsg = "no data in response";
-            KF_LOG_ERROR(logger, "[getResponse] error (message)" << retMsg);
+            retMsg = "join ok";
+            KF_LOG_ERROR(logger, "[getResponse]  (message)" << retMsg);
         }
         else
         {
@@ -879,6 +879,33 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
                 onRtnMarket(conn,response);
             }
         }
+        else if( errorMsg == "join ok")
+        {
+            std::lock_guard<std::mutex> lck(unit_mutex);
+            auto it = unit.mapSubscribeRef.find(topic);
+            if(it != unit.mapSubscribeRef.end())
+            {
+                std::string req="";   
+                if (topic == TOPIC_ORDER)
+                {               
+                    req = createSubscribeOrderReq(it->second);
+                }
+                else if (topic == TOPIC_TRADE)
+                {
+                    req = createSubscribeTradeReq(it->second);
+                }
+                else if(topic == TOPIC_API)
+                {
+                    req = createCancelAllOrdersReq(it->second);
+                }
+                else if(topic == TOPIC_MARKET)
+                {
+                    req = createSubscribeMarketReq(it->second);
+                }
+                unit.listMessageToSend.push(req);
+                unit.mapSubscribeRef.erase(it);    
+            }
+        }
 	}
 }
 
@@ -972,16 +999,7 @@ void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& response)
     }    
     else
     {
-        auto it = unit.mapSubscribeRef.find(TOPIC_ORDER);
-        if(it != unit.mapSubscribeRef.end())
-        {
-            unit.listMessageToSend.push(createSubscribeOrderReq(it->second));
-             unit.mapSubscribeRef.erase(it);
-        }
-        else
-        {
-            KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnOrder unknown message");    
-        }
+        KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnOrder unknown message");    
     }
 }
 void TDEngineDaybit::onRspOrder(struct lws* conn, Value& rsp,int64_t ref) 
@@ -1065,16 +1083,7 @@ void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
 	}
     else
     {
-        auto it = unit.mapSubscribeRef.find(TOPIC_TRADE);
-        if(it != unit.mapSubscribeRef.end())
-        {
-            unit.listMessageToSend.push(createSubscribeTradeReq(it->second));
-             unit.mapSubscribeRef.erase(it);
-        }
-        else
-        {
-            KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnTrade unknown message");    
-        } 
+       KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnTrade unknown message");     
     }
 }
 void TDEngineDaybit::onRtnMarket(struct lws * websocketConn, Value& response)
@@ -1086,17 +1095,7 @@ void TDEngineDaybit::onRtnMarket(struct lws * websocketConn, Value& response)
     }
     else
     {
-         auto it = unit.mapSubscribeRef.find(TOPIC_MARKET);
-        if(it != unit.mapSubscribeRef.end())
-        {
-            unit.listMessageToSend.push(createSubscribeMarketReq(it->second));
-            unit.mapSubscribeRef.erase(it);
-            cancel_all_orders(unit);
-        }
-        else
-        {
-            KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnTrade unknown message");    
-        } 
+        KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnTrade unknown message");
     }
     
 }
