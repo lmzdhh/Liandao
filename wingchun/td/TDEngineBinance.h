@@ -5,6 +5,7 @@
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
 #include "CoinPairWhiteList.h"
+#include "InterfaceMgr.h"
 #include <vector>
 #include <algorithm>
 #include <iomanip>
@@ -110,6 +111,7 @@ private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
     vector<AccountUnitBinance> account_units;
+	InterfaceMgr m_interfaceMgr;
 
     std::string GetSide(const LfDirectionType& input);
     LfDirectionType GetDirection(std::string input);
@@ -241,7 +243,7 @@ private:
 
     //handle 429,prohibit send/cencel order time,ms
     //code=-1429,msg:order count over 10000 limit.
-    int err_code_429 = 0;
+    int response_status_code = 0;    
     int prohibit_order_ms = 10000;      //default 10s
     bool bHandle_429 = false;
     std::mutex* mutex_handle_429 = nullptr;

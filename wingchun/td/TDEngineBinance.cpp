@@ -26,6 +26,7 @@ using cpr::Parameters;
 using cpr::Payload;
 using cpr::Post;
 using cpr::Timeout;
+using cpr::Interface;
 
 using rapidjson::StringRef;
 using rapidjson::Writer;
@@ -41,7 +42,12 @@ using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
+
+#define HTTP_CONNECT_REFUSED 429
+#define HTTP_CONNECT_BANS	418
+
 USING_WC_NAMESPACE
+
 
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
 {
@@ -81,6 +87,19 @@ void TDEngineBinance::resize_accounts(int account_num)
 TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
+
+	string interfaces;
+	int interface_timeout = 300000;
+	if(j_config.find("interfaces") != j_config.end()) {
+		interfaces = j_config["interfaces"].get<string>();
+	}
+
+	if(j_config.find("interface_timeout_ms") != j_config.end()) {
+		interface_timeout = j_config["interface_timeout_ms"].get<int>();
+	}
+	m_interfaceMgr.init(interfaces, interface_timeout);
+	m_interfaceMgr.print();
+	
     // internal load
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
@@ -1141,6 +1160,10 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
         strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
         strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
         //must be Array
+        if (!resultTrade.IsArray()) {
+			KF_LOG_INFO(logger, "[retrieveTradeStatus] Binance interface bans or refused!");
+			continue;
+		}
         int len = resultTrade.Size();
         for(int i = 0 ; i < len; i++)
         {
@@ -1360,6 +1383,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 {
     KF_LOG_INFO(logger, "[send_order]");
 
+	string interface;
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
@@ -1443,7 +1467,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 
         handle_request_weight(SendOrder_Type);
 
-        if (err_code_429 == 429)
+        if (response_status_code == HTTP_CONNECT_REFUSED)
         {
             KF_LOG_INFO(logger, "[send_order] meet 429");
             if (handle_429())
@@ -1454,15 +1478,24 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
             }
         }
 
+        interface = m_interfaceMgr.getActiveInterface();
+        KF_LOG_INFO(logger, "[send_order] interface: [" << interface << "].");
+        if (interface.empty()) {
+            KF_LOG_INFO(logger, "[send_order] interface is empty, decline message sending!");
+            std::string strRefused = "{\"code\":-1430,\"msg\":\"interface is empty.\"}";
+            json.Parse(strRefused.c_str());
+            return;
+        }
+
         response = Post(Url{url},
-                                  Header{{"X-MBX-APIKEY", unit.api_key}},
-                                  Body{body}, Timeout{100000});
+                                  Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
+                                  Body{body}, Timeout{100000}, Interface{interface});
 
         KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                          " (response.error.message) " << response.error.message <<
                                                          " (response.text) " << response.text.c_str());
 
-        err_code_429 = response.status_code;
+        response_status_code = response.status_code;
 
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
@@ -1472,9 +1505,14 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
     } while(should_retry && retry_times < max_rest_retry_times);
 
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
-                                                                         " (response.error.message) " << response.error.message <<
+																		 " interface [" << interface <<
+                                                                         "] (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
-
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
+		m_interfaceMgr.disable(interface);
+		KF_LOG_INFO(logger, "[send_order] interface [" << interface << "] is disabled!");
+	}
+	
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1676,15 +1714,28 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
 
     handle_request_weight(GetOrder_Type);
 
+    string interface = m_interfaceMgr.getActiveInterface();
+    KF_LOG_INFO(logger, "[get_order] interface: [" << interface << "].");
+    if (interface.empty()) {
+        KF_LOG_INFO(logger, "[get_order] interface is empty, decline message sending!");
+        return;
+    }
+
     const auto response = Get(Url{url},
-                              Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
+                              Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
+                              Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
-                                              " (response.error.message) " << response.error.message <<
+											  " interface [" << interface <<
+                                              "] (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
 
-    err_code_429 = response.status_code;
+    response_status_code = response.status_code;
+
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
+		m_interfaceMgr.disable(interface);
+		KF_LOG_INFO(logger, "[get_order] interface [" << interface << "] is disabled!");
+	}
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1696,6 +1747,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
+	string interface;
     do {
         should_retry = false;
 
@@ -1747,7 +1799,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 
         handle_request_weight(CancelOrder_Type);
 
-        if (err_code_429 == 429)
+        if (response_status_code == HTTP_CONNECT_REFUSED)
         {
             KF_LOG_INFO(logger, "[cancel_order] meet 429");
             if (handle_429())
@@ -1758,15 +1810,24 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
             }
         }
 
+        interface = m_interfaceMgr.getActiveInterface();
+        KF_LOG_INFO(logger, "[cancel_order] interface: [" << interface << "].");
+        if (interface.empty()) {
+            KF_LOG_INFO(logger, "[cancel_order] interface is empty, decline message sending!");
+            std::string strRefused = "{\"code\":-1430,\"msg\":\"interface is empty.\"}";
+            json.Parse(strRefused.c_str());
+            return;
+        }
+
         response = Delete(Url{url},
-                                  Header{{"X-MBX-APIKEY", unit.api_key}},
-                                  Body{body}, Timeout{100000});
+                                  Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
+                                  Body{body}, Timeout{100000}, Interface{interface});
 
         KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                  " (response.error.message) " << response.error.message <<
                                                  " (response.text) " << response.text.c_str());
 
-        err_code_429 = response.status_code;
+        response_status_code = response.status_code;
 
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
@@ -1776,8 +1837,13 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
     } while(should_retry && retry_times < max_rest_retry_times);
 
     KF_LOG_INFO(logger, "[cancel_order] out_retry (response.status_code) " << response.status_code <<
-                                                                         " (response.error.message) " << response.error.message <<
+                                                                         " interface [" << interface <<
+                                                                         "] (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
+		m_interfaceMgr.disable(interface);
+		KF_LOG_INFO(logger, "[cancel_order] interface [" << interface << "] is disabled!");
+	}
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1820,14 +1886,27 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 
     handle_request_weight(TradeList_Type);
 
+	string interface = m_interfaceMgr.getActiveInterface();
+	KF_LOG_INFO(logger, "[get_my_trades] interface: [" << interface << "].");
+	if (interface.empty()) {
+		KF_LOG_INFO(logger, "[get_my_trades] interface is empty, decline message sending!");
+		return;
+	}
+
     const auto response = Get(Url{url},
-                              Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
+                              Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
+                              Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_my_trades] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                " (response.error.message) " << response.error.message <<
+												" interface [" << interface <<
+                                                "] (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
-    err_code_429 = response.status_code;
+    response_status_code = response.status_code;
+
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
+		m_interfaceMgr.disable(interface);
+		KF_LOG_INFO(logger, "[get_my_trades] interface [" << interface << "] is disabled!");
+	}
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1877,9 +1956,11 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
 
     string url = requestPath + queryString;
 
+    string interface = m_interfaceMgr.getActiveInterface();
+
     const auto response = Get(Url{url},
-                                 Header{{"X-MBX-APIKEY", unit.api_key}},
-                                 Body{body}, Timeout{100000});
+                                 Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
+                                 Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response.status_code) " << response.status_code <<
                                                  " (response.error.message) " << response.error.message <<
@@ -1904,6 +1985,11 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
       }
     ]
      * */
+
+	if (response.status_code == HTTP_CONNECT_REFUSED) {
+		m_interfaceMgr.disable(interface);	
+	}
+
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
