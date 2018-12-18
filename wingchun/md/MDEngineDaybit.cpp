@@ -95,20 +95,21 @@ void MDEngineDaybit::genSubscribeJson()
 		//joinRef = this->makeJoinRef();
 		subscription = this->genOrderbookJoin(var.second, joinRef);
 		KF_LOG_DEBUG(logger, "genOrderbookJoin:" << subscription);
-		if (!subscription.empty()) {
-			m_subscribeJson.push_back(subscription);
-		}
+		if (subscription.empty()) continue;
+
+		m_subscribeJson.push_back(subscription);
 
 		subscription = this->genOrderbookReq(var.second, joinRef);
 		KF_LOG_DEBUG(logger, "genOrderbookReq:" << subscription);
-		if (!subscription.empty()) {
-			m_subscribeJson.push_back(subscription);
-		}
+		m_subscribeJson.push_back(subscription);
 
 		//joinRef = this->makeJoinRef();
-		m_subscribeJson.push_back(this->genTradeJoin(var.second, joinRef));
+		subscription = this->genTradeJoin(var.second, joinRef);
+		m_subscribeJson.push_back(subscription);
 		KF_LOG_DEBUG(logger, "genTradeJoin:" << subscription);
-		m_subscribeJson.push_back(this->genTradeReq(var.second, joinRef));
+
+		subscription = this->genTradeReq(var.second, joinRef);
+		m_subscribeJson.push_back(subscription);
 		KF_LOG_DEBUG(logger, "genTradeReq:" << subscription);
 	}
 	
@@ -146,7 +147,6 @@ std::string MDEngineDaybit::genOrderbookJoin(const std::string& symbol, int64_t&
 
 	writer.Key("topic");
 	string topic = SUBS_ORDERBOOK;
-	topic.append(symbol);
 	string tickPrice = m_tickPriceList.GetValueByKey(symbol);
 	if (tickPrice.empty()) {
 		KF_LOG_ERROR(logger, "find tick_price fail, symbol:" << symbol);
@@ -164,6 +164,7 @@ std::string MDEngineDaybit::genOrderbookJoin(const std::string& symbol, int64_t&
 	
 	writer.Key("timeout");
 	writer.Int(WSS_TIMEOUT);
+	writer.EndObject();
 
 	return buffer.GetString();
 }
@@ -186,7 +187,6 @@ std::string MDEngineDaybit::genOrderbookReq(const std::string& symbol, int64_t n
 	
 	writer.Key("topic");
 	string topic = SUBS_ORDERBOOK;
-	topic.append(symbol);
 	string tickPrice = m_tickPriceList.GetValueByKey(symbol);
 	if (tickPrice.empty()) {
 		KF_LOG_ERROR(logger, "find tick_price fail, symbol:" << symbol);
@@ -206,6 +206,7 @@ std::string MDEngineDaybit::genOrderbookReq(const std::string& symbol, int64_t n
 	
 	writer.Key("timeout");
 	writer.Int(WSS_TIMEOUT);
+	writer.EndObject();
 	
 	return buffer.GetString();
 
@@ -242,6 +243,7 @@ std::string MDEngineDaybit::genTradeJoin(const std::string& symbol, int64_t& nJo
 	
 	writer.Key("timeout");
 	writer.Int(WSS_TIMEOUT);
+	writer.EndObject();
 	
 	return buffer.GetString();
 }
@@ -281,6 +283,7 @@ std::string MDEngineDaybit::genTradeReq(const std::string& symbol, int64_t nJoin
 
 	writer.Key("timeout");
 	writer.Int(WSS_TIMEOUT);
+	writer.EndObject();
 
 	return buffer.GetString();
 }
@@ -471,22 +474,26 @@ void MDEngineDaybit::onWrite(struct lws* conn)
 
 void MDEngineDaybit::orderbookInsertNotify(const rapidjson::Value& data, const std::string& instrument)
 {	
-	double sellVol, buyVol;
-	int64_t price;
+	double sellVol, buyVol, minPrice, maxPrice;
+	int64_t price, volumn;
 	
 	for (size_t i = 0; i < data.Size(); ++i) {
 		auto& val = data[i];
 		sellVol = std::stod(val["sell_vol"].GetString());
 		buyVol = std::stod(val["buy_vol"].GetString());
+		minPrice = std::stod(val["min_price"].GetString());
+		maxPrice = std::stod(val["max_price"].GetString());
 		
 		if (sellVol > 0) {
-			price = std::round(val["max_price"].GetDouble() * SCALE_OFFSET); 
-			priceBook20Assembler.UpdateBidPrice(instrument, price, sellVol * SCALE_OFFSET);
+			price = std::round(maxPrice * SCALE_OFFSET);
+			volumn = std::round(sellVol * SCALE_OFFSET);
+			priceBook20Assembler.UpdateBidPrice(instrument, price, volumn);
 		}
 		
 		if (buyVol > 0) {
-			price = std::round(val["min_price"].GetDouble() * SCALE_OFFSET); 
-			priceBook20Assembler.UpdateAskPrice(instrument, price, sellVol * SCALE_OFFSET);
+			price = std::round(minPrice * SCALE_OFFSET);
+			volumn = std::round(buyVol * SCALE_OFFSET);
+			priceBook20Assembler.UpdateAskPrice(instrument, price, volumn);
 		}
 	}
 
@@ -505,7 +512,7 @@ void MDEngineDaybit::orderbookInsertNotify(const rapidjson::Value& data, const s
 
 void MDEngineDaybit::orderbookInitNotify(const rapidjson::Value& data, const std::string& instrument)
 {
-	double sellVol, buyVol;
+	double sellVol, buyVol, minPrice, maxPrice;
 	LFPriceBook20Field priceBook {0};
 
 	strncpy(priceBook.ExchangeID, "daybit", std::min<size_t>(sizeof(priceBook.ExchangeID)-1, 6));
@@ -514,15 +521,16 @@ void MDEngineDaybit::orderbookInitNotify(const rapidjson::Value& data, const std
 		auto& val = data[i];
 		sellVol = std::stod(val["sell_vol"].GetString());
 		buyVol = std::stod(val["buy_vol"].GetString());
+		minPrice = std::stod(val["min_price"].GetString());
+		maxPrice = std::stod(val["max_price"].GetString());
 		
 		if (sellVol > 0) {
-			priceBook.BidLevels[i].price = std::round(val["min_price"].GetDouble() * SCALE_OFFSET);
-			priceBook.BidLevels[i].volume = std::round(sellVol * SCALE_OFFSET);
-		
+			priceBook.BidLevels[i].price = std::round(maxPrice * SCALE_OFFSET);
+			priceBook.BidLevels[i].volume = std::round(sellVol * SCALE_OFFSET);		
 		}
 		
 		if (buyVol > 0) {
-			priceBook.AskLevels[i].price = std::round(val["max_price"].GetDouble() * SCALE_OFFSET);
+			priceBook.AskLevels[i].price = std::round(minPrice * SCALE_OFFSET);
 			priceBook.AskLevels[i].volume = std::round(buyVol * SCALE_OFFSET);
 		}
 	}
@@ -613,6 +621,10 @@ void MDEngineDaybit::orderbookHandler(const rapidjson::Document& json, const std
     {
         KF_LOG_DEBUG(logger, "orderbookHandler start");
         auto& payload = json["payload"];
+
+		if (!payload.HasMember("data") || !payload.HasMember("response")) {
+			return;
+		}
 		
 		string status = payload["status"].GetString();
         if (status != "ok") {
@@ -660,8 +672,14 @@ void MDEngineDaybit::tradeHandler(const rapidjson::Document& json, const std::st
 {
     try
     {
+    	double  price, base_amount;
+		
         KF_LOG_DEBUG(logger, "tradeHandler start");
         auto& payload = json["payload"];
+
+		if (!payload.HasMember("data") || !payload.HasMember("response")) {
+			return;
+		}
 		
 		string status = payload["status"].GetString();
         if (status != "ok") {
@@ -694,8 +712,10 @@ void MDEngineDaybit::tradeHandler(const rapidjson::Document& json, const std::st
 	        strncpy(trade.ExchangeID, "daybit", std::min((int)sizeof(trade.ExchangeID)-1, 6));
 	        strncpy(trade.InstrumentID, instrument.c_str(),std::min(sizeof(trade.InstrumentID)-1, instrument.size()));
 	        auto& val = data[i];
-	        trade.Volume =  std::round(val["base_amount"].GetDouble() * SCALE_OFFSET);
-	        trade.Price  =  std::round(val["price"].GetDouble() * SCALE_OFFSET);
+			price = std::stod(val["price"].GetString());
+			base_amount = std::stod(val["base_amount"].GetString());
+	        trade.Volume = std::round(base_amount * SCALE_OFFSET);
+	        trade.Price = std::round(price * SCALE_OFFSET);
 	        bool sell = val["taker_sold"].GetBool();
 	        trade.OrderBSFlag[0] = sell ? 'S' : 'B';
 	        on_trade(&trade);
