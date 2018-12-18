@@ -46,9 +46,9 @@ protected:
 
 private:
 	void genSubscribeJson();
-    std::string genOrderbookJoin(const std::string&, int64_t);
+    std::string genOrderbookJoin(const std::string&, int64_t&);
     std::string genOrderbookReq(const std::string&, int64_t);
-	std::string genTradeJoin(const std::string&, int64_t);
+	std::string genTradeJoin(const std::string&, int64_t&);
     std::string genTradeReq(const std::string&, int64_t);
 
 private:
