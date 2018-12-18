@@ -92,20 +92,24 @@ void MDEngineDaybit::genSubscribeJson()
 	string subscription;
     auto& symbol_map = m_whiteList.GetKeyIsStrategyCoinpairWhiteList();
     for(const auto& var : symbol_map) {
-		joinRef = this->makeJoinRef();
+		//joinRef = this->makeJoinRef();
 		subscription = this->genOrderbookJoin(var.second, joinRef);
+		KF_LOG_DEBUG(logger, "genOrderbookJoin:" << subscription);
 		if (!subscription.empty()) {
 			m_subscribeJson.push_back(subscription);
 		}
 
 		subscription = this->genOrderbookReq(var.second, joinRef);
+		KF_LOG_DEBUG(logger, "genOrderbookReq:" << subscription);
 		if (!subscription.empty()) {
 			m_subscribeJson.push_back(subscription);
 		}
 
-		joinRef = this->makeJoinRef();
+		//joinRef = this->makeJoinRef();
 		m_subscribeJson.push_back(this->genTradeJoin(var.second, joinRef));
+		KF_LOG_DEBUG(logger, "genTradeJoin:" << subscription);
 		m_subscribeJson.push_back(this->genTradeReq(var.second, joinRef));
+		KF_LOG_DEBUG(logger, "genTradeReq:" << subscription);
 	}
 	
     if(m_subscribeJson.empty())
@@ -127,8 +131,10 @@ format:
   {"join_ref": "1", "ref": "1", "topic": "/subscription:order_books;USDT;BTC;0.20000000", 
   "event": "phx_join", "payload": {}, "timeout": 3000}
 **/
-std::string MDEngineDaybit::genOrderbookJoin(const std::string& symbol, int64_t nJoinRef)
+std::string MDEngineDaybit::genOrderbookJoin(const std::string& symbol, int64_t& nJoinRef)
 {	 
+	nJoinRef = this->makeRef();
+	
 	rapidjson::StringBuffer buffer;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 	writer.StartObject();
@@ -136,7 +142,7 @@ std::string MDEngineDaybit::genOrderbookJoin(const std::string& symbol, int64_t 
 	writer.String(std::to_string(nJoinRef).c_str());
 
 	writer.Key("ref");
-	writer.String(std::to_string(this->makeRef()).c_str());
+	writer.String(std::to_string(nJoinRef).c_str());
 
 	writer.Key("topic");
 	string topic = SUBS_ORDERBOOK;
@@ -209,8 +215,10 @@ std::string MDEngineDaybit::genOrderbookReq(const std::string& symbol, int64_t n
 {"join_ref": "1", "ref": "1", "topic": "/subscription:trades;USDT;BTC", "event": "phx_join", "payload": {}, 
 	"timeout": 3000}
 **/
-std::string MDEngineDaybit::genTradeJoin(const std::string& symbol, int64_t nJoinRef)
+std::string MDEngineDaybit::genTradeJoin(const std::string& symbol, int64_t& nJoinRef)
 {
+	nJoinRef = this->makeRef();
+
 	rapidjson::StringBuffer buffer;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 	writer.StartObject();
@@ -218,7 +226,7 @@ std::string MDEngineDaybit::genTradeJoin(const std::string& symbol, int64_t nJoi
 	writer.String(std::to_string(nJoinRef).c_str());
 	
 	writer.Key("ref");
-	writer.String(std::to_string(this->makeRef()).c_str());
+	writer.String(std::to_string(nJoinRef).c_str());
 	
 	writer.Key("topic");
 	string topic = SUBS_TRADE;
