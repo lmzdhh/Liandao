@@ -88,7 +88,7 @@ void MDEngineDaybit::load(const json& config)
 
 void MDEngineDaybit::genSubscribeJson()
 {
-	int joinRef = 0;
+	int64_t joinRef = 0;
 	string subscription;
     auto& symbol_map = m_whiteList.GetKeyIsStrategyCoinpairWhiteList();
     for(const auto& var : symbol_map) {
