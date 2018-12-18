@@ -38,8 +38,9 @@ struct SendOrderFilter
 struct AccountUnitDaybit
 {
     string api_key;
-    string secret_key;
+    string secret_key; 
     string baseUrl;
+    string path;
     // internal flags
     bool    logged_in;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
@@ -48,6 +49,7 @@ struct AccountUnitDaybit
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
     std::queue<std::string> listMessageToSend;
+    std::map<std::string, int64_t> mapSubscribeRef;
     std::vector<std::string> pendingSendMsg;
     struct lws * websocketConn;
     int maxRetryCount=3;
@@ -117,7 +119,7 @@ private:
 //websocket
     AccountUnitDaybit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onRtnOrder(struct lws * websocketConn, rapidjson::Value& json);
-    void onRspOrder(struct lws * websocketConn, rapidjson::Document& json);
+    void onRspOrder(struct lws * websocketConn, rapidjson::Value& json,int64_t ref);
     void onRtnTrade(struct lws * websocketConn, rapidjson::Value& json);
     void onRtnMarket(struct lws * websocketConn, rapidjson::Value& json);
     void wsloop();
@@ -129,10 +131,10 @@ private:
 private:
     int64_t						m_joinRef = 0;
 	int64_t						m_ref = 0;
-	inline int64_t makeRef(){ return ++m_ref;}
-    inline int64_t getRef(){ return m_ref;}
-	inline int64_t makeJoinRef(){return ++m_joinRef;}
-    inline int64_t getJoinRef(){ return m_joinRef;}
+	int64_t makeRef();
+    int64_t getRef();
+	int64_t makeJoinRef();
+    int64_t getJoinRef();
     void get_account(AccountUnitDaybit& unit, Document& json);
 
     void cancel_all_orders(AccountUnitDaybit& unit);
