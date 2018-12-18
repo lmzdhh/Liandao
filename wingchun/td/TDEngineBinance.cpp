@@ -49,11 +49,15 @@ TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
     KF_LOG_INFO(logger, "[ATTENTION] default to confirm settlement and no authentication!");
 
     mutex_order_and_trade = new std::mutex();
+    mutex_weight = new std::mutex();
+    mutex_handle_429 = new std::mutex();
 }
 
 TDEngineBinance::~TDEngineBinance()
 {
     if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
+    if(mutex_weight != nullptr) delete mutex_weight;
+    if(mutex_handle_429 != nullptr) delete mutex_handle_429;
 }
 
 void TDEngineBinance::init()
@@ -1308,7 +1312,13 @@ void TDEngineBinance::loop()
     {
         using namespace std::chrono;
         auto current_ms = duration_cast< milliseconds>(system_clock::now().time_since_epoch()).count();
-        if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < rest_get_interval_ms)
+        uint64_t tmp_rest_get_interval_ms = rest_get_interval_ms;
+        if (bHandle_429)
+        {
+            //double rest_get_interval_ms
+            tmp_rest_get_interval_ms = rest_get_interval_ms * 2;
+        }
+        if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < tmp_rest_get_interval_ms)
         {
             continue;
         }
@@ -1431,7 +1441,18 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
             return;
         }
 
-        //request_weight_handle(NewOrder_Type)
+        handle_request_weight(SendOrder_Type);
+
+        if (err_code_429 == 429)
+        {
+            KF_LOG_INFO(logger, "[send_order] meet 429");
+            if (handle_429())
+            {
+                std::string strErr = "{\"code\":-1429,\"msg\":\"handle 429, prohibit send order.\"}";
+                json.Parse(strErr.c_str());
+                return;
+            }
+        }
 
         response = Post(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
@@ -1440,6 +1461,8 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
         KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                          " (response.error.message) " << response.error.message <<
                                                          " (response.text) " << response.text.c_str());
+
+        err_code_429 = response.status_code;
 
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
@@ -1497,7 +1520,8 @@ bool TDEngineBinance::order_count_over_limit()
         << " (order_total_count)" << order_total_count
         << " (order_count_per_second)" << order_count_per_second);
     
-    if (order_time_diff_ms < 1000)
+    const int order_ms = 1000;      //1s
+    if (order_time_diff_ms < order_ms)
     {
         //in second        
         if(time_queue.size() < order_count_per_second)
@@ -1509,7 +1533,7 @@ bool TDEngineBinance::order_count_over_limit()
         }
 
         //reach limit in second/over limit count, sleep
-        usleep(1000000 - order_time_diff_ms * 1000);
+        usleep((order_ms - order_time_diff_ms) * 1000);
         timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     }
 
@@ -1520,33 +1544,97 @@ bool TDEngineBinance::order_count_over_limit()
     return false;
 }
 
-bool TDEngineBinance::request_weight_handle(RequestWeightType type)
+void TDEngineBinance::handle_request_weight(RequestWeightType type)
 {
-    static int request_weight_count = 0;
-    if (request_weight_per_minute >= 1200)
+    if (request_weight_per_minute <= 0)
     {
-        return true;
+        //do nothing even meet 429
+        return;
     }
 
-    switch(type)
+    std::lock_guard<std::mutex> guard_mutex(*mutex_weight);
+    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    static std::queue<weight_data> weight_data_queue;
+    if (weight_data_queue.size() <= 0)
     {
-        case NewOrder_Type:
-            request_weight_count++;
-            break;
-        case CancelOrder_Type:
-            request_weight_count++;
-            break;
-        case OpenOrder_Type:
-            request_weight_count++;
-            break;
-        case TradeList_Type:
-            request_weight_count = request_weight_count + 5;
-            break;
-        default:
-            break;
+        weight_data wd;
+        wd.time = timestamp;
+        wd.addWeight(type);
+        weight_total_count += wd.weight;
+        weight_data_queue.push(wd);
+        return;
+    }
+
+    weight_data front_data = weight_data_queue.front();
+    int weight_time_diff_ms = timestamp - front_data.time;
+    KF_LOG_DEBUG(logger, "[handle_request_weight] (weight_time_diff_ms)" << weight_time_diff_ms 
+        << " (weight_data_queue.size)" << weight_data_queue.size()
+        << " (weight_total_count)" << weight_total_count
+        << " (request_weight_per_minute)" << request_weight_per_minute);
+
+    const int weight_ms = 60000;     //60s,1minute
+    if (weight_time_diff_ms < weight_ms)
+    {
+        //in minute
+        if(weight_total_count < request_weight_per_minute)
+        {
+            //do not reach limit in second
+            weight_data wd;
+            wd.time = timestamp;
+            wd.addWeight(type);
+            weight_total_count += wd.weight;
+            weight_data_queue.push(wd);
+            return;
+        }
+
+        //reach limit in minute/over weight limit count, sleep
+        usleep((weight_ms - weight_time_diff_ms) * 1000);
+        timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     }
     
-    return false;
+    weight_total_count -= front_data.weight;
+    weight_data_queue.pop();
+
+    weight_data wd;
+    wd.time = timestamp;
+    wd.addWeight(type);
+    weight_total_count += wd.weight;
+    weight_data_queue.push(wd);
+}
+
+bool TDEngineBinance::handle_429()
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_handle_429);
+    
+    static uint64_t startTime = 0;
+    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    int handle_429_time_diff_ms = timestamp - startTime;
+    if (request_weight_per_minute <= 0)
+    {
+        bHandle_429 = false;
+    }
+    else
+    {
+        if (!bHandle_429)
+        {
+            //start handle 429
+            startTime = timestamp;
+            bHandle_429 = true;    
+        }
+        else
+        {
+            //already handling 429
+            if (handle_429_time_diff_ms > prohibit_order_ms)
+            {
+                //stop handle 429
+                bHandle_429 = false;
+            }
+        }
+    }
+    KF_LOG_INFO(logger, "[handle_429] " << bHandle_429 
+        << " handle_429_time_diff_ms " << handle_429_time_diff_ms 
+        << " request_weight_per_minute " << request_weight_per_minute);
+    return bHandle_429;
 }
 
 void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json)
@@ -1586,6 +1674,8 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
 
     string url = requestPath + queryString;
 
+    handle_request_weight(GetOrder_Type);
+
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
                               Body{body}, Timeout{100000});
@@ -1593,6 +1683,8 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
     KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                               " (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
+
+    err_code_429 = response.status_code;
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1653,7 +1745,18 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
             return;
         }
 
-        //request_weight_handle(CancelOrder_Type)
+        handle_request_weight(CancelOrder_Type);
+
+        if (err_code_429 == 429)
+        {
+            KF_LOG_INFO(logger, "[cancel_order] meet 429");
+            if (handle_429())
+            {
+                std::string strErr = "{\"code\":-1429,\"msg\":\"handle 429, prohibit cancel order.\"}";
+                json.Parse(strErr.c_str());
+                return;
+            }
+        }
 
         response = Delete(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}},
@@ -1663,6 +1766,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
                                                  " (response.error.message) " << response.error.message <<
                                                  " (response.text) " << response.text.c_str());
 
+        err_code_429 = response.status_code;
 
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
@@ -1671,7 +1775,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
         }
     } while(should_retry && retry_times < max_rest_retry_times);
 
-    KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[cancel_order] out_retry (response.status_code) " << response.status_code <<
                                                                          " (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
 
@@ -1714,7 +1818,7 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 
     string url = requestPath + queryString;
 
-    //request_weight_handle(TradeList_Type)
+    handle_request_weight(TradeList_Type);
 
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
@@ -1723,6 +1827,7 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
     KF_LOG_INFO(logger, "[get_my_trades] (url) " << url << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
+    err_code_429 = response.status_code;
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1771,8 +1876,6 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
     queryString.append( signature );
 
     string url = requestPath + queryString;
-
-    //request_weight_handle(OpenOrder_Type)
 
     const auto response = Get(Url{url},
                                  Header{{"X-MBX-APIKEY", unit.api_key}},

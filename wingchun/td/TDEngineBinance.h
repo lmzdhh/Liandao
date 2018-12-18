@@ -178,12 +178,46 @@ private:
 
     enum RequestWeightType
     {
-        NewOrder_Type = 0,
+        Unkonw = 0,
+        SendOrder_Type,
         CancelOrder_Type,
-        OpenOrder_Type,
+        GetOrder_Type,
         TradeList_Type
     };
-    bool request_weight_handle(RequestWeightType type);
+    struct weight_data
+    {
+        int weight;
+        long long time;
+
+        weight_data()
+        {
+            memset(this, 0, sizeof(weight_data));
+        }
+
+        void addWeight(RequestWeightType type)
+        {
+            switch(type)
+            {
+                case SendOrder_Type:
+                    weight = 1;
+                    break;
+                case CancelOrder_Type:
+                    weight = 1;
+                    break;
+                case GetOrder_Type:
+                    weight = 1;
+                    break;
+                case TradeList_Type:
+                    weight = 5;
+                    break;
+                default:
+                    weight = 0;
+                    break;
+            }
+        }
+    };
+    void handle_request_weight(RequestWeightType type);
+    bool handle_429();
 private:
     static constexpr int scale_offset = 1e8;
     ThreadPtr rest_thread;
@@ -192,11 +226,27 @@ private:
 
     uint64_t order_insert_recvwindow_ms = 5000;
     uint64_t order_action_recvwindow_ms = 5000;
-    int order_count_per_second = 5;
-    int request_weight_per_minute = 1000;
-    uint64_t order_total_count = 0;
-    std::mutex* mutex_order_and_trade = nullptr;
 
+    /////////////// order_count_over_limit ////////////////
+    //code=-1429,msg:order count over 10000 limit.
+    int order_count_per_second = 5;
+    uint64_t order_total_count = 0;
+
+    /////////////// request weight ////////////////
+    //<=0，do nothing even meet 429
+    //>0，limit weight per minute；
+    int request_weight_per_minute = 1000;
+    uint64_t weight_total_count = 0;
+    std::mutex* mutex_weight = nullptr;
+
+    //handle 429,prohibit send/cencel order time,ms
+    //code=-1429,msg:order count over 10000 limit.
+    int err_code_429 = 0;
+    int prohibit_order_ms = 10000;      //default 10s
+    bool bHandle_429 = false;
+    std::mutex* mutex_handle_429 = nullptr;
+
+    std::mutex* mutex_order_and_trade = nullptr;
     int SYNC_TIME_DEFAULT_INTERVAL = 10000;
     int sync_time_interval;
     int64_t timeDiffOfExchange = 0;
