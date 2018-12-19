@@ -114,8 +114,8 @@ private:
     std::map<std::string, int64_t> localOrderRefRemoteOrderId;
     int m_limitRate_Remain = 0;
     int64_t m_TimeStamp_Reset;
-
-
+    int64_t m_time_diff_with_server=0;
+    bool isSyncServerTime = false;
 //websocket
     AccountUnitDaybit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onRtnOrder(struct lws * websocketConn, rapidjson::Value& json);
@@ -160,6 +160,7 @@ private:
     std::string createSubscribeTradeReq(int64_t joinref);
     std::string createPhoenixMsg(int64_t joinref,const std::string& topic,const std::string& event,rapidjson::Value& payload);
     std::string createSubscribeMarketReq(int64_t joinref);
+    std::string createGetServerTimeReq(int64_t joinref);
     void InitSubscribeMsg(AccountUnitDaybit& unit);
 };
 
