@@ -36,13 +36,14 @@ public:
     void onMessage(struct lws*,char* , size_t );
     void onClose(struct lws*);
     void onWrite(struct lws*);
+	void heartBeat();
 
 protected:
     void set_reader_thread() override;
     void orderbookHandler(const rapidjson::Document&, const std::string&);
 	void orderbookInitNotify(const rapidjson::Value&, const std::string&);
 	void orderbookInsertNotify(const rapidjson::Value&, const std::string&);
-    void tradeHandler(const rapidjson::Document&, const std::string&);
+    void tradeHandler(const rapidjson::Document&, const std::string&);	
 
 private:
 	void genSubscribeJson();
@@ -50,6 +51,7 @@ private:
     std::string genOrderbookReq(const std::string&, int64_t);
 	std::string genTradeJoin(const std::string&, int64_t&);
     std::string genTradeReq(const std::string&, int64_t);
+	std::string genHeartBeatJson();
 
 private:
 	inline int64_t getTimestamp();
@@ -80,6 +82,8 @@ private:
     struct lws*                 m_lwsConnection = nullptr;
 	std::string					m_url;
     std::string                 m_path;
+	int64_t 					m_lastHeartbeatTime = 0;
+	int 						m_heartBeatIntervalMs =0;
 
 };
 DECLARE_PTR(MDEngineDaybit);

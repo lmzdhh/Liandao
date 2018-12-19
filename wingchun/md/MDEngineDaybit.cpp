@@ -17,7 +17,7 @@ using namespace std;
 #define SCALE_OFFSET 1e8
 #define	SUBS_ORDERBOOK "/subscription:order_books;"
 #define SUBS_TRADE	"/subscription:trades;"
-#define WSS_TIMEOUT	3000
+#define WSS_TIMEOUT	30000
 
 WC_NAMESPACE_START
 
@@ -58,6 +58,7 @@ void MDEngineDaybit::reset()
 	m_joinRef = 1;
 	m_ref = 1;
     m_logged_in = true;
+	m_lastHeartbeatTime = this->getTimestamp();
 }
 
 void MDEngineDaybit::load(const json& config)
@@ -65,6 +66,7 @@ void MDEngineDaybit::load(const json& config)
     KF_LOG_INFO(logger, "load config start");
     try
     {
+    	m_heartBeatIntervalMs = 3000;
         m_priceBookNum = config["book_depth_count"].get<int>();
 		m_tradeNum = config["trade_count"].get<int>();
 		m_url = config["baseUrl"].get<string>();
@@ -453,7 +455,7 @@ void MDEngineDaybit::onWrite(struct lws* conn)
     KF_LOG_DEBUG(logger, "subscribe start");
     if (m_subscribeJson.empty() || m_subscribeIndex == -1)
     {
-        KF_LOG_DEBUG(logger, "subscribe ignore");
+		this->heartBeat();
         return;
     }
     auto symbol = m_subscribeJson[m_subscribeIndex++];
@@ -740,6 +742,48 @@ int64_t MDEngineDaybit::makeJoinRef()
 {
 	return this->m_joinRef++;
 }
+
+std::string MDEngineDaybit::genHeartBeatJson()
+{
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	writer.StartObject();
+	writer.Key("join_ref");
+	writer.Null();
+
+	writer.Key("ref");
+	writer.String(std::to_string(this->makeRef()).c_str());
+
+	writer.Key("topic");
+	writer.String("phoenix");
+
+	writer.Key("event");
+	writer.String("heartbeat");
+	
+	writer.Key("payload");
+	writer.StartObject();
+	writer.EndObject();
+	
+	writer.Key("timeout");
+	writer.Int(3000);
+	writer.EndObject();
+
+	return buffer.GetString();
+
+}
+
+void MDEngineDaybit::heartBeat()
+{
+	int64_t currentTime = this->getTimestamp();
+	if (currentTime - m_lastHeartbeatTime > m_heartBeatIntervalMs) {
+		auto message = this->genHeartBeatJson();
+		KF_LOG_DEBUG(logger, "heartbeat message:" << message);
+		sendMessage(std::move(message));
+		m_lastHeartbeatTime = currentTime;
+	}
+	
+	return;
+}
  
  int lwsEventCallback( struct lws *conn, enum lws_callback_reasons reason, void *, void *data , size_t len )
 {
@@ -755,6 +799,7 @@ int64_t MDEngineDaybit::makeJoinRef()
             if(MDEngineDaybit::m_instance)
             {
                 MDEngineDaybit::m_instance->onMessage(conn, (char*)data, len);
+				lws_callback_on_writable(conn);
             }
             break;
         }
@@ -776,8 +821,8 @@ int64_t MDEngineDaybit::makeJoinRef()
             }
             break;
         }
-        default:
-            std::cout<< "callback #"<<(int)reason<<std::endl;
+        default:			
+            //std::cout<< "callback #"<<(int)reason<<std::endl;
             break;
     }
     return 0;
