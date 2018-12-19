@@ -236,6 +236,7 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
 void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit)
 {
     std::lock_guard<std::mutex> lck(unit_mutex);
+    isSyncServerTime = false;
     unit.listMessageToSend = std::queue<std::string>(); 
     unit.listMessageToSend.push(createJoinReq(0,TOPIC_API));
     unit.mapSubscribeRef.insert(std::make_pair(TOPIC_API,getRef()));
@@ -886,6 +887,7 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
                 if(response.IsObject() && response.HasMember("server_time"))
                 {
                     m_time_diff_with_server = response["server_time"].GetInt64() - getTimestamp();
+                    isSyncServerTime = true;
                 }
                 else
                     onRspOrder(conn,response,ref);
@@ -901,26 +903,35 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
             auto it = unit.mapSubscribeRef.find(topic);
             if(it != unit.mapSubscribeRef.end())
             {
-                std::string req="";   
-                if (topic == TOPIC_ORDER)
-                {               
-                    req = createSubscribeOrderReq(it->second);
-                }
-                else if (topic == TOPIC_TRADE)
+                if(!isSyncServerTime)
                 {
-                    req = createSubscribeTradeReq(it->second);
+                    if(topic == TOPIC_API)
+                    {
+                        req = createGetServerTimeReq(it->second);
+                        unit.listMessageToSend.push(req);
+                    }
                 }
-                else if(topic == TOPIC_API)
+                else
                 {
-                    req = createGetServerTimeReq(it->second);
+                    std::string req="";   
+                    if (topic == TOPIC_ORDER)
+                    {               
+                        req = createSubscribeOrderReq(it->second);
+                    }
+                    else if (topic == TOPIC_TRADE)
+                    {
+                        req = createSubscribeTradeReq(it->second);
+                    }
+                    else if(topic == TOPIC_API)
+                    {                      
+                        req = createCancelAllOrdersReq(it->second);                    
+                    }
+                    else if(topic == TOPIC_MARKET)
+                    {
+                        req = createSubscribeMarketReq(it->second);
+                    }
                     unit.listMessageToSend.push(req);
-                    req = createCancelAllOrdersReq(it->second);                    
                 }
-                else if(topic == TOPIC_MARKET)
-                {
-                    req = createSubscribeMarketReq(it->second);
-                }
-                unit.listMessageToSend.push(req);
                 //unit.mapSubscribeRef.erase(it);    
             }
         }
