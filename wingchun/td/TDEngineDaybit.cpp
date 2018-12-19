@@ -233,19 +233,26 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
     return account;
 }
 
-void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit)
+void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit,bool only_api_topic)
 {
     std::lock_guard<std::mutex> lck(unit_mutex);
-    isSyncServerTime = false;
+    
     unit.listMessageToSend = std::queue<std::string>(); 
     unit.listMessageToSend.push(createJoinReq(0,TOPIC_API));
     unit.mapSubscribeRef.insert(std::make_pair(TOPIC_API,getRef()));
-    unit.listMessageToSend.push(createJoinReq(0,TOPIC_MARKET));
-    unit.mapSubscribeRef.insert(std::make_pair(TOPIC_MARKET,getRef()));
-    unit.listMessageToSend.push(createJoinReq(0,TOPIC_ORDER));
-    unit.mapSubscribeRef.insert(std::make_pair(TOPIC_ORDER,getRef()));
-    unit.listMessageToSend.push(createJoinReq(0,TOPIC_TRADE));
-    unit.mapSubscribeRef.insert(std::make_pair(TOPIC_TRADE,getRef()));
+    if(only_api_topic)
+    {   
+        isSyncServerTime = false;         
+    }
+    else
+    {
+        unit.listMessageToSend.push(createJoinReq(0,TOPIC_MARKET));
+        unit.mapSubscribeRef.insert(std::make_pair(TOPIC_MARKET,getRef()));
+        unit.listMessageToSend.push(createJoinReq(0,TOPIC_ORDER));
+        unit.mapSubscribeRef.insert(std::make_pair(TOPIC_ORDER,getRef()));
+        unit.listMessageToSend.push(createJoinReq(0,TOPIC_TRADE));
+        unit.mapSubscribeRef.insert(std::make_pair(TOPIC_TRADE,getRef()));
+    }
     //std::cout << "InitSubscribeMsg, ref test " << getRef() << " hhhhh " <<getRef() << std::endl;
 }
 void TDEngineDaybit::connect(long timeout_nsec)
@@ -889,6 +896,7 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
                     m_time_diff_with_server = response["server_time"].GetInt64() - getTimestamp();
                     std::cout << "server_time:" <<response["server_time"].GetInt64() << " diff" << m_time_diff_with_server<<std::endl;
                     isSyncServerTime = true;
+                    InitSubscribeMsg(unit,false);
                 }
                 else
                     onRspOrder(conn,response,ref);

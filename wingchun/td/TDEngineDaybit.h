@@ -161,7 +161,7 @@ private:
     std::string createPhoenixMsg(int64_t joinref,const std::string& topic,const std::string& event,rapidjson::Value& payload);
     std::string createSubscribeMarketReq(int64_t joinref);
     std::string createGetServerTimeReq(int64_t joinref);
-    void InitSubscribeMsg(AccountUnitDaybit& unit);
+    void InitSubscribeMsg(AccountUnitDaybit& unit,bool only_api_topic = true);
 };
 
 WC_NAMESPACE_END
