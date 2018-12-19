@@ -887,6 +887,7 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
                 if(response.IsObject() && response.HasMember("server_time"))
                 {
                     m_time_diff_with_server = response["server_time"].GetInt64() - getTimestamp();
+                    std::cout << "server_time:" <<response["server_time"].GetInt64() << " diff" << m_time_diff_with_server<<std::endl;
                     isSyncServerTime = true;
                 }
                 else
@@ -907,7 +908,7 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
                 {
                     if(topic == TOPIC_API)
                     {
-                        req = createGetServerTimeReq(it->second);
+                        auto req = createGetServerTimeReq(it->second);
                         unit.listMessageToSend.push(req);
                     }
                 }
@@ -1209,7 +1210,7 @@ std::string TDEngineDaybit::createCancelAllOrdersReq(int64_t joinref)
     Value payload_obj(rapidjson::kObjectType);
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
     //payload_obj.AddMember("order_id",orderID,allocator);
-   
+    std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
     return createPhoenixMsg(joinref,"/api","cancel_all_my_orders",payload_obj);
 }
 std::string TDEngineDaybit::createSubscribeOrderReq(int64_t joinref)
@@ -1220,8 +1221,8 @@ std::string TDEngineDaybit::createSubscribeOrderReq(int64_t joinref)
     Value payload_obj(rapidjson::kObjectType);
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
     //payload_obj.AddMember("closed",false,allocator);
-
-     return createPhoenixMsg(joinref,"/subscription:my_orders","request",payload_obj);
+    std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
+    return createPhoenixMsg(joinref,"/subscription:my_orders","request",payload_obj);
 }
 
 std::string TDEngineDaybit::createSubscribeTradeReq(int64_t joinref)
@@ -1232,7 +1233,7 @@ std::string TDEngineDaybit::createSubscribeTradeReq(int64_t joinref)
     Value payload_obj(rapidjson::kObjectType);
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
     //payload_obj.AddMember("closed",false,allocator);
-
+    std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
     return createPhoenixMsg(joinref,"/subscription:my_trades","request",payload_obj);
 }
 std::string TDEngineDaybit::createSubscribeMarketReq(int64_t joinref)
@@ -1243,6 +1244,7 @@ std::string TDEngineDaybit::createSubscribeMarketReq(int64_t joinref)
     Value payload_obj(rapidjson::kObjectType);
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
     //payload_obj.AddMember("closed",false,allocator);
+    std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
     return createPhoenixMsg(joinref,"/subscription:markets","request",payload_obj);
 }
 
