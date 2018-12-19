@@ -1340,6 +1340,7 @@ void TDEngineBinance::loop()
         {
             //double rest_get_interval_ms
             tmp_rest_get_interval_ms = rest_get_interval_ms * 2;
+            KF_LOG_INFO(logger, "[loop] bHandle_429:" << bHandle_429 << " tmp_rest_get_interval_ms:" << tmp_rest_get_interval_ms);
         }
         if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < tmp_rest_get_interval_ms)
         {
