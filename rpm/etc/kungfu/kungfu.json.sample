@@ -210,7 +210,7 @@
                         "order_count_per_second": 5,
                         "request_weight_per_minute": 1000,
                         "prohibit_order_ms": 10000,
-                        "default_429_rest_interval_ms": 1000,
+                        "default_429_rest_interval_ms": 2000,
                         "max_rest_retry_times":3,
                         "retry_interval_milliseconds": 1000,
                         "rest_get_interval_ms": 2000,
