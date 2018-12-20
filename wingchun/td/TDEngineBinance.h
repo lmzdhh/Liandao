@@ -245,6 +245,7 @@ private:
     //code=-1429,msg:order count over 10000 limit.
     int response_status_code = 0;    
     int prohibit_order_ms = 10000;      //default 10s
+    int default_429_rest_interval_ms = 1000;      //default 10s
     bool bHandle_429 = false;
     std::mutex* mutex_handle_429 = nullptr;
 

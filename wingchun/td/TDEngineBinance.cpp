@@ -135,6 +135,16 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (request_weight_per_minute)" << request_weight_per_minute);
 
+    if(j_config.find("prohibit_order_ms") != j_config.end()) {
+        prohibit_order_ms = j_config["prohibit_order_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (prohibit_order_ms)" << prohibit_order_ms);
+
+    if(j_config.find("default_429_rest_interval_ms") != j_config.end()) {
+        default_429_rest_interval_ms = j_config["default_429_rest_interval_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (default_429_rest_interval_ms)" << default_429_rest_interval_ms);
+
     if(j_config.find("max_rest_retry_times") != j_config.end()) {
         max_rest_retry_times = j_config["max_rest_retry_times"].get<int>();
     }
@@ -1339,7 +1349,7 @@ void TDEngineBinance::loop()
         if (bHandle_429)
         {
             //double rest_get_interval_ms
-            tmp_rest_get_interval_ms = rest_get_interval_ms * 2;
+            tmp_rest_get_interval_ms = default_429_rest_interval_ms;
             KF_LOG_INFO(logger, "[loop] bHandle_429:" << bHandle_429 << " tmp_rest_get_interval_ms:" << tmp_rest_get_interval_ms);
         }
         if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < tmp_rest_get_interval_ms)
