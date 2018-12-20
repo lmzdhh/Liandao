@@ -255,6 +255,23 @@ void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit,bool only_api_topi
     }
     //std::cout << "InitSubscribeMsg, ref test " << getRef() << " hhhhh " <<getRef() << std::endl;
 }
+void TDEngineDaybit::heartbeat_loop()
+{
+
+    while(isRunning)
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(30));
+       
+        for (size_t idx = 0; idx < account_units.size(); idx++) 
+        {
+            AccountUnitDaybit &unit = account_units[idx];
+            std::unique_lock<std::mutex> lck(unit_mutex);
+            unit.listMessageToSend.push(createHeartBeatReq());   
+            lck.unlock();
+            lws_callback_on_writable(unit.websocketConn);        
+        }                   
+    }
+}
 void TDEngineDaybit::connect(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "[connect]");
@@ -663,7 +680,7 @@ void TDEngineDaybit::set_reader_thread()
 
     KF_LOG_INFO(logger, "[set_reader_thread] ws_thread start on TDEngineDaybit::wsloop");
     ws_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineDaybit::wsloop, this)));
-
+    heartbeat_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineDaybit::heartbeat_loop, this)));
 }
 
 
@@ -1137,7 +1154,25 @@ void TDEngineDaybit::onRtnMarket(struct lws * websocketConn, Value& response)
     }
     
 }
-
+std::string TDEngineDaybit::createHeartBeatReq()
+{
+    Document doc;
+    doc.SetObject();
+    Document::AllocatorType& allocator = doc.GetAllocator();
+    std::string strRef = std::to_string(makeRef());
+    Value joinref(rapidjson::kNullType);
+    Value payload_obj(rapidjson::kObjectType);
+    doc.AddMember(StringRef("join_ref"),joinref,allocator);
+    doc.AddMember(StringRef("ref"),StringRef(strRef.c_str()),allocator);
+    doc.AddMember(StringRef("topic"),StringRef("phoenix"),allocator);
+    doc.AddMember(StringRef("event"),StringRef("heartbeat"),allocator);
+    doc.AddMember(StringRef("payload"),payload_obj,allocator);
+    doc.AddMember(StringRef("timeout"),3000,allocator);
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    return buffer.GetString();
+}
 std::string TDEngineDaybit::createJoinReq(int64_t joinref,const std::string& topic)
 {
     Value obj(rapidjson::kObjectType);

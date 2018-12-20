@@ -123,11 +123,11 @@ private:
     void onRtnTrade(struct lws * websocketConn, rapidjson::Value& json);
     void onRtnMarket(struct lws * websocketConn, rapidjson::Value& json);
     void wsloop();
-
+    
 
     struct lws_context *context = nullptr;
     ThreadPtr ws_thread;
-
+    ThreadPtr heartbeat_thread;
 private:
     int64_t						m_joinRef = 0;
 	int64_t						m_ref = 0;
@@ -161,7 +161,9 @@ private:
     std::string createPhoenixMsg(int64_t joinref,const std::string& topic,const std::string& event,rapidjson::Value& payload);
     std::string createSubscribeMarketReq(int64_t joinref);
     std::string createGetServerTimeReq(int64_t joinref);
+    std::string createHeartBeatReq();
     void InitSubscribeMsg(AccountUnitDaybit& unit,bool only_api_topic = true);
+    void heartbeat_loop();
 };
 
 WC_NAMESPACE_END
