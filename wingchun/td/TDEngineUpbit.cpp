@@ -216,8 +216,7 @@ void TDEngineUpbit::connect(long timeout_nsec)
         {
            std::string vstrMarkets;
            getAllMarkets(vstrMarkets);
-            loadMarketsInfo(unit,vstrMarkets);
-            if(loadMarketsInfo)
+            if( loadMarketsInfo(unit,vstrMarkets);)
             {
                 unit.logged_in = true;
             } else {
@@ -1771,7 +1770,7 @@ std::string getAuthorization(const AccountUnitUpbit& unit,const string& strQuery
         return strAuthorization;
 }
 
-bool TDEngineUpbit::loadMarketsInfo(const AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets)
+bool loadMarketsInfo(const AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets)
 {
      KF_LOG_INFO(logger, "[loadMarketsInfo]");
     long recvWindow = 5000;
@@ -1826,6 +1825,7 @@ bool TDEngineUpbit::loadMarketsInfo(const AccountUnitUpbit& unit, const std::vec
         }
     }
     
+    return true;
 }
 
 void TDEngineUpbit::get_exchange_infos(AccountUnitUpbit& unit, Document &json)
