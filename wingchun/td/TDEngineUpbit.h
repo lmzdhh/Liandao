@@ -105,7 +105,7 @@ public:
     // req functions
     virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
     virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId);
-    virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
+    virtual void req_or+der_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
     virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
 
 public:
@@ -168,9 +168,12 @@ private:
     void get_my_trades(AccountUnitUpbit& unit, const char *symbol, int limit, int64_t fromId, Document &doc);
     void get_open_orders(AccountUnitUpbit& unit, const char *symbol, Document &doc);
     void get_exchange_infos(AccountUnitUpbit& unit, Document &doc);
+    void getChanceResponce(const AccountUnitUpbit& unit, const std::string& strMarket,Document& d);
+    void getAccountResponce(const AccountUnitUpbit& unit,Document& d);
     void getAllMarkets(std::vector<std::string>& vstrMarkets);
     bool loadMarketsInfo(const AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets);
     std::string getEncode(const std::string& str);
+    std::string getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery = std::string());
     void get_exchange_time(AccountUnitUpbit& unit, Document &doc);
     void get_account(AccountUnitUpbit& unit, Document &doc);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& doc);

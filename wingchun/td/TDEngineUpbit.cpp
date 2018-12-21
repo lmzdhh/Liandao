@@ -419,6 +419,26 @@ LfOrderStatusType TDEngineUpbit::GetOrderStatus(std::string input) {
     }
 }
 
+void TDEngineUpbit::getAccountResponce(const AccountUnitUpbit& unit,Document& d)
+{
+       long recvWindow = 5000;
+    std::string Method = "GET";
+     std::string strQueryString = "";
+    std::string url = "https://api.Upbit.com//v1/accounts";
+    std::string body = "";
+
+    std::string Authorization = getAuthorization(unit);
+        
+    const auto response = Get(Url{url},
+                            Header{{  "Authorization", Authorization}},
+                            Body{body}, Timeout{100000});
+    KF_LOG_INFO(logger, "[getChanceResponce] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                " (response.error.message) " << response.error.message <<
+                                                " (response.text) " << response.text.c_str());
+
+    d.Parse(response.text.c_str());
+}
+
 /**
  * req functions
  */
@@ -428,12 +448,11 @@ void TDEngineUpbit::req_investor_position(const LFQryPositionField* data, int ac
 
     AccountUnitUpbit& unit = account_units[account_index];
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key);
-
+    
     // User Balance
     Document d;
-    get_account(unit, d);
+    getAccountResponce(unit,d);
     KF_LOG_INFO(logger, "[req_investor_position] get_account");
-    printResponse(d);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -454,7 +473,7 @@ void TDEngineUpbit::req_investor_position(const LFQryPositionField* data, int ac
 
         KF_LOG_ERROR(logger, "[req_investor_position] get_account failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
-    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_Upbit, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_UPBIT, 1, requestId);
 
     LFRspPositionField pos;
     memset(&pos, 0, sizeof(LFRspPositionField));
@@ -466,18 +485,19 @@ void TDEngineUpbit::req_investor_position(const LFQryPositionField* data, int ac
 
     std::vector<LFRspPositionField> tmp_vector;
 
-    if(!d.HasParseError() && d.IsObject() && d.HasMember("balances"))
+    if(!d.HasParseError() && d.IsArray())
     {
-        int len = d["balances"].Size();
+        int len = d.Size();
         for ( int i  = 0 ; i < len ; i++ ) {
-            std::string symbol = d["balances"].GetArray()[i]["asset"].GetString();
+            std::string symbol = d.GetArray()[i]["currency"].GetString();
             std::string ticker = unit.positionWhiteList.GetKeyByValue(symbol);
             if(ticker.length() > 0) {
                 strncpy(pos.InstrumentID, ticker.c_str(), 31);
-                pos.Position = std::round(stod(d["balances"].GetArray()[i]["free"].GetString()) * scale_offset);
+                pos.Position = std::round(stod(d.GetArray()[i]["balance"].GetString()) * scale_offset);
                 tmp_vector.push_back(pos);
-                KF_LOG_INFO(logger,  "[connect] (symbol)" << symbol << " (free)" <<  d["balances"].GetArray()[i]["free"].GetString()
-                                                          << " (locked)" << d["balances"].GetArray()[i]["locked"].GetString());
+                KF_LOG_INFO(logger,  "[connect] (symbol)" << symbol << " (balance)" <<  d.GetArray()[i]["balance"].GetString()
+                                                          << " (locked)" << d.GetArray()[i]["locked"].GetString() 
+                                                          << "(avg_krw_buy_price)" << d.GetArray()[i]["avg_krw_buy_price"].GetString());
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
             }
         }
@@ -1759,72 +1779,84 @@ std::string TDEngineUpbit::getEncode(const std::string& str)
    return  base64_encode((unsigned char const*)queryString.c_str(),queryString.size());
 }
 
-std::string getAuthorization(const AccountUnitUpbit& unit,const string& strQuery)
+std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery)
 {
          std::stringstream ssPayLoad;
-        ssPayLoad << "{access_key: " << unit.api_key <<  ",noce: " << getTimestampString << ",query: " << strQuery << "}";
-        std::string strJWT = jwt_create(ssPayLoad.str(),unit.secret_key);
+         if(strQuery == "")
+         {
+             ssPayLoad << "{access_key: " << unit.api_key <<  ",noce: " << getTimestampString() << "}";
+         }
+         else
+         {    
+            ssPayLoad << "{access_key: " << unit.api_key <<  ",noce: " << getTimestampString()<< ",query: " << strQuery << "}";
+         }
+         std::string strJWT = jwt_create(ssPayLoad.str(),unit.secret_key);
         std::string strAuthorization = "Bearer ";
         Authorization += strJWT;
 
         return strAuthorization;
 }
 
-bool loadMarketsInfo(const AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets)
+void TDEngineUpbit::getChanceResponce(const AccountUnitUpbit& unit, const std::string& strMarket,Document& d)
 {
-     KF_LOG_INFO(logger, "[loadMarketsInfo]");
     long recvWindow = 5000;
-    std::string Timestamp = getTimestampString();
     std::string Method = "GET";
      std::string strQueryString = "market=";
     std::string requestPath = "https://api.Upbit.com//v1/orders/chance?";
     std::string body = "";
+
+    std::string strParamEncode = getEncode(strQueryString + strMarket);
+    std::string url = requestPath + strParamEncode;
+    std::string Authorization = getAuthorization(unit,strParamEncode);
+        
+    const auto response = Get(Url{url},
+                            Header{{  "Authorization", Authorization}},
+                            Body{body}, Timeout{100000});
+    KF_LOG_INFO(logger, "[getChanceResponce] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                " (response.error.message) " << response.error.message <<
+                                                " (response.text) " << response.text.c_str());
+
+    d.Parse(response.text.c_str());
+}
+
+bool TDEngineUpbit::loadMarketsInfo(const AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets)
+{
     for(auto& strMarket : vstrMarkets)
     {
-        std::string strParamEncode = getEncode(strQueryString + strMarket);
-        std::string url = requestPath + strParamEncode;
-        std::string Authorization = getAuthorization(unit,strParamEncode);
-         
-        const auto response = Get(Url{url},
-                              Header{{  "Authorization", Authorization}},
-                              Body{body}, Timeout{100000});
-        KF_LOG_INFO(logger, "[get_exchange_infos] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                   " (response.error.message) " << response.error.message <<
-                                                   " (response.text) " << response.text.c_str());
-    
-    Document doc;
-    doc.Parse(response.text.c_str());
-    KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
-    if(doc.HasParseError() || !doc.IsObject())
-    {
-        return false;
-    }
+         Document doc;
+        getChanceResponce(unit,strMarket,doc);
+       
+        KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
+        if(doc.HasParseError() || !doc.IsObject())
+        {
+            return false;
+        }
 
-    std::map<std::string, SendOrderFilter>::iterator it;
-    if(doc.HasMember("market") && doc.HasMember("id"))
-    {
-        std::string strMarket = doc["market"]["id"].GetString();
-        it = unit.sendOrderFilters.insert(std::make_pair(strMarket,SendOrderFilter())).first;
-        if(doc.HasMember("bid") && doc["bid"].HasMember("currency") && doc["bid"].HasMember("min_total"))
+        std::map<std::string, SendOrderFilter>::iterator it;
+        if(doc.HasMember("market") && doc.HasMember("id"))
         {
-            it->second.strBidCurrency = doc["bid"]["currency"].GetString();
-            it->second.nBidMinTotal =  atoi(doc["bid"]["min_total"].GetString());
-        }
-         if(doc.HasMember("ask") && doc["ask"].HasMember("currency") && doc["ask"].HasMember("min_total"))
-        {
-            it->second.strAskCurrency = doc["ask"]["currency"].GetString();
-            it->second.nAskMinTotal =  atoi(doc["ask"]["min_total"].GetString());
-        }
-        if(doc.HasMember("max_total"))
-        {
-            it->second.nMaxTotal = atoi(doc["max_total"].GetString());
-        }
-        if(doc.HasMember("state"))
-        {
-            it->second.strState = doc["state"].GetString();
+            std::string strMarket = doc["market"]["id"].GetString();
+            it = unit.sendOrderFilters.insert(std::make_pair(strMarket,SendOrderFilter())).first;
+            if(doc.HasMember("bid") && doc["bid"].HasMember("currency") && doc["bid"].HasMember("min_total"))
+            {
+                it->second.strBidCurrency = doc["bid"]["currency"].GetString();
+                it->second.nBidMinTotal =  atoi(doc["bid"]["min_total"].GetString());
+            }
+            if(doc.HasMember("ask") && doc["ask"].HasMember("currency") && doc["ask"].HasMember("min_total"))
+            {
+                it->second.strAskCurrency = doc["ask"]["currency"].GetString();
+                it->second.nAskMinTotal =  atoi(doc["ask"]["min_total"].GetString());
+            }
+            if(doc.HasMember("max_total"))
+            {
+                it->second.nMaxTotal = atoi(doc["max_total"].GetString());
+            }
+            if(doc.HasMember("state"))
+            {
+                it->second.strState = doc["state"].GetString();
+            }
         }
     }
-    
     return true;
 }
 
