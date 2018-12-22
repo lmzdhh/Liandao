@@ -1281,6 +1281,7 @@ std::string TDEngineDaybit::createSubscribeTradeReq(int64_t joinref)
     Document::AllocatorType& allocator = doc.GetAllocator();
     Value payload_obj(rapidjson::kObjectType);
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
+    payload_obj.AddMember(StringRef("timeout"),-1,allocator);
     //payload_obj.AddMember("closed",false,allocator);
     std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
     return createPhoenixMsg(joinref,TOPIC_TRADE,"request",payload_obj);
@@ -1292,6 +1293,7 @@ std::string TDEngineDaybit::createSubscribeMarketReq(int64_t joinref)
     Document::AllocatorType& allocator = doc.GetAllocator();
     Value payload_obj(rapidjson::kObjectType);
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
+    payload_obj.AddMember(StringRef("timeout"),-1,allocator);
     //payload_obj.AddMember("closed",false,allocator);
     std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
     return createPhoenixMsg(joinref,TOPIC_MARKET,"request",payload_obj);
