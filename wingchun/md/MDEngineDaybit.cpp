@@ -514,7 +514,6 @@ void MDEngineDaybit::orderbookInsertNotify(const rapidjson::Value& data, const s
 {	
 	double sellVol, buyVol, minPrice, maxPrice;
 	int64_t price, volumn;
-	
 	for (size_t i = 0; i < data.Size(); ++i) {
 		auto& val = data[i];
 		sellVol = std::stod(val["sell_vol"].GetString());
@@ -553,6 +552,8 @@ void MDEngineDaybit::orderbookInitNotify(const rapidjson::Value& data, const std
 	double sellVol, buyVol, minPrice, maxPrice;
 	LFPriceBook20Field priceBook {0};
 
+	KF_LOG_DEBUG(logger, "orderbook size: " << data.Size() << " priceBookNum: " << m_priceBookNum);
+		
 	strncpy(priceBook.ExchangeID, "daybit", std::min<size_t>(sizeof(priceBook.ExchangeID)-1, 6));
 	strncpy(priceBook.InstrumentID, instrument.c_str(), std::min(sizeof(priceBook.InstrumentID)-1, instrument.size()));
 	for (size_t i = 0; i < std::min((int)data.Size(), m_priceBookNum); ++i) {
@@ -561,13 +562,16 @@ void MDEngineDaybit::orderbookInitNotify(const rapidjson::Value& data, const std
 		buyVol = std::stod(val["buy_vol"].GetString());
 		minPrice = std::stod(val["min_price"].GetString());
 		maxPrice = std::stod(val["max_price"].GetString());
-		
+
+		KF_LOG_DEBUG(logger, "orderbook buyVol : " << buyVol << ", sellVol :" << sellVol);
 		if (sellVol > 0) {
+			KF_LOG_DEBUG(logger, "orderbook sellVal : " << sellVol);
 			priceBook.BidLevels[i].price = std::round(maxPrice * SCALE_OFFSET);
 			priceBook.BidLevels[i].volume = std::round(sellVol * SCALE_OFFSET);		
 		}
 		
 		if (buyVol > 0) {
+			KF_LOG_DEBUG(logger, "orderbook buyVol : " << buyVol);
 			priceBook.AskLevels[i].price = std::round(minPrice * SCALE_OFFSET);
 			priceBook.AskLevels[i].volume = std::round(buyVol * SCALE_OFFSET);
 		}
@@ -660,7 +664,7 @@ void MDEngineDaybit::orderbookHandler(const rapidjson::Document& json, const std
         KF_LOG_DEBUG(logger, "orderbookHandler start");
         auto& payload = json["payload"];
 
-		if (!payload.HasMember("data") || !payload.HasMember("response")) {
+		if (!payload.HasMember("status") || !payload.HasMember("response")) {
 			return;
 		}
 		
@@ -715,7 +719,7 @@ void MDEngineDaybit::tradeHandler(const rapidjson::Document& json, const std::st
         KF_LOG_DEBUG(logger, "tradeHandler start");
         auto& payload = json["payload"];
 
-		if (!payload.HasMember("data") || !payload.HasMember("response")) {
+		if (!payload.HasMember("status") || !payload.HasMember("response")) {
 			return;
 		}
 		
