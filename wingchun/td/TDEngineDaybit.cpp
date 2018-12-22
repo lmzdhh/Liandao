@@ -307,12 +307,13 @@ bool TDEngineDaybit::loadExchangeOrderFilters(AccountUnitDaybit& unit, Value &do
     KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
     for (auto iter = doc.MemberBegin();iter !=  doc.MemberEnd();++iter) 
     {            
-        if (iter->value.HasMember("tick_price")) {              
+        if (iter->value.HasMember("tick_price") && iter->value.HasMember("quote") && iter->value.HasMember("base")) {              
             double tickSize = iter->value["tick_price"].GetDouble();
-            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << iter->name.GetString() << " (tickSize)"                                                                                           << tickSize);
+            std::string symbol = iter->value["base"]+"-"+iter->value["quote"];
+            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"                                                                                           << tickSize);
             //0.0000100; 0.001;  1; 10
             SendOrderFilter afilter;
-            afilter.InstrumentID = iter->name.GetString();
+            afilter.InstrumentID = symbol;
             afilter.ticksize = tickSize;
             unit.sendOrderFilters.insert(std::make_pair(afilter.InstrumentID, afilter));
         }
@@ -1167,7 +1168,7 @@ std::string TDEngineDaybit::createHeartBeatReq()
     doc.AddMember(StringRef("topic"),StringRef("phoenix"),allocator);
     doc.AddMember(StringRef("event"),StringRef("heartbeat"),allocator);
     doc.AddMember(StringRef("payload"),payload_obj,allocator);
-    doc.AddMember(StringRef("timeout"),3000,allocator);
+    //doc.AddMember(StringRef("timeout"),3000,allocator);
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
@@ -1210,7 +1211,7 @@ std::string TDEngineDaybit::createPhoenixMsg(int64_t joinref,const std::string& 
     doc.AddMember(StringRef("topic"),StringRef(topic.c_str()),allocator);
     doc.AddMember(StringRef("event"),StringRef(event.c_str()),allocator);
     doc.AddMember(StringRef("payload"),payload,allocator);
-    doc.AddMember(StringRef("timeout"),3000,allocator);
+    //doc.AddMember(StringRef("timeout"),3000,allocator);
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
@@ -1232,7 +1233,8 @@ std::string TDEngineDaybit::createNewOrderReq(int64_t joinref,double amount,doub
     payload_obj.AddMember(StringRef("base"),StringRef(pairCoin.second.c_str()),allocator);
     payload_obj.AddMember(StringRef("quote"),StringRef(pairCoin.first.c_str()),allocator);
     payload_obj.AddMember(StringRef("sell"),isSell,allocator);
-    return createPhoenixMsg(joinref,"/api","create_order",payload_obj);
+    payload_obj.AddMember(StringRef("timeout"),-1,allocator);
+    return createPhoenixMsg(joinref,TOPIC_API,"create_order",payload_obj);
 }
 std::string TDEngineDaybit::createCancelOrderReq(int64_t joinref,int64_t orderID)
 {
@@ -1242,8 +1244,8 @@ std::string TDEngineDaybit::createCancelOrderReq(int64_t joinref,int64_t orderID
     Value payload_obj(rapidjson::kObjectType);
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp(),allocator);
     payload_obj.AddMember(StringRef("order_id"),orderID,allocator);
-   
-    return createPhoenixMsg(joinref,"/api","cancel_order",payload_obj);
+    payload_obj.AddMember(StringRef("timeout"),-1,allocator);
+    return createPhoenixMsg(joinref,TOPIC_API,"cancel_order",payload_obj);
 }
 std::string TDEngineDaybit::createCancelAllOrdersReq(int64_t joinref)
 {
@@ -1253,8 +1255,9 @@ std::string TDEngineDaybit::createCancelAllOrdersReq(int64_t joinref)
     Value payload_obj(rapidjson::kObjectType);
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
     //payload_obj.AddMember("order_id",orderID,allocator);
+    payload_obj.AddMember(StringRef("timeout"),-1,allocator);
     std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
-    return createPhoenixMsg(joinref,"/api","cancel_all_my_orders",payload_obj);
+    return createPhoenixMsg(joinref,TOPIC_API,"cancel_all_my_orders",payload_obj);
 }
 std::string TDEngineDaybit::createSubscribeOrderReq(int64_t joinref)
 {
@@ -1264,8 +1267,9 @@ std::string TDEngineDaybit::createSubscribeOrderReq(int64_t joinref)
     Value payload_obj(rapidjson::kObjectType);
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
     //payload_obj.AddMember("closed",false,allocator);
+    payload_obj.AddMember(StringRef("timeout"),-1,allocator);
     std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
-    return createPhoenixMsg(joinref,"/subscription:my_orders","request",payload_obj);
+    return createPhoenixMsg(joinref,TOPIC_ORDER,"request",payload_obj);
 }
 
 std::string TDEngineDaybit::createSubscribeTradeReq(int64_t joinref)
@@ -1277,7 +1281,7 @@ std::string TDEngineDaybit::createSubscribeTradeReq(int64_t joinref)
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
     //payload_obj.AddMember("closed",false,allocator);
     std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
-    return createPhoenixMsg(joinref,"/subscription:my_trades","request",payload_obj);
+    return createPhoenixMsg(joinref,TOPIC_TRADE,"request",payload_obj);
 }
 std::string TDEngineDaybit::createSubscribeMarketReq(int64_t joinref)
 {
@@ -1288,7 +1292,7 @@ std::string TDEngineDaybit::createSubscribeMarketReq(int64_t joinref)
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
     //payload_obj.AddMember("closed",false,allocator);
     std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
-    return createPhoenixMsg(joinref,"/subscription:markets","request",payload_obj);
+    return createPhoenixMsg(joinref,TOPIC_MARKET,"request",payload_obj);
 }
 
 std::string TDEngineDaybit::createGetServerTimeReq(int64_t joinref)
