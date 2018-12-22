@@ -308,16 +308,25 @@ bool TDEngineDaybit::loadExchangeOrderFilters(AccountUnitDaybit& unit, Value &do
     SizeType size = doc.Size();
     for (SizeType index =0;index < size;++index) 
     {            
-        auto& item = doc[index];
-        if (item.HasMember("tick_price") && item.HasMember("quote") && item.HasMember("base")) {              
-            double tickSize = atof(item["tick_price"].GetString());
-            std::string symbol = item["base"].GetString()+std::string("-")+item["quote"].GetString();
-            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"                                                                                           << tickSize);
-            //0.0000100; 0.001;  1; 10
-            SendOrderFilter afilter;
-            afilter.InstrumentID = symbol;
-            afilter.ticksize = tickSize;
-            unit.sendOrderFilters.insert(std::make_pair(afilter.InstrumentID, afilter));
+        auto& data = doc[index];
+        if(data.IsArray())
+        {
+            SizeType innerSize = data.Size();
+            for(SizeType i = 0;i < innerSize;++innerSize)
+            {
+                auto& item = data[innerSize];
+                if (item.HasMember("tick_price") && item.HasMember("quote") && item.HasMember("base")) 
+                {              
+                    double tickSize = atof(item["tick_price"].GetString());
+                    std::string symbol = item["base"].GetString()+std::string("-")+item["quote"].GetString();
+                    KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"                                                                                           << tickSize);
+                    //0.0000100; 0.001;  1; 10
+                    SendOrderFilter afilter;
+                    afilter.InstrumentID = symbol;
+                    afilter.ticksize = tickSize;
+                    unit.sendOrderFilters.insert(std::make_pair(afilter.InstrumentID, afilter));
+                }
+            }
         }
     }
     return true;
