@@ -77,11 +77,9 @@ private:
 private:
     CoinPairWhiteList           m_whiteList;
 	CoinPairWhiteList           m_tickPriceList;
-	std::vector<std::string>	m_subscribeJson;
 	std::queue<std::string>     m_subscribeQueue;
 	PriceBook20Assembler priceBook20Assembler;
 	
-    int                         m_subscribeIndex = 0;
     int                         m_priceBookNum = 20;
 	int 						m_tradeNum = 10;
 	int64_t						m_joinRef = 0;

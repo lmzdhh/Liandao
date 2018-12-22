@@ -23,6 +23,8 @@ using namespace std;
 
 WC_NAMESPACE_START
 
+std::mutex m_mutex;
+
 //lws event function
 static int lwsEventCallback( struct lws *conn, enum lws_callback_reasons reason, void *user, void* data, size_t len );
 static  struct lws_protocols  lwsProtocols [] {{"md-protocol", lwsEventCallback, 0, 65536,}, { NULL, NULL, 0, 0 }};
@@ -66,7 +68,6 @@ void MDEngineDaybit::set_reader_thread()
 void MDEngineDaybit::reset()
 {
 	KF_LOG_DEBUG(logger, "MDEngineDaybit reset");
-	m_subscribeIndex = 0;
 	m_joinRef = 1;
 	m_ref = 1;
     m_logged_in = true;
@@ -112,8 +113,8 @@ void MDEngineDaybit::genSubscribeJson()
 {
 	int64_t joinRef = 0;
 	string subscription;
-	m_subscribeJson.clear();
 	
+	this->phxClear();
     auto& symbol_map = m_whiteList.GetKeyIsStrategyCoinpairWhiteList();
     for(const auto& var : symbol_map) {
 		//joinRef = this->makeJoinRef();
@@ -121,27 +122,23 @@ void MDEngineDaybit::genSubscribeJson()
 		KF_LOG_DEBUG(logger, "genOrderbookJoin:" << subscription);
 		if (subscription.empty()) continue;
 
-		m_subscribeJson.push_back(subscription);
+		this->phxPush(subscription);
 
 		subscription = this->genOrderbookReq(var.second, joinRef);
 		KF_LOG_DEBUG(logger, "genOrderbookReq:" << subscription);
-		m_subscribeJson.push_back(subscription);
+		this->phxPush(subscription);
 
 		//joinRef = this->makeJoinRef();
 		subscription = this->genTradeJoin(var.second, joinRef);
-		m_subscribeJson.push_back(subscription);
+		this->phxPush(subscription);
 		KF_LOG_DEBUG(logger, "genTradeJoin:" << subscription);
 
 		subscription = this->genTradeReq(var.second, joinRef);
-		m_subscribeJson.push_back(subscription);
+		this->phxPush(subscription);
 		KF_LOG_DEBUG(logger, "genTradeReq:" << subscription);
 	}
-	
-    if(m_subscribeJson.empty())
-    {
-        KF_LOG_INFO(logger, "genSubscribeJson failed, {error:has no white list}");
-        exit(0);
-    }
+
+	return;
 }
 
 inline int64_t MDEngineDaybit::getTimestamp()
@@ -509,26 +506,7 @@ void MDEngineDaybit::onWrite(struct lws* conn)
 		lws_callback_on_writable(conn);
 		return;
 	}
-
-    if (m_subscribeJson.empty() || m_subscribeIndex == -1)
-    {
-    	KF_LOG_DEBUG(logger, "subscribe message ignore.");
-        return;
-    }
 	
-    auto symbol = m_subscribeJson[m_subscribeIndex++];
-    KF_LOG_DEBUG(logger, "req subscribe " << symbol);
-    sendMessage(std::move(symbol));
-    if(m_subscribeIndex >= m_subscribeJson.size())
-    {
-        m_subscribeIndex = -1;
-        KF_LOG_DEBUG(logger, "subscribe end");
-        return;
-    }
-    if(isRunning)
-    {
-        lws_callback_on_writable(conn);
-    }
     KF_LOG_DEBUG(logger, "subscribe continue");
 }
 
@@ -536,7 +514,6 @@ void MDEngineDaybit::orderbookInsertNotify(const rapidjson::Value& data, const s
 {	
 	double sellVol, buyVol, minPrice, maxPrice;
 	int64_t price, volumn;
-	
 	for (size_t i = 0; i < data.Size(); ++i) {
 		auto& val = data[i];
 		sellVol = std::stod(val["sell_vol"].GetString());
@@ -575,6 +552,8 @@ void MDEngineDaybit::orderbookInitNotify(const rapidjson::Value& data, const std
 	double sellVol, buyVol, minPrice, maxPrice;
 	LFPriceBook20Field priceBook {0};
 
+	KF_LOG_DEBUG(logger, "orderbook size: " << data.Size() << " priceBookNum: " << m_priceBookNum);
+		
 	strncpy(priceBook.ExchangeID, "daybit", std::min<size_t>(sizeof(priceBook.ExchangeID)-1, 6));
 	strncpy(priceBook.InstrumentID, instrument.c_str(), std::min(sizeof(priceBook.InstrumentID)-1, instrument.size()));
 	for (size_t i = 0; i < std::min((int)data.Size(), m_priceBookNum); ++i) {
@@ -583,13 +562,16 @@ void MDEngineDaybit::orderbookInitNotify(const rapidjson::Value& data, const std
 		buyVol = std::stod(val["buy_vol"].GetString());
 		minPrice = std::stod(val["min_price"].GetString());
 		maxPrice = std::stod(val["max_price"].GetString());
-		
+
+		KF_LOG_DEBUG(logger, "orderbook buyVol : " << buyVol << ", sellVol :" << sellVol);
 		if (sellVol > 0) {
+			KF_LOG_DEBUG(logger, "orderbook sellVal : " << sellVol);
 			priceBook.BidLevels[i].price = std::round(maxPrice * SCALE_OFFSET);
 			priceBook.BidLevels[i].volume = std::round(sellVol * SCALE_OFFSET);		
 		}
 		
 		if (buyVol > 0) {
+			KF_LOG_DEBUG(logger, "orderbook buyVol : " << buyVol);
 			priceBook.AskLevels[i].price = std::round(minPrice * SCALE_OFFSET);
 			priceBook.AskLevels[i].volume = std::round(buyVol * SCALE_OFFSET);
 		}
@@ -682,7 +664,7 @@ void MDEngineDaybit::orderbookHandler(const rapidjson::Document& json, const std
         KF_LOG_DEBUG(logger, "orderbookHandler start");
         auto& payload = json["payload"];
 
-		if (!payload.HasMember("data") || !payload.HasMember("response")) {
+		if (!payload.HasMember("status") || !payload.HasMember("response")) {
 			return;
 		}
 		
@@ -737,7 +719,7 @@ void MDEngineDaybit::tradeHandler(const rapidjson::Document& json, const std::st
         KF_LOG_DEBUG(logger, "tradeHandler start");
         auto& payload = json["payload"];
 
-		if (!payload.HasMember("data") || !payload.HasMember("response")) {
+		if (!payload.HasMember("status") || !payload.HasMember("response")) {
 			return;
 		}
 		
@@ -804,6 +786,7 @@ void MDEngineDaybit::serverTimeHandler(const rapidjson::Document& json)
 					m_timeDiffWithServer = data["server_time"].GetInt64() - getTimestamp();
 					KF_LOG_INFO(logger, "serverTime: " << data["server_time"].GetInt64() 
 													 << ", timeDiff: " << m_timeDiffWithServer);
+					//after sync serverTime, begin to subscribe
 					genSubscribeJson();
 				}
 			}
@@ -853,28 +836,32 @@ std::string MDEngineDaybit::genHeartBeatJson()
 
 void MDEngineDaybit::phxPush(const std::string& message)
 {
+	std::lock_guard<std::mutex> lock(m_mutex);
 	m_subscribeQueue.push(message);
 	return;
 }
 
 std::string MDEngineDaybit::phxPop()
 {
-	std::string message;
-	if(m_subscribeQueue.size() > 0) {		  
-		message = m_subscribeQueue.front();
-		m_subscribeQueue.pop();	 
-	}	
+	std::lock_guard<std::mutex> lock(m_mutex);
 
+	std::string message;
+	if(m_subscribeQueue.size() > 0) {
+		message = m_subscribeQueue.front();
+		m_subscribeQueue.pop();
+	}
+	
 	return message;
 }
 
 void MDEngineDaybit::phxClear()
 {
-	 while (!m_subscribeQueue.empty()) {
-		 m_subscribeQueue.pop();
-	 }
+	std::lock_guard<std::mutex> lock(m_mutex);
+	while (!m_subscribeQueue.empty()) {
+		m_subscribeQueue.pop();
+	}
 
-	 return;
+	return;
 }
 
 std::string MDEngineDaybit::genServerTimeJoin(int64_t& nJoinRef)
