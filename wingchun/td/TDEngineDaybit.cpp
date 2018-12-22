@@ -311,7 +311,7 @@ bool TDEngineDaybit::loadExchangeOrderFilters(AccountUnitDaybit& unit, Value &do
         auto& item = doc[index];
         if (item.HasMember("tick_price") && item.HasMember("quote") && item.HasMember("base")) {              
             double tickSize = item["tick_price"].GetDouble();
-            std::string symbol = item["base"]+"-"+item["quote"];
+            std::string symbol = item["base"].GetString()+std::string("-")+item["quote"].GetString();
             KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"                                                                                           << tickSize);
             //0.0000100; 0.001;  1; 10
             SendOrderFilter afilter;
