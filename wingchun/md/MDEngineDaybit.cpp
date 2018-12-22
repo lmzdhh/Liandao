@@ -17,7 +17,9 @@ using namespace std;
 #define SCALE_OFFSET 1e8
 #define	SUBS_ORDERBOOK "/subscription:order_books;"
 #define SUBS_TRADE	"/subscription:trades;"
-#define WSS_TIMEOUT	30000
+#define TOPIC_API	"/api"
+#define TOPIC_PHOENIX	"phoenix"
+#define WSS_TIMEOUT	-1
 
 WC_NAMESPACE_START
 
@@ -43,6 +45,14 @@ MDEngineDaybit::~MDEngineDaybit()
             m_thread->join();
         }
     }
+
+	if (m_heartBeatThread)
+    {
+        if(m_heartBeatThread->joinable())
+        {
+            m_heartBeatThread->join();
+        }
+    }
     KF_LOG_DEBUG(logger, "MDEngineDaybit deconstruct");
 }
 
@@ -50,15 +60,27 @@ void MDEngineDaybit::set_reader_thread()
 {
     IMDEngine::set_reader_thread();
     m_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineDaybit::lwsEventLoop, this)));
+	m_heartBeatThread = ThreadPtr(new std::thread(boost::bind(&MDEngineDaybit::heartBeatLoop, this)));
 }
 
 void MDEngineDaybit::reset()
 {
+	KF_LOG_DEBUG(logger, "MDEngineDaybit reset");
 	m_subscribeIndex = 0;
 	m_joinRef = 1;
 	m_ref = 1;
     m_logged_in = true;
-	m_lastHeartbeatTime = this->getTimestamp();
+
+	//create serverTime json
+	int64_t joinRef = 0;
+	this->phxClear();
+	string subscription = genServerTimeJoin(joinRef);
+	KF_LOG_INFO(logger, "getServerTime join:" << subscription);
+	this->phxPush(subscription);
+
+	subscription = genServerTimeReq(joinRef);
+	KF_LOG_INFO(logger, "getServerTime request:" << subscription);
+	this->phxPush(subscription);
 }
 
 void MDEngineDaybit::load(const json& config)
@@ -66,7 +88,6 @@ void MDEngineDaybit::load(const json& config)
     KF_LOG_INFO(logger, "load config start");
     try
     {
-    	m_heartBeatIntervalMs = 3000;
         m_priceBookNum = config["book_depth_count"].get<int>();
 		m_tradeNum = config["trade_count"].get<int>();
 		m_url = config["baseUrl"].get<string>();
@@ -77,7 +98,6 @@ void MDEngineDaybit::load(const json& config)
 
 		m_tickPriceList.ReadWhiteLists(config, "tickPriceLists");
 		m_tickPriceList.Debug_print();
-        genSubscribeJson();
     }
     catch (const std::exception& e)
     {
@@ -92,6 +112,8 @@ void MDEngineDaybit::genSubscribeJson()
 {
 	int64_t joinRef = 0;
 	string subscription;
+	m_subscribeJson.clear();
+	
     auto& symbol_map = m_whiteList.GetKeyIsStrategyCoinpairWhiteList();
     for(const auto& var : symbol_map) {
 		//joinRef = this->makeJoinRef();
@@ -162,6 +184,8 @@ std::string MDEngineDaybit::genOrderbookJoin(const std::string& symbol, int64_t&
 	
 	writer.Key("payload");
 	writer.StartObject();
+	writer.Key("timeout");
+	writer.Int(WSS_TIMEOUT);
 	writer.EndObject();
 	
 	writer.Key("timeout");
@@ -203,7 +227,9 @@ std::string MDEngineDaybit::genOrderbookReq(const std::string& symbol, int64_t n
 	writer.Key("payload");
 	writer.StartObject();
 	writer.Key("timestamp");
-	writer.Int64(this->getTimestamp());
+	writer.Int64(this->getTimestamp() + m_timeDiffWithServer);
+	writer.Key("timeout");
+	writer.Int(WSS_TIMEOUT);
 	writer.EndObject();
 	
 	writer.Key("timeout");
@@ -241,6 +267,8 @@ std::string MDEngineDaybit::genTradeJoin(const std::string& symbol, int64_t& nJo
 	
 	writer.Key("payload");
 	writer.StartObject();
+	writer.Key("timeout");
+	writer.Int(WSS_TIMEOUT);
 	writer.EndObject();
 	
 	writer.Key("timeout");
@@ -280,7 +308,9 @@ std::string MDEngineDaybit::genTradeReq(const std::string& symbol, int64_t nJoin
 	writer.Key("size");
 	writer.Int(m_tradeNum);
 	writer.Key("timestamp");
-	writer.Int64(this->getTimestamp());
+	writer.Int64(this->getTimestamp() + m_timeDiffWithServer);
+	writer.Key("timeout");
+	writer.Int(WSS_TIMEOUT);
 	writer.EndObject();
 
 	writer.Key("timeout");
@@ -300,6 +330,7 @@ void MDEngineDaybit::login(long)
 {
     KF_LOG_DEBUG(logger, "create context start");
     m_instance = this;
+	reset();
     struct lws_context_creation_info creation_info;
     memset(&creation_info, 0x00, sizeof(creation_info));
     creation_info.port = CONTEXT_PORT_NO_LISTEN;
@@ -341,9 +372,7 @@ void MDEngineDaybit::createConnection()
         return ;
     }
     KF_LOG_INFO(logger, "connect to "<< conn_info.protocol<< conn_info.address<< ":"<< conn_info.port
-    			<< conn_info.path <<" success");
-
-	reset();
+    			<< conn_info.path <<" success");				
 }
 
 void MDEngineDaybit::logout()
@@ -358,6 +387,16 @@ void MDEngineDaybit::lwsEventLoop()
     while(isRunning)
     {
         lws_service(m_lwsContext, 500);
+    }
+}
+
+void MDEngineDaybit::heartBeatLoop()
+{
+    while(isRunning) {
+        std::this_thread::sleep_for(std::chrono::seconds(30));
+		std::string message = this->genHeartBeatJson();
+		this->phxPush(message);
+		lws_callback_on_writable(m_lwsConnection);
     }
 }
 
@@ -397,6 +436,15 @@ void MDEngineDaybit::onMessage(struct lws* conn, char* data, size_t len)
 		
 		string coinPair;
 		string topic = json["topic"].GetString();
+		if (topic == TOPIC_PHOENIX) {
+			KF_LOG_INFO(logger, "receive heartbeat response.");
+			return;
+		} else if (topic == TOPIC_API) {
+		 	KF_LOG_INFO(logger, "begin to handler serverTime topic.");
+			serverTimeHandler(json);
+			return;
+    	}
+
 		std::vector<std::string> array = LDUtils::split(topic, ";");
 		if (array.size() >= 3) {
 			coinPair.append(array[1]);
@@ -453,11 +501,21 @@ void MDEngineDaybit::onWrite(struct lws* conn)
         return;
     }
     KF_LOG_DEBUG(logger, "subscribe start");
+
+	std::string message = this->phxPop();
+	KF_LOG_DEBUG(logger, "subscribe message: " << message);
+	if (!message.empty()) {
+		sendMessage(std::move(message));
+		lws_callback_on_writable(conn);
+		return;
+	}
+
     if (m_subscribeJson.empty() || m_subscribeIndex == -1)
     {
-		this->heartBeat();
+    	KF_LOG_DEBUG(logger, "subscribe message ignore.");
         return;
     }
+	
     auto symbol = m_subscribeJson[m_subscribeIndex++];
     KF_LOG_DEBUG(logger, "req subscribe " << symbol);
     sendMessage(std::move(symbol));
@@ -733,6 +791,28 @@ void MDEngineDaybit::tradeHandler(const rapidjson::Document& json, const std::st
 	return;
 }
 
+void MDEngineDaybit::serverTimeHandler(const rapidjson::Document& json)
+{
+	auto& payload = json["payload"];
+	if (payload.HasMember("status") && payload.HasMember("response")) {
+		std::string status = payload["status"].GetString();
+		auto& response = payload["response"];
+		if(status == "ok") {
+			if (response.IsObject() && response.HasMember("data")) {
+				auto& data = response["data"];
+				if(data.IsObject() && data.HasMember("server_time")) {
+					m_timeDiffWithServer = data["server_time"].GetInt64() - getTimestamp();
+					KF_LOG_INFO(logger, "serverTime: " << data["server_time"].GetInt64() 
+													 << ", timeDiff: " << m_timeDiffWithServer);
+					genSubscribeJson();
+				}
+			}
+		}
+	}
+
+	return;
+}
+
 int64_t MDEngineDaybit::makeRef()
 {
 	return this->m_ref++;
@@ -769,21 +849,95 @@ std::string MDEngineDaybit::genHeartBeatJson()
 	writer.EndObject();
 
 	return buffer.GetString();
-
 }
 
-void MDEngineDaybit::heartBeat()
+void MDEngineDaybit::phxPush(const std::string& message)
 {
-	int64_t currentTime = this->getTimestamp();
-	if (currentTime - m_lastHeartbeatTime > m_heartBeatIntervalMs) {
-		auto message = this->genHeartBeatJson();
-		KF_LOG_DEBUG(logger, "heartbeat message:" << message);
-		sendMessage(std::move(message));
-		m_lastHeartbeatTime = currentTime;
-	}
-	
+	m_subscribeQueue.push(message);
 	return;
 }
+
+std::string MDEngineDaybit::phxPop()
+{
+	std::string message;
+	if(m_subscribeQueue.size() > 0) {		  
+		message = m_subscribeQueue.front();
+		m_subscribeQueue.pop();	 
+	}	
+
+	return message;
+}
+
+void MDEngineDaybit::phxClear()
+{
+	 while (!m_subscribeQueue.empty()) {
+		 m_subscribeQueue.pop();
+	 }
+
+	 return;
+}
+
+std::string MDEngineDaybit::genServerTimeJoin(int64_t& nJoinRef)
+{
+	nJoinRef = this->makeRef();
+
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	writer.StartObject();
+	writer.Key("join_ref");
+	writer.String(std::to_string(nJoinRef).c_str());
+
+	writer.Key("ref");
+	writer.String(std::to_string(nJoinRef).c_str());
+
+	writer.Key("topic");
+	writer.String(TOPIC_API);
+
+	writer.Key("event");
+	writer.String("phx_join");
+
+	writer.Key("payload");
+	writer.StartObject();
+	writer.EndObject();
+
+	writer.Key("timeout");
+	writer.Int(3000);
+	writer.EndObject();
+
+	return buffer.GetString();
+}
+
+
+std::string MDEngineDaybit::genServerTimeReq(int64_t& nJoinRef)
+{
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	writer.StartObject();
+	writer.Key("join_ref");
+	writer.String(std::to_string(nJoinRef).c_str());
+
+	writer.Key("ref");
+	writer.String(std::to_string(this->makeRef()).c_str());
+
+	writer.Key("topic");
+	writer.String(TOPIC_API);
+
+	writer.Key("event");
+	writer.String("get_server_time");
+
+	writer.Key("payload");
+	writer.StartObject();
+	writer.Key("timestamp");
+	writer.Int64(this->getTimestamp() + m_timeDiffWithServer);
+	writer.EndObject();
+
+	writer.Key("timeout");
+	writer.Int(3000);
+	writer.EndObject();
+
+	return buffer.GetString();
+}
+
  
  int lwsEventCallback( struct lws *conn, enum lws_callback_reasons reason, void *, void *data , size_t len )
 {
@@ -798,8 +952,7 @@ void MDEngineDaybit::heartBeat()
         {
             if(MDEngineDaybit::m_instance)
             {
-                MDEngineDaybit::m_instance->onMessage(conn, (char*)data, len);
-				lws_callback_on_writable(conn);
+                MDEngineDaybit::m_instance->onMessage(conn, (char*)data, len);				
             }
             break;
         }
@@ -817,12 +970,12 @@ void MDEngineDaybit::heartBeat()
         {
             if(MDEngineDaybit::m_instance)
             {
+            	std::cout<< "connection broken, reason :"<<(int)reason<<std::endl;
                 MDEngineDaybit::m_instance->onClose(conn);
             }
             break;
         }
-        default:			
-            //std::cout<< "callback #"<<(int)reason<<std::endl;
+        default:
             break;
     }
     return 0;
