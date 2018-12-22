@@ -305,11 +305,13 @@ void TDEngineDaybit::connect(long timeout_nsec)
 
 bool TDEngineDaybit::loadExchangeOrderFilters(AccountUnitDaybit& unit, Value &doc) {
     KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
-    for (auto iter = doc.MemberBegin();iter !=  doc.MemberEnd();++iter) 
+    SizeType size = doc.Size();
+    for (SizeType index =0;index < size;++index) 
     {            
-        if (iter->value.HasMember("tick_price") && iter->value.HasMember("quote") && iter->value.HasMember("base")) {              
-            double tickSize = iter->value["tick_price"].GetDouble();
-            std::string symbol = iter->value["base"]+"-"+iter->value["quote"];
+        auto& item = doc[index];
+        if (item.HasMember("tick_price") && item.HasMember("quote") && item.HasMember("base")) {              
+            double tickSize = item["tick_price"].GetDouble();
+            std::string symbol = item["base"]+"-"+item["quote"];
             KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"                                                                                           << tickSize);
             //0.0000100; 0.001;  1; 10
             SendOrderFilter afilter;
@@ -735,7 +737,7 @@ std::string TDEngineDaybit::getResponse(Value& payload, Value& response)
         }
         else
         {
-            response = response["data"].GetObject();
+            response = response["data"];//.GetObject();
         }
      } 
      printResponse(payload);
@@ -1145,7 +1147,7 @@ void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
 void TDEngineDaybit::onRtnMarket(struct lws * websocketConn, Value& response)
 {
     AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(websocketConn);
-    if(response.IsObject() && !response.ObjectEmpty())
+    if(response.IsArray() && !response.Empty())
     {
         loadExchangeOrderFilters(unit,response);
     }
