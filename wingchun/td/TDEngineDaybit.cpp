@@ -310,7 +310,7 @@ bool TDEngineDaybit::loadExchangeOrderFilters(AccountUnitDaybit& unit, Value &do
     {            
         auto& item = doc[index];
         if (item.HasMember("tick_price") && item.HasMember("quote") && item.HasMember("base")) {              
-            double tickSize = item["tick_price"].GetDouble();
+            double tickSize = atof(item["tick_price"].GetString());
             std::string symbol = item["base"].GetString()+std::string("-")+item["quote"].GetString();
             KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"                                                                                           << tickSize);
             //0.0000100; 0.001;  1; 10
@@ -892,7 +892,7 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
     if (json.HasParseError() || !json.IsObject()) {
         KF_LOG_ERROR(logger, "TDEngineDaybit::on_lws_data. parse json error: " << data);        
     }
-	else if(json.HasMember("topic") && json.HasMember("payload") && json.HasMember("ref"))
+	else if(json.HasMember("topic") && json.HasMember("payload") && json.HasMember("ref") && !json["ref"].IsNull())
 	{
 		std::string  topic = json["topic"].GetString();
         Value payload = json["payload"].GetObject();
