@@ -456,7 +456,7 @@ void TDEngineDaybit::req_investor_position(const LFQryPositionField* data, int a
 
     int errorId = 0;
     std::string errorMsg = "";
-     LFRspPositionField pos;
+    LFRspPositionField pos;
     memset(&pos, 0, sizeof(LFRspPositionField));
     strncpy(pos.BrokerID, data->BrokerID, 11);
     strncpy(pos.InvestorID, data->InvestorID, 19);
@@ -466,6 +466,8 @@ void TDEngineDaybit::req_investor_position(const LFQryPositionField* data, int a
     pos.Position = 0;
     pos.YdPosition = 0;
     pos.PositionCost = 0;
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_DAYBIT, 1, requestId);
+    on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
    /*  int errorId = 0;
     std::string errorMsg = "";
     Document d;
@@ -747,10 +749,10 @@ std::string TDEngineDaybit::getResponse(Value& payload, Value& response)
         response = payload["response"].GetObject();
         if(status != "ok")
         {
-            if(response.HasMember("error_code") && response.HasMember("message"))
+            if(response.HasMember("error_code"))
             {
                 retMsg = response["message"].GetString();
-                KF_LOG_ERROR(logger, "[getResponse] error (code)"<< response["error_code"].GetString() << ",(message)" << retMsg);
+                KF_LOG_ERROR(logger, "[getResponse] error (code)"<< response["error_code"].GetString());
             }
             else
             {
@@ -992,6 +994,13 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
                 //unit.mapSubscribeRef.erase(it);    
             }
         }
+        else
+        {
+            if(topic == TOPIC_API)
+            {
+                onRspError(conn,errorMsg,ref);
+            }
+        }
 	}
 }
 
@@ -1114,6 +1123,25 @@ void TDEngineDaybit::onRspOrder(struct lws* conn, Value& rsp,int64_t ref)
     }
     
 
+}
+void TDEngineDaybit::onRspError(struct lws * websocketConn, std::string errorMsg,int64_t ref)
+{
+    KF_LOG_INFO(logger, "TDEngineDaybit::onRspError");
+    AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(conn);
+	std::lock_guard<std::mutex> lck(unit_mutex);
+    
+    auto it = unit.ordersLocalMap.find(ref);
+    if(it == unit.ordersLocalMap.end())
+    {
+        //KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError,no order match (ref)" << ref);
+        return;
+    }
+   
+    else
+    {
+        on_rsp_order_insert(data, requestId, -1, errorMsg.c_str());
+        KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError on_rsp_order_insert");       
+    }
 }
 void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
 { 
@@ -1257,8 +1285,10 @@ std::string TDEngineDaybit::createNewOrderReq(int64_t joinref,double amount,doub
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp() + m_time_diff_with_server,allocator);
     payload_obj.AddMember(StringRef("cond_type"),StringRef("none"),allocator);
     payload_obj.AddMember(StringRef("role"),StringRef("both"),allocator);
-    payload_obj.AddMember(StringRef("price"),StringRef(fToa(price).c_str()),allocator);
-    payload_obj.AddMember(StringRef("amount"),StringRef(fToa(amount).c_str()),allocator);
+    std::string strPrice = fToa(price);
+    std::string strAmount = fToa(amount);
+    payload_obj.AddMember(StringRef("price"),StringRef(strPrice.c_str()),allocator);
+    payload_obj.AddMember(StringRef("amount"),StringRef(strAmount.c_str()),allocator);
     auto pairCoin = SplitCoinPair(symbol);
     payload_obj.AddMember(StringRef("base"),StringRef(pairCoin.second.c_str()),allocator);
     payload_obj.AddMember(StringRef("quote"),StringRef(pairCoin.first.c_str()),allocator);

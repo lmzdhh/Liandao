@@ -120,6 +120,7 @@ private:
     AccountUnitDaybit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onRtnOrder(struct lws * websocketConn, rapidjson::Value& json);
     void onRspOrder(struct lws * websocketConn, rapidjson::Value& json,int64_t ref);
+    void onRspError(struct lws * websocketConn, std::string errorMsg,int64_t ref);
     void onRtnTrade(struct lws * websocketConn, rapidjson::Value& json);
     void onRtnMarket(struct lws * websocketConn, rapidjson::Value& json);
     void wsloop();
