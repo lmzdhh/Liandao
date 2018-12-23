@@ -111,7 +111,7 @@ private:
     static constexpr int scale_offset = 1e8;
 
     int64_t base_interval_ms=500;
-    std::map<std::string, int64_t> localOrderRefRemoteOrderId;
+    //std::map<std::string, int64_t> localOrderRefRemoteOrderId;
     int m_limitRate_Remain = 0;
     int64_t m_TimeStamp_Reset;
     int64_t m_time_diff_with_server=0;
@@ -159,7 +159,7 @@ private:
     std::string createCancelAllOrdersReq(int64_t joinref);
     std::string createSubscribeOrderReq(int64_t joinref);
     std::string createSubscribeTradeReq(int64_t joinref);
-    std::string createPhoenixMsg(int64_t joinref,const std::string& topic,const std::string& event,rapidjson::Value& payload);
+    std::string createPhoenixMsg(int64_t joinref,const std::string& topic,const std::string& event,rapidjson::Value& payload,int64_t ref);
     std::string createSubscribeMarketReq(int64_t joinref);
     std::string createGetServerTimeReq(int64_t joinref);
     std::string createHeartBeatReq();
