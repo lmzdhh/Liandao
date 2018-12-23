@@ -621,7 +621,7 @@ void TDEngineDaybit::req_order_insert(const LFInputOrderField* data, int account
     std::lock_guard<std::mutex> guard_mutex(unit_mutex);                                                            
     //unit.listMessageToSend.push(createJoinReq(getJoinRef(),"/api"));
     unit.listMessageToSend.push(createNewOrderReq(unit.mapSubscribeRef[TOPIC_API],data->Volume*1.0/scale_offset,fixedPrice*1.0/scale_offset,ticker,LF_CHAR_Sell == data->Direction));
-	addNewOrder(unit, data->InstrumentID, data->OrderRef,data->Direction, LF_CHAR_Unknown, data->Volume, requestId,getRef());
+	addNewOrder(unit, data->InstrumentID, data->OrderRef,data->Direction, LF_CHAR_Unknown, data->Volume, requestId,getRef(),*data);
     //on_rsp_order_insert(data, requestId,errorId, errorMsg.c_str());
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_DAYBIT, 1, requestId, errorId, errorMsg.c_str());
 }
@@ -682,7 +682,7 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
 
 
 void TDEngineDaybit::addNewOrder(AccountUnitDaybit& unit, const char_31 InstrumentID,
-                                                 const char_21 OrderRef, LfDirectionType direction, const LfOrderStatusType OrderStatus,const uint64_t VolumeTotal,int reqID,int64_t ref)
+                                                 const char_21 OrderRef, LfDirectionType direction, const LfOrderStatusType OrderStatus,const uint64_t VolumeTotal,int reqID,int64_t ref,LFInputOrderField input)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
    
@@ -700,7 +700,7 @@ void TDEngineDaybit::addNewOrder(AccountUnitDaybit& unit, const char_31 Instrume
 	order.TimeCondition = LF_CHAR_GTC;
 	order.Direction = direction;
     order.OrderPriceType = LF_CHAR_LimitPrice;
-	unit.ordersLocalMap.insert(std::make_pair(ref, order));
+	unit.ordersLocalMap.insert(std::make_pair(ref, std::make_pair(order,input)));
     KF_LOG_INFO(logger, "[addNewOrder] (InstrumentID) " << InstrumentID
                                                                        << " (OrderRef) " << OrderRef
                                                                        << "(VolumeTraded)" << VolumeTotal);
@@ -743,33 +743,40 @@ void TDEngineDaybit::printResponse(const Value& d)
 std::string TDEngineDaybit::getResponse(Value& payload, Value& response)
 {
      std::string  retMsg ="";
-     if (payload.IsObject() && payload.HasMember("status") && payload.HasMember("response"))
+     if (payload.IsObject()) 
      {
-		std::string status = payload["status"].GetString();
-        response = payload["response"].GetObject();
-        if(status != "ok")
+         if(payload.HasMember("status") && payload.HasMember("response"))
         {
-            if(response.HasMember("error_code"))
+            std::string status = payload["status"].GetString();
+            response = payload["response"].GetObject();
+            if(status != "ok")
             {
-                retMsg = response["message"].GetString();
-                KF_LOG_ERROR(logger, "[getResponse] error (code)"<< response["error_code"].GetString());
+                if(response.HasMember("error_code"))
+                {
+                    retMsg = response["error_code"].GetString();
+                    KF_LOG_ERROR(logger, "[getResponse] error (code)"<< retMsg);
+                }
+                else
+                {
+                    retMsg = "unkown error";
+                    KF_LOG_ERROR(logger, "[getResponse] error (message) unkown error" );
+                }
+            }
+            else if(!response.HasMember("data"))
+            {
+                retMsg = "join ok";
+                KF_LOG_ERROR(logger, "[getResponse]  (message)" << retMsg);
             }
             else
             {
-                retMsg = "unkown error";
-                KF_LOG_ERROR(logger, "[getResponse] error (message) unkown error" );
+                response = response["data"];//.GetObject();
             }
-        }
-        else if(!response.HasMember("data"))
+        } 
+        else if(payload.HasMember("data"))
         {
-            retMsg = "join ok";
-            KF_LOG_ERROR(logger, "[getResponse]  (message)" << retMsg);
+            response = payload["data"];
         }
-        else
-        {
-            response = response["data"];//.GetObject();
-        }
-     } 
+     }
      printResponse(payload);
      return retMsg;
 }
@@ -922,11 +929,11 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
     if (json.HasParseError() || !json.IsObject()) {
         KF_LOG_ERROR(logger, "TDEngineDaybit::on_lws_data. parse json error: " << data);        
     }
-	else if(json.HasMember("topic") && json.HasMember("payload") && json.HasMember("ref") && !json["ref"].IsNull())
+	else if(json.HasMember("topic") && json.HasMember("payload") && json.HasMember("ref"))
 	{
 		std::string  topic = json["topic"].GetString();
         Value payload = json["payload"].GetObject();
-        int64_t ref = atoll(json["ref"].GetString());
+        int64_t ref = json["ref"].IsNull() ? -1 : atoll(json["ref"].GetString());
         Value response;
         auto errorMsg = getResponse(payload,response);
         if(errorMsg.empty())
@@ -1111,10 +1118,11 @@ void TDEngineDaybit::onRspOrder(struct lws* conn, Value& rsp,int64_t ref)
     }
     if(rsp.IsObject() && rsp.HasMember("id"))
     {
-        unit.ordersMap.insert(std::make_pair(rsp["id"].GetInt64(),it->second));
+        auto& rtnOrder = it->second.first;
+        unit.ordersMap.insert(std::make_pair(rsp["id"].GetInt64(),rtnOrder));
         KF_LOG_INFO(logger, "TDEngineDaybit::onRspOrder,rtn_order");
-		on_rtn_order(&it->second);
-		raw_writer->write_frame(&it->second, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_ORDER_DAYBIT,1, (it->second.RequestID > 0) ? it->second.RequestID : -1);
+		on_rtn_order(&rtnOrder);
+		raw_writer->write_frame(&rtnOrder, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_ORDER_DAYBIT,1, (rtnOrder.RequestID > 0) ? rtnOrder.RequestID : -1);
         unit.ordersLocalMap.erase(it);
     }
     else
@@ -1124,7 +1132,7 @@ void TDEngineDaybit::onRspOrder(struct lws* conn, Value& rsp,int64_t ref)
     
 
 }
-void TDEngineDaybit::onRspError(struct lws * websocketConn, std::string errorMsg,int64_t ref)
+void TDEngineDaybit::onRspError(struct lws * conn, std::string errorMsg,int64_t ref)
 {
     KF_LOG_INFO(logger, "TDEngineDaybit::onRspError");
     AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(conn);
@@ -1139,8 +1147,10 @@ void TDEngineDaybit::onRspError(struct lws * websocketConn, std::string errorMsg
    
     else
     {
-        on_rsp_order_insert(data, it->second.RequestID, -1, errorMsg.c_str());
-        KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError on_rsp_order_insert");       
+        auto& inputOrder = it->second.second;
+        on_rsp_order_insert(&inputOrder, it->second.first.RequestID, -1, errorMsg.c_str());
+        KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError on_rsp_order_insert");   
+        unit.ordersLocalMap.erase(it);    
     }
 }
 void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)

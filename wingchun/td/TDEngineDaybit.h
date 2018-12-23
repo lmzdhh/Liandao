@@ -45,7 +45,7 @@ struct AccountUnitDaybit
     bool    logged_in;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 	std::map<int64_t, LFRtnOrderField> ordersMap;
-    std::map<int64_t, LFRtnOrderField> ordersLocalMap;
+    std::map<int64_t, std::pair<LFRtnOrderField,LFInputOrderField>> ordersLocalMap;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
     std::queue<std::string> listMessageToSend;
@@ -107,7 +107,7 @@ private:
     LfOrderPriceTypeType GetPriceType(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
     void addNewOrder(AccountUnitDaybit& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, LfDirectionType direction,const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID,int64_t ref);
+                                    const char_21 OrderRef, LfDirectionType direction,const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID,int64_t ref,LFInputOrderField input);
     static constexpr int scale_offset = 1e8;
 
     int64_t base_interval_ms=500;
