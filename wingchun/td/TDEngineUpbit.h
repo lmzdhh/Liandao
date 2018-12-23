@@ -41,7 +41,7 @@ struct PendingUpbitTradeStatus
 struct OnRtnOrderDoneAndWaitingOnRtnTrade
 {
     char_21 OrderRef;       //报单引用
-    int64_t UpbitOrderId;       //Upbit 报单引用
+    std::string OrderRef;       //Upbit 报单引用
     LfDirectionType Direction;  //买卖方向
 };
 
@@ -72,7 +72,7 @@ struct AccountUnitUpbit
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
     std::vector<std::string> whiteListInstrumentIDs;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
-
+    
     // the trade id that has been called on_rtn_trade. Do not send it again.
     std::vector<int64_t> newSentTradeIds;
     std::vector<int64_t> sentTradeIds;
@@ -105,7 +105,7 @@ public:
     // req functions
     virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
     virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId);
-    virtual void req_or+der_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
+    virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
     virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
 
 public:
@@ -162,7 +162,7 @@ private:
                     double icebergQty,
                     Document& json);
 
-    void get_order(AccountUnitUpbit& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json);
+    void get_order(AccountUnitUpbit& unit, const char *origClientOrderId, Document& json);
     void cancel_order(AccountUnitUpbit& unit, const char *symbol,
                       long orderId, const char *origClientOrderId, const char *newClientOrderId, Document &doc);
     void get_my_trades(AccountUnitUpbit& unit, const char *symbol, int limit, int64_t fromId, Document &doc);
@@ -179,6 +179,7 @@ private:
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& doc);
     void printResponse(const Document& d);
     inline std::string getTimestampString();
+    LfOrderStatusType convertOrderStatus(const std::string& strStatus,,int64_t nTrades);
 
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
 
