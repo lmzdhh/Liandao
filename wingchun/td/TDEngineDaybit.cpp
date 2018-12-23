@@ -312,12 +312,12 @@ bool TDEngineDaybit::loadExchangeOrderFilters(AccountUnitDaybit& unit, Value &do
 	//std::cout << "index:" << index <<"size:"<< size <<std::endl;
         if(data.HasMember("data") && data["data"].IsArray())
         {
-	    auto& dataInner = data["data"];
+	        auto& dataInner = data["data"];
             SizeType innerSize = dataInner.Size();
             for(SizeType i = 0;i < innerSize;++i)
             {
-		//std::cout << "i:" << i <<"innersize:"<< innerSize <<std::endl;	
-		auto& item = dataInner[i];
+		    //std::cout << "i:" << i <<"innersize:"<< innerSize <<std::endl;	
+		    auto& item = dataInner[i];
                 if (item.HasMember("tick_price") && item.HasMember("quote") && item.HasMember("base")) 
                 {              
                     double tickSize = atof(item["tick_price"].GetString());
@@ -454,6 +454,18 @@ void TDEngineDaybit::req_investor_position(const LFQryPositionField* data, int a
     AccountUnitDaybit& unit = account_units[account_index];
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key << " (InstrumentID) " << data->InstrumentID);
 
+    int errorId = 0;
+    std::string errorMsg = "";
+     LFRspPositionField pos;
+    memset(&pos, 0, sizeof(LFRspPositionField));
+    strncpy(pos.BrokerID, data->BrokerID, 11);
+    strncpy(pos.InvestorID, data->InvestorID, 19);
+    strncpy(pos.InstrumentID, data->InstrumentID, 31);
+    pos.PosiDirection = LF_CHAR_Long;
+    pos.HedgeFlag = LF_CHAR_Speculation;
+    pos.Position = 0;
+    pos.YdPosition = 0;
+    pos.PositionCost = 0;
    /*  int errorId = 0;
     std::string errorMsg = "";
     Document d;
