@@ -309,17 +309,20 @@ bool TDEngineDaybit::loadExchangeOrderFilters(AccountUnitDaybit& unit, Value &do
     for (SizeType index =0;index < size;++index) 
     {            
         auto& data = doc[index];
-        if(data.IsArray())
+	//std::cout << "index:" << index <<"size:"<< size <<std::endl;
+        if(data.HasMember("data") && data["data"].IsArray())
         {
-            SizeType innerSize = data.Size();
-            for(SizeType i = 0;i < innerSize;++innerSize)
+	    auto& dataInner = data["data"];
+            SizeType innerSize = dataInner.Size();
+            for(SizeType i = 0;i < innerSize;++i)
             {
-                auto& item = data[innerSize];
+		//std::cout << "i:" << i <<"innersize:"<< innerSize <<std::endl;	
+		auto& item = dataInner[i];
                 if (item.HasMember("tick_price") && item.HasMember("quote") && item.HasMember("base")) 
                 {              
                     double tickSize = atof(item["tick_price"].GetString());
-                    std::string symbol = item["base"].GetString()+std::string("-")+item["quote"].GetString();
-                    KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"                                                                                           << tickSize);
+                    std::string symbol = item["quote"].GetString()+std::string("-")+item["base"].GetString();
+                    KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"<< tickSize);
                     //0.0000100; 0.001;  1; 10
                     SendOrderFilter afilter;
                     afilter.InstrumentID = symbol;
@@ -376,8 +379,12 @@ bool TDEngineDaybit::is_logged_in() const
     for (auto& unit: account_units)
     {
         if (!unit.logged_in)
+	{
+	    std::cout << "not log in" << std::endl;
             return false;
+	}
     }
+    std::cout << "is log in" << std::endl;
     return true;
 }
 
