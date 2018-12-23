@@ -1139,7 +1139,7 @@ void TDEngineDaybit::onRspError(struct lws * websocketConn, std::string errorMsg
    
     else
     {
-        on_rsp_order_insert(data, requestId, -1, errorMsg.c_str());
+        on_rsp_order_insert(data, it->second.RequestID, -1, errorMsg.c_str());
         KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError on_rsp_order_insert");       
     }
 }
