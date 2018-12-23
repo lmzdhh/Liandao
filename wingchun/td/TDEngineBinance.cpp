@@ -103,8 +103,10 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
 	}
 
 	KF_LOG_INFO(logger, "[load_account] interface switch: " << m_interface_switch);
-	m_interfaceMgr.init(interfaces, interface_timeout);
-	m_interfaceMgr.print();
+	if (m_interface_switch > 0) {
+		m_interfaceMgr.init(interfaces, interface_timeout);
+		m_interfaceMgr.print();
+	}
 	
     // internal load
     string api_key = j_config["APIKey"].get<string>();

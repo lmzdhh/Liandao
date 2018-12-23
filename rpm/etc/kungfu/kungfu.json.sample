@@ -181,7 +181,8 @@
                     "info":
                     {
                         "interfaces": "10.0.0.22-10.0.0.104",
-                        "face_timeout_ms": 30000,
+                        "interface_timeout_ms": 30000,
+						"interface_switch": 1,
                         "APIKey": "fxnBi00raJLkvl5DeEb9tSiXTdqCITfiPMulpFmZPcDiFdFHQlYsmFZyh3if1JFx",
                         "SecretKey": "H3xr0qCcZv2yimy3cjSHNSncORHnjyP6Y5tNgV122EU8CdFkrDs0A2uz5Ry5C6Xj",
                         "whiteLists":{
