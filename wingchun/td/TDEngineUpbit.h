@@ -34,13 +34,12 @@ struct PendingUpbitOrderStatus
 struct PendingUpbitTradeStatus
 {
     char_31 InstrumentID;   //合约代码
-    int64_t last_trade_id; //for myTrade
+    std::string last_trade_id; //for myTrade
 };
 
 //当Order已经全部成交完成之后，到get_myTrades拿到这个OrderRef记录的信息以后， 删除记录，不再get_myTrades
 struct OnRtnOrderDoneAndWaitingOnRtnTrade
 {
-    char_21 OrderRef;       //报单引用
     std::string OrderRef;       //Upbit 报单引用
     LfDirectionType Direction;  //买卖方向
 };
@@ -137,12 +136,13 @@ private:
     inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitUpbit& unit, Document& result, int requestId);
     inline void onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitUpbit& unit, Document& result, int requestId);
 
-    void retrieveOrderStatus(AccountUnitUpbit& unit);
-    void retrieveTradeStatus(AccountUnitUpbit& unit);
+    void retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderResult);
+    void retrieveTradeStatus(AccountUnitUpbit& unit,Document& d);
+    void retrieveOrderAndTradesStatus(AccountUnitUpbit& unit);
     void moveNewtoPending(AccountUnitUpbit& unit);
     bool isExistSymbolInPendingTradeStatus(AccountUnitUpbit& unit, const char_31 InstrumentID);
     bool isExistSymbolInPendingUpbitOrderStatus(AccountUnitUpbit& unit, const char_31 InstrumentID, const char_21 OrderRef);
-    bool removeUpbitOrderIdFromPendingOnRtnTrades(AccountUnitUpbit& unit, int64_t UpbitOrderId);
+    bool removeUpbitOrderIdFromPendingOnRtnTrades(AccountUnitUpbit& unit, const std::string& UpbitOrderId);
 
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
 
@@ -151,7 +151,7 @@ private:
 
 private:
     int HTTP_RESPONSE_OK = 200;
-    void send_order(AccountUnitUpbit& unit, const char *symbol,
+    std::int32_t  send_order(AccountUnitUpbit& unit, const char *symbol,
                     const char *side,
                     const char *type,
                     const char *timeInForce,
@@ -162,14 +162,14 @@ private:
                     double icebergQty,
                     Document& json);
 
-    void get_order(AccountUnitUpbit& unit, const char *origClientOrderId, Document& json);
-    void cancel_order(AccountUnitUpbit& unit, const char *symbol,
+    std::int32_t  get_order(AccountUnitUpbit& unit, const char *origClientOrderId, Document& json);
+    std::int32_t  cancel_order(AccountUnitUpbit& unit, const char *symbol,
                       long orderId, const char *origClientOrderId, const char *newClientOrderId, Document &doc);
     void get_my_trades(AccountUnitUpbit& unit, const char *symbol, int limit, int64_t fromId, Document &doc);
     void get_open_orders(AccountUnitUpbit& unit, const char *symbol, Document &doc);
     void get_exchange_infos(AccountUnitUpbit& unit, Document &doc);
     void getChanceResponce(const AccountUnitUpbit& unit, const std::string& strMarket,Document& d);
-    void getAccountResponce(const AccountUnitUpbit& unit,Document& d);
+    std::int32_t getAccountResponce(const AccountUnitUpbit& unit,Document& d);
     void getAllMarkets(std::vector<std::string>& vstrMarkets);
     bool loadMarketsInfo(const AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets);
     std::string getEncode(const std::string& str);
