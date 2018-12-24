@@ -1,11 +1,12 @@
 //
-// Created by wang on 10/20/18.
+// Created by xiaoning on 12/23/18.
 //
 
 #ifndef KUNGFU_MDENGINEDAYBIT_H
 #define KUNGFU_MDENGINEDAYBIT_H
 #include <map>
 #include <queue>
+#include <unordered_map>
 #include <vector>
 #include "CoinPairWhiteList.h"
 #include "IMDEngine.h"
@@ -31,7 +32,7 @@ public:
     void release_api() override { KF_LOG_INFO(logger, "release_api"); }
     bool is_connected() const override { return m_connected; }
     bool is_logged_in() const override { return m_logged_in; }
-    std::string name() const  override { return "MDEngineDaybit"; }
+    std::string name() const    override { return "MDEngineDaybit"; }
 
 public:
     void onMessage(struct lws*,char* , size_t );
@@ -48,6 +49,7 @@ protected:
 	void orderbookInsertNotify(const rapidjson::Value&, const std::string&);
     void tradeHandler(const rapidjson::Document&, const std::string&);
 	void serverTimeHandler(const rapidjson::Document&);
+	void marketDataHandler(const rapidjson::Document&);	
 
 private:
 	void genSubscribeJson();
@@ -58,6 +60,8 @@ private:
 	std::string genHeartBeatJson();
 	std::string genServerTimeJoin(int64_t&);
 	std::string genServerTimeReq(int64_t&);
+	std::string genMarketDataJoin(int64_t&);
+	std::string genMarketDataReq(int64_t&);
 
 private:
 	inline int64_t getTimestamp();
@@ -68,6 +72,8 @@ private:
     void sendMessage(std::string&& );
 	int64_t makeRef();
 	int64_t	makeJoinRef();
+	std::string getTickPrice(const std::string&);
+	void setTickPrice(const std::string&, const std::string&);
 
 private:
     bool                        m_connected = false;
@@ -76,7 +82,7 @@ private:
 	ThreadPtr                   m_heartBeatThread;
 private:
     CoinPairWhiteList           m_whiteList;
-	CoinPairWhiteList           m_tickPriceList;
+	std::unordered_map<std::string, std::string> m_tickPriceList;
 	std::queue<std::string>     m_subscribeQueue;
 	PriceBook20Assembler priceBook20Assembler;
 	

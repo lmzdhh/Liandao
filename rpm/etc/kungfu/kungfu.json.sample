@@ -164,13 +164,6 @@
 			"bch_eth": "ETH;BCH",
 			"ltc_btc": "BTC;LTC",
 			"btc_usdt": "USDT;BTC"
-		},
-		"tickPriceLists":
-		{
-			"coinpair(quote;base)": "tick price",
-			"ETH;BCH":	"0.00020000",
-			"BTC;LTC":	"0.00000050",
-			"USDT;BTC":	"0.20000000"
 		}
      }
   },

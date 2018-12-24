@@ -17,6 +17,7 @@ using namespace std;
 #define SCALE_OFFSET 1e8
 #define	SUBS_ORDERBOOK "/subscription:order_books;"
 #define SUBS_TRADE	"/subscription:trades;"
+#define SUBS_MARKETS	"/subscription:markets"
 #define TOPIC_API	"/api"
 #define TOPIC_PHOENIX	"phoenix"
 #define WSS_TIMEOUT	-1
@@ -72,7 +73,7 @@ void MDEngineDaybit::reset()
 	m_ref = 1;
     m_logged_in = true;
 
-	//create serverTime json
+	//1. create serverTime json
 	int64_t joinRef = 0;
 	this->phxClear();
 	string subscription = genServerTimeJoin(joinRef);
@@ -81,6 +82,15 @@ void MDEngineDaybit::reset()
 
 	subscription = genServerTimeReq(joinRef);
 	KF_LOG_INFO(logger, "getServerTime request:" << subscription);
+	this->phxPush(subscription);
+
+	//2. create marketData json
+	subscription = genMarketDataJoin(joinRef);
+	KF_LOG_INFO(logger, "genMarketDataJoin join:" << subscription);
+	this->phxPush(subscription);
+
+	subscription = genMarketDataReq(joinRef);
+	KF_LOG_INFO(logger, "genMarketDataReq request:" << subscription);
 	this->phxPush(subscription);
 }
 
@@ -96,9 +106,6 @@ void MDEngineDaybit::load(const json& config)
 		
         m_whiteList.ReadWhiteLists(config, "whiteLists");
         m_whiteList.Debug_print();
-
-		m_tickPriceList.ReadWhiteLists(config, "tickPriceLists");
-		m_tickPriceList.Debug_print();
     }
     catch (const std::exception& e)
     {
@@ -168,7 +175,7 @@ std::string MDEngineDaybit::genOrderbookJoin(const std::string& symbol, int64_t&
 
 	writer.Key("topic");
 	string topic = SUBS_ORDERBOOK;
-	string tickPrice = m_tickPriceList.GetValueByKey(symbol);
+	string tickPrice = this->getTickPrice(symbol);
 	if (tickPrice.empty()) {
 		KF_LOG_ERROR(logger, "find tick_price fail, symbol:" << symbol);
 		return "";
@@ -210,7 +217,7 @@ std::string MDEngineDaybit::genOrderbookReq(const std::string& symbol, int64_t n
 	
 	writer.Key("topic");
 	string topic = SUBS_ORDERBOOK;
-	string tickPrice = m_tickPriceList.GetValueByKey(symbol);
+	string tickPrice = this->getTickPrice(symbol);
 	if (tickPrice.empty()) {
 		KF_LOG_ERROR(logger, "find tick_price fail, symbol:" << symbol);
 		return "";
@@ -440,7 +447,11 @@ void MDEngineDaybit::onMessage(struct lws* conn, char* data, size_t len)
 		 	KF_LOG_INFO(logger, "begin to handler serverTime topic.");
 			serverTimeHandler(json);
 			return;
-    	}
+    	} else if (topic == SUBS_MARKETS) {
+			KF_LOG_INFO(logger, "begin to handler serverTime topic.");
+			marketDataHandler(json);
+			return;
+		}
 
 		std::vector<std::string> array = LDUtils::split(topic, ";");
 		if (array.size() >= 3) {
@@ -507,7 +518,7 @@ void MDEngineDaybit::onWrite(struct lws* conn)
 		return;
 	}
 	
-    KF_LOG_DEBUG(logger, "subscribe continue");
+    KF_LOG_DEBUG(logger, "subscribe end");
 }
 
 void MDEngineDaybit::orderbookInsertNotify(const rapidjson::Value& data, const std::string& instrument)
@@ -786,13 +797,69 @@ void MDEngineDaybit::serverTimeHandler(const rapidjson::Document& json)
 					m_timeDiffWithServer = data["server_time"].GetInt64() - getTimestamp();
 					KF_LOG_INFO(logger, "serverTime: " << data["server_time"].GetInt64() 
 													 << ", timeDiff: " << m_timeDiffWithServer);
-					//after sync serverTime, begin to subscribe
-					genSubscribeJson();
 				}
 			}
 		}
 	}
 
+	return;
+}
+
+void MDEngineDaybit::marketDataHandler(const rapidjson::Document& json)
+{
+	auto& payload = json["payload"];
+	if (!payload.HasMember("status") || !payload.HasMember("response")) {
+		KF_LOG_ERROR(logger, "lack parameter [status] or [response]");
+		return;
+	}
+
+	std::string status = payload["status"].GetString();
+	if (status != "ok") {
+		KF_LOG_ERROR(logger, "status error!");
+		return;
+	}
+	
+	auto& response = payload["response"];
+	if (!response.IsObject() || !response.HasMember("data")) {
+		KF_LOG_ERROR(logger, "response format error!");
+		return;
+	}
+
+	auto& outer =response["data"];
+	if (!outer.IsArray()) {
+		KF_LOG_ERROR(logger, "outer data is not array!");
+		return;
+	}
+
+	auto& inner = outer[0];
+	if (!inner.HasMember("data")) {
+		KF_LOG_ERROR(logger, "inner data not exists!");
+	    return;
+	}
+
+	const rapidjson::Value& data = inner["data"];
+	if (!data.IsArray()) {
+		KF_LOG_ERROR(logger, "inner data is not array!");
+		return;
+	}
+
+	string base, quote, tickPrice;
+	for (size_t i = 0; i < data.Size(); ++i) {
+		auto& val = data[i];
+		base = val["base"].GetString();
+		quote = val["quote"].GetString();
+		tickPrice = val["tick_price"].GetString();
+		
+		string coinPair;
+		coinPair.append(quote).append(";").append(base);
+
+		this->setTickPrice(coinPair, tickPrice);
+	}
+
+	//after sync coinPair, begin to subscribe
+	KF_LOG_INFO(logger, "begin to generate subscribe json");
+	this->genSubscribeJson();
+	
 	return;
 }
 
@@ -925,8 +992,84 @@ std::string MDEngineDaybit::genServerTimeReq(int64_t& nJoinRef)
 	return buffer.GetString();
 }
 
+std::string MDEngineDaybit::getTickPrice(const std::string& coinPair)
+{
+	std::string tickPrice;
+	if (m_tickPriceList.end() != m_tickPriceList.find(coinPair)) {
+		tickPrice = m_tickPriceList[coinPair];
+	}
+	
+	return tickPrice;
+}
+
+void MDEngineDaybit::setTickPrice(const std::string& coinPair, const std::string& tickPrice)
+{
+	KF_LOG_INFO(logger, "coinPair[" << coinPair <<"], tickPrice[" << tickPrice << "].");
+	m_tickPriceList[coinPair] = tickPrice;
+	return;
+}
+
+std::string MDEngineDaybit::genMarketDataJoin(int64_t& nJoinRef)
+{
+	nJoinRef = this->makeRef();
+
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	writer.StartObject();
+	writer.Key("join_ref");
+	writer.String(std::to_string(nJoinRef).c_str());
+
+	writer.Key("ref");
+	writer.String(std::to_string(nJoinRef).c_str());
+
+	writer.Key("topic");
+	writer.String(SUBS_MARKETS);
+
+	writer.Key("event");
+	writer.String("phx_join");
+
+	writer.Key("payload");
+	writer.StartObject();
+	writer.EndObject();
+
+	writer.Key("timeout");
+	writer.Int(3000);
+	writer.EndObject();
+
+	return buffer.GetString();
+}
+
+std::string MDEngineDaybit::genMarketDataReq(int64_t& nJoinRef)
+{
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	writer.StartObject();
+	writer.Key("join_ref");
+	writer.String(std::to_string(nJoinRef).c_str());
+
+	writer.Key("ref");
+	writer.String(std::to_string(this->makeRef()).c_str());
+
+	writer.Key("topic");
+	writer.String(SUBS_MARKETS);
+
+	writer.Key("event");
+	writer.String("request");
+
+	writer.Key("payload");
+	writer.StartObject();
+	writer.Key("timestamp");
+	writer.Int64(this->getTimestamp() + m_timeDiffWithServer);
+	writer.EndObject();
+
+	writer.Key("timeout");
+	writer.Int(3000);
+	writer.EndObject();
+
+	return buffer.GetString();
+}
  
- int lwsEventCallback( struct lws *conn, enum lws_callback_reasons reason, void *, void *data , size_t len )
+int lwsEventCallback( struct lws *conn, enum lws_callback_reasons reason, void *, void *data , size_t len )
 {
     switch( reason )
     {
