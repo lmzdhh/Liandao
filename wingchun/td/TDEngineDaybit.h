@@ -45,7 +45,7 @@ struct AccountUnitDaybit
     bool    logged_in;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 	std::map<int64_t, LFRtnOrderField> ordersMap;
-    std::map<int64_t, LFRtnOrderField> ordersLocalMap;
+    std::map<int64_t, std::pair<LFRtnOrderField,LFInputOrderField>> ordersLocalMap;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
     std::queue<std::string> listMessageToSend;
@@ -107,11 +107,11 @@ private:
     LfOrderPriceTypeType GetPriceType(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
     void addNewOrder(AccountUnitDaybit& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, LfDirectionType direction,const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID,int64_t ref);
+                                    const char_21 OrderRef, LfDirectionType direction,const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID,int64_t ref,LFInputOrderField input);
     static constexpr int scale_offset = 1e8;
 
     int64_t base_interval_ms=500;
-    std::map<std::string, int64_t> localOrderRefRemoteOrderId;
+    //std::map<std::string, int64_t> localOrderRefRemoteOrderId;
     int m_limitRate_Remain = 0;
     int64_t m_TimeStamp_Reset;
     int64_t m_time_diff_with_server=0;
@@ -120,6 +120,7 @@ private:
     AccountUnitDaybit& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onRtnOrder(struct lws * websocketConn, rapidjson::Value& json);
     void onRspOrder(struct lws * websocketConn, rapidjson::Value& json,int64_t ref);
+    void onRspError(struct lws * websocketConn, std::string errorMsg,int64_t ref);
     void onRtnTrade(struct lws * websocketConn, rapidjson::Value& json);
     void onRtnMarket(struct lws * websocketConn, rapidjson::Value& json);
     void wsloop();
@@ -158,7 +159,7 @@ private:
     std::string createCancelAllOrdersReq(int64_t joinref);
     std::string createSubscribeOrderReq(int64_t joinref);
     std::string createSubscribeTradeReq(int64_t joinref);
-    std::string createPhoenixMsg(int64_t joinref,const std::string& topic,const std::string& event,rapidjson::Value& payload);
+    std::string createPhoenixMsg(int64_t joinref,const std::string& topic,const std::string& event,rapidjson::Value& payload,int64_t ref);
     std::string createSubscribeMarketReq(int64_t joinref);
     std::string createGetServerTimeReq(int64_t joinref);
     std::string createHeartBeatReq();
