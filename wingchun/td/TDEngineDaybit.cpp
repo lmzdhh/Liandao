@@ -1067,14 +1067,14 @@ void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& response)
                         LFRtnOrderField rtn_order = it->second;
                        
                         rtn_order.VolumeTotal = int64_t(aTof(order["unfilled"].GetString())*scale_offset);	                                                                       
-                        if(!order["sell"].GetBool())
-                        {
+                        //if(!order["sell"].GetBool())
+                        //{
                             rtn_order.VolumeTraded = int64_t(aTof(order["filled"].GetString())*scale_offset);
-                        }
-                        else
-                        {
-                            rtn_order.VolumeTraded = int64_t(aTof(order["filled_quote"].GetString())*scale_offset);
-                        }
+                        //}
+                        //else
+                        //{
+                        //    rtn_order.VolumeTraded = int64_t(aTof(order["filled_quote"].GetString())*scale_offset);
+                        //}
 
                         std::string status = order["status"].GetString();
                         if(status == "closed")
@@ -1200,14 +1200,14 @@ void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
                         strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
                         strncpy(rtn_trade.InstrumentID, order.InstrumentID, 31);
                         rtn_trade.Direction = order.Direction;	
-                        if(!trade["sell"].GetBool())
-                        {
+                        //if(!trade["sell"].GetBool())
+                        //{
                             rtn_trade.Volume = int64_t(aTof(trade["base_amount"].GetString())*scale_offset);
-                        }
-                        else
-                        {
-                            rtn_trade.Volume = int64_t(aTof(trade["quote_amount"].GetString())*scale_offset);
-                        }					        
+                        //}
+                        //else
+                        //{
+                        //    rtn_trade.Volume = int64_t(aTof(trade["quote_amount"].GetString())*scale_offset);
+                        //}					        
                         rtn_trade.Price = int64_t(aTof(trade["price"].GetString())*scale_offset);
                         
                         KF_LOG_ERROR(logger, "TDEngineDaybit::onTrade,rtn_trade");
