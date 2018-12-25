@@ -3,7 +3,13 @@
 #include <cstring>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
 #include <openssl/evp.h>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <sstream>
 namespace utils { namespace crypto {
 
 inline std::string b2a_hex(char *byte_arr, int n) {
@@ -51,7 +57,15 @@ inline bool is_base64(unsigned char c) {
     return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
+static const std::string base64_url_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+											"abcdefghijklmnopqrstuvwxyz"
+											"0123456789-_";
+
+inline bool is_base64_url(unsigned char c) {
+	return (isalnum(c) || (c == '-') || (c == '_'));
+}
+
+std::string base64_encode(const unsigned char* bytes_to_encode, unsigned long in_len) {
     std::string ret;
     int i = 0;
     int j = 0;
