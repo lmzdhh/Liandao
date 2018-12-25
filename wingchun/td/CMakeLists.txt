@@ -76,3 +76,8 @@ ADD_LIBRARY(probittd SHARED ${PROBIT_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(probittd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS probittd DESTINATION "lib/wingchun")
 INSTALL(TARGETS oceanextd DESTINATION "lib/wingchun")
+
+SET(UPBIT_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineUpbit.cpp TDEngineUpbit.h  ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
+ADD_LIBRARY(upbittd SHARED ${PROBIT_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(upbittd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS upbittd DESTINATION "lib/wingchun")
