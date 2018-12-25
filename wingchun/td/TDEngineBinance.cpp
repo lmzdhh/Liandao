@@ -1692,12 +1692,17 @@ void TDEngineBinance::meet_429()
 bool TDEngineBinance::isResume()
 {
     std::lock_guard<std::mutex> guard_mutex(*mutex_handle_429);
+    if (!bHandle_429)
+    {
+        return true;
+    }
     uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     int handle_429_time_diff_ms = timestamp - startTime;
     if (handle_429_time_diff_ms > prohibit_order_ms)
     {
         //stop handle 429
         bHandle_429 = false;
+        KF_LOG_INFO(logger, "[isResume] stop handle 429, resume" << " bHandle_429 " << bHandle_429 << " request_weight_per_minute " << request_weight_per_minute);
         return true;
     }
     KF_LOG_INFO(logger, "[isResume] " << " bHandle_429 " << bHandle_429 << " request_weight_per_minute " << request_weight_per_minute);
