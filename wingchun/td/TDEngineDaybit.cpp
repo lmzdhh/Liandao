@@ -138,7 +138,16 @@ struct session_data {
     int fd;
 };
 
-
+std::string fToa(double src)
+{
+    char strTmp[20]{0};
+    sprintf(strTmp,"%.8f",src+0.000000001);
+    return strTmp;
+} 
+double aTof(std::string src)
+{
+    return atof(src.c_str())+0.000000001;    
+} 
 
 TDEngineDaybit::TDEngineDaybit(): ITDEngine(SOURCE_DAYBIT)
 {
@@ -320,7 +329,7 @@ bool TDEngineDaybit::loadExchangeOrderFilters(AccountUnitDaybit& unit, Value &do
 		    auto& item = dataInner[i];
                 if (item.HasMember("tick_price") && item.HasMember("quote") && item.HasMember("base")) 
                 {              
-                    double tickSize = atof(item["tick_price"].GetString());
+                    double tickSize = aTof(item["tick_price"].GetString());
                     std::string symbol = item["quote"].GetString()+std::string("-")+item["base"].GetString();
                     KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"<< tickSize);
                     //0.0000100; 0.001;  1; 10
@@ -621,7 +630,7 @@ void TDEngineDaybit::req_order_insert(const LFInputOrderField* data, int account
     std::lock_guard<std::mutex> guard_mutex(unit_mutex);                                                            
     //unit.listMessageToSend.push(createJoinReq(getJoinRef(),"/api"));
     unit.listMessageToSend.push(createNewOrderReq(unit.mapSubscribeRef[TOPIC_API],data->Volume*1.0/scale_offset,fixedPrice*1.0/scale_offset,ticker,LF_CHAR_Sell == data->Direction));
-	addNewOrder(unit, data->InstrumentID, data->OrderRef,data->Direction, LF_CHAR_Unknown, data->Volume, requestId,getRef(),*data);
+	addNewOrder(unit, LF_CHAR_NotTouched, requestId,getRef(),*data);
     //on_rsp_order_insert(data, requestId,errorId, errorMsg.c_str());
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_DAYBIT, 1, requestId, errorId, errorMsg.c_str());
 }
@@ -685,8 +694,7 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
 
 
 
-void TDEngineDaybit::addNewOrder(AccountUnitDaybit& unit, const char_31 InstrumentID,
-                                                 const char_21 OrderRef, LfDirectionType direction, const LfOrderStatusType OrderStatus,const uint64_t VolumeTotal,int reqID,int64_t ref,LFInputOrderField input)
+void TDEngineDaybit::addNewOrder(AccountUnitDaybit& unit, const LfOrderStatusType OrderStatus,int reqID,int64_t ref,LFInputOrderField input)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
    
@@ -694,20 +702,21 @@ void TDEngineDaybit::addNewOrder(AccountUnitDaybit& unit, const char_31 Instrume
 	LFRtnOrderField order;
     memset(&order, 0, sizeof(LFRtnOrderField));
 	order.OrderStatus = OrderStatus;
-    order.VolumeTotalOriginal = VolumeTotal;
-    order.VolumeTotal = VolumeTotal;
-	strncpy(order.OrderRef, OrderRef, 21);
-	strncpy(order.InstrumentID, InstrumentID, 31);
+    order.VolumeTotalOriginal = input.Volume;
+    order.VolumeTotal = input.Volume;
+	strncpy(order.OrderRef, input.OrderRef, 21);
+	strncpy(order.InstrumentID, input.InstrumentID, 31);
 	order.RequestID = reqID;
 	strcpy(order.ExchangeID, "Daybit");
 	strncpy(order.UserID, unit.api_key.c_str(), 16);
+    order.LimitPrice = input.LimitPrice;
 	order.TimeCondition = LF_CHAR_GTC;
-	order.Direction = direction;
+	order.Direction = input.Direction;
     order.OrderPriceType = LF_CHAR_LimitPrice;
 	unit.ordersLocalMap.insert(std::make_pair(ref, std::make_pair(order,input)));
-    KF_LOG_INFO(logger, "[addNewOrder] (InstrumentID) " << InstrumentID
-                                                                       << " (OrderRef) " << OrderRef
-                                                                       << "(VolumeTraded)" << VolumeTotal);
+    KF_LOG_INFO(logger, "[addNewOrder] (InstrumentID) " << input.InstrumentID
+                                                                       << " (OrderRef) " << input.OrderRef
+                                                                       << "(VolumeTraded)" << input.Volume);
 }
 
 
@@ -1057,14 +1066,14 @@ void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& response)
                         }
                         LFRtnOrderField rtn_order = it->second;
                        
-                        rtn_order.VolumeTotal = int64_t(atof(order["unfilled"].GetString())*scale_offset);	                                                                       
-                        if(order["sell"].GetBool())
+                        rtn_order.VolumeTotal = int64_t(aTof(order["unfilled"].GetString())*scale_offset);	                                                                       
+                        if(!order["sell"].GetBool())
                         {
-                            rtn_order.VolumeTraded = int64_t(atof(order["filled"].GetString())*scale_offset);
+                            rtn_order.VolumeTraded = int64_t(aTof(order["filled"].GetString())*scale_offset);
                         }
                         else
                         {
-                            rtn_order.VolumeTraded = int64_t(atof(order["filled_quote"].GetString())*scale_offset);
+                            rtn_order.VolumeTraded = int64_t(aTof(order["filled_quote"].GetString())*scale_offset);
                         }
 
                         std::string status = order["status"].GetString();
@@ -1176,7 +1185,7 @@ void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
                     if(trade.HasMember("price") && trade.HasMember("order_id") &&  trade.HasMember("sell") && trade.HasMember("quote_amount") 
                     && trade.HasMember("base_amount") )	
                     {	
-			        LFRtnTradeField rtn_trade;
+			            LFRtnTradeField rtn_trade;
                         memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
                         int64_t id = trade["order_id"].GetInt64();
                         auto it = unit.ordersMap.find(id);
@@ -1191,15 +1200,15 @@ void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
                         strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
                         strncpy(rtn_trade.InstrumentID, order.InstrumentID, 31);
                         rtn_trade.Direction = order.Direction;	
-                        if(trade["sell"].GetBool())
+                        if(!trade["sell"].GetBool())
                         {
-                            rtn_trade.Volume = int64_t(atof(trade["base_amount"].GetString())*scale_offset);
+                            rtn_trade.Volume = int64_t(aTof(trade["base_amount"].GetString())*scale_offset);
                         }
                         else
                         {
-                            rtn_trade.Volume = int64_t(atof(trade["quote_amount"].GetString())*scale_offset);
+                            rtn_trade.Volume = int64_t(aTof(trade["quote_amount"].GetString())*scale_offset);
                         }					        
-                        rtn_trade.Price = int64_t(atof(trade["price"].GetString())*scale_offset);
+                        rtn_trade.Price = int64_t(aTof(trade["price"].GetString())*scale_offset);
                         
                         KF_LOG_ERROR(logger, "TDEngineDaybit::onTrade,rtn_trade");
                         on_rtn_trade(&rtn_trade);
@@ -1257,12 +1266,7 @@ std::string TDEngineDaybit::createLeaveReq(int64_t joinref,const std::string& to
     Value obj(rapidjson::kObjectType);
     return createPhoenixMsg(joinref,topic,"phx_leave",obj,makeRef());
 }
-std::string fToa(double src)
-{
-    char strTmp[20]{0};
-    sprintf(strTmp,"%.8f",src+0.000000001);
-    return strTmp;
-} 
+
 
 std::pair<std::string,std::string> SplitCoinPair(const std::string& coinpair)
 {

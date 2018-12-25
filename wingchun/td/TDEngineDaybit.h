@@ -106,8 +106,7 @@ private:
     std::string GetType(const LfOrderPriceTypeType& input);
     LfOrderPriceTypeType GetPriceType(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
-    void addNewOrder(AccountUnitDaybit& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, LfDirectionType direction,const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, int reqID,int64_t ref,LFInputOrderField input);
+    void addNewOrder(AccountUnitDaybit& unit,const LfOrderStatusType OrderStatus,  int reqID,int64_t ref,LFInputOrderField input);
     static constexpr int scale_offset = 1e8;
 
     int64_t base_interval_ms=500;
