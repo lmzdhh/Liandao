@@ -1358,7 +1358,10 @@ void TDEngineBinance::loop()
         {
             //double rest_get_interval_ms
             tmp_rest_get_interval_ms = default_429_rest_interval_ms;
-            KF_LOG_INFO(logger, "[loop] bHandle_429:" << bHandle_429 << " tmp_rest_get_interval_ms:" << tmp_rest_get_interval_ms);
+            KF_LOG_INFO(logger, "[loop] bHandle_429:" << bHandle_429 
+                << " tmp_rest_get_interval_ms:" << tmp_rest_get_interval_ms
+                << " default_429_rest_interval_ms:" << default_429_rest_interval_ms
+                << " rest_get_interval_ms:" << rest_get_interval_ms);
         }
         if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < tmp_rest_get_interval_ms)
         {
@@ -1486,11 +1489,11 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 
         handle_request_weight(SendOrder_Type);
 
-        if (response_status_code == HTTP_CONNECT_REFUSED)
+        if (bHandle_429)
         {
-            KF_LOG_INFO(logger, "[send_order] meet 429");
-            if (handle_429())
+            if (!isResume())
             {
+                KF_LOG_INFO(logger, "[send_order] handle 429");
                 std::string strErr = "{\"code\":-1429,\"msg\":\"handle 429, prohibit send order.\"}";
                 json.Parse(strErr.c_str());
                 return;
@@ -1516,7 +1519,11 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
                                                          " (response.error.message) " << response.error.message <<
                                                          " (response.text) " << response.text.c_str());
 
-        response_status_code = response.status_code;
+        if (response_status_code == HTTP_CONNECT_REFUSED)
+        {
+            meet_429();
+            break;
+        }
 
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
@@ -1663,13 +1670,9 @@ void TDEngineBinance::handle_request_weight(RequestWeightType type)
     weight_data_queue.push(wd);
 }
 
-bool TDEngineBinance::handle_429()
+void TDEngineBinance::meet_429()
 {
     std::lock_guard<std::mutex> guard_mutex(*mutex_handle_429);
-    
-    static uint64_t startTime = 0;
-    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    int handle_429_time_diff_ms = timestamp - startTime;
     if (request_weight_per_minute <= 0)
     {
         bHandle_429 = false;
@@ -1678,24 +1681,27 @@ bool TDEngineBinance::handle_429()
     {
         if (!bHandle_429)
         {
-            //start handle 429
+            uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             startTime = timestamp;
-            bHandle_429 = true;    
-        }
-        else
-        {
-            //already handling 429
-            if (handle_429_time_diff_ms > prohibit_order_ms)
-            {
-                //stop handle 429
-                bHandle_429 = false;
-            }
-        }
+            bHandle_429 = true;
+        }        
     }
-    KF_LOG_INFO(logger, "[handle_429] " << bHandle_429 
-        << " handle_429_time_diff_ms " << handle_429_time_diff_ms 
-        << " request_weight_per_minute " << request_weight_per_minute);
-    return bHandle_429;
+    KF_LOG_INFO(logger, "[meet_429] " << bHandle_429 << " request_weight_per_minute " << request_weight_per_minute);
+}
+
+bool TDEngineBinance::isResume()
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_handle_429);
+    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    int handle_429_time_diff_ms = timestamp - startTime;
+    if (handle_429_time_diff_ms > prohibit_order_ms)
+    {
+        //stop handle 429
+        bHandle_429 = false;
+        return true;
+    }
+    KF_LOG_INFO(logger, "[isResume] " << " bHandle_429 " << bHandle_429 << " request_weight_per_minute " << request_weight_per_minute);
+    return false;
 }
 
 void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json)
@@ -1737,6 +1743,11 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
 
     handle_request_weight(GetOrder_Type);
 
+    if (bHandle_429)
+    {
+        isResume();
+    }
+
 	string interface;
 	if (m_interface_switch > 0) {
 		interface = m_interfaceMgr.getActiveInterface();
@@ -1756,7 +1767,10 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
                                               "] (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
 
-    response_status_code = response.status_code;
+    if (response_status_code == HTTP_CONNECT_REFUSED)
+    {
+        meet_429();
+    }
 
 	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
 		if (m_interface_switch > 0) {
@@ -1827,11 +1841,11 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 
         handle_request_weight(CancelOrder_Type);
 
-        if (response_status_code == HTTP_CONNECT_REFUSED)
+        if (bHandle_429)
         {
-            KF_LOG_INFO(logger, "[cancel_order] meet 429");
-            if (handle_429())
+            if (!isResume())
             {
+                KF_LOG_INFO(logger, "[cancel_order] handle 429");
                 std::string strErr = "{\"code\":-1429,\"msg\":\"handle 429, prohibit cancel order.\"}";
                 json.Parse(strErr.c_str());
                 return;
@@ -1857,7 +1871,11 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
                                                  " (response.error.message) " << response.error.message <<
                                                  " (response.text) " << response.text.c_str());
 
-        response_status_code = response.status_code;
+        if (response_status_code == HTTP_CONNECT_REFUSED)
+        {
+            meet_429();
+            break;
+        }
 
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
@@ -1918,6 +1936,11 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 
     handle_request_weight(TradeList_Type);
 
+    if (bHandle_429)
+    {
+        isResume();
+    }
+
 	string interface;
 	if (m_interface_switch > 0) {
 		interface = m_interfaceMgr.getActiveInterface();
@@ -1936,7 +1959,10 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 												" interface [" << interface <<
                                                 "] (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
-    response_status_code = response.status_code;
+    if (response_status_code == HTTP_CONNECT_REFUSED)
+    {
+        meet_429();
+    }
 
 	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
 		if (m_interface_switch > 0) {
