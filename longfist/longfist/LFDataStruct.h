@@ -347,7 +347,7 @@ struct LFRtnTradeField
 	char_11           	ParticipantID;         //会员代码
 	char_21           	ClientID;              //客户代码
 	int64_t            	Price;                 //价格
-	uint64_t               	Volume;                //数量
+	uint64_t            Volume;                //数量
 	char_13           	TradingDay;            //交易日
 	char_13           	TradeTime;             //成交时间
 	LfDirectionType   	Direction;             //买卖方向
@@ -367,7 +367,7 @@ struct LFOrderActionField
 	int      	RequestID;             //请求编号
 	char     	ActionFlag;            //报单操作标志
 	int64_t   	LimitPrice;            //价格
-	uint64_t      	VolumeChange;          //数量变化
+	uint64_t    VolumeChange;          //数量变化
 	int      	KfOrderID;             //Kf系统内订单ID
 	uint64_t	MassOrderSeqId;
 	int			MassOrderIndex;

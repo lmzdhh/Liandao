@@ -26,6 +26,7 @@ class SOURCE:
     BITMEX = 23
     HITBTC = 24
     OCEANEX = 25
+    HUOBI = 26
     PROBIT = 28
     UPBIT = 30
 

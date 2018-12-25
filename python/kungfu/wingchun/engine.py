@@ -27,7 +27,11 @@ class Engine(object):
 
     account_file = '/opt/kungfu/master/etc/kungfu/kungfu.json'
 
-    def __init__(self, name, tp):
+    #[name, type, index]
+    def __init__(self, args):
+        name = args[0]
+        tp =  args[1]
+        index = args[2]
         lib_name = 'lib{}{}'.format(name, tp)
         lib = None
         try:
@@ -47,6 +51,8 @@ class Engine(object):
             json_info = json.load(fin, object_hook=_byteify)[tp][name]
             # then simply dump to str and will init
             self.info = json.dumps(json_info)
+            #info format is  "0{}"
+            self.info = index + self.info
         except Exception as e:
             print 'Cannot find related account info: ', tp, name, ' in ', self.account_file
             print e
