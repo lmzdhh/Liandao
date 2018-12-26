@@ -10,48 +10,48 @@ from longfist_structs_sniffer import *
 
 class LFMarketDataField(Structure):
     _fields_ = [
-        ("TradingDay", c_char * 13),	# äº¤æ˜“æ—¥ 
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("ExchangeID", c_char * 9),	# äº¤æ˜“æ‰€ä»£ç  
-        ("ExchangeInstID", c_char * 64),	# åˆçº¦åœ¨äº¤æ˜“æ‰€çš„ä»£ç  
-        ("LastPrice", c_double),	# æœ€æ–°ä»· 
-        ("PreSettlementPrice", c_double),	# ä¸Šæ¬¡ç»“ç®—ä»· 
-        ("PreClosePrice", c_double),	# æ˜¨æ”¶ç›˜ 
-        ("PreOpenInterest", c_double),	# æ˜¨æŒä»“é‡ 
-        ("OpenPrice", c_double),	# ä»Šå¼€ç›˜ 
-        ("HighestPrice", c_double),	# æœ€é«˜ä»· 
-        ("LowestPrice", c_double),	# æœ€ä½ä»· 
-        ("Volume", c_int),	# æ•°é‡ 
-        ("Turnover", c_double),	# æˆäº¤é‡‘é¢ 
-        ("OpenInterest", c_double),	# æŒä»“é‡ 
-        ("ClosePrice", c_double),	# ä»Šæ”¶ç›˜ 
-        ("SettlementPrice", c_double),	# æœ¬æ¬¡ç»“ç®—ä»· 
-        ("UpperLimitPrice", c_double),	# æ¶¨åœæ¿ä»· 
-        ("LowerLimitPrice", c_double),	# è·Œåœæ¿ä»· 
-        ("PreDelta", c_double),	# æ˜¨è™šå®åº¦ 
-        ("CurrDelta", c_double),	# ä»Šè™šå®åº¦ 
-        ("UpdateTime", c_char * 13),	# æœ€åä¿®æ”¹æ—¶é—´ 
-        ("UpdateMillisec", c_uint64),	# æœ€åä¿®æ”¹æ¯«ç§’ 
-        ("BidPrice1", c_int64),	# ç”³ä¹°ä»·ä¸€ 
-        ("BidVolume1", c_uint64),	# ç”³ä¹°é‡ä¸€ 
-        ("AskPrice1", c_int64),	# ç”³å–ä»·ä¸€ 
-        ("AskVolume1", c_uint64),	# ç”³å–é‡ä¸€ 
-        ("BidPrice2", c_int64),	# ç”³ä¹°ä»·äºŒ 
-        ("BidVolume2", c_uint64),	# ç”³ä¹°é‡äºŒ 
-        ("AskPrice2", c_int64),	# ç”³å–ä»·äºŒ 
-        ("AskVolume2", c_uint64),	# ç”³å–é‡äºŒ 
-        ("BidPrice3", c_int64),	# ç”³ä¹°ä»·ä¸‰ 
-        ("BidVolume3", c_uint64),	# ç”³ä¹°é‡ä¸‰ 
-        ("AskPrice3", c_int64),	# ç”³å–ä»·ä¸‰ 
-        ("AskVolume3", c_uint64),	# ç”³å–é‡ä¸‰ 
-        ("BidPrice4", c_int64),	# ç”³ä¹°ä»·å›› 
-        ("BidVolume4", c_uint64),	# ç”³ä¹°é‡å›› 
-        ("AskPrice4", c_int64),	# ç”³å–ä»·å›› 
-        ("AskVolume4", c_uint64),	# ç”³å–é‡å›› 
-        ("BidPrice5", c_int64),	# ç”³ä¹°ä»·äº” 
-        ("BidVolume5", c_uint64),	# ç”³ä¹°é‡äº” 
-        ("AskPrice5", c_int64),	# ç”³å–ä»·äº” 
-        ("AskVolume5", c_uint64),	# ç”³å–é‡äº” 
+        ("TradingDay", c_char * 13),	# ½»Ò×ÈÕ 
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("ExchangeID", c_char * 9),	# ½»Ò×Ëù´úÂë 
+        ("ExchangeInstID", c_char * 64),	# ºÏÔ¼ÔÚ½»Ò×ËùµÄ´úÂë 
+        ("LastPrice", c_double),	# ×îĞÂ¼Û 
+        ("PreSettlementPrice", c_double),	# ÉÏ´Î½áËã¼Û 
+        ("PreClosePrice", c_double),	# ×òÊÕÅÌ 
+        ("PreOpenInterest", c_double),	# ×ò³Ö²ÖÁ¿ 
+        ("OpenPrice", c_double),	# ½ñ¿ªÅÌ 
+        ("HighestPrice", c_double),	# ×î¸ß¼Û 
+        ("LowestPrice", c_double),	# ×îµÍ¼Û 
+        ("Volume", c_int),	# ÊıÁ¿ 
+        ("Turnover", c_double),	# ³É½»½ğ¶î 
+        ("OpenInterest", c_double),	# ³Ö²ÖÁ¿ 
+        ("ClosePrice", c_double),	# ½ñÊÕÅÌ 
+        ("SettlementPrice", c_double),	# ±¾´Î½áËã¼Û 
+        ("UpperLimitPrice", c_double),	# ÕÇÍ£°å¼Û 
+        ("LowerLimitPrice", c_double),	# µøÍ£°å¼Û 
+        ("PreDelta", c_double),	# ×òĞéÊµ¶È 
+        ("CurrDelta", c_double),	# ½ñĞéÊµ¶È 
+        ("UpdateTime", c_char * 13),	# ×îºóĞŞ¸ÄÊ±¼ä 
+        ("UpdateMillisec", c_uint64),	# ×îºóĞŞ¸ÄºÁÃë 
+        ("BidPrice1", c_int64),	# ÉêÂò¼ÛÒ» 
+        ("BidVolume1", c_uint64),	# ÉêÂòÁ¿Ò» 
+        ("AskPrice1", c_int64),	# ÉêÂô¼ÛÒ» 
+        ("AskVolume1", c_uint64),	# ÉêÂôÁ¿Ò» 
+        ("BidPrice2", c_int64),	# ÉêÂò¼Û¶ş 
+        ("BidVolume2", c_uint64),	# ÉêÂòÁ¿¶ş 
+        ("AskPrice2", c_int64),	# ÉêÂô¼Û¶ş 
+        ("AskVolume2", c_uint64),	# ÉêÂôÁ¿¶ş 
+        ("BidPrice3", c_int64),	# ÉêÂò¼ÛÈı 
+        ("BidVolume3", c_uint64),	# ÉêÂòÁ¿Èı 
+        ("AskPrice3", c_int64),	# ÉêÂô¼ÛÈı 
+        ("AskVolume3", c_uint64),	# ÉêÂôÁ¿Èı 
+        ("BidPrice4", c_int64),	# ÉêÂò¼ÛËÄ 
+        ("BidVolume4", c_uint64),	# ÉêÂòÁ¿ËÄ 
+        ("AskPrice4", c_int64),	# ÉêÂô¼ÛËÄ 
+        ("AskVolume4", c_uint64),	# ÉêÂôÁ¿ËÄ 
+        ("BidPrice5", c_int64),	# ÉêÂò¼ÛÎå 
+        ("BidVolume5", c_uint64),	# ÉêÂòÁ¿Îå 
+        ("AskPrice5", c_int64),	# ÉêÂô¼ÛÎå 
+        ("AskVolume5", c_uint64),	# ÉêÂôÁ¿Îå 
         ]
 
 class LFPriceLevelField(Structure):
@@ -82,222 +82,222 @@ class LFPriceBook20Field(Structure):
 
 class LFL2MarketDataField(Structure):
     _fields_ = [
-        ("TradingDay", c_char * 9),	# äº¤æ˜“æ—¥ 
-        ("TimeStamp", c_char * 9),	# æ—¶é—´æˆ³ 
-        ("ExchangeID", c_char * 9),	# äº¤æ˜“æ‰€ä»£ç  
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("PreClosePrice", c_double),	# æ˜¨æ”¶ç›˜ä»· 
-        ("OpenPrice", c_double),	# ä»Šå¼€ç›˜ä»· 
-        ("ClosePrice", c_double),	# æ”¶ç›˜ä»· 
-        ("IOPV", c_double),	# å‡€å€¼ä¼°å€¼ 
-        ("YieldToMaturity", c_double),	# åˆ°æœŸæ”¶ç›Šç‡ 
-        ("AuctionPrice", c_double),	# åŠ¨æ€å‚è€ƒä»·æ ¼ 
-        ("TradingPhase", c_char),	# äº¤æ˜“é˜¶æ®µ char
-        ("OpenRestriction", c_char),	# å¼€ä»“é™åˆ¶ char
-        ("HighPrice", c_double),	# æœ€é«˜ä»· 
-        ("LowPrice", c_double),	# æœ€ä½ä»· 
-        ("LastPrice", c_double),	# æœ€æ–°ä»· 
-        ("TradeCount", c_double),	# æˆäº¤ç¬”æ•° 
-        ("TotalTradeVolume", c_double),	# æˆäº¤æ€»é‡ 
-        ("TotalTradeValue", c_double),	# æˆäº¤æ€»é‡‘é¢ 
-        ("OpenInterest", c_double),	# æŒä»“é‡ 
-        ("TotalBidVolume", c_double),	# å§”æ‰˜ä¹°å…¥æ€»é‡ 
-        ("WeightedAvgBidPrice", c_double),	# åŠ æƒå¹³å‡å§”ä¹°ä»· 
-        ("AltWeightedAvgBidPrice", c_double),	# å€ºåˆ¸åŠ æƒå¹³å‡å§”ä¹°ä»· 
-        ("TotalOfferVolume", c_double),	# å§”æ‰˜å–å‡ºæ€»é‡ 
-        ("WeightedAvgOfferPrice", c_double),	# åŠ æƒå¹³å‡å§”å–ä»· 
-        ("AltWeightedAvgOfferPrice", c_double),	# å€ºåˆ¸åŠ æƒå¹³å‡å§”å–ä»·æ ¼ 
-        ("BidPriceLevel", c_int),	# ä¹°ä»·æ·±åº¦ 
-        ("OfferPriceLevel", c_int),	# å–ä»·æ·±åº¦ 
-        ("BidPrice1", c_double),	# ç”³ä¹°ä»·ä¸€ 
-        ("BidVolume1", c_double),	# ç”³ä¹°é‡ä¸€ 
-        ("BidCount1", c_int),	# å®é™…ä¹°æ€»å§”æ‰˜ç¬”æ•°ä¸€ 
-        ("BidPrice2", c_double),	# ç”³ä¹°ä»·äºŒ 
-        ("BidVolume2", c_double),	# ç”³ä¹°é‡äºŒ 
-        ("BidCount2", c_int),	# å®é™…ä¹°æ€»å§”æ‰˜ç¬”æ•°äºŒ 
-        ("BidPrice3", c_double),	# ç”³ä¹°ä»·ä¸‰ 
-        ("BidVolume3", c_double),	# ç”³ä¹°é‡ä¸‰ 
-        ("BidCount3", c_int),	# å®é™…ä¹°æ€»å§”æ‰˜ç¬”æ•°ä¸‰ 
-        ("BidPrice4", c_double),	# ç”³ä¹°ä»·å›› 
-        ("BidVolume4", c_double),	# ç”³ä¹°é‡å›› 
-        ("BidCount4", c_int),	# å®é™…ä¹°æ€»å§”æ‰˜ç¬”æ•°å›› 
-        ("BidPrice5", c_double),	# ç”³ä¹°ä»·äº” 
-        ("BidVolume5", c_double),	# ç”³ä¹°é‡äº” 
-        ("BidCount5", c_int),	# å®é™…ä¹°æ€»å§”æ‰˜ç¬”æ•°äº” 
-        ("BidPrice6", c_double),	# ç”³ä¹°ä»·å…­ 
-        ("BidVolume6", c_double),	# ç”³ä¹°é‡å…­ 
-        ("BidCount6", c_int),	# å®é™…ä¹°æ€»å§”æ‰˜ç¬”æ•°å…­ 
-        ("BidPrice7", c_double),	# ç”³ä¹°ä»·ä¸ƒ 
-        ("BidVolume7", c_double),	# ç”³ä¹°é‡ä¸ƒ 
-        ("BidCount7", c_int),	# å®é™…ä¹°æ€»å§”æ‰˜ç¬”æ•°ä¸ƒ 
-        ("BidPrice8", c_double),	# ç”³ä¹°ä»·å…« 
-        ("BidVolume8", c_double),	# ç”³ä¹°é‡å…« 
-        ("BidCount8", c_int),	# å®é™…ä¹°æ€»å§”æ‰˜ç¬”æ•°å…« 
-        ("BidPrice9", c_double),	# ç”³ä¹°ä»·ä¹ 
-        ("BidVolume9", c_double),	# ç”³ä¹°é‡ä¹ 
-        ("BidCount9", c_int),	# å®é™…ä¹°æ€»å§”æ‰˜ç¬”æ•°ä¹ 
-        ("BidPriceA", c_double),	# ç”³ä¹°ä»·å 
-        ("BidVolumeA", c_double),	# ç”³ä¹°é‡å 
-        ("BidCountA", c_int),	# å®é™…ä¹°æ€»å§”æ‰˜ç¬”æ•°å 
-        ("OfferPrice1", c_double),	# ç”³å–ä»·ä¸€ 
-        ("OfferVolume1", c_double),	# ç”³å–é‡ä¸€ 
-        ("OfferCount1", c_int),	# å®é™…å–æ€»å§”æ‰˜ç¬”æ•°ä¸€ 
-        ("OfferPrice2", c_double),	# ç”³å–ä»·äºŒ 
-        ("OfferVolume2", c_double),	# ç”³å–é‡äºŒ 
-        ("OfferCount2", c_int),	# å®é™…å–æ€»å§”æ‰˜ç¬”æ•°äºŒ 
-        ("OfferPrice3", c_double),	# ç”³å–ä»·ä¸‰ 
-        ("OfferVolume3", c_double),	# ç”³å–é‡ä¸‰ 
-        ("OfferCount3", c_int),	# å®é™…å–æ€»å§”æ‰˜ç¬”æ•°ä¸‰ 
-        ("OfferPrice4", c_double),	# ç”³å–ä»·å›› 
-        ("OfferVolume4", c_double),	# ç”³å–é‡å›› 
-        ("OfferCount4", c_int),	# å®é™…å–æ€»å§”æ‰˜ç¬”æ•°å›› 
-        ("OfferPrice5", c_double),	# ç”³å–ä»·äº” 
-        ("OfferVolume5", c_double),	# ç”³å–é‡äº” 
-        ("OfferCount5", c_int),	# å®é™…å–æ€»å§”æ‰˜ç¬”æ•°äº” 
-        ("OfferPrice6", c_double),	# ç”³å–ä»·å…­ 
-        ("OfferVolume6", c_double),	# ç”³å–é‡å…­ 
-        ("OfferCount6", c_int),	# å®é™…å–æ€»å§”æ‰˜ç¬”æ•°å…­ 
-        ("OfferPrice7", c_double),	# ç”³å–ä»·ä¸ƒ 
-        ("OfferVolume7", c_double),	# ç”³å–é‡ä¸ƒ 
-        ("OfferCount7", c_int),	# å®é™…å–æ€»å§”æ‰˜ç¬”æ•°ä¸ƒ 
-        ("OfferPrice8", c_double),	# ç”³å–ä»·å…« 
-        ("OfferVolume8", c_double),	# ç”³å–é‡å…« 
-        ("OfferCount8", c_int),	# å®é™…å–æ€»å§”æ‰˜ç¬”æ•°å…« 
-        ("OfferPrice9", c_double),	# ç”³å–ä»·ä¹ 
-        ("OfferVolume9", c_double),	# ç”³å–é‡ä¹ 
-        ("OfferCount9", c_int),	# å®é™…å–æ€»å§”æ‰˜ç¬”æ•°ä¹ 
-        ("OfferPriceA", c_double),	# ç”³å–ä»·å 
-        ("OfferVolumeA", c_double),	# ç”³å–é‡å 
-        ("OfferCountA", c_int),	# å®é™…å–æ€»å§”æ‰˜ç¬”æ•°å 
-        ("InstrumentStatus", c_char * 7),	# åˆçº¦çŠ¶æ€ 
-        ("PreIOPV", c_double),	# æ˜¨å‡€å€¼ä¼°å€¼ 
-        ("PERatio1", c_double),	# å¸‚ç›ˆç‡ä¸€ 
-        ("PERatio2", c_double),	# å¸‚ç›ˆç‡äºŒ 
-        ("UpperLimitPrice", c_double),	# æ¶¨åœä»· 
-        ("LowerLimitPrice", c_double),	# è·Œåœä»· 
-        ("WarrantPremiumRatio", c_double),	# æƒè¯æº¢ä»·ç‡ 
-        ("TotalWarrantExecQty", c_double),	# æƒè¯æ‰§è¡Œæ€»æ•°é‡ 
-        ("PriceDiff1", c_double),	# å‡è·Œä¸€ 
-        ("PriceDiff2", c_double),	# å‡è·ŒäºŒ 
-        ("ETFBuyNumber", c_double),	# ETFç”³è´­ç¬”æ•° 
-        ("ETFBuyAmount", c_double),	# ETFç”³è´­æ•°é‡ 
-        ("ETFBuyMoney", c_double),	# ETFç”³è´­é‡‘é¢ 
-        ("ETFSellNumber", c_double),	# ETFèµå›ç¬”æ•° 
-        ("ETFSellAmount", c_double),	# ETFèµå›æ•°é‡ 
-        ("ETFSellMoney", c_double),	# ETFèµå›é‡‘é¢ 
-        ("WithdrawBuyNumber", c_double),	# ä¹°å…¥æ’¤å•ç¬”æ•° 
-        ("WithdrawBuyAmount", c_double),	# ä¹°å…¥æ’¤å•æ•°é‡ 
-        ("WithdrawBuyMoney", c_double),	# ä¹°å…¥æ’¤å•é‡‘é¢ 
-        ("TotalBidNumber", c_double),	# ä¹°å…¥æ€»ç¬”æ•° 
-        ("BidTradeMaxDuration", c_double),	# ä¹°å…¥å§”æ‰˜æˆäº¤æœ€å¤§ç­‰å¾…æ—¶é—´ 
-        ("NumBidOrders", c_double),	# ä¹°æ–¹å§”æ‰˜ä»·ä½æ•° 
-        ("WithdrawSellNumber", c_double),	# å–å‡ºæ’¤å•ç¬”æ•° 
-        ("WithdrawSellAmount", c_double),	# å–å‡ºæ’¤å•æ•°é‡ 
-        ("WithdrawSellMoney", c_double),	# å–å‡ºæ’¤å•é‡‘é¢ 
-        ("TotalOfferNumber", c_double),	# å–å‡ºæ€»ç¬”æ•° 
-        ("OfferTradeMaxDuration", c_double),	# å–å‡ºå§”æ‰˜æˆäº¤æœ€å¤§ç­‰å¾…æ—¶é—´ 
-        ("NumOfferOrders", c_double),	# å–æ–¹å§”æ‰˜ä»·ä½æ•° 
+        ("TradingDay", c_char * 9),	# ½»Ò×ÈÕ 
+        ("TimeStamp", c_char * 9),	# Ê±¼ä´Á 
+        ("ExchangeID", c_char * 9),	# ½»Ò×Ëù´úÂë 
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("PreClosePrice", c_double),	# ×òÊÕÅÌ¼Û 
+        ("OpenPrice", c_double),	# ½ñ¿ªÅÌ¼Û 
+        ("ClosePrice", c_double),	# ÊÕÅÌ¼Û 
+        ("IOPV", c_double),	# ¾»Öµ¹ÀÖµ 
+        ("YieldToMaturity", c_double),	# µ½ÆÚÊÕÒæÂÊ 
+        ("AuctionPrice", c_double),	# ¶¯Ì¬²Î¿¼¼Û¸ñ 
+        ("TradingPhase", c_char),	# ½»Ò×½×¶Î char
+        ("OpenRestriction", c_char),	# ¿ª²ÖÏŞÖÆ char
+        ("HighPrice", c_double),	# ×î¸ß¼Û 
+        ("LowPrice", c_double),	# ×îµÍ¼Û 
+        ("LastPrice", c_double),	# ×îĞÂ¼Û 
+        ("TradeCount", c_double),	# ³É½»±ÊÊı 
+        ("TotalTradeVolume", c_double),	# ³É½»×ÜÁ¿ 
+        ("TotalTradeValue", c_double),	# ³É½»×Ü½ğ¶î 
+        ("OpenInterest", c_double),	# ³Ö²ÖÁ¿ 
+        ("TotalBidVolume", c_double),	# Î¯ÍĞÂòÈë×ÜÁ¿ 
+        ("WeightedAvgBidPrice", c_double),	# ¼ÓÈ¨Æ½¾ùÎ¯Âò¼Û 
+        ("AltWeightedAvgBidPrice", c_double),	# Õ®È¯¼ÓÈ¨Æ½¾ùÎ¯Âò¼Û 
+        ("TotalOfferVolume", c_double),	# Î¯ÍĞÂô³ö×ÜÁ¿ 
+        ("WeightedAvgOfferPrice", c_double),	# ¼ÓÈ¨Æ½¾ùÎ¯Âô¼Û 
+        ("AltWeightedAvgOfferPrice", c_double),	# Õ®È¯¼ÓÈ¨Æ½¾ùÎ¯Âô¼Û¸ñ 
+        ("BidPriceLevel", c_int),	# Âò¼ÛÉî¶È 
+        ("OfferPriceLevel", c_int),	# Âô¼ÛÉî¶È 
+        ("BidPrice1", c_double),	# ÉêÂò¼ÛÒ» 
+        ("BidVolume1", c_double),	# ÉêÂòÁ¿Ò» 
+        ("BidCount1", c_int),	# Êµ¼ÊÂò×ÜÎ¯ÍĞ±ÊÊıÒ» 
+        ("BidPrice2", c_double),	# ÉêÂò¼Û¶ş 
+        ("BidVolume2", c_double),	# ÉêÂòÁ¿¶ş 
+        ("BidCount2", c_int),	# Êµ¼ÊÂò×ÜÎ¯ÍĞ±ÊÊı¶ş 
+        ("BidPrice3", c_double),	# ÉêÂò¼ÛÈı 
+        ("BidVolume3", c_double),	# ÉêÂòÁ¿Èı 
+        ("BidCount3", c_int),	# Êµ¼ÊÂò×ÜÎ¯ÍĞ±ÊÊıÈı 
+        ("BidPrice4", c_double),	# ÉêÂò¼ÛËÄ 
+        ("BidVolume4", c_double),	# ÉêÂòÁ¿ËÄ 
+        ("BidCount4", c_int),	# Êµ¼ÊÂò×ÜÎ¯ÍĞ±ÊÊıËÄ 
+        ("BidPrice5", c_double),	# ÉêÂò¼ÛÎå 
+        ("BidVolume5", c_double),	# ÉêÂòÁ¿Îå 
+        ("BidCount5", c_int),	# Êµ¼ÊÂò×ÜÎ¯ÍĞ±ÊÊıÎå 
+        ("BidPrice6", c_double),	# ÉêÂò¼ÛÁù 
+        ("BidVolume6", c_double),	# ÉêÂòÁ¿Áù 
+        ("BidCount6", c_int),	# Êµ¼ÊÂò×ÜÎ¯ÍĞ±ÊÊıÁù 
+        ("BidPrice7", c_double),	# ÉêÂò¼ÛÆß 
+        ("BidVolume7", c_double),	# ÉêÂòÁ¿Æß 
+        ("BidCount7", c_int),	# Êµ¼ÊÂò×ÜÎ¯ÍĞ±ÊÊıÆß 
+        ("BidPrice8", c_double),	# ÉêÂò¼Û°Ë 
+        ("BidVolume8", c_double),	# ÉêÂòÁ¿°Ë 
+        ("BidCount8", c_int),	# Êµ¼ÊÂò×ÜÎ¯ÍĞ±ÊÊı°Ë 
+        ("BidPrice9", c_double),	# ÉêÂò¼Û¾Å 
+        ("BidVolume9", c_double),	# ÉêÂòÁ¿¾Å 
+        ("BidCount9", c_int),	# Êµ¼ÊÂò×ÜÎ¯ÍĞ±ÊÊı¾Å 
+        ("BidPriceA", c_double),	# ÉêÂò¼ÛÊ® 
+        ("BidVolumeA", c_double),	# ÉêÂòÁ¿Ê® 
+        ("BidCountA", c_int),	# Êµ¼ÊÂò×ÜÎ¯ÍĞ±ÊÊıÊ® 
+        ("OfferPrice1", c_double),	# ÉêÂô¼ÛÒ» 
+        ("OfferVolume1", c_double),	# ÉêÂôÁ¿Ò» 
+        ("OfferCount1", c_int),	# Êµ¼ÊÂô×ÜÎ¯ÍĞ±ÊÊıÒ» 
+        ("OfferPrice2", c_double),	# ÉêÂô¼Û¶ş 
+        ("OfferVolume2", c_double),	# ÉêÂôÁ¿¶ş 
+        ("OfferCount2", c_int),	# Êµ¼ÊÂô×ÜÎ¯ÍĞ±ÊÊı¶ş 
+        ("OfferPrice3", c_double),	# ÉêÂô¼ÛÈı 
+        ("OfferVolume3", c_double),	# ÉêÂôÁ¿Èı 
+        ("OfferCount3", c_int),	# Êµ¼ÊÂô×ÜÎ¯ÍĞ±ÊÊıÈı 
+        ("OfferPrice4", c_double),	# ÉêÂô¼ÛËÄ 
+        ("OfferVolume4", c_double),	# ÉêÂôÁ¿ËÄ 
+        ("OfferCount4", c_int),	# Êµ¼ÊÂô×ÜÎ¯ÍĞ±ÊÊıËÄ 
+        ("OfferPrice5", c_double),	# ÉêÂô¼ÛÎå 
+        ("OfferVolume5", c_double),	# ÉêÂôÁ¿Îå 
+        ("OfferCount5", c_int),	# Êµ¼ÊÂô×ÜÎ¯ÍĞ±ÊÊıÎå 
+        ("OfferPrice6", c_double),	# ÉêÂô¼ÛÁù 
+        ("OfferVolume6", c_double),	# ÉêÂôÁ¿Áù 
+        ("OfferCount6", c_int),	# Êµ¼ÊÂô×ÜÎ¯ÍĞ±ÊÊıÁù 
+        ("OfferPrice7", c_double),	# ÉêÂô¼ÛÆß 
+        ("OfferVolume7", c_double),	# ÉêÂôÁ¿Æß 
+        ("OfferCount7", c_int),	# Êµ¼ÊÂô×ÜÎ¯ÍĞ±ÊÊıÆß 
+        ("OfferPrice8", c_double),	# ÉêÂô¼Û°Ë 
+        ("OfferVolume8", c_double),	# ÉêÂôÁ¿°Ë 
+        ("OfferCount8", c_int),	# Êµ¼ÊÂô×ÜÎ¯ÍĞ±ÊÊı°Ë 
+        ("OfferPrice9", c_double),	# ÉêÂô¼Û¾Å 
+        ("OfferVolume9", c_double),	# ÉêÂôÁ¿¾Å 
+        ("OfferCount9", c_int),	# Êµ¼ÊÂô×ÜÎ¯ÍĞ±ÊÊı¾Å 
+        ("OfferPriceA", c_double),	# ÉêÂô¼ÛÊ® 
+        ("OfferVolumeA", c_double),	# ÉêÂôÁ¿Ê® 
+        ("OfferCountA", c_int),	# Êµ¼ÊÂô×ÜÎ¯ÍĞ±ÊÊıÊ® 
+        ("InstrumentStatus", c_char * 7),	# ºÏÔ¼×´Ì¬ 
+        ("PreIOPV", c_double),	# ×ò¾»Öµ¹ÀÖµ 
+        ("PERatio1", c_double),	# ÊĞÓ¯ÂÊÒ» 
+        ("PERatio2", c_double),	# ÊĞÓ¯ÂÊ¶ş 
+        ("UpperLimitPrice", c_double),	# ÕÇÍ£¼Û 
+        ("LowerLimitPrice", c_double),	# µøÍ£¼Û 
+        ("WarrantPremiumRatio", c_double),	# È¨Ö¤Òç¼ÛÂÊ 
+        ("TotalWarrantExecQty", c_double),	# È¨Ö¤Ö´ĞĞ×ÜÊıÁ¿ 
+        ("PriceDiff1", c_double),	# ÉıµøÒ» 
+        ("PriceDiff2", c_double),	# Éıµø¶ş 
+        ("ETFBuyNumber", c_double),	# ETFÉê¹º±ÊÊı 
+        ("ETFBuyAmount", c_double),	# ETFÉê¹ºÊıÁ¿ 
+        ("ETFBuyMoney", c_double),	# ETFÉê¹º½ğ¶î 
+        ("ETFSellNumber", c_double),	# ETFÊê»Ø±ÊÊı 
+        ("ETFSellAmount", c_double),	# ETFÊê»ØÊıÁ¿ 
+        ("ETFSellMoney", c_double),	# ETFÊê»Ø½ğ¶î 
+        ("WithdrawBuyNumber", c_double),	# ÂòÈë³·µ¥±ÊÊı 
+        ("WithdrawBuyAmount", c_double),	# ÂòÈë³·µ¥ÊıÁ¿ 
+        ("WithdrawBuyMoney", c_double),	# ÂòÈë³·µ¥½ğ¶î 
+        ("TotalBidNumber", c_double),	# ÂòÈë×Ü±ÊÊı 
+        ("BidTradeMaxDuration", c_double),	# ÂòÈëÎ¯ÍĞ³É½»×î´óµÈ´ıÊ±¼ä 
+        ("NumBidOrders", c_double),	# Âò·½Î¯ÍĞ¼ÛÎ»Êı 
+        ("WithdrawSellNumber", c_double),	# Âô³ö³·µ¥±ÊÊı 
+        ("WithdrawSellAmount", c_double),	# Âô³ö³·µ¥ÊıÁ¿ 
+        ("WithdrawSellMoney", c_double),	# Âô³ö³·µ¥½ğ¶î 
+        ("TotalOfferNumber", c_double),	# Âô³ö×Ü±ÊÊı 
+        ("OfferTradeMaxDuration", c_double),	# Âô³öÎ¯ÍĞ³É½»×î´óµÈ´ıÊ±¼ä 
+        ("NumOfferOrders", c_double),	# Âô·½Î¯ÍĞ¼ÛÎ»Êı 
         ]
 
 class LFL2IndexField(Structure):
     _fields_ = [
-        ("TradingDay", c_char * 9),	# äº¤æ˜“æ—¥ 
-        ("TimeStamp", c_char * 9),	# è¡Œæƒ…æ—¶é—´ï¼ˆç§’ï¼‰ 
-        ("ExchangeID", c_char * 9),	# äº¤æ˜“æ‰€ä»£ç  
-        ("InstrumentID", c_char * 31),	# æŒ‡æ•°ä»£ç  
-        ("PreCloseIndex", c_double),	# å‰æ”¶ç›˜æŒ‡æ•° 
-        ("OpenIndex", c_double),	# ä»Šå¼€ç›˜æŒ‡æ•° 
-        ("CloseIndex", c_double),	# ä»Šæ—¥æ”¶ç›˜æŒ‡æ•° 
-        ("HighIndex", c_double),	# æœ€é«˜æŒ‡æ•° 
-        ("LowIndex", c_double),	# æœ€ä½æŒ‡æ•° 
-        ("LastIndex", c_double),	# æœ€æ–°æŒ‡æ•° 
-        ("TurnOver", c_double),	# å‚ä¸è®¡ç®—ç›¸åº”æŒ‡æ•°çš„æˆäº¤é‡‘é¢ï¼ˆå…ƒï¼‰ 
-        ("TotalVolume", c_double),	# å‚ä¸è®¡ç®—ç›¸åº”æŒ‡æ•°çš„äº¤æ˜“æ•°é‡ï¼ˆæ‰‹ï¼‰ 
+        ("TradingDay", c_char * 9),	# ½»Ò×ÈÕ 
+        ("TimeStamp", c_char * 9),	# ĞĞÇéÊ±¼ä£¨Ãë£© 
+        ("ExchangeID", c_char * 9),	# ½»Ò×Ëù´úÂë 
+        ("InstrumentID", c_char * 31),	# Ö¸Êı´úÂë 
+        ("PreCloseIndex", c_double),	# Ç°ÊÕÅÌÖ¸Êı 
+        ("OpenIndex", c_double),	# ½ñ¿ªÅÌÖ¸Êı 
+        ("CloseIndex", c_double),	# ½ñÈÕÊÕÅÌÖ¸Êı 
+        ("HighIndex", c_double),	# ×î¸ßÖ¸Êı 
+        ("LowIndex", c_double),	# ×îµÍÖ¸Êı 
+        ("LastIndex", c_double),	# ×îĞÂÖ¸Êı 
+        ("TurnOver", c_double),	# ²ÎÓë¼ÆËãÏàÓ¦Ö¸ÊıµÄ³É½»½ğ¶î£¨Ôª£© 
+        ("TotalVolume", c_double),	# ²ÎÓë¼ÆËãÏàÓ¦Ö¸ÊıµÄ½»Ò×ÊıÁ¿£¨ÊÖ£© 
         ]
 
 class LFL2OrderField(Structure):
     _fields_ = [
-        ("OrderTime", c_char * 9),	# å§”æ‰˜æ—¶é—´ï¼ˆç§’ï¼‰ 
-        ("ExchangeID", c_char * 9),	# äº¤æ˜“æ‰€ä»£ç  
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("Price", c_double),	# å§”æ‰˜ä»·æ ¼ 
-        ("Volume", c_double),	# å§”æ‰˜æ•°é‡ 
-        ("OrderKind", c_char * 2),	# æŠ¥å•ç±»å‹ 
+        ("OrderTime", c_char * 9),	# Î¯ÍĞÊ±¼ä£¨Ãë£© 
+        ("ExchangeID", c_char * 9),	# ½»Ò×Ëù´úÂë 
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("Price", c_double),	# Î¯ÍĞ¼Û¸ñ 
+        ("Volume", c_double),	# Î¯ÍĞÊıÁ¿ 
+        ("OrderKind", c_char * 2),	# ±¨µ¥ÀàĞÍ 
         ]
 
 class LFL2TradeField(Structure):
     _fields_ = [
-        ("TradeTime", c_char * 9),	# æˆäº¤æ—¶é—´ï¼ˆç§’ï¼‰ 
-        ("ExchangeID", c_char * 9),	# äº¤æ˜“æ‰€ä»£ç  
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("Price", c_int64),	# æˆäº¤ä»·æ ¼ 
-        ("Volume", c_uint64),	# æˆäº¤æ•°é‡ 
-        ("OrderKind", c_char * 2),	# æŠ¥å•ç±»å‹ 
-        ("OrderBSFlag", c_char * 2),	# å†…å¤–ç›˜æ ‡å¿— 
+        ("TradeTime", c_char * 9),	# ³É½»Ê±¼ä£¨Ãë£© 
+        ("ExchangeID", c_char * 9),	# ½»Ò×Ëù´úÂë 
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("Price", c_int64),	# ³É½»¼Û¸ñ 
+        ("Volume", c_uint64),	# ³É½»ÊıÁ¿ 
+        ("OrderKind", c_char * 2),	# ±¨µ¥ÀàĞÍ 
+        ("OrderBSFlag", c_char * 2),	# ÄÚÍâÅÌ±êÖ¾ 
         ]
 
 class LFBarMarketDataField(Structure):
     _fields_ = [
-        ("TradingDay", c_char * 9),	# äº¤æ˜“æ—¥ 
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("UpperLimitPrice", c_int64),	# æ¶¨åœæ¿ä»· 
-        ("LowerLimitPrice", c_int64),	# è·Œåœæ¿ä»· 
-        ("StartUpdateTime", c_char * 13),	# é¦–tickä¿®æ”¹æ—¶é—´ 
-        ("StartUpdateMillisec", c_int),	# é¦–tickæœ€åä¿®æ”¹æ¯«ç§’ 
-        ("EndUpdateTime", c_char * 13),	# å°¾tickæœ€åä¿®æ”¹æ—¶é—´ 
-        ("EndUpdateMillisec", c_int),	# å°¾tickæœ€åä¿®æ”¹æ¯«ç§’ 
+        ("TradingDay", c_char * 9),	# ½»Ò×ÈÕ 
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("UpperLimitPrice", c_int64),	# ÕÇÍ£°å¼Û 
+        ("LowerLimitPrice", c_int64),	# µøÍ£°å¼Û 
+        ("StartUpdateTime", c_char * 13),	# Ê×tickĞŞ¸ÄÊ±¼ä 
+        ("StartUpdateMillisec", c_int),	# Ê×tick×îºóĞŞ¸ÄºÁÃë 
+        ("EndUpdateTime", c_char * 13),	# Î²tick×îºóĞŞ¸ÄÊ±¼ä 
+        ("EndUpdateMillisec", c_int),	# Î²tick×îºóĞŞ¸ÄºÁÃë 
         ("PeriodMillisec", c_int),	
-        ("Open", c_int64),	# å¼€ 
-        ("Close", c_int64),	# æ”¶ 
-        ("Low", c_int64),	# ä½ 
-        ("High", c_int64),	# é«˜ 
-        ("Volume", c_uint64),	# åŒºé—´äº¤æ˜“é‡ 
-        ("StartVolume", c_uint64),	# åˆå§‹æ€»äº¤æ˜“é‡ 
+        ("Open", c_int64),	# ¿ª 
+        ("Close", c_int64),	# ÊÕ 
+        ("Low", c_int64),	# µÍ 
+        ("High", c_int64),	# ¸ß 
+        ("Volume", c_uint64),	# Çø¼ä½»Ò×Á¿ 
+        ("StartVolume", c_uint64),	# ³õÊ¼×Ü½»Ò×Á¿ 
         ]
 
 class LFQryPositionField(Structure):
     _fields_ = [
-        ("BrokerID", c_char * 11),	# ç»çºªå…¬å¸ä»£ç  
-        ("InvestorID", c_char * 19),	# æŠ•èµ„è€…ä»£ç  
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("ExchangeID", c_char * 9),	# äº¤æ˜“æ‰€ä»£ç  
+        ("BrokerID", c_char * 11),	# ¾­¼Í¹«Ë¾´úÂë 
+        ("InvestorID", c_char * 19),	# Í¶×ÊÕß´úÂë 
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("ExchangeID", c_char * 9),	# ½»Ò×Ëù´úÂë 
         ]
 
 class LFRspPositionField(Structure):
     _fields_ = [
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("YdPosition", c_uint64),	# ä¸Šæ—¥æŒä»“
-        ("Position", c_uint64),	# æ€»æŒä»“
-        ("BrokerID", c_char * 11),	# ç»çºªå…¬å¸ä»£ç  
-        ("InvestorID", c_char * 19),	# æŠ•èµ„è€…ä»£ç  
-        ("PositionCost", c_int64),	# æŒä»“æˆæœ¬
-        ("HedgeFlag", c_char),	# æŠ•æœºå¥—ä¿æ ‡å¿— LfHedgeFlagType
-        ("PosiDirection", c_char),	# æŒä»“å¤šç©ºæ–¹å‘ LfPosiDirectionType
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("YdPosition", c_uint64),	# ÉÏÈÕ³Ö²Ö
+        ("Position", c_uint64),	# ×Ü³Ö²Ö
+        ("BrokerID", c_char * 11),	# ¾­¼Í¹«Ë¾´úÂë 
+        ("InvestorID", c_char * 19),	# Í¶×ÊÕß´úÂë 
+        ("PositionCost", c_int64),	# ³Ö²Ö³É±¾
+        ("HedgeFlag", c_char),	# Í¶»úÌ×±£±êÖ¾ LfHedgeFlagType
+        ("PosiDirection", c_char),	# ³Ö²Ö¶à¿Õ·½Ïò LfPosiDirectionType
         ]
 
 class LFInputOrderField(Structure):
     _fields_ = [
-        ("BrokerID", c_char * 11),	# ç»çºªå…¬å¸ä»£ç  
-        ("UserID", c_char * 16),	# ç”¨æˆ·ä»£ç  
-        ("InvestorID", c_char * 19),	# æŠ•èµ„è€…ä»£ç  
-        ("BusinessUnit", c_char * 21),	# ä¸šåŠ¡å•å…ƒ 
-        ("ExchangeID", c_char * 9),	# äº¤æ˜“æ‰€ä»£ç  
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("OrderRef", c_char * 21),	# æŠ¥å•å¼•ç”¨ 
-        ("LimitPrice", c_int64),	# ä»·æ ¼ 
-        ("Volume", c_uint64),	# æ•°é‡ 
-        ("MinVolume", c_uint64),	# æœ€å°æˆäº¤é‡ 
-        ("TimeCondition", c_char),	# æœ‰æ•ˆæœŸç±»å‹ LfTimeConditionType
-        ("VolumeCondition", c_char),	# æˆäº¤é‡ç±»å‹ LfVolumeConditionType
-        ("OrderPriceType", c_char),	# æŠ¥å•ä»·æ ¼æ¡ä»¶ LfOrderPriceTypeType
-        ("Direction", c_char),	# ä¹°å–æ–¹å‘ LfDirectionType
-        ("OffsetFlag", c_char),	# å¼€å¹³æ ‡å¿— LfOffsetFlagType
-        ("HedgeFlag", c_char),	# æŠ•æœºå¥—ä¿æ ‡å¿— LfHedgeFlagType
-        ("ForceCloseReason", c_char),	# å¼ºå¹³åŸå›  LfForceCloseReasonType
-        ("StopPrice", c_double),	# æ­¢æŸä»· 
-        ("IsAutoSuspend", c_int),	# è‡ªåŠ¨æŒ‚èµ·æ ‡å¿— 
-        ("ContingentCondition", c_char),	# è§¦å‘æ¡ä»¶ LfContingentConditionType
-        ("MiscInfo", c_char * 30),	# å§”æ‰˜è‡ªå®šä¹‰æ ‡ç­¾ 
+        ("BrokerID", c_char * 11),	# ¾­¼Í¹«Ë¾´úÂë 
+        ("UserID", c_char * 16),	# ÓÃ»§´úÂë 
+        ("InvestorID", c_char * 19),	# Í¶×ÊÕß´úÂë 
+        ("BusinessUnit", c_char * 21),	# ÒµÎñµ¥Ôª 
+        ("ExchangeID", c_char * 9),	# ½»Ò×Ëù´úÂë 
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("OrderRef", c_char * 21),	# ±¨µ¥ÒıÓÃ 
+        ("LimitPrice", c_int64),	# ¼Û¸ñ 
+        ("Volume", c_uint64),	# ÊıÁ¿ 
+        ("MinVolume", c_uint64),	# ×îĞ¡³É½»Á¿ 
+        ("TimeCondition", c_char),	# ÓĞĞ§ÆÚÀàĞÍ LfTimeConditionType
+        ("VolumeCondition", c_char),	# ³É½»Á¿ÀàĞÍ LfVolumeConditionType
+        ("OrderPriceType", c_char),	# ±¨µ¥¼Û¸ñÌõ¼ş LfOrderPriceTypeType
+        ("Direction", c_char),	# ÂòÂô·½Ïò LfDirectionType
+        ("OffsetFlag", c_char),	# ¿ªÆ½±êÖ¾ LfOffsetFlagType
+        ("HedgeFlag", c_char),	# Í¶»úÌ×±£±êÖ¾ LfHedgeFlagType
+        ("ForceCloseReason", c_char),	# Ç¿Æ½Ô­Òò LfForceCloseReasonType
+        ("StopPrice", c_double),	# Ö¹Ëğ¼Û 
+        ("IsAutoSuspend", c_int),	# ×Ô¶¯¹ÒÆğ±êÖ¾ 
+        ("ContingentCondition", c_char),	# ´¥·¢Ìõ¼ş LfContingentConditionType
+        ("MiscInfo", c_char * 30),	# Î¯ÍĞ×Ô¶¨Òå±êÇ© 
         ("MassOrderSeqId", c_uint64),	
         ("MassOrderIndex", c_int),	
         ("MassOrderTotalNum", c_int),	
@@ -305,64 +305,64 @@ class LFInputOrderField(Structure):
 
 class LFRtnOrderField(Structure):
     _fields_ = [
-        ("BrokerID", c_char * 11),	# ç»çºªå…¬å¸ä»£ç  
-        ("UserID", c_char * 16),	# ç”¨æˆ·ä»£ç  
-        ("ParticipantID", c_char * 11),	# ä¼šå‘˜ä»£ç  
-        ("InvestorID", c_char * 19),	# æŠ•èµ„è€…ä»£ç  
-        ("BusinessUnit", c_char * 21),	# ä¸šåŠ¡å•å…ƒ 
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("OrderRef", c_char * 21),	# æŠ¥å•å¼•ç”¨ 
-        ("ExchangeID", c_char * 11),	# äº¤æ˜“æ‰€ä»£ç  
-        ("LimitPrice", c_int64),	# ä»·æ ¼ 
-        ("VolumeTraded", c_uint64),	# ä»Šæˆäº¤æ•°é‡ 
-        ("VolumeTotal", c_uint64),	# å‰©ä½™æ•°é‡ 
-        ("VolumeTotalOriginal", c_uint64),	# æ•°é‡ 
-        ("TimeCondition", c_char),	# æœ‰æ•ˆæœŸç±»å‹ LfTimeConditionType
-        ("VolumeCondition", c_char),	# æˆäº¤é‡ç±»å‹ LfVolumeConditionType
-        ("OrderPriceType", c_char),	# æŠ¥å•ä»·æ ¼æ¡ä»¶ LfOrderPriceTypeType
-        ("Direction", c_char),	# ä¹°å–æ–¹å‘ LfDirectionType
-        ("OffsetFlag", c_char),	# å¼€å¹³æ ‡å¿— LfOffsetFlagType
-        ("HedgeFlag", c_char),	# æŠ•æœºå¥—ä¿æ ‡å¿— LfHedgeFlagType
-        ("OrderStatus", c_char),	# æŠ¥å•çŠ¶æ€ LfOrderStatusType
-        ("RequestID", c_int),	# è¯·æ±‚ç¼–å· 
+        ("BrokerID", c_char * 11),	# ¾­¼Í¹«Ë¾´úÂë 
+        ("UserID", c_char * 16),	# ÓÃ»§´úÂë 
+        ("ParticipantID", c_char * 11),	# »áÔ±´úÂë 
+        ("InvestorID", c_char * 19),	# Í¶×ÊÕß´úÂë 
+        ("BusinessUnit", c_char * 21),	# ÒµÎñµ¥Ôª 
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("OrderRef", c_char * 21),	# ±¨µ¥ÒıÓÃ 
+        ("ExchangeID", c_char * 11),	# ½»Ò×Ëù´úÂë 
+        ("LimitPrice", c_int64),	# ¼Û¸ñ 
+        ("VolumeTraded", c_uint64),	# ½ñ³É½»ÊıÁ¿ 
+        ("VolumeTotal", c_uint64),	# Ê£ÓàÊıÁ¿ 
+        ("VolumeTotalOriginal", c_uint64),	# ÊıÁ¿ 
+        ("TimeCondition", c_char),	# ÓĞĞ§ÆÚÀàĞÍ LfTimeConditionType
+        ("VolumeCondition", c_char),	# ³É½»Á¿ÀàĞÍ LfVolumeConditionType
+        ("OrderPriceType", c_char),	# ±¨µ¥¼Û¸ñÌõ¼ş LfOrderPriceTypeType
+        ("Direction", c_char),	# ÂòÂô·½Ïò LfDirectionType
+        ("OffsetFlag", c_char),	# ¿ªÆ½±êÖ¾ LfOffsetFlagType
+        ("HedgeFlag", c_char),	# Í¶»úÌ×±£±êÖ¾ LfHedgeFlagType
+        ("OrderStatus", c_char),	# ±¨µ¥×´Ì¬ LfOrderStatusType
+        ("RequestID", c_int),	# ÇëÇó±àºÅ 
         ]
 
 class LFRtnTradeField(Structure):
     _fields_ = [
-        ("BrokerID", c_char * 11),	# ç»çºªå…¬å¸ä»£ç  
-        ("UserID", c_char * 16),	# ç”¨æˆ·ä»£ç  
-        ("InvestorID", c_char * 19),	# æŠ•èµ„è€…ä»£ç  
-        ("BusinessUnit", c_char * 21),	# ä¸šåŠ¡å•å…ƒ 
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("OrderRef", c_char * 21),	# æŠ¥å•å¼•ç”¨ 
-        ("ExchangeID", c_char * 11),	# äº¤æ˜“æ‰€ä»£ç  
-        ("TradeID", c_char * 21),	# æˆäº¤ç¼–å· 
-        ("OrderSysID", c_char * 31),	# æŠ¥å•ç¼–å· 
-        ("ParticipantID", c_char * 11),	# ä¼šå‘˜ä»£ç  
-        ("ClientID", c_char * 21),	# å®¢æˆ·ä»£ç  
-        ("Price", c_int64),	# ä»·æ ¼ 
-        ("Volume", c_uint64),	# æ•°é‡ 
-        ("TradingDay", c_char * 13),	# äº¤æ˜“æ—¥ 
-        ("TradeTime", c_char * 13),	# æˆäº¤æ—¶é—´ 
-        ("Direction", c_char),	# ä¹°å–æ–¹å‘ LfDirectionType
-        ("OffsetFlag", c_char),	# å¼€å¹³æ ‡å¿— LfOffsetFlagType
-        ("HedgeFlag", c_char),	# æŠ•æœºå¥—ä¿æ ‡å¿— LfHedgeFlagType
+        ("BrokerID", c_char * 11),	# ¾­¼Í¹«Ë¾´úÂë 
+        ("UserID", c_char * 16),	# ÓÃ»§´úÂë 
+        ("InvestorID", c_char * 19),	# Í¶×ÊÕß´úÂë 
+        ("BusinessUnit", c_char * 21),	# ÒµÎñµ¥Ôª 
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("OrderRef", c_char * 21),	# ±¨µ¥ÒıÓÃ 
+        ("ExchangeID", c_char * 11),	# ½»Ò×Ëù´úÂë 
+        ("TradeID", c_char * 21),	# ³É½»±àºÅ 
+        ("OrderSysID", c_char * 31),	# ±¨µ¥±àºÅ 
+        ("ParticipantID", c_char * 11),	# »áÔ±´úÂë 
+        ("ClientID", c_char * 21),	# ¿Í»§´úÂë 
+        ("Price", c_int64),	# ¼Û¸ñ 
+        ("Volume", c_uint64),	# ÊıÁ¿ 
+        ("TradingDay", c_char * 13),	# ½»Ò×ÈÕ 
+        ("TradeTime", c_char * 13),	# ³É½»Ê±¼ä 
+        ("Direction", c_char),	# ÂòÂô·½Ïò LfDirectionType
+        ("OffsetFlag", c_char),	# ¿ªÆ½±êÖ¾ LfOffsetFlagType
+        ("HedgeFlag", c_char),	# Í¶»úÌ×±£±êÖ¾ LfHedgeFlagType
         ]
 
 class LFOrderActionField(Structure):
     _fields_ = [
-        ("BrokerID", c_char * 11),	# ç»çºªå…¬å¸ä»£ç  
-        ("InvestorID", c_char * 19),	# æŠ•èµ„è€…ä»£ç  
-        ("InstrumentID", c_char * 31),	# åˆçº¦ä»£ç  
-        ("ExchangeID", c_char * 11),	# äº¤æ˜“æ‰€ä»£ç  
-        ("UserID", c_char * 16),	# ç”¨æˆ·ä»£ç  
-        ("OrderRef", c_char * 21),	# æŠ¥å•å¼•ç”¨ 
-        ("OrderSysID", c_char * 31),	# æŠ¥å•ç¼–å· 
-        ("RequestID", c_int),	# è¯·æ±‚ç¼–å· 
-        ("ActionFlag", c_char),	# æŠ¥å•æ“ä½œæ ‡å¿— char
-        ("LimitPrice", c_int64),	# ä»·æ ¼ 
-        ("VolumeChange", c_uint64),	# æ•°é‡å˜åŒ– 
-        ("KfOrderID", c_int),	# Kfç³»ç»Ÿå†…è®¢å•ID 
+        ("BrokerID", c_char * 11),	# ¾­¼Í¹«Ë¾´úÂë 
+        ("InvestorID", c_char * 19),	# Í¶×ÊÕß´úÂë 
+        ("InstrumentID", c_char * 31),	# ºÏÔ¼´úÂë 
+        ("ExchangeID", c_char * 11),	# ½»Ò×Ëù´úÂë 
+        ("UserID", c_char * 16),	# ÓÃ»§´úÂë 
+        ("OrderRef", c_char * 21),	# ±¨µ¥ÒıÓÃ 
+        ("OrderSysID", c_char * 31),	# ±¨µ¥±àºÅ 
+        ("RequestID", c_int),	# ÇëÇó±àºÅ 
+        ("ActionFlag", c_char),	# ±¨µ¥²Ù×÷±êÖ¾ char
+        ("LimitPrice", c_int64),	# ¼Û¸ñ 
+        ("VolumeChange", c_uint64),	# ÊıÁ¿±ä»¯ 
+        ("KfOrderID", c_int),	# KfÏµÍ³ÄÚ¶©µ¥ID 
         ("MassOrderSeqId", c_uint64),	
         ("MassOrderIndex", c_int),	
         ("MassOrderTotalNum", c_int),	
@@ -370,42 +370,42 @@ class LFOrderActionField(Structure):
 
 class LFQryAccountField(Structure):
     _fields_ = [
-        ("BrokerID", c_char * 11),	# ç»çºªå…¬å¸ä»£ç  
-        ("InvestorID", c_char * 19),	# æŠ•èµ„è€…ä»£ç  
+        ("BrokerID", c_char * 11),	# ¾­¼Í¹«Ë¾´úÂë 
+        ("InvestorID", c_char * 19),	# Í¶×ÊÕß´úÂë 
         ]
 
 class LFRspAccountField(Structure):
     _fields_ = [
-        ("BrokerID", c_char * 11),	# ç»çºªå…¬å¸ä»£ç  
-        ("InvestorID", c_char * 19),	# æŠ•èµ„è€…ä»£ç  
-        ("PreMortgage", c_double),	# ä¸Šæ¬¡è´¨æŠ¼é‡‘é¢ 
-        ("PreCredit", c_double),	# ä¸Šæ¬¡ä¿¡ç”¨é¢åº¦ 
-        ("PreDeposit", c_double),	# ä¸Šæ¬¡å­˜æ¬¾é¢ 
-        ("preBalance", c_double),	# ä¸Šæ¬¡ç»“ç®—å‡†å¤‡é‡‘ 
-        ("PreMargin", c_double),	# ä¸Šæ¬¡å ç”¨çš„ä¿è¯é‡‘ 
-        ("Deposit", c_double),	# å…¥é‡‘é‡‘é¢ 
-        ("Withdraw", c_double),	# å‡ºé‡‘é‡‘é¢ 
-        ("FrozenMargin", c_double),	# å†»ç»“çš„ä¿è¯é‡‘ï¼ˆæŠ¥å•æœªæˆäº¤å†»ç»“çš„ä¿è¯é‡‘ï¼‰ 
-        ("FrozenCash", c_double),	# å†»ç»“çš„èµ„é‡‘ï¼ˆæŠ¥å•æœªæˆäº¤å†»ç»“çš„æ€»èµ„é‡‘ï¼‰ 
-        ("FrozenCommission", c_double),	# å†»ç»“çš„æ‰‹ç»­è´¹ï¼ˆæŠ¥å•æœªæˆäº¤å†»ç»“çš„æ‰‹ç»­è´¹ï¼‰ 
-        ("CurrMargin", c_double),	# å½“å‰ä¿è¯é‡‘æ€»é¢ 
-        ("CashIn", c_double),	# èµ„é‡‘å·®é¢ 
-        ("Commission", c_double),	# æ‰‹ç»­è´¹ 
-        ("CloseProfit", c_double),	# å¹³ä»“ç›ˆäº 
-        ("PositionProfit", c_double),	# æŒä»“ç›ˆäº 
-        ("Balance", c_double),	# ç»“ç®—å‡†å¤‡é‡‘ 
-        ("Available", c_double),	# å¯ç”¨èµ„é‡‘ 
-        ("WithdrawQuota", c_double),	# å¯å–èµ„é‡‘ 
-        ("Reserve", c_double),	# åŸºæœ¬å‡†å¤‡é‡‘ 
-        ("TradingDay", c_char * 9),	# äº¤æ˜“æ—¥ 
-        ("Credit", c_double),	# ä¿¡ç”¨é¢åº¦ 
-        ("Mortgage", c_double),	# è´¨æŠ¼é‡‘é¢ 
-        ("ExchangeMargin", c_double),	# äº¤æ˜“æ‰€ä¿è¯é‡‘ 
-        ("DeliveryMargin", c_double),	# æŠ•èµ„è€…äº¤å‰²ä¿è¯é‡‘ 
-        ("ExchangeDeliveryMargin", c_double),	# äº¤æ˜“æ‰€äº¤å‰²ä¿è¯é‡‘ 
-        ("ReserveBalance", c_double),	# ä¿åº•æœŸè´§ç»“ç®—å‡†å¤‡é‡‘ 
-        ("Equity", c_double),	# å½“æ—¥æƒç›Š 
-        ("MarketValue", c_double),	# è´¦æˆ·å¸‚å€¼ 
+        ("BrokerID", c_char * 11),	# ¾­¼Í¹«Ë¾´úÂë 
+        ("InvestorID", c_char * 19),	# Í¶×ÊÕß´úÂë 
+        ("PreMortgage", c_double),	# ÉÏ´ÎÖÊÑº½ğ¶î 
+        ("PreCredit", c_double),	# ÉÏ´ÎĞÅÓÃ¶î¶È 
+        ("PreDeposit", c_double),	# ÉÏ´Î´æ¿î¶î 
+        ("preBalance", c_double),	# ÉÏ´Î½áËã×¼±¸½ğ 
+        ("PreMargin", c_double),	# ÉÏ´ÎÕ¼ÓÃµÄ±£Ö¤½ğ 
+        ("Deposit", c_double),	# Èë½ğ½ğ¶î 
+        ("Withdraw", c_double),	# ³ö½ğ½ğ¶î 
+        ("FrozenMargin", c_double),	# ¶³½áµÄ±£Ö¤½ğ£¨±¨µ¥Î´³É½»¶³½áµÄ±£Ö¤½ğ£© 
+        ("FrozenCash", c_double),	# ¶³½áµÄ×Ê½ğ£¨±¨µ¥Î´³É½»¶³½áµÄ×Ü×Ê½ğ£© 
+        ("FrozenCommission", c_double),	# ¶³½áµÄÊÖĞø·Ñ£¨±¨µ¥Î´³É½»¶³½áµÄÊÖĞø·Ñ£© 
+        ("CurrMargin", c_double),	# µ±Ç°±£Ö¤½ğ×Ü¶î 
+        ("CashIn", c_double),	# ×Ê½ğ²î¶î 
+        ("Commission", c_double),	# ÊÖĞø·Ñ 
+        ("CloseProfit", c_double),	# Æ½²ÖÓ¯¿÷ 
+        ("PositionProfit", c_double),	# ³Ö²ÖÓ¯¿÷ 
+        ("Balance", c_double),	# ½áËã×¼±¸½ğ 
+        ("Available", c_double),	# ¿ÉÓÃ×Ê½ğ 
+        ("WithdrawQuota", c_double),	# ¿ÉÈ¡×Ê½ğ 
+        ("Reserve", c_double),	# »ù±¾×¼±¸½ğ 
+        ("TradingDay", c_char * 9),	# ½»Ò×ÈÕ 
+        ("Credit", c_double),	# ĞÅÓÃ¶î¶È 
+        ("Mortgage", c_double),	# ÖÊÑº½ğ¶î 
+        ("ExchangeMargin", c_double),	# ½»Ò×Ëù±£Ö¤½ğ 
+        ("DeliveryMargin", c_double),	# Í¶×ÊÕß½»¸î±£Ö¤½ğ 
+        ("ExchangeDeliveryMargin", c_double),	# ½»Ò×Ëù½»¸î±£Ö¤½ğ 
+        ("ReserveBalance", c_double),	# ±£µ×ÆÚ»õ½áËã×¼±¸½ğ 
+        ("Equity", c_double),	# µ±ÈÕÈ¨Òæ 
+        ("MarketValue", c_double),	# ÕË»§ÊĞÖµ 
         ]
 
 DataFieldMap = {
@@ -628,7 +628,10 @@ DataFieldMap = {
 		'BrokerID': 'c11',
 		'MiscInfo': 'c30',
 		'StopPrice': 'd',
-	},
+        'MassOrderSeqId':'i64',
+        'MassOrderIndex':'i',
+        'MassOrderTotalNum':'i',
+    },
 	'LFRtnOrderField': {
 		'InstrumentID': 'c31',
 		'ExchangeID': 'c11',
