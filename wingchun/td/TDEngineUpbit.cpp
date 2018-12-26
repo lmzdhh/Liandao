@@ -1785,7 +1785,7 @@ int64_t TDEngineUpbit::getTimeDiffOfExchange(AccountUnitUpbit& unit)
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
 
-BOOST_PYTHON_MODULE(libUpbittd)
+BOOST_PYTHON_MODULE(libupbittd)
 {
     using namespace boost::python;
     class_<TDEngineUpbit, boost::shared_ptr<TDEngineUpbit> >("Engine")

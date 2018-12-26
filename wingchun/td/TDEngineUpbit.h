@@ -1,6 +1,6 @@
 
-#ifndef PROJECT_TDENGINEUpbit_H
-#define PROJECT_TDENGINEUpbit_H
+#ifndef PROJECT_TDENGINEUPBIT_H
+#define PROJECT_TDENGINEUPBIT_H
 
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
