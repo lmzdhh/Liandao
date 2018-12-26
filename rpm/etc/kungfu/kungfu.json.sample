@@ -178,7 +178,7 @@
               {
                 "APIKey": "6nIg0pkRWfb0JhFtUsO9bM1GTpTYfgJs",
                 "SecretKey": "kQ4eMfse0TKsCe838iP_6AAw7gZNMpUh",
-                "baseUrl": "wss://api.staging.daybit.com",
+                "baseUrl": "api.staging.daybit.com",
 				"path":"/v1/user_api_socket/websocket",
                 "whiteLists":{
                   "btc_bat": "BTC-BAT"
