@@ -207,7 +207,7 @@ void TDEngineUpbit::connect(long timeout_nsec)
     KF_LOG_INFO(logger, "[connect]");
       //sync time of exchange
     timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
-    for (size_t idx = 0; idx < accou nt_units.size(); idx++)
+    for (size_t idx = 0; idx < account_units.size(); idx++)
     {
         AccountUnitUpbit& unit = account_units[idx];
 

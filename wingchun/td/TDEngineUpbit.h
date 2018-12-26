@@ -179,7 +179,7 @@ private:
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& doc);
     void printResponse(const Document& d);
     inline std::string getTimestampString();
-    LfOrderStatusType convertOrderStatus(const std::string& strStatus,,int64_t nTrades);
+    LfOrderStatusType convertOrderStatus(const std::string& strStatus,int64_t nTrades);
 
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
 
