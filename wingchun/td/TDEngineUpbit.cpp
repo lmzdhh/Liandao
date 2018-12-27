@@ -234,7 +234,7 @@ void TDEngineUpbit::debug_print(std::map<std::string, SendOrderFilter> &sendOrde
     while(map_itr != sendOrderFilters.end())
     {
         KF_LOG_INFO(logger, "[debug_print] sendOrderFilters (symbol)" << map_itr->first <<
-            "(AskCurrency)" << map_itr->second.strAskCurrency" (AskMintotal)" << map_itr->second.nAskMinTotal) << 
+            "(AskCurrency)" << map_itr->second.strAskCurrency << " (AskMintotal)" << map_itr->second.nAskMinTotal) << 
             "(BidCurrency)" << map_itr->second.strBidCurrency << "(BidMinTotal)" << map_itr->second.nBidMinTotal << 
             "(Maxtotal)" << map_itr->second.nMaxTotal << "(State)" << map_itr->second.strState ;
         map_itr++;
@@ -253,7 +253,8 @@ SendOrderFilter TDEngineUpbit::getSendOrderFilter(AccountUnitUpbit& unit, const 
         map_itr++;
     }
     SendOrderFilter defaultFilter;
-    defaultFilter.ticksize = 8;
+    defaultFilter.nBidTickSize = 8;
+     defaultFilter.nAskTickSize = 8;
     strcpy(defaultFilter.InstrumentID, "notfound");
     return defaultFilter;
 }
@@ -536,7 +537,8 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
 
     KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<
                                                                      " (LimitPrice)" << data->LimitPrice <<
-                                                                     " (ticksize)" << filter.ticksize <<
+                                                                     " (bidticksize)" << filter.nBidTickSize <<
+                                                                      " (askticksize)" << filter.nAskTickSize <<
                                                                      " (fixedPrice)" << fixedPrice);
 
     auto nRsponseCode = send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(), GetType(data->OrderPriceType).c_str(),
@@ -647,7 +649,7 @@ void TDEngineUpbit::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUn
     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
     rtn_order.LimitPrice = std::round(stod(result["price"].GetString()) * scale_offset);
     rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus =  convertOrderStatus(result["state"].GetString(),atoi(result["trades_count"].GetString());
+    rtn_order.OrderStatus =  convertOrderStatus(result["state"].GetString(),atoi(result["trades_count"].GetString()));
     on_rtn_order(&rtn_order);
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                             source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
@@ -694,7 +696,7 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, result["uuid"].GetString(), 13);
     rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus = convertOrderStatus(result["state"].GetString(),atoi(result["trades_count"].GetString());
+    rtn_order.OrderStatus = convertOrderStatus(result["state"].GetString(),atoi(result["trades_count"].GetString()));
 
     uint64_t volumeTotalOriginal = std::round(stod(result["volume"].GetString()) * scale_offset);
     //数量
@@ -709,7 +711,7 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     rtn_trade.Direction = data->Direction;
 
     Document d;
-    get_order(unit,result["uuid"].GetString().c_str(),d);
+    get_order(unit,result["uuid"].GetString(),d);
     //we have strike price, emit OnRtnTrade
     int fills_size = d["trades"];
 
@@ -723,15 +725,12 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
         //剩余数量
         volumeTotalOriginal = volumeTotalOriginal - volume;
         rtn_order.VolumeTotal = volumeTotalOriginal;
-
-        if(isAllTraded)
-        {
-            if(i == fills_size - 1) {
-                //the last one
-                rtn_order.OrderStatus = LF_CHAR_AllTraded;
-            } else {
-                rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
-            }
+ 
+        if(i == fills_size - 1) {
+            //the last one
+            rtn_order.OrderStatus = LF_CHAR_AllTraded;
+        } else {
+            rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
         }
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
@@ -811,7 +810,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
     void TDEngineUpbit::retrieveOrderAndTradesStatus(AccountUnitUpbit& unit)
     {
           KF_LOG_INFO(logger, "[retrieveOrderAndTradesStatus]: (Account))" << unit.api_key);
-        for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
+        for(auto orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
         {
             KF_LOG_INFO(logger, "[retrieveOrderAndTradesStatus] get_order " << "account.api_key:"<< unit.api_key
                                                                             << "  account.pendingOrderStatus.InstrumentID: "<< orderStatusIterator->InstrumentID
@@ -908,19 +907,29 @@ void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
             rtn_order.OrderStatus = convertOrderStatus(orderResult["state"].GetString(),atoi(orderResult["trades"].GetString()));
             rtn_order.VolumeTraded = std::round(stod(orderResult["executed_volume"].GetString()) * scale_offset);
-
+            strncpy(rtn_order.OrderRef, orderResult["uuid"].GetString(), 21);
+            strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+            auto orderStatusIterator = unit.pendingOrderStatus.end();
+            for(auto it = unit.pendingOrderStatus.begin();it!= unit.pendingOrderStatus.end();++it)
+            {
+                if(strcmp(it->orderRef,rtn_order.OrderRef) == 0 && strcmp(it->InstrumentID,rtn_order.InstrumentID) == 0 )
+                {
+                    orderStatusIterator = it;
+                    break;
+                }
+            }
+            if(orderStatusIterator == unit.pendingOrderStatus.end()) return;
             //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
             if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
                (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
                 && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
             {
                 strcpy(rtn_order.ExchangeID, "upbit");
-                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);       
                 rtn_order.Direction = GetDirection(orderResult["side"].GetString());
                 rtn_order.TimeCondition = LF_CHAR_GTC;
                 rtn_order.OrderPriceType = GetPriceType(orderResult["type"].GetString());
-                strncpy(rtn_order.OrderRef, orderResult["uuid"].GetString(), 21);
+              
                 rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["volume"].GetString()) * scale_offset);
                 rtn_order.LimitPrice = std::round(stod(orderResult["price"].GetString()) * scale_offset);
                 rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
