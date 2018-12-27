@@ -181,6 +181,7 @@ private:
     enum RequestWeightType
     {
         Unkonw = 0,
+        GetOpenOrder_Type,
         SendOrder_Type,
         CancelOrder_Type,
         GetOrder_Type,
@@ -189,7 +190,7 @@ private:
     struct weight_data
     {
         int weight;
-        long long time;
+        uint64_t time;
 
         weight_data()
         {
@@ -200,6 +201,9 @@ private:
         {
             switch(type)
             {
+                case GetOpenOrder_Type:
+                    weight = 1;
+                    break;
                 case SendOrder_Type:
                     weight = 1;
                     break;
@@ -220,7 +224,7 @@ private:
     };
     void handle_request_weight(RequestWeightType type);
     void meet_429();
-    bool isResume();
+    bool isHandling();
     
 private:
     static constexpr int scale_offset = 1e8;
@@ -240,12 +244,11 @@ private:
     //<=0，do nothing even meet 429
     //>0，limit weight per minute；
     int request_weight_per_minute = 1000;
-    uint64_t weight_total_count = 0;
+    uint64_t weight_count = 0;
     std::mutex* mutex_weight = nullptr;
 
     //handle 429,prohibit send/cencel order time,ms
     //code=-1429,msg:order count over 10000 limit.
-    int response_status_code = 0;    
     int prohibit_order_ms = 10000;      //default 10s
     int default_429_rest_interval_ms = 1000;      //default 10s
     bool bHandle_429 = false;
