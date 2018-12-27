@@ -853,7 +853,7 @@ void TDEngineProbit::cancel_all_orders(AccountUnitProbit& unit)
 
 void TDEngineProbit::cancel_order(const AccountUnitProbit& unit, const std::string& orderId, const std::string& marketID, double quantity,  Document& json)
 {
-    KF_LOG_INFO(logger, "[cancel_order]");
+    KF_LOG_DEBUG(logger, "[cancel_order]");
     std::string requestPath = "/api/exchange/v1/cancel_order";
 	char strQuantity[20];
 	sprintf(strQuantity, "%.4f", quantity);
