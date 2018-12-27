@@ -75,8 +75,8 @@ struct AccountUnitUpbit
     std::map<std::string, SendOrderFilter> sendOrderFilters;
     
     // the trade id that has been called on_rtn_trade. Do not send it again.
-    std::vector<int64_t> newSentTradeIds;
-    std::vector<int64_t> sentTradeIds;
+    std::vector<std::string> newSentTradeIds;
+    std::vector<std::string> sentTradeIds;
 
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
@@ -129,7 +129,7 @@ private:
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
-    void addNewSentTradeIds(AccountUnitUpbit& unit, int64_t newSentTradeIds);
+    void addNewSentTradeIds(AccountUnitUpbit& unit,const std::string& newSentTradeIds);
     void addNewQueryOrdersAndTrades(AccountUnitUpbit& unit, const char_31 InstrumentID,
                                         const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, int64_t UpbitOrderId);
 

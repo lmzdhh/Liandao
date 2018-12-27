@@ -892,7 +892,7 @@ void TDEngineUpbit::moveNewtoPending(AccountUnitUpbit& unit)
         newTradeStatusIterator = unit.newTradeStatus.erase(newTradeStatusIterator);
     }
 
-    std::vector<int64_t>::iterator newSentTradeIdsIterator;
+    std::vector<std::string>::iterator newSentTradeIdsIterator;
     for(newSentTradeIdsIterator = unit.newSentTradeIds.begin(); newSentTradeIdsIterator != unit.newSentTradeIds.end();) {
         unit.sentTradeIds.push_back(*newSentTradeIdsIterator);
         newSentTradeIdsIterator = unit.newSentTradeIds.erase(newSentTradeIdsIterator);
@@ -987,10 +987,11 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
     {
         std::string newtradeId = resultTrade["trades"].GetArray()[i]["uuid"].GetString();
         bool hasSendThisTradeId = false;
-        std::vector<int64_t>::iterator sentTradeIdsIterator;
+        std::vector<std::string>::iterator sentTradeIdsIterator;
         for(sentTradeIdsIterator = unit.sentTradeIds.begin(); sentTradeIdsIterator != unit.sentTradeIds.end(); sentTradeIdsIterator++) {
             if((*sentTradeIdsIterator) == newtradeId) {
                 hasSendThisTradeId = true;
+                break;
             }
         }
         if(hasSendThisTradeId) {
@@ -1058,7 +1059,7 @@ bool TDEngineUpbit::removeUpbitOrderIdFromPendingOnRtnTrades(AccountUnitUpbit& u
 }
 
 
-void TDEngineUpbit::addNewSentTradeIds(AccountUnitUpbit& unit, int64_t newSentTradeIds)
+void TDEngineUpbit::addNewSentTradeIds(AccountUnitUpbit& unit, const std::string& newSentTradeIds)
 {
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
