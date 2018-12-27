@@ -154,23 +154,26 @@
           },
           "clients": [ "YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3" ],
           "is_default": true
-        }
-      ],
-      "FeeSetup": {
-        "stock": {
-          "type": "amount",
-          "fee_multi": 0.0003,
-          "ctr_multi": 1,
-          "min_fee": 0
         },
-        "future": {
-          "type": "amount",
-          "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-          "ctr_multi": 200,
-          "min_fee": 0
+    "probit":
+    {
+      "book_depth_count": 5,
+      "trade_count": 10,
+      "whiteLists": 
+        {
+            "etc_eth": "ETC-ETH",
+            "ltc_btc": "LTC-BTC",
+            "ltc_usdt": "LTC-USDT",
+            "bch_btc": "BCH-BTC",
+            "bch_usdt": "BCH-USDT",
+            "etc_btc": "ETC-BTC",
+            "eth_btc": "ETH-BTC",
+            "etc_usdt": "ETC-USDT",
+            "eth_usdt": "ETH-USDT",
+            "btc_usdt": "BTC-USDT"
         },
-        "future_exotic": null
-      }
+      "rest_get_interval_ms": 500
+    }
 
     },
     "coinmex":

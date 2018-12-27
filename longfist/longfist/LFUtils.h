@@ -73,6 +73,10 @@ inline JournalPair getMdJournalPair(short source)
 			return {"/shared/kungfu/journal/MD/HUOBI/", "MD_HUOBI"};
 		//case 27:
 		//	return { "/shared/kungfu/journal/MD/OCEANEX2/", "MD_OCEANEX2" };
+		case 28:
+			return{ "/shared/kungfu/journal/MD/PROBIT/", "MD_PROBIT" };
+		case 29:
+			return { "/shared/kungfu/journal/MD/BITHUMB/", "MD_BITHUMB" };
 		default:
 			return {"", ""};
 	}
@@ -104,6 +108,10 @@ inline JournalPair getMdRawJournalPair(short source)
             return {"/shared/kungfu/journal/MD_RAW/HUOBI/", "MDRAW_HUOBI"};
 		//case 27:
 		//	return { "/shared/kungfu/journal/MD_RAW/OCEANEX2/", "MDRAW_OCEANEX2" };
+		case 28:
+			return{ "/shared/kungfu/journal/MD_RAW/PROBIT/", "MDRAW_PROBIT" };
+		case 29:
+                   	return{ "/shared/kungfu/journal/MD_RAW/BITHUMB/", "MDRAW_BITHUMB" };
 		default:
 			return {"", ""};
 	}
@@ -137,6 +145,11 @@ inline JournalPair getTdJournalPair(short source)
 			return {"/shared/kungfu/journal/TD/HUOBI/", "TD_HUOBI"};
 		case 27:
 			return { "/shared/kungfu/journal/TD/OCEANEX2/", "TD_OCEANEX2" };
+		case 28:
+			return {"/shared/kungfu/journal/TD/PROBIT/", "TD_PROBIT"};
+		case 29:
+			return {"/shared/kungfu/journal/TD/BITHUMB/", "TD_BITHUMB"};
+
 		default:
 			return {"", ""};
 	}
@@ -170,6 +183,11 @@ inline JournalPair getTdSendJournalPair(short source)
             return {"/shared/kungfu/journal/TD_SEND/HUOBI/", "TD_SEND_HUOBI"};
 		case 27:
 			return { "/shared/kungfu/journal/TD_SEND/OCEANEX2/", "TD_SEND_OCEANEX2" };
+        case 28:
+			return {"/shared/kungfu/journal/TD_SEND/PROBIT/", "TD_SEND_PROBIT"};
+		case 29:
+			return {"/shared/kungfu/journal/TD_SEND/BITHUMB/", "TD_SEND_BITHUMB"};
+
 		default:
 			return {"", ""};
 	}
@@ -203,6 +221,11 @@ inline JournalPair getTdRawJournalPair(short source)
             return {"/shared/kungfu/journal/TD_RAW/HUOBI/", "TD_RAW_HUOBI"};
 		case 27:
 			return { "/shared/kungfu/journal/TD_RAW/OCEANEX2/", "TD_RAW_OCEANEX2" };
+        case 28:
+			return {"/shared/kungfu/journal/TD_RAW/PROBIT/", "TD_RAW_PROBIT"};
+		case 29:
+			return {"/shared/kungfu/journal/TD_RAW/BITHUMB/", "TD_RAW_BITHUMB"};
+
 		default:
 			return {"", ""};
 	}
@@ -236,6 +259,11 @@ inline JournalPair getTdQJournalPair(short source)
             return {"/shared/kungfu/journal/TD_Q/HUOBI/", "TD_Q_HUOBI"};
 		case 27:
 			return { "/shared/kungfu/journal/TD_Q/OCEANEX2/", "TD_Q_OCEANEX2" };
+		case 28:
+			return {"/shared/kungfu/journal/TD_Q/PROBIT/", "TD_Q_PROBIT"};
+		case 29:
+			return {"/shared/kungfu/journal/TD_Q/BITHUMB/", "TD_Q_BITHUMB"};
+
 		default:
 			return {"", ""};
 	}

@@ -25,6 +25,8 @@ enum exchange_source_index : short
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
 	SOURCE_OCEANEX2 = 27,
+    SOURCE_PROBIT = 28,
+    SOURCE_BITHUMB = 29,
     SOURCE_UNKNOWN
 };
 
@@ -60,8 +62,12 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "HUOBI";
 		case SOURCE_OCEANEX2:
 			return "oceanex2";
-		default:
-			return "unknown";
+        case SOURCE_PROBIT:
+            return "probit";
+        case SOURCE_BITHUMB:
+            return "bithumb";
+        default:
+            return "unknown";
 	}
 }
 
@@ -69,27 +75,27 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 {
     if(exch_str == "ctp")
     {
-         return SOURCE_CTP;
+        return SOURCE_CTP;
     }
     else if(exch_str == "xtp")
     {
-	return SOURCE_XTP;
+        return SOURCE_XTP;
     }
     else if(exch_str == "binance")
     {
-	return SOURCE_BINANCE;
+        return SOURCE_BINANCE;
     }
     else if(exch_str == "indodax")
     {
-	return SOURCE_INDODAX;
+        return SOURCE_INDODAX;
     }
     else if(exch_str == "okex")
     {
-	return SOURCE_OKEX;
+        return SOURCE_OKEX;
     }
     else if(exch_str == "coinmex")
     {
-	return SOURCE_COINMEX;
+        return SOURCE_COINMEX;
     }
     else if(exch_str == "mock")
     {
@@ -97,7 +103,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     }
     else if(exch_str == "bitmax")
     {
-	return SOURCE_BITMAX;
+        return SOURCE_BITMAX;
     }
     else if(exch_str == "bitfinex")
     {
@@ -105,7 +111,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     }
     else if(exch_str == "bitmex")
     {
-	return SOURCE_BITMEX;
+        return SOURCE_BITMEX;
     }
     else if(exch_str == "hitbtc")
     {
@@ -123,10 +129,18 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 	{
 		return SOURCE_OCEANEX2;
 	}
-    else
+    else if(exch_str == "probit")
     {
-	return SOURCE_UNKNOWN;
+        return SOURCE_PROBIT;
     }
+    else if(exch_str == "bithumb")
+    {
+		return SOURCE_BITHUMB;
+    }
+    else {
+		return SOURCE_UNKNOWN;
+    }
+
 }
 
 // Exchange names
@@ -146,6 +160,8 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_OCEANEX "OCEANEX"
 #define EXCHANGE_HUOBI "HUOBI"
 #define EXCHANGE_OCEANEX2 "OCEANEX2"
+#define EXCHANGE_PROBIT "PROBIT"
+#define EXCHANGE_BITHUMB "BITHUMB"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -259,7 +275,6 @@ const short MSG_TYPE_LF_RTN_ORDER_BITMEX = 23205;
 const short MSG_TYPE_LF_RTN_TRADE_BITMEX = 23206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITMEX = 23207;
 
-
 //HITBTC, idx=24
 const short MSG_TYPE_LF_MD_HITBTC        = 24101;
 const short MSG_TYPE_LF_QRY_POS_HITBTC   = 24201;
@@ -268,7 +283,6 @@ const short MSG_TYPE_LF_ORDER_HITBTC     = 24204;
 const short MSG_TYPE_LF_RTN_ORDER_HITBTC = 24205;
 const short MSG_TYPE_LF_RTN_TRADE_HITBTC = 24206;
 const short MSG_TYPE_LF_ORDER_ACTION_HITBTC = 24207;
-
 
 //OCEANEX, idx=25
 const short MSG_TYPE_LF_MD_OCEANEX        = 25101;
@@ -287,6 +301,26 @@ const short MSG_TYPE_LF_ORDER_OCEANEX2 = 27204;
 const short MSG_TYPE_LF_RTN_ORDER_OCEANEX2 = 27205;
 const short MSG_TYPE_LF_RTN_TRADE_OCEANEX2 = 27206;
 const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX2 = 27207;
+
+//PROBIT, idx=28
+const short MSG_TYPE_LF_MD_PROBIT        	= 28101;
+const short MSG_TYPE_LF_QRY_POS_PROBIT   	= 28201;
+const short MSG_TYPE_LF_RSP_POS_PROBIT   	= 28202;
+const short MSG_TYPE_LF_ORDER_PROBIT     	= 28204;
+const short MSG_TYPE_LF_RTN_ORDER_PROBIT 	= 28205;
+const short MSG_TYPE_LF_RTN_TRADE_PROBIT 	= 28206;
+const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 28207;
+
+//BITHUMB, idx=29
+const short MSG_TYPE_LF_MD_BITHUMB             = 29101;
+const short MSG_TYPE_LF_QRY_POS_BITHUMB           = 29201;
+const short MSG_TYPE_LF_RSP_POS_BITHUMB           = 29202;
+const short MSG_TYPE_LF_ORDER_BITHUMB             = 29204;
+const short MSG_TYPE_LF_RTN_ORDER_BITHUMB         = 29205;
+const short MSG_TYPE_LF_RTN_TRADE_BITHUMB         = 29206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITHUMB     = 29207;
+
+
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
 ///////////////////////////////////
