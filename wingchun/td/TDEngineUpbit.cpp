@@ -228,48 +228,6 @@ void TDEngineUpbit::connect(long timeout_nsec)
   
 }
 
-bool TDEngineUpbit::loadExchangeOrderFilters(AccountUnitUpbit& unit, Document &doc)
-{
-    KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
-    if(doc.HasParseError() || !doc.IsObject())
-    {
-        return false;
-    }
-    if(doc.HasMember("symbols") && doc["symbols"].IsArray())
-    {
-        int symbolsCount = doc["symbols"].Size();
-        for (int i = 0; i < symbolsCount; i++) {
-            const rapidjson::Value& sym = doc["symbols"].GetArray()[i];
-            std::string symbol = sym["symbol"].GetString();
-            if(sym.IsObject() && sym.HasMember("filters") && sym["filters"].IsArray()) {
-                int filtersCount = sym["filters"].Size();
-                for (int j = 0; j < filtersCount; j++) {
-                    const rapidjson::Value& filter = sym["filters"].GetArray()[j];
-                    if (strcmp("PRICE_FILTER", filter["filterType"].GetString()) == 0) {
-                        std::string tickSizeStr =  filter["tickSize"].GetString();
-                        KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
-                                                                                                   " (tickSizeStr)" << tickSizeStr);
-                        //0.0000100; 0.001;
-                        unsigned int locStart = tickSizeStr.find( ".", 0 );
-                        unsigned int locEnd = tickSizeStr.find( "1", 0 );
-                        if( locStart != string::npos  && locEnd != string::npos ){
-                            int num = locEnd - locStart;
-                            SendOrderFilter afilter;
-                            strncpy(afilter.InstrumentID, symbol.c_str(), 31);
-                            afilter.ticksize = num;
-                            unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
-                            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
-                                                                                                       " (tickSizeStr)" << tickSizeStr
-                                                                                                       <<" (tickSize)" << afilter.ticksize);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return true;
-}
-
 void TDEngineUpbit::debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters)
 {
     std::map<std::string, SendOrderFilter>::iterator map_itr = sendOrderFilters.begin();
@@ -517,7 +475,7 @@ void TDEngineUpbit::req_investor_position(const LFQryPositionField* data, int ac
     }
     if(errorId != 0)
     {
-        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_Upbit, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_UPBIT, 1, requestId, errorId, errorMsg.c_str());
     }
 }
 
@@ -527,8 +485,9 @@ void TDEngineUpbit::req_qry_account(const LFQryAccountField *data, int account_i
 }
 
 
-int64_t TDEngineUpbit::fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy)
+int64_t TDEngineUpbit::fixPriceTickSize(int keepPrecisionBid, int keepPrecisionAsk, int64_t price, bool isBuy)
 {
+    int keepPrecision = isBuy ? keepPrecisionBid : keepPrecisionAsk;
     //the 8 is come from 1e8.
     if(keepPrecision == 8) return price;
     int removePrecisions = (8 - keepPrecision);
@@ -562,7 +521,7 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
         KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
                 errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_Upbit, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_UPBIT, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
@@ -573,7 +532,7 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
 
     SendOrderFilter filter = getSendOrderFilter(unit, ticker.c_str());
 
-    int64_t fixedPrice = fixPriceTickSize(filter.ticksize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
+    int64_t fixedPrice = fixPriceTickSize(filter.nBidTickSize,filter.nAskTickSize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
 
     KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<
                                                                      " (LimitPrice)" << data->LimitPrice <<
@@ -607,13 +566,13 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_Upbit, 1, requestId, errorId, errorMsg.c_str());
+    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_UPBIT, 1, requestId, errorId, errorMsg.c_str());
 
     //paser the order/trade info in the response result
     if(!d.HasParseError() && d.IsObject() && !d.HasMember("error"))
     {
         std::string strStatus=d["state"].GetString();
-        int64_t nTrades = atoi(d["trades_count"].GetString().c_str());
+        int64_t nTrades = atoi(d["trades_count"].GetString());
         auto cStatus = convertOrderStatus(strStatus,nTrades);
         if(cStatus == LF_CHAR_NoTradeQueueing)
         {//no status, it is ACK
@@ -688,7 +647,7 @@ void TDEngineUpbit::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUn
     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
     rtn_order.LimitPrice = std::round(stod(result["price"].GetString()) * scale_offset);
     rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus =  convertOrderStatus(result["state"].GetString(),atoi(result["trades_count"].GetString().c_str());
+    rtn_order.OrderStatus =  convertOrderStatus(result["state"].GetString(),atoi(result["trades_count"].GetString());
     on_rtn_order(&rtn_order);
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                             source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
@@ -735,7 +694,7 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, result["uuid"].GetString(), 13);
     rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus = convertOrderStatus(result["state"].GetString(),atoi(result["trades_count"].GetString().c_str());
+    rtn_order.OrderStatus = convertOrderStatus(result["state"].GetString(),atoi(result["trades_count"].GetString());
 
     uint64_t volumeTotalOriginal = std::round(stod(result["volume"].GetString()) * scale_offset);
     //数量
@@ -783,7 +742,7 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
         rtn_trade.Price = price;
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                source_id, MSG_TYPE_LF_RTN_TRADE_Upbit, 1/*islast*/, -1/*invalidRid*/);
+                                source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);
 
     }
 
@@ -805,7 +764,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
                                               << " (Iid)" << data->InvestorID
                                               << " (OrderRef)" << data->OrderRef << " (KfOrderID)" << data->KfOrderID);
 
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_Upbit, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_UPBIT, 1, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -817,7 +776,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
         KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it. (rid)" << requestId << " (errorId)" <<
                                                                                       errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_Upbit, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_UPBIT, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
@@ -846,7 +805,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_Upbit, 1, requestId, errorId, errorMsg.c_str());
+    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_UPBIT, 1, requestId, errorId, errorMsg.c_str());
 }
 
     void TDEngineUpbit::retrieveOrderAndTradesStatus(AccountUnitUpbit& unit)
@@ -1026,7 +985,7 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
     int len = resultTrade["trades"].Size();
     for(int i = 0 ; i < len; i++)
     {
-        auto newtradeId = resultTrade["trades"].GetArray()[i]["uuid"].GetString();
+        std::string newtradeId = resultTrade["trades"].GetArray()[i]["uuid"].GetString();
         bool hasSendThisTradeId = false;
         std::vector<int64_t>::iterator sentTradeIdsIterator;
         for(sentTradeIdsIterator = unit.sentTradeIds.begin(); sentTradeIdsIterator != unit.sentTradeIds.end(); sentTradeIdsIterator++) {
@@ -1124,7 +1083,7 @@ void TDEngineUpbit::addNewQueryOrdersAndTrades(AccountUnitUpbit& unit, const cha
 
     OnRtnOrderDoneAndWaitingOnRtnTrade waitingTrade;
     strncpy(waitingTrade.OrderRef, OrderRef, 21);
-    waitingTrade.UpbitOrderId = UpbitOrderId;
+    //waitingTrade.UpbitOrderId = UpbitOrderId;
     waitingTrade.Direction = Direction;
     unit.newOnRtnTrades.push_back(waitingTrade);
 
@@ -1634,10 +1593,30 @@ bool TDEngineUpbit::loadMarketsInfo(const AccountUnitUpbit& unit, const std::vec
                 it->second.strBidCurrency = doc["bid"]["currency"].GetString();
                 it->second.nBidMinTotal =  atoi(doc["bid"]["min_total"].GetString());
             }
+            if(doc.HasMember("bid") && doc["bid"].HasMember("price_unit") )
+            {
+                    std::string strBidUnit = doc["bid"]["price_unit"].GetString();
+                    auto nBegin = strBidUnit.find(".",0);
+                    auto nEnd = strBidUnit.find("1",0);
+                    if(nBegin != std::string::npos && nEnd != std::string::npos)
+                    {
+                        it->second.nBidTickSize = nEnd - nBegin;
+                    }
+            }
             if(doc.HasMember("ask") && doc["ask"].HasMember("currency") && doc["ask"].HasMember("min_total"))
             {
                 it->second.strAskCurrency = doc["ask"]["currency"].GetString();
                 it->second.nAskMinTotal =  atoi(doc["ask"]["min_total"].GetString());
+            }
+             if(doc.HasMember("ask") && doc["ask"].HasMember("price_unit") )
+            {
+                std::string strAskUnit = doc["ask"]["price_unit"].GetString();
+                    auto nBegin = strAskUnit.find(".",0);
+                    auto nEnd = strAskUnit.find("1",0);
+                    if(nBegin != std::string::npos && nEnd != std::string::npos)
+                    {
+                        it->second.nAskTickSize = nEnd - nBegin;
+                    }
             }
             if(doc.HasMember("max_total"))
             {

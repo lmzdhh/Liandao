@@ -47,8 +47,10 @@ struct OnRtnOrderDoneAndWaitingOnRtnTrade
 struct SendOrderFilter
 {
     char_31 InstrumentID;   //合约代码
+    int nBidTickSize= 8;
     std::string strBidCurrency; 
     long long nBidMinTotal;
+    int nAskTickSize = 8;
     std::string strAskCurrency;
     long long nAskMinTotal;
     long long nMaxTotal;
@@ -126,7 +128,6 @@ private:
     virtual void set_reader_thread() override;
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
-    bool loadExchangeOrderFilters(AccountUnitUpbit& unit, Document &doc);
     void GetAndHandleOrderTradeResponse();
     void addNewSentTradeIds(AccountUnitUpbit& unit, int64_t newSentTradeIds);
     void addNewQueryOrdersAndTrades(AccountUnitUpbit& unit, const char_31 InstrumentID,
@@ -144,7 +145,7 @@ private:
     bool isExistSymbolInPendingUpbitOrderStatus(AccountUnitUpbit& unit, const char_31 InstrumentID, const char_21 OrderRef);
     bool removeUpbitOrderIdFromPendingOnRtnTrades(AccountUnitUpbit& unit, const std::string& UpbitOrderId);
 
-    int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
+    int64_t fixPriceTickSize(int keepPrecisionBid, int keepPrecisionAsk,int64_t price, bool isBuy);
 
     inline int64_t getTimestamp();
     int64_t getTimeDiffOfExchange(AccountUnitUpbit& unit);
