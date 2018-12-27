@@ -214,9 +214,9 @@ void TDEngineUpbit::connect(long timeout_nsec)
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
-           std::string vstrMarkets;
+          std::vector<std::string> vstrMarkets;
            getAllMarkets(vstrMarkets);
-            if( loadMarketsInfo(unit,vstrMarkets);)
+            if( loadMarketsInfo(unit,vstrMarkets))
             {
                 unit.logged_in = true;
             } else {
