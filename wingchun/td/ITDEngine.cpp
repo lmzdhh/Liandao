@@ -217,7 +217,7 @@ void ITDEngine::listening()
                         req_order_insert(order, idx, requestId, cur_time);
                         // insert order, we need to track in send
                         send_writer->write_frame_extra(order, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER, 1/*ISLAST*/, requestId, before_nano);
-                        KF_LOG_DEBUG(logger, "[insert_order] (rid)" << requestId << " (ticker)" << order->InstrumentID << " (ref)" << order_ref);
+                        KF_LOG_INFO(logger, "[insert_order] (rid)" << requestId << " (ticker)" << order->InstrumentID << " (ref)" << order_ref);
                         break;
                     }
                     case MSG_TYPE_LF_ORDER_ACTION:
