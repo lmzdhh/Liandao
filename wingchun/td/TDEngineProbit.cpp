@@ -193,8 +193,8 @@ TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
     // set up
     TradeAccount account {};
     //partly copy this fields
-    strncpy(account.UserID, unit.api_key .c_str(), 16);
-    strncpy(account.Password, unit.secret_key.c_str(), 21);
+    strncpy(account.UserID, unit.api_key .c_str(), sizeof(account.UserID));
+    strncpy(account.Password, unit.secret_key.c_str(), sizeof(account.Password));
     return account;
 }
 
