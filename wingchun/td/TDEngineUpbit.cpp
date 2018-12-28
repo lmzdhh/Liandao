@@ -234,9 +234,9 @@ void TDEngineUpbit::debug_print(std::map<std::string, SendOrderFilter> &sendOrde
     while(map_itr != sendOrderFilters.end())
     {
         KF_LOG_INFO(logger, "[debug_print] sendOrderFilters (symbol)" << map_itr->first <<
-            "(AskCurrency)" << map_itr->second.strAskCurrency << " (AskMintotal)" << map_itr->second.nAskMinTotal) << 
+            "(AskCurrency)" << map_itr->second.strAskCurrency << " (AskMintotal)" << map_itr->second.nAskMinTotal << 
             "(BidCurrency)" << map_itr->second.strBidCurrency << "(BidMinTotal)" << map_itr->second.nBidMinTotal << 
-            "(Maxtotal)" << map_itr->second.nMaxTotal << "(State)" << map_itr->second.strState ;
+            "(Maxtotal)" << map_itr->second.nMaxTotal << "(State)" << map_itr->second.strState );
         map_itr++;
     }
 }
@@ -713,7 +713,7 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     Document d;
     get_order(unit,result["uuid"].GetString(),d);
     //we have strike price, emit OnRtnTrade
-    int fills_size = d["trades"];
+    int fills_size = atoi(d["trades"].GetString());
 
     for(int i = 0; i < fills_size; ++i)
     {
@@ -825,7 +825,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
             }
 
             Document orderResult;
-            get_order(unit, ticker.c_str(), 0, orderStatusIterator->OrderRef, orderResult);
+            get_order(unit, orderStatusIterator->OrderRef, orderResult);
             KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
                                                                             << " (orderId)" << orderStatusIterator->OrderRef);
             //printResponse(orderResult);
@@ -900,6 +900,21 @@ void TDEngineUpbit::moveNewtoPending(AccountUnitUpbit& unit)
 
 void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderResult)
 {
+      auto orderStatusIterator = unit.pendingOrderStatus.end();
+        if(orderResult.IsObject())
+        {
+            char_21 strOrderRef;
+            strncpy(strOrderRef, orderResult["uuid"].GetString(), 21);      
+            for(auto it = unit.pendingOrderStatus.begin();it!= unit.pendingOrderStatus.end();++it)
+            {
+                if(strcmp(it->orderRef,strOrderRef) == 0)
+                {
+                    orderStatusIterator = it;
+                    break;
+                }
+            }
+            if(orderStatusIterator == unit.pendingOrderStatus.end()) return;
+        }
         //parse order status
         if(orderResult.IsObject())
         {
@@ -908,17 +923,7 @@ void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
             rtn_order.OrderStatus = convertOrderStatus(orderResult["state"].GetString(),atoi(orderResult["trades"].GetString()));
             rtn_order.VolumeTraded = std::round(stod(orderResult["executed_volume"].GetString()) * scale_offset);
             strncpy(rtn_order.OrderRef, orderResult["uuid"].GetString(), 21);
-            strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-            auto orderStatusIterator = unit.pendingOrderStatus.end();
-            for(auto it = unit.pendingOrderStatus.begin();it!= unit.pendingOrderStatus.end();++it)
-            {
-                if(strcmp(it->orderRef,rtn_order.OrderRef) == 0 && strcmp(it->InstrumentID,rtn_order.InstrumentID) == 0 )
-                {
-                    orderStatusIterator = it;
-                    break;
-                }
-            }
-            if(orderStatusIterator == unit.pendingOrderStatus.end()) return;
+          
             //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
             if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
                (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
@@ -929,7 +934,7 @@ void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
                 rtn_order.Direction = GetDirection(orderResult["side"].GetString());
                 rtn_order.TimeCondition = LF_CHAR_GTC;
                 rtn_order.OrderPriceType = GetPriceType(orderResult["type"].GetString());
-              
+                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
                 rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["volume"].GetString()) * scale_offset);
                 rtn_order.LimitPrice = std::round(stod(orderResult["price"].GetString()) * scale_offset);
                 rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
