@@ -608,7 +608,7 @@ void MDEngineOceanEx::onFills(Document& json)
         auto& arrayTrades = jsonData["trades"];
         std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
         strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
-        strInstrumentID = getLiandaoCoin(strInstrumentID);
+        strInstrumentID = getWhiteListCoinpairFrom(strInstrumentID);
         for(int i = 0 ; i < len; i++) {
             LFL2TradeField trade;
             memset(&trade, 0, sizeof(trade));
@@ -746,7 +746,7 @@ void MDEngineOceanEx::onDepth(Document& json)
     
     std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
     strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
-    strInstrumentID = getLiandaoCoin(strInstrumentID);
+    strInstrumentID = getWhiteListCoinpairFrom(strInstrumentID);
     strcpy(md.InstrumentID, strInstrumentID.c_str());
     strcpy(md.ExchangeID, "oceanex");
 
