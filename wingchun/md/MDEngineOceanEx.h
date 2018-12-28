@@ -12,8 +12,6 @@ WC_NAMESPACE_START
 
 using rapidjson::Document;
 
-std::string GetValueByKey
-
 struct PriceAndVolume
 {
     int64_t price;
