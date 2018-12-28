@@ -226,6 +226,10 @@ void MDEngineOceanEx::readWhiteLists(const json& j_config)
 
 				}
                 */
+                    std::string strategy_coinpair = it.key();
+				    std::string exchange_coinpair = it.value();
+				    KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
+				    keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
                     std::string strMarketSub = makeMarketSub(it.value(),book_depth_count);
                     websocketSubscribeJsonString.push_back(std::move(strMarketSub));
                     KF_LOG_INFO(logger, "[MDEngineOceanEx::readWhiteLists] makeMarketSub: " << strMarketSub);
@@ -254,8 +258,8 @@ void MDEngineOceanEx::split(std::string str, std::string token, SubscribeCoinBas
 
 std::string MDEngineOceanEx::getWhiteListCoinpairFrom(std::string md_coinpair)
 {
-    std::string ticker = md_coinpair;
-    std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
+    std::string& ticker = md_coinpair;
+    //std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
 
     KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find md_coinpair (md_coinpair) " << md_coinpair << " (toupper(ticker)) " << ticker);
     std::map<std::string, std::string>::iterator map_itr;
@@ -587,6 +591,7 @@ void MDEngineOceanEx::onFills(Document& json)
         auto& arrayTrades = jsonData["trades"];
         std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
         strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
+        strInstrumentID = getWhiteListCoinpairFrom(strInstrumentID);
         for(int i = 0 ; i < len; i++) {
             LFL2TradeField trade;
             memset(&trade, 0, sizeof(trade));
@@ -724,6 +729,7 @@ void MDEngineOceanEx::onDepth(Document& json)
     
     std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
     strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
+    strInstrumentID = getWhiteListCoinpairFrom(strInstrumentID);
     strcpy(md.InstrumentID, strInstrumentID.c_str());
     strcpy(md.ExchangeID, "oceanex");
 
