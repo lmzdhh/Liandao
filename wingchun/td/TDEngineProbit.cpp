@@ -193,8 +193,8 @@ TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
     // set up
     TradeAccount account {};
     //partly copy this fields
-    strncpy(account.UserID, unit.api_key .c_str(), 16);
-    strncpy(account.Password, unit.secret_key.c_str(), 21);
+    strncpy(account.UserID, unit.api_key .c_str(), sizeof(account.UserID)-1);
+    strncpy(account.Password, unit.secret_key.c_str(), sizeof(account.Password)-1);
     return account;
 }
 
@@ -473,12 +473,11 @@ int TDEngineProbit::Round(std::string tickSizeStr)
 std::string TDEngineProbit::TimeToFormatISO8601(int64_t timestamp)
 {
 	int ms = timestamp % 1000;
-	tm utc_time;
+	tm utc_time{};
 	time_t time = timestamp/1000;
 	gmtime_r(&time, &utc_time);
-	char timeStr[50];
-	sprintf(timeStr, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_time.tm_year + 1900, utc_time.tm_mon + 1, utc_time.tm_mday,
-		utc_time.tm_hour, utc_time.tm_min, utc_time.tm_sec,ms);
+	char timeStr[50]{};
+	sprintf(timeStr, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_time.tm_year + 1900, utc_time.tm_mon + 1, utc_time.tm_mday, utc_time.tm_hour, utc_time.tm_min, utc_time.tm_sec,ms);
 	return std::string(timeStr);
 }
 
@@ -744,16 +743,16 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
     document.AddMember("market_id", StringRef(code), allocator);
     document.AddMember("side", StringRef(side), allocator);
     document.AddMember("type", StringRef(type), allocator);
-	document.AddMember("time_in_force", StringRef("gtc"), allocator);
-	rapidjson::Value nullObject(rapidjson::kNullType); 
+	rapidjson::Value nullObject(rapidjson::kNullType);
 	if (strcmp(type, "limit") == 0)
-	{     
-	      
-	      document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
-	      document.AddMember("cost", nullObject,allocator);
+	{
+        document.AddMember("time_in_force", StringRef("gtc"), allocator);
+	    document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
+	    document.AddMember("cost", nullObject,allocator);
 	}
 	else
 	{
+        document.AddMember("time_in_force", StringRef("ioc"), allocator);
 		if (strcmp(side, "buy") == 0)
 		{
 			document.AddMember("quantity", StringRef(""), allocator);
@@ -771,11 +770,10 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
     document.Accept(writer);
-    std::string requestPath = "/api/exchange/v1/new_order";
     std::string body = jsonStr.GetString();
-	std::string authToken = getAuthToken(unit);
-	string url = unit.baseUrl + requestPath;
-    PostRequest(url, "Bearer " + authToken, body, json);
+	std::string url = unit.baseUrl + std::string("/api/exchange/v1/new_order");
+    std::string authToken = getAuthToken(unit);
+    PostRequest(url , "Bearer " + authToken , body, json);
 }
 
 void TDEngineProbit::cancel_all_orders(AccountUnitProbit& unit)
@@ -855,7 +853,7 @@ void TDEngineProbit::cancel_order(const AccountUnitProbit& unit, const std::stri
 {
     KF_LOG_INFO(logger, "[cancel_order]");
     std::string requestPath = "/api/exchange/v1/cancel_order";
-	char strQuantity[20];
+	char strQuantity[20]{};
 	sprintf(strQuantity, "%.4f", quantity);
 	std::string body = "{\"market_id\":\"" + marketID + "\",\"order_id\":\"" + orderId + "\",\"limit_open_quantity\":\"0\"}";
 	std::string authToken = getAuthToken(unit);
@@ -873,11 +871,10 @@ void TDEngineProbit::lws_login(AccountUnitProbit& unit, long timeout_nsec)
 {
     KF_LOG_INFO(logger, "TDEngineProbit::lws_login:");
     global_td = this;
-
     if (context == NULL)
     {
         struct lws_context_creation_info info;
-        memset( &info, 0, sizeof(info) );
+        memset( &info, 0x00, sizeof(info) );
         info.port = CONTEXT_PORT_NO_LISTEN;
         info.protocols = protocols;
         info.iface = NULL;
@@ -932,7 +929,6 @@ void TDEngineProbit::on_lws_connection_error(struct lws* conn)
     unit.logged_in = false;
     unit.status = AccountStatus::AS_AUTH;
     KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_connection_error. login again.");
-    //unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
     lws_login(unit, 0);
 }
 
@@ -1092,14 +1088,14 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"open_quantity\"");
             return;
         }
-        rtn_order.VolumeTotal = (uint64_t)((std::atof(order["open_quantity"].GetString())+0.000000001) * scale_offset);
+        rtn_order.VolumeTotal = (uint64_t)((std::atof(order["open_quantity"].GetString()) + 0.000000001) * scale_offset);
         rtn_order.RequestID = orderIter->second.RequestID;
         if (!order.HasMember("cancelled_quantity") || !order["cancelled_quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"cancelled_quantity\"");
             return;
         }
-        auto cancelled_quantity = (uint64_t)((std::atof(order["cancelled_quantity"].GetString())+0.000000001) * scale_offset);
+        auto cancelled_quantity = (uint64_t)((std::atof(order["cancelled_quantity"].GetString()) + 0.000000001) * scale_offset);
         if(cancelled_quantity > 0)
         {
             rtn_order.OrderStatus = LF_CHAR_Canceled;
@@ -1110,7 +1106,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"limit_price\"");
             return;
         }
-        rtn_order.LimitPrice = (int64_t)((std::atof(order["limit_price"].GetString())+0.000000001) * scale_offset);
+        rtn_order.LimitPrice = (int64_t)((std::atof(order["limit_price"].GetString()) + 0.000000001) * scale_offset);
         if (!order.HasMember("filled_cost") || !order["filled_cost"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"filled_cost\"");
@@ -1128,14 +1124,14 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         }
         double total_filled_quantity = std::atof(order["filled_quantity"].GetString());
         double cur_filled_quantity = total_filled_quantity - rtn_order.preFilledQuantity;
-        rtn_order.VolumeTraded = (uint64_t)((total_filled_quantity+0.000000001)*scale_offset);
+        rtn_order.VolumeTraded = (uint64_t)((total_filled_quantity + 0.000000001)*scale_offset);
         rtn_order.preFilledQuantity =  total_filled_quantity;
         if (!order.HasMember("quantity") || !order["quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"quantity\"");
             return;
         }
-        double quantity = std::atof(order["quantity"].GetString())+0.000000001;
+        double quantity = std::atof(order["quantity"].GetString()) + 0.000000001;
         rtn_order.VolumeTotalOriginal = (uint64_t)(quantity*scale_offset);
         //status
         if (!order.HasMember("status") || !order["status"].IsString())
@@ -1146,7 +1142,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         rtn_order.OrderStatus = GetOrderStatus(order["status"].GetString());
         if (rtn_order.OrderStatus == LF_CHAR_NotTouched)
         {
-            if (cur_filled_quantity > 0.0)
+            if (cur_filled_quantity > 0.0000001)
             {
                 rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
             }
@@ -1155,12 +1151,12 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
         KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, ticker:" << rtn_order.InstrumentID <<",curFilledCost:"<< cur_filledCost << ", curQuantity:" << cur_filled_quantity <<", requestId:" << rtn_order.RequestID);
-        if (cur_filled_quantity > 0.0)
+        if (cur_filled_quantity > 0.0000001)
         {
             double fixedPrice  = cur_filledCost / cur_filled_quantity;
             int64_t cur_price = convert(rtn_order.InstrumentID, fixedPrice);
             // on_rtn_trade
-            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, (uint64_t)((cur_filled_quantity+0.000000001) * scale_offset), cur_price, rtn_order.RequestID);
+            onTrade(conn, rtn_order.OrderRef,unit.api_key.c_str(), rtn_order.InstrumentID, rtn_order.Direction, (uint64_t)((cur_filled_quantity + 0.000000001) * scale_offset), cur_price, rtn_order.RequestID);
         }
         if(rtn_order.OrderStatus == LF_CHAR_Canceled ||  rtn_order.OrderStatus == LF_CHAR_AllTraded )
         {
@@ -1389,7 +1385,6 @@ int64_t TDEngineProbit::convert(const std::string &ticker, double price)
     int64_t dividend = price * scale_offset;
     return dividend / divisor * divisor;
 }
-
 
 BOOST_PYTHON_MODULE(libprobittd)
 {
