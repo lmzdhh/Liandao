@@ -1663,6 +1663,20 @@ void TDEngineBinance::handle_request_weight(RequestWeightType type)
     weight_count -= front_data.weight;
     weight_data_queue.pop();
 
+    //清理时间超过60000ms(1分钟)的记录
+    while(weight_data_queue.size() > 0)
+    {
+        weight_data tmp_data = weight_data_queue.front();
+        int tmp_time_diff_ms = timestamp - tmp_data.time;
+        if (tmp_time_diff_ms <= weight_ms)
+        {
+            break;
+        }
+
+        weight_count -= tmp_data.weight;
+        weight_data_queue.pop();
+    }
+
     weight_data wd;
     wd.time = timestamp;
     wd.addWeight(type);
