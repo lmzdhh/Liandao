@@ -244,7 +244,7 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
 
 void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit,bool only_api_topic)
 {
-    std::lock_guard<std::mutex> lck(unit_mutex);
+    std::lock_guard<std::mutex> lck(g_reqMutex);
     
     unit.listMessageToSend = std::queue<std::string>(); 
     unit.listMessageToSend.push(createJoinReq(0,TOPIC_API));
@@ -261,6 +261,7 @@ void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit,bool only_api_topi
         unit.mapSubscribeRef.insert(std::make_pair(TOPIC_ORDER,getRef()));
         unit.listMessageToSend.push(createJoinReq(0,TOPIC_TRADE));
         unit.mapSubscribeRef.insert(std::make_pair(TOPIC_TRADE,getRef()));
+        //cancel_all_orders(unit);
     }
     //std::cout << "InitSubscribeMsg, ref test " << getRef() << " hhhhh " <<getRef() << std::endl;
 }
@@ -274,7 +275,7 @@ void TDEngineDaybit::heartbeat_loop()
         for (size_t idx = 0; idx < account_units.size(); idx++) 
         {
             AccountUnitDaybit &unit = account_units[idx];
-            std::unique_lock<std::mutex> lck(unit_mutex);
+            std::unique_lock<std::mutex> lck(g_reqMutex);
             unit.listMessageToSend.push(createHeartBeatReq());   
             lck.unlock();
             lws_callback_on_writable(unit.websocketConn);        
@@ -627,10 +628,13 @@ void TDEngineDaybit::req_order_insert(const LFInputOrderField* data, int account
                                                                      " (LimitPrice)" << data->LimitPrice <<
                                                                      " (ticksize)" << filter.ticksize <<
                                                                      " (fixedPrice)" << fixedPrice);
-    std::lock_guard<std::mutex> guard_mutex(unit_mutex);                                                            
+    std::unique_lock<std::mutex> lck(g_reqMutex);                                                            
     //unit.listMessageToSend.push(createJoinReq(getJoinRef(),"/api"));
     unit.listMessageToSend.push(createNewOrderReq(unit.mapSubscribeRef[TOPIC_API],data->Volume*1.0/scale_offset,fixedPrice*1.0/scale_offset,ticker,LF_CHAR_Sell == data->Direction));
+    lck.unlock();
 	addNewOrder(unit, LF_CHAR_NotTouched, requestId,getRef(),*data);
+   
+    lws_callback_on_writable(unit.websocketConn);
     //on_rsp_order_insert(data, requestId,errorId, errorMsg.c_str());
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_DAYBIT, 1, requestId, errorId, errorMsg.c_str());
 }
@@ -683,7 +687,9 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
         raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_DAYBIT, 1, requestId, errorId, errorMsg.c_str());
         return;
     } 
+    lck.unlock();
     cancel_order(unit,remoteOrderId);
+    lws_callback_on_writable(unit.websocketConn);
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
@@ -697,8 +703,8 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
 void TDEngineDaybit::addNewOrder(AccountUnitDaybit& unit, const LfOrderStatusType OrderStatus,int reqID,int64_t ref,LFInputOrderField input)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
-   
-     KF_LOG_INFO(logger, "[addNewOrder]");
+    std::unique_lock<std::mutex> lck(unit_mutex);
+    KF_LOG_INFO(logger, "[addNewOrder]");
 	LFRtnOrderField order;
     memset(&order, 0, sizeof(LFRtnOrderField));
 	order.OrderStatus = OrderStatus;
@@ -814,6 +820,7 @@ void TDEngineDaybit::cancel_all_orders(AccountUnitDaybit& unit)
 
 void TDEngineDaybit::cancel_order(AccountUnitDaybit& unit, int64_t orderId)
 {
+    std::lock_guard<std::mutex> lck(g_reqMutex);
     KF_LOG_INFO(logger, "[cancel_order]");  
     //unit.listMessageToSend.push(createJoinReq(getJoinRef(),"/api"));
     auto req = createCancelOrderReq(unit.mapSubscribeRef[TOPIC_API],orderId);
@@ -849,7 +856,7 @@ int TDEngineDaybit::on_lws_write(struct lws* conn)
 {
     
     KF_LOG_INFO(logger, "TDEngineDaybit::on_lws_write");
-    std::lock_guard<std::mutex> lck(unit_mutex);
+    std::lock_guard<std::mutex> lck(g_reqMutex);
     //KF_LOG_INFO(logger,"TDEngineDaybit::lws_write_subscribe");
     auto& unit = findAccountUnitByWebsocketConn(conn);
     int ret = 0;
@@ -865,7 +872,7 @@ int TDEngineDaybit::on_lws_write(struct lws* conn)
         unit.listMessageToSend.pop();
         if(unit.listMessageToSend.size() > 0)
         {    //still has pending send data, emit a lws_callback_on_writable()
-            lws_callback_on_writable( conn );
+            lws_callback_on_writable(conn);
         }
     }  
     return ret;
@@ -978,7 +985,7 @@ void TDEngineDaybit::on_lws_data(struct lws* conn, const char* data, size_t len)
         }
         else if( errorMsg == "join ok")
         {
-            std::lock_guard<std::mutex> lck(unit_mutex);
+            std::lock_guard<std::mutex> lck(g_reqMutex);
             auto it = unit.mapSubscribeRef.find(topic);
             if(it != unit.mapSubscribeRef.end())
             {
