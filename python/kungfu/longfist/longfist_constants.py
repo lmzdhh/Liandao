@@ -141,7 +141,7 @@ class MsgTypes:
     MSG_TYPE_LF_RTN_ORDER_PROBIT 		= 28205
     MSG_TYPE_LF_RTN_TRADE_PROBIT 		= 28206
     MSG_TYPE_LF_ORDER_ACTION_PROBIT		= 28207
-    MSG_TYPE_LF_MD_PROBIT                       = 28101
+    MSG_TYPE_LF_MD_PROBIT               = 28101
    
     MSG_TYPE_LF_QRY_POS_BITHUMB                  = 29201
     MSG_TYPE_LF_RSP_POS_BITHUMB                  = 29202

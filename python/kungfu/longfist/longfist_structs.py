@@ -628,6 +628,9 @@ DataFieldMap = {
 		'BrokerID': 'c11',
 		'MiscInfo': 'c30',
 		'StopPrice': 'd',
+        'MassOrderSeqId':'i64',
+	    'MassOrderIndex':'i',
+	    'MassOrderTotalNum':'i',
 	},
 	'LFRtnOrderField': {
 		'InstrumentID': 'c31',
@@ -757,6 +760,9 @@ DataFieldMap = {
 		'BrokerID': 'c11',
 		'RequestID': 'i',
 		'OrderSysID': 'c31',
+        'MassOrderSeqId':'i64',
+	    'MassOrderIndex':'i',
+	    'MassOrderTotalNum':'i',
 	},
 }
 
@@ -807,7 +813,24 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_ORDER_COINMEX: LFInputOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_COINMEX: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_COINMEX: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_COINMEX: LFOrderActionField
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_COINMEX: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_OCEANEX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_OCEANEX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_OCEANEX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_OCEANEX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_OCEANEX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_OCEANEX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_OCEANEX: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_OCEANEX2: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_OCEANEX2: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_OCEANEX2: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_OCEANEX2: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_OCEANEX2: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_OCEANEX2: LFOrderActionField
+
+
 }
 
 MsgType2LFStruct.update(SnifferMsgType2Struct)
