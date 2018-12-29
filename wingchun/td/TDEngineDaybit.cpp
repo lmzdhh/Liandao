@@ -665,16 +665,25 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
-	std::unique_lock<std::mutex> lck(unit_mutex);
+
     int64_t remoteOrderId =-1;
-    for(auto& order : unit.ordersMap)
+    int count = 0;
+    while(count < 5)
     {
-        if(strcmp(order.second.OrderRef,data->OrderRef) == 0)
+        std::unique_lock<std::mutex> lck(unit_mutex);
+        for(auto& order : unit.ordersMap)
         {
-            remoteOrderId = order.first;
-            KF_LOG_DEBUG(logger, "[req_order_action] found in ordersMap (orderRef) "
-                             << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+            if(strcmp(order.second.OrderRef,data->OrderRef) == 0)
+            {
+                remoteOrderId = order.first;
+                KF_LOG_DEBUG(logger, "[req_order_action] found in ordersMap (orderRef) "
+                                << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+                break;
+            }
         }
+        lck.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(base_interval_ms));
+        ++count;
     }
     if(remoteOrderId == -1) {
         errorId = 1;
@@ -687,7 +696,7 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
         raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_DAYBIT, 1, requestId, errorId, errorMsg.c_str());
         return;
     } 
-    lck.unlock();
+    
     cancel_order(unit,remoteOrderId);
     lws_callback_on_writable(unit.websocketConn);
     if(errorId != 0)
@@ -1163,8 +1172,7 @@ void TDEngineDaybit::onRspError(struct lws * conn, std::string errorMsg,int64_t 
     {
         //KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError,no order match (ref)" << ref);
         return;
-    }
-   
+    } 
     else
     {
         auto& inputOrder = it->second.second;
