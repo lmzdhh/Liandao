@@ -628,13 +628,16 @@ void TDEngineDaybit::req_order_insert(const LFInputOrderField* data, int account
                                                                      " (LimitPrice)" << data->LimitPrice <<
                                                                      " (ticksize)" << filter.ticksize <<
                                                                      " (fixedPrice)" << fixedPrice);
-    std::unique_lock<std::mutex> lck(g_reqMutex);                                                            
-    //unit.listMessageToSend.push(createJoinReq(getJoinRef(),"/api"));
-    unit.listMessageToSend.push(createNewOrderReq(unit.mapSubscribeRef[TOPIC_API],data->Volume*1.0/scale_offset,fixedPrice*1.0/scale_offset,ticker,LF_CHAR_Sell == data->Direction));
-    lck.unlock();
-	addNewOrder(unit, LF_CHAR_NotTouched, requestId,getRef(),*data);
-   
-    lws_callback_on_writable(unit.websocketConn);
+
+    OrderInsertInfo insertInfo;
+    insertInfo.input = *data;
+    insertInfo.requestID = requestId;
+    insertInfo.amount = data->Volume*1.0/scale_offset;
+    insertInfo.price = fixedPrice*1.0/scale_offset;
+    insertInfo.symbol = ticker;
+    insertInfo.isSell = LF_CHAR_Sell == data->Direction;
+    insertInfo.retryCount=-1;                                                        
+    new_order(unit,insertInfo);
     //on_rsp_order_insert(data, requestId,errorId, errorMsg.c_str());
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_DAYBIT, 1, requestId, errorId, errorMsg.c_str());
 }
@@ -668,7 +671,7 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
 
     int64_t remoteOrderId =-1;
     int count = 0;
-    while(count < 5)
+    while(count < unit.maxRetryCount)
     {
         std::unique_lock<std::mutex> lck(unit_mutex);
         for(auto& order : unit.ordersMap)
@@ -696,9 +699,13 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
         raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_DAYBIT, 1, requestId, errorId, errorMsg.c_str());
         return;
     } 
+    OrderActionInfo info;
+    info.requestID = requestId;
+    info.action = *data;
+    info.orderId = remoteOrderId;
+    info.retryCount = -1;
+    cancel_order(unit,info);
     
-    cancel_order(unit,remoteOrderId);
-    lws_callback_on_writable(unit.websocketConn);
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
@@ -709,7 +716,7 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
 
 
 
-void TDEngineDaybit::addNewOrder(AccountUnitDaybit& unit, const LfOrderStatusType OrderStatus,int reqID,int64_t ref,LFInputOrderField input)
+void TDEngineDaybit::addNewOrder(AccountUnitDaybit& unit, const LfOrderStatusType OrderStatus,int64_t ref,OrderInsertInfo data)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::unique_lock<std::mutex> lck(unit_mutex);
@@ -717,21 +724,25 @@ void TDEngineDaybit::addNewOrder(AccountUnitDaybit& unit, const LfOrderStatusTyp
 	LFRtnOrderField order;
     memset(&order, 0, sizeof(LFRtnOrderField));
 	order.OrderStatus = OrderStatus;
-    order.VolumeTotalOriginal = input.Volume;
-    order.VolumeTotal = input.Volume;
-	strncpy(order.OrderRef, input.OrderRef, 21);
-	strncpy(order.InstrumentID, input.InstrumentID, 31);
-	order.RequestID = reqID;
+    order.VolumeTotalOriginal = data.input.Volume;
+    order.VolumeTotal = data.input.Volume;
+	strncpy(order.OrderRef, data.input.OrderRef, 21);
+	strncpy(order.InstrumentID, data.input.InstrumentID, 31);
+	order.RequestID = data.requestID;
 	strcpy(order.ExchangeID, "Daybit");
 	strncpy(order.UserID, unit.api_key.c_str(), 16);
-    order.LimitPrice = input.LimitPrice;
+    order.LimitPrice = data.input.LimitPrice;
 	order.TimeCondition = LF_CHAR_GTC;
-	order.Direction = input.Direction;
+	order.Direction = data.input.Direction;
     order.OrderPriceType = LF_CHAR_LimitPrice;
-	unit.ordersLocalMap.insert(std::make_pair(ref, std::make_pair(order,input)));
-    KF_LOG_INFO(logger, "[addNewOrder] (InstrumentID) " << input.InstrumentID
-                                                                       << " (OrderRef) " << input.OrderRef
-                                                                       << "(VolumeTraded)" << input.Volume);
+    //OrderInsertInfo insertInfo;
+    data.order = order;
+    //insertInfo.input = input;
+    //insertInfo.requestID = reqID;
+	unit.ordersLocalMap.insert(std::make_pair(ref, data));
+    KF_LOG_INFO(logger, "[addNewOrder] (InstrumentID) " << data.input.InstrumentID
+                                                                       << " (OrderRef) " << data.input.OrderRef << "ref" << ref
+                                                                       << "(VolumeTraded)" << data.input.Volume);
 }
 
 
@@ -827,16 +838,33 @@ void TDEngineDaybit::cancel_all_orders(AccountUnitDaybit& unit)
 }
 
 
-void TDEngineDaybit::cancel_order(AccountUnitDaybit& unit, int64_t orderId)
+void TDEngineDaybit::cancel_order(AccountUnitDaybit& unit, OrderActionInfo& data)
 {
-    std::lock_guard<std::mutex> lck(g_reqMutex);
-    KF_LOG_INFO(logger, "[cancel_order]");  
-    //unit.listMessageToSend.push(createJoinReq(getJoinRef(),"/api"));
-    auto req = createCancelOrderReq(unit.mapSubscribeRef[TOPIC_API],orderId);
+    std::unique_lock<std::mutex> lck(g_reqMutex);
+    KF_LOG_INFO(logger, "[cancel_order] (order_id)" << data.orderId);  
+    auto req = createCancelOrderReq(unit.mapSubscribeRef[TOPIC_API],data.orderId);
     unit.listMessageToSend.push(req);
     KF_LOG_INFO(logger, "[cancel_order] (joinref) " << unit.mapSubscribeRef[TOPIC_API] << " (ref)" << getRef() << "(msg) " << req);	
+    lck.unlock();  
+
+    std::unique_lock<std::mutex> lck_sec(unit_mutex);
+    data.retryCount++;
+    unit.ordersLocalActionMap.insert(std::make_pair(getRef(),data));
+    lws_callback_on_writable(unit.websocketConn);
+    
 }
 
+void TDEngineDaybit::new_order(AccountUnitDaybit& unit,OrderInsertInfo& data)
+{
+    std::unique_lock<std::mutex> lck(g_reqMutex);    
+    auto req =  createNewOrderReq(unit.mapSubscribeRef[TOPIC_API],data.amount,data.price,data.symbol,data.isSell);                                            
+    unit.listMessageToSend.push(req);
+     KF_LOG_INFO(logger, "[new_order] (joinref) " << unit.mapSubscribeRef[TOPIC_API] << " (ref)" << getRef() << "(msg) " << req);	
+    lck.unlock();  
+    data.retryCount++;
+	addNewOrder(unit, LF_CHAR_NotTouched,getRef(),data); 
+    lws_callback_on_writable(unit.websocketConn);
+}
 
 
 int64_t TDEngineDaybit::getTimestamp()
@@ -1147,7 +1175,7 @@ void TDEngineDaybit::onRspOrder(struct lws* conn, Value& rsp,int64_t ref)
     }
     if(rsp.IsObject() && rsp.HasMember("id"))
     {
-        auto& rtnOrder = it->second.first;
+        auto& rtnOrder = it->second.order;
         unit.ordersMap.insert(std::make_pair(rsp["id"].GetInt64(),rtnOrder));
         KF_LOG_INFO(logger, "TDEngineDaybit::onRspOrder,rtn_order");
 		on_rtn_order(&rtnOrder);
@@ -1170,15 +1198,45 @@ void TDEngineDaybit::onRspError(struct lws * conn, std::string errorMsg,int64_t 
     auto it = unit.ordersLocalMap.find(ref);
     if(it == unit.ordersLocalMap.end())
     {
-        //KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError,no order match (ref)" << ref);
-        return;
+        auto it_cancel = unit.ordersLocalActionMap.find(ref);
+        if(it_cancel == unit.ordersLocalActionMap.end())
+        {
+            return;
+        }
+        else
+        { 
+            auto data = it_cancel->second;
+            unit.ordersLocalActionMap.erase(it_cancel);   
+            if(data.retryCount < unit.maxRetryCount)
+            {
+                 KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError retry_order_cancel");   
+                 cancel_order(unit,data);
+            }
+            else
+            {
+                int errorId = 1;
+                KF_LOG_ERROR(logger, "[req_order_action] error"
+                             << " (rid)" << data.requestID << " (orderRef)" << data.action.OrderRef << " (errorMsg)" << errorMsg);
+                on_rsp_order_action(&(data.action), data.requestID, errorId, errorMsg.c_str());
+                raw_writer->write_error_frame(&(data.action), sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_DAYBIT, 1, data.requestID, errorId, errorMsg.c_str());
+            }
+        }
     } 
     else
     {
-        auto& inputOrder = it->second.second;
-        on_rsp_order_insert(&inputOrder, it->second.first.RequestID, 1, errorMsg.c_str());
-        KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError on_rsp_order_insert");   
+        auto data = it->second;
         unit.ordersLocalMap.erase(it);    
+        if(data.retryCount < unit.maxRetryCount)
+        {//retry
+            KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError retry_order_insert");   
+            new_order(unit,data);        
+        }
+        else
+        {
+            auto& inputOrder = data.input;
+            on_rsp_order_insert(&inputOrder, data.requestID, 1, errorMsg.c_str());
+            KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError on_rsp_order_insert");            
+        }
     }
 }
 void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)

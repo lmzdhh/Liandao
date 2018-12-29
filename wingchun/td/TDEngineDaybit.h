@@ -33,7 +33,24 @@ struct SendOrderFilter
     std::string InstrumentID;   //合约代码
     double ticksize; //for price round.
 };
-
+struct OrderInsertInfo
+{
+    LFRtnOrderField order;
+    LFInputOrderField input;
+    int requestID;
+    int retryCount=0;
+    double amount;
+    double price;
+    std::string symbol;
+    bool isSell;
+};
+struct OrderActionInfo
+{
+    LFOrderActionField action;
+    int requestID;
+    int64_t orderId;
+    int retryCount=0;
+};
 
 struct AccountUnitDaybit
 {
@@ -45,7 +62,8 @@ struct AccountUnitDaybit
     bool    logged_in;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 	std::map<int64_t, LFRtnOrderField> ordersMap;
-    std::map<int64_t, std::pair<LFRtnOrderField,LFInputOrderField>> ordersLocalMap;
+    std::map<int64_t, OrderInsertInfo> ordersLocalMap;
+    std::map<int64_t, OrderActionInfo> ordersLocalActionMap;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
     std::queue<std::string> listMessageToSend;
@@ -106,7 +124,7 @@ private:
     std::string GetType(const LfOrderPriceTypeType& input);
     LfOrderPriceTypeType GetPriceType(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
-    void addNewOrder(AccountUnitDaybit& unit,const LfOrderStatusType OrderStatus,  int reqID,int64_t ref,LFInputOrderField input);
+    void addNewOrder(AccountUnitDaybit& unit,const LfOrderStatusType OrderStatus,int64_t ref,OrderInsertInfo data);
     static constexpr int scale_offset = 1e8;
 
     int64_t base_interval_ms=500;
@@ -138,8 +156,8 @@ private:
     void get_account(AccountUnitDaybit& unit, Document& json);
 
     void cancel_all_orders(AccountUnitDaybit& unit);
-    void cancel_order(AccountUnitDaybit& unit, int64_t orderId);
-
+    void cancel_order(AccountUnitDaybit& unit, OrderActionInfo& data);
+    void new_order(AccountUnitDaybit& unit,OrderInsertInfo& data);
     //void query_order(AccountUnitDaybit& unit, std::string code, std::string orderId, Document& json);
     std::string  getResponse(rapidjson::Value& payload, rapidjson::Value& response);
     void printResponse(const rapidjson::Value& d);
