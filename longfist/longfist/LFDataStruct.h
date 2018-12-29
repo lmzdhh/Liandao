@@ -243,6 +243,7 @@ struct LFBarMarketDataField
 {
 	char_9   	TradingDay;            //交易日
 	char_31  	InstrumentID;          //合约代码
+        char_9   	ExchangeID;
 	int64_t   	UpperLimitPrice;       //涨停板价
 	int64_t   	LowerLimitPrice;       //跌停板价
 	char_13  	StartUpdateTime;       //首tick修改时间
@@ -256,6 +257,8 @@ struct LFBarMarketDataField
 	int64_t   	High;                  //高
 	uint64_t   	Volume;                //区间交易量
 	uint64_t   	StartVolume;           //初始总交易量
+        int64_t         BestBidPrice;
+        int64_t         BestAskPrice;
 };
 
 struct LFQryPositionField
@@ -344,7 +347,7 @@ struct LFRtnTradeField
 	char_11           	ParticipantID;         //会员代码
 	char_21           	ClientID;              //客户代码
 	int64_t            	Price;                 //价格
-	uint64_t               	Volume;                //数量
+	uint64_t            Volume;                //数量
 	char_13           	TradingDay;            //交易日
 	char_13           	TradeTime;             //成交时间
 	LfDirectionType   	Direction;             //买卖方向
@@ -364,7 +367,7 @@ struct LFOrderActionField
 	int      	RequestID;             //请求编号
 	char     	ActionFlag;            //报单操作标志
 	int64_t   	LimitPrice;            //价格
-	uint64_t      	VolumeChange;          //数量变化
+	uint64_t    VolumeChange;          //数量变化
 	int      	KfOrderID;             //Kf系统内订单ID
 	uint64_t	MassOrderSeqId;
 	int			MassOrderIndex;

@@ -256,8 +256,8 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "InstrumentID:" << std::setw(6) << "(c31)" << " " << ptr->InstrumentID << std::endl \
 	 << std::setw(20) << "OrderRef:" << std::setw(6) << "(c21)" << " " << ptr->OrderRef << std::endl \
 	 << std::setw(20) << "LimitPrice:" << std::setw(6) << "(d)" << " " << ptr->LimitPrice << std::endl \
-	 << std::setw(20) << "Volume:" << std::setw(6) << "(i)" << " " << (int)ptr->Volume << std::endl \
-	 << std::setw(20) << "MinVolume:" << std::setw(6) << "(i)" << " " << (int)ptr->MinVolume << std::endl \
+	 << std::setw(20) << "Volume:" << std::setw(6) << "(i)" << " " << ptr->Volume << std::endl \
+	 << std::setw(20) << "MinVolume:" << std::setw(6) << "(i)" << " " << ptr->MinVolume << std::endl \
 	 << std::setw(20) << "TimeCondition:" << std::setw(6) << "(t)" << " " << getLfTimeConditionType(ptr->TimeCondition) << std::endl \
 	 << std::setw(20) << "VolumeCondition:" << std::setw(6) << "(t)" << " " << getLfVolumeConditionType(ptr->VolumeCondition) << std::endl \
 	 << std::setw(20) << "OrderPriceType:" << std::setw(6) << "(t)" << " " << getLfOrderPriceTypeType(ptr->OrderPriceType) << std::endl \
@@ -283,9 +283,9 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "OrderRef:" << std::setw(6) << "(c21)" << " " << ptr->OrderRef << std::endl \
 	 << std::setw(20) << "ExchangeID:" << std::setw(6) << "(c11)" << " " << ptr->ExchangeID << std::endl \
 	 << std::setw(20) << "LimitPrice:" << std::setw(6) << "(d)" << " " << ptr->LimitPrice << std::endl \
-	 << std::setw(20) << "VolumeTraded:" << std::setw(6) << "(i)" << " " << (int)ptr->VolumeTraded << std::endl \
-	 << std::setw(20) << "VolumeTotal:" << std::setw(6) << "(i)" << " " << (int)ptr->VolumeTotal << std::endl \
-	 << std::setw(20) << "VolumeTotalOriginal:" << std::setw(6) << "(i)" << " " << (int)ptr->VolumeTotalOriginal << std::endl \
+	 << std::setw(20) << "VolumeTraded:" << std::setw(6) << "(i)" << " " << ptr->VolumeTraded << std::endl \
+	 << std::setw(20) << "VolumeTotal:" << std::setw(6) << "(i)" << " " << ptr->VolumeTotal << std::endl \
+	 << std::setw(20) << "VolumeTotalOriginal:" << std::setw(6) << "(i)" << " " << ptr->VolumeTotalOriginal << std::endl \
 	 << std::setw(20) << "TimeCondition:" << std::setw(6) << "(t)" << " " << getLfTimeConditionType(ptr->TimeCondition) << std::endl \
 	 << std::setw(20) << "VolumeCondition:" << std::setw(6) << "(t)" << " " << getLfVolumeConditionType(ptr->VolumeCondition) << std::endl \
 	 << std::setw(20) << "OrderPriceType:" << std::setw(6) << "(t)" << " " << getLfOrderPriceTypeType(ptr->OrderPriceType) << std::endl \
@@ -308,7 +308,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "ParticipantID:" << std::setw(6) << "(c11)" << " " << ptr->ParticipantID << std::endl \
 	 << std::setw(20) << "ClientID:" << std::setw(6) << "(c21)" << " " << ptr->ClientID << std::endl \
 	 << std::setw(20) << "Price:" << std::setw(6) << "(d)" << " " << ptr->Price << std::endl \
-	 << std::setw(20) << "Volume:" << std::setw(6) << "(i)" << " " << (int)ptr->Volume << std::endl \
+	 << std::setw(20) << "Volume:" << std::setw(6) << "(i)" << " " << ptr->Volume << std::endl \
 	 << std::setw(20) << "TradingDay:" << std::setw(6) << "(c13)" << " " << ptr->TradingDay << std::endl \
 	 << std::setw(20) << "TradeTime:" << std::setw(6) << "(c13)" << " " << ptr->TradeTime << std::endl \
 	 << std::setw(20) << "Direction:" << std::setw(6) << "(t)" << " " << getLfDirectionType(ptr->Direction) << std::endl \
@@ -326,7 +326,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "RequestID:" << std::setw(6) << "(i)" << " " << (int)ptr->RequestID << std::endl \
 	 << std::setw(20) << "ActionFlag:" << std::setw(6) << "(c)" << " " << ptr->ActionFlag << std::endl \
 	 << std::setw(20) << "LimitPrice:" << std::setw(6) << "(d)" << " " << ptr->LimitPrice << std::endl \
-	 << std::setw(20) << "VolumeChange:" << std::setw(6) << "(i)" << " " << (int)ptr->VolumeChange << std::endl \
+	 << std::setw(20) << "VolumeChange:" << std::setw(6) << "(i)" << " " << ptr->VolumeChange << std::endl \
 	 << std::setw(20) << "KfOrderID:" << std::setw(6) << "(i)" << " " << (int)ptr->KfOrderID << std::endl \
 	 << std::setw(20) << "MassOrderSeqId:" << std::setw(6) << "(i)" << " " << ptr->MassOrderSeqId << std::endl \
 	 << std::setw(20) << "MassOrderIndex:" << std::setw(6) << "(i)" << " " << ptr->MassOrderIndex << std::endl \

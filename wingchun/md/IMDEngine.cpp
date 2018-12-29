@@ -216,6 +216,22 @@ void IMDEngine::on_market_data(const LFMarketDataField* data)
     }
 }
 
+void IMDEngine::on_market_bar_data(const LFBarMarketDataField* data)
+{
+    if (isRunning)
+    {
+        writer->write_frame(data, sizeof(LFBarMarketDataField), source_id, MSG_TYPE_LF_BAR_MD, 1/*islast*/, -1/*invalidRid*/);
+        KF_LOG_DEBUG_FMT(logger, "%-10s [open %ld, close %ld | low %ld, high %ld] [best bid %ld, best ask %ld]",
+                         data->InstrumentID,
+                         data->Open,
+                         data->Close,
+                         data->Low,
+                         data->High,
+                         data->BestBidPrice,
+                         data->BestAskPrice);
+    }
+}
+
 void IMDEngine::on_price_book_update(const LFPriceBook20Field* data)
 {
     if (isRunning)
@@ -223,11 +239,12 @@ void IMDEngine::on_price_book_update(const LFPriceBook20Field* data)
         writer->write_frame(data, sizeof(LFPriceBook20Field), source_id, MSG_TYPE_LF_PRICE_BOOK_20, 1/*islast*/, -1/*invalidRid*/);
         KF_LOG_DEBUG_FMT(logger, "price book 20 update: %-10s %d | %d [%ld, %lu | %ld, %lu]",
                          data->InstrumentID,
-                         data->BidLevelCount, data->AskLevelCount,
-						 data->BidLevels[0].price,
-						 data->BidLevels[0].volume,
-						 data->AskLevels[0].price,
-						 data->AskLevels[0].volume);
+                         data->BidLevelCount,
+                         data->AskLevelCount,
+                         data->BidLevels[0].price,
+                         data->BidLevels[0].volume,
+                         data->AskLevels[0].price,
+                         data->AskLevels[0].volume);
     }
 }
 

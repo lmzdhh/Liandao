@@ -30,24 +30,24 @@ enum exchange_source_index : short
 
 inline const char* get_str_from_source_index(exchange_source_index source)
 {
-	switch(source)
-	{
-		case SOURCE_CTP:
-			return "ctp";
-		case SOURCE_XTP:
-			return "xtp";
-		case SOURCE_BINANCE:
-			return "binance";
-		case SOURCE_INDODAX:
-			return "indodax";
-		case SOURCE_OKEX:
-			return "okex";
-		case SOURCE_COINMEX:
-			return "coinmex";
-		case SOURCE_MOCK:
-			return "mock";
-		case SOURCE_BITMAX:
-			return "bitmax";
+    switch(source)
+    {
+        case SOURCE_CTP:
+            return "ctp";
+        case SOURCE_XTP:
+            return "xtp";
+        case SOURCE_BINANCE:
+            return "binance";
+        case SOURCE_INDODAX:
+            return "indodax";
+        case SOURCE_OKEX:
+            return "okex";
+        case SOURCE_COINMEX:
+            return "coinmex";
+        case SOURCE_MOCK:
+            return "mock";
+        case SOURCE_BITMAX:
+            return "bitmax";
         case SOURCE_BITFINEX:
             return "bitfinex";
         case SOURCE_BITMEX:
@@ -57,11 +57,11 @@ inline const char* get_str_from_source_index(exchange_source_index source)
         case SOURCE_OCEANEX:
             return "oceanex";
         case SOURCE_HUOBI:
-            return "HUOBI";
+            return "huobi";
         case SOURCE_PROBIT:
             return "probit";
-		default:
-			return "unknown";
+        default:
+            return "unknown";
 	}
 }
 
@@ -69,27 +69,27 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 {
     if(exch_str == "ctp")
     {
-         return SOURCE_CTP;
+        return SOURCE_CTP;
     }
     else if(exch_str == "xtp")
     {
-	return SOURCE_XTP;
+        return SOURCE_XTP;
     }
     else if(exch_str == "binance")
     {
-	return SOURCE_BINANCE;
+        return SOURCE_BINANCE;
     }
     else if(exch_str == "indodax")
     {
-	return SOURCE_INDODAX;
+        return SOURCE_INDODAX;
     }
     else if(exch_str == "okex")
     {
-	return SOURCE_OKEX;
+        return SOURCE_OKEX;
     }
     else if(exch_str == "coinmex")
     {
-	return SOURCE_COINMEX;
+        return SOURCE_COINMEX;
     }
     else if(exch_str == "mock")
     {
@@ -97,7 +97,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     }
     else if(exch_str == "bitmax")
     {
-	return SOURCE_BITMAX;
+        return SOURCE_BITMAX;
     }
     else if(exch_str == "bitfinex")
     {
@@ -105,7 +105,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     }
     else if(exch_str == "bitmex")
     {
-	return SOURCE_BITMEX;
+        return SOURCE_BITMEX;
     }
     else if(exch_str == "hitbtc")
     {
@@ -119,13 +119,13 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_HUOBI;
     }
-	else if(exch_str == "probit")
+    else if(exch_str == "probit")
     {
         return SOURCE_PROBIT;
     }
     else
     {
-	return SOURCE_UNKNOWN;
+        return SOURCE_UNKNOWN;
     }
 }
 
@@ -166,7 +166,7 @@ const short MSG_TYPE_LF_BAR_MD        = 110;
 const short MSG_TYPE_LF_QRY_POS       = 201;
 const short MSG_TYPE_LF_RSP_POS       = 202;
 const short MSG_TYPE_LF_ORDER         = 204;
-const short MSG_TYPE_LF_RTN_ORDER     = 205;
+const short     MSG_TYPE_LF_RTN_ORDER     = 205;
 const short MSG_TYPE_LF_RTN_TRADE     = 206;
 const short MSG_TYPE_LF_ORDER_ACTION  = 207;
 const short MSG_TYPE_LF_QRY_ACCOUNT   = 208;
@@ -259,7 +259,6 @@ const short MSG_TYPE_LF_RTN_ORDER_BITMEX = 23205;
 const short MSG_TYPE_LF_RTN_TRADE_BITMEX = 23206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITMEX = 23207;
 
-
 //HITBTC, idx=24
 const short MSG_TYPE_LF_MD_HITBTC        = 24101;
 const short MSG_TYPE_LF_QRY_POS_HITBTC   = 24201;
@@ -268,7 +267,6 @@ const short MSG_TYPE_LF_ORDER_HITBTC     = 24204;
 const short MSG_TYPE_LF_RTN_ORDER_HITBTC = 24205;
 const short MSG_TYPE_LF_RTN_TRADE_HITBTC = 24206;
 const short MSG_TYPE_LF_ORDER_ACTION_HITBTC = 24207;
-
 
 //OCEANEX, idx=25
 const short MSG_TYPE_LF_MD_OCEANEX        = 25101;
@@ -279,14 +277,23 @@ const short MSG_TYPE_LF_RTN_ORDER_OCEANEX = 25205;
 const short MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206;
 const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207;
 
-//PROBIT, idx=27
-const short MSG_TYPE_LF_MD_PROBIT        	= 27101;
-const short MSG_TYPE_LF_QRY_POS_PROBIT   	= 27201;
-const short MSG_TYPE_LF_RSP_POS_PROBIT   	= 27202;
-const short MSG_TYPE_LF_ORDER_PROBIT     	= 27204;
-const short MSG_TYPE_LF_RTN_ORDER_PROBIT 	= 27205;
-const short MSG_TYPE_LF_RTN_TRADE_PROBIT 	= 27206;
-const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 27207;
+//HUOBI, idx=26
+const short MSG_TYPE_LF_MD_HUOBI = 26101;
+const short MSG_TYPE_LF_QRY_POS_HUOBI = 26201;
+const short MSG_TYPE_LF_RSP_POS_HUOBI = 26202;
+const short MSG_TYPE_LF_ORDER_HUOBI = 26204;
+const short MSG_TYPE_LF_RTN_ORDER_HUOBI = 26205;
+const short MSG_TYPE_LF_RTN_TRADE_HUOBI = 26206;
+const short MSG_TYPE_LF_ORDER_ACTION_HUOBI = 26207;
+
+//PROBIT, idx=28
+const short MSG_TYPE_LF_MD_PROBIT        	= 28101;
+const short MSG_TYPE_LF_QRY_POS_PROBIT   	= 28201;
+const short MSG_TYPE_LF_RSP_POS_PROBIT   	= 28202;
+const short MSG_TYPE_LF_ORDER_PROBIT     	= 28204;
+const short MSG_TYPE_LF_RTN_ORDER_PROBIT 	= 28205;
+const short MSG_TYPE_LF_RTN_TRADE_PROBIT 	= 28206;
+const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 28207;
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志

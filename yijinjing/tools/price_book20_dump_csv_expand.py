@@ -60,7 +60,7 @@ def expand_level20_price_volume(df, collapseFieldName, newFieldName):
     # 会额外多出一个20的列，需要删掉
     df.drop([20], axis=1, inplace=True)
     for i in range(0, 20, 1):
-        columns_bid_price_volumes = {0: newFieldName + "_price_%s" % (str(i)), 1: newFieldName + "_volume_%s" % (str(i))}
+        columns_bid_price_volumes = {0: newFieldName + "_volume_%s" % (str(i)), 1: newFieldName + "_price_%s" % (str(i))}
         # print(columns_bid_price_volumes)
         df = pd.merge(df, df[newFieldName + "_%s" % (str(i))].str.split('@', n=-1, expand=True).rename(columns=columns_bid_price_volumes), left_index=True, right_index=True, how='left')
         df.drop([newFieldName + "_%s" % (str(i))], axis=1, inplace=True)

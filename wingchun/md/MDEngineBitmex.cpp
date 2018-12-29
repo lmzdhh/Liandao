@@ -51,11 +51,11 @@ static int eventCallback(struct lws* conn, enum lws_callback_reasons reason, voi
         }
         case LWS_CALLBACK_CLOSED:
         {
-	    std::cout << "received signal LWS_CALLBACK_CLOSED" << std::endl;
+            std::cout << "received signal LWS_CALLBACK_CLOSED" << std::endl;
             break;
-	}
+        }
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-	{
+        {
             std::cout << "received signal LWS_CALLBACK_CLIENT_CONNECTION_ERROR" << std::endl;
             if(md_instance)
             {
@@ -78,7 +78,7 @@ static struct lws_protocols protocols[] =
         "example_protocol",
         eventCallback,
         0,
-	65536,
+        65536,
     },
     {NULL, NULL, 0, 0} /* terminator */
 };
@@ -131,12 +131,12 @@ void MDEngineBitmex::login(long timeout_nsec)
 
     int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
     lws_set_log_level(logs, NULL);
-    
+
     KF_LOG_INFO(logger, "creating lws context");
-    
+
     struct lws_context_creation_info creation_info;
     memset(&creation_info, 0, sizeof(creation_info));
-    
+
     creation_info.port                     = CONTEXT_PORT_NO_LISTEN;
     creation_info.protocols                = protocols;
     creation_info.iface                    = NULL;
@@ -156,7 +156,7 @@ void MDEngineBitmex::login(long timeout_nsec)
     context = lws_create_context(&creation_info);
 
     KF_LOG_INFO(logger, "lws context created");
-    
+
     KF_LOG_INFO(logger, "creating initial lws connection");
 
     struct lws_client_connect_info connect_info = {0};
@@ -172,7 +172,7 @@ void MDEngineBitmex::login(long timeout_nsec)
     connect_info.origin         = host.c_str();
     connect_info.protocol       = protocols[0].name;
     connect_info.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-    
+
     struct lws* conn = lws_client_connect_via_info(&connect_info);
     
     KF_LOG_INFO(logger, "connecting to " << connect_info.host << ":" << connect_info.port << ":" << connect_info.path);
@@ -180,6 +180,7 @@ void MDEngineBitmex::login(long timeout_nsec)
     if(!conn)
     {
         KF_LOG_INFO(logger, "error creating initial lws connection");
+        return;
     }
 
     KF_LOG_INFO(logger, "done initiating and creating initial lws connection");
@@ -224,6 +225,20 @@ std::string MDEngineBitmex::createOrderbookJsonString(std::string symbol)
     return buffer.GetString();
 }
 
+std::string MDEngineBitmex::createQuoteBinsJsonString(std::string symbol)
+{
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("op");
+    writer.String("subscribe");
+    writer.Key("args");
+    std::string str = "quoteBin1m:" + symbol;
+    writer.String(str.c_str());
+    writer.EndObject();
+    return buffer.GetString();
+}
+
 std::string MDEngineBitmex::createTradeJsonString(std::string symbol)
 {
     rapidjson::StringBuffer buffer;
@@ -238,6 +253,20 @@ std::string MDEngineBitmex::createTradeJsonString(std::string symbol)
     return buffer.GetString();
 }
 
+std::string MDEngineBitmex::createTradeBinsJsonString(std::string symbol)
+{
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("op");
+    writer.String("subscribe");
+    writer.Key("args");
+    std::string str = "tradeBin1m:" + symbol;
+    writer.String(str.c_str());
+    writer.EndObject();
+    return buffer.GetString();
+}
+
 void MDEngineBitmex::createSubscribeJsonStrings()
 {
     std::unordered_map<std::string, std::string>::iterator iter = whiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
@@ -246,6 +275,7 @@ void MDEngineBitmex::createSubscribeJsonStrings()
         KF_LOG_DEBUG(logger, "creating subscribe json string for strategy symbol " << iter->first << ", market symbol " << iter->second);
         subscribeJsonStrings.push_back(createOrderbookJsonString(iter->second));
         subscribeJsonStrings.push_back(createTradeJsonString(iter->second));
+        subscribeJsonStrings.push_back(createTradeBinsJsonString(iter->second));
     }
 }
 
@@ -253,7 +283,7 @@ void MDEngineBitmex::debugPrint(std::vector<std::string> &jsons)
 {
     KF_LOG_INFO(logger, "printing out all subscribe json strings");
 
-    for (size_t count = 0; count < jsons.size(); count++)
+    for(size_t count = 0; count < jsons.size(); count++)
     {
         KF_LOG_INFO(logger, "json string: " << jsons[count]);
     }
@@ -261,17 +291,9 @@ void MDEngineBitmex::debugPrint(std::vector<std::string> &jsons)
 
 void MDEngineBitmex::subscribeChannel(struct lws* conn)
 {
-    KF_LOG_INFO(logger, "subscribe to channel #" << num_subscribed);
-
-    if(subscribeJsonStrings.size() == 0)
+    if(num_subscribed >= subscribeJsonStrings.size())
     {
-        KF_LOG_INFO(logger, "there is no channel to subscribe to");
         return;
-    }
-    else if(num_subscribed >= subscribeJsonStrings.size())
-    {
-        KF_LOG_INFO(logger, "no more channel to subscribe to");
-	return;
     }
 
     unsigned char message[512];
@@ -281,8 +303,6 @@ void MDEngineBitmex::subscribeChannel(struct lws* conn)
     int length = json.length();
     strncpy((char *)message + LWS_PRE, json.c_str(), length);
 
-    KF_LOG_INFO(logger, "subscribing to " << json);
-    
     lws_write(conn, &message[LWS_PRE], length, LWS_WRITE_TEXT);
 
     KF_LOG_INFO(logger, "subscribed to " << json);
@@ -291,6 +311,10 @@ void MDEngineBitmex::subscribeChannel(struct lws* conn)
     {
         lws_callback_on_writable(conn);
         KF_LOG_INFO(logger, "there are more channels to subscribe to");
+    }
+    else
+    {
+        KF_LOG_INFO(logger, "there are no more channels to subscribe to");
     }
 }
 
@@ -311,7 +335,7 @@ void MDEngineBitmex::handleConnectionError(struct lws* conn)
 
     logged_in = false;
     num_subscribed = 0;
-    
+
     priceBook.clearPriceBook();
     id_to_price.clear();
     received_partial.clear();
@@ -331,13 +355,22 @@ void MDEngineBitmex::processData(struct lws* conn, const char* data, size_t len)
     {
         if(strcmp(json["table"].GetString(), "orderBookL2_25") == 0)
         {
-	    KF_LOG_INFO(logger, "received data is orderBook");
+            KF_LOG_INFO(logger, "received data is orderBook");
             processOrderbookData(json);
+        }
+        else if(strcmp(json["table"].GetString(), "quoteBin1m") == 0)
+        {
+            KF_LOG_INFO(logger, "received data is 1-minute quote bins");
         }
         else if(strcmp(json["table"].GetString(), "trade") == 0)
         {
-	    KF_LOG_INFO(logger, "received data is trade");
+            KF_LOG_INFO(logger, "received data is live trade");
             processTradingData(json);
+        }
+        else if(strcmp(json["table"].GetString(), "tradeBin1m") == 0)
+        {
+            KF_LOG_INFO(logger, "received data is 1-minute trade bins");
+            processTradeBinsData(json);
         }
         else
         {
@@ -352,10 +385,10 @@ void MDEngineBitmex::processOrderbookData(Document& json)
 
     if(!json.HasMember("data") || !json["data"].IsArray() || json["data"].Size() == 0)
     {
-	KF_LOG_INFO(logger, "received orderbook does not have valid data");
-	return;
+        KF_LOG_INFO(logger, "received orderbook does not have valid data");
+        return;
     }
-    
+
     std::string symbol = json["data"].GetArray()[0]["symbol"].GetString();
     std::string ticker = whiteList.GetKeyByValue(symbol);
     if(ticker.empty())
@@ -391,7 +424,7 @@ void MDEngineBitmex::processOrderbookData(Document& json)
                 priceBook.UpdateBidPrice(ticker, price, size);
             }
             else
-     	    {
+            {
                 KF_LOG_INFO(logger, "new ask: price " << price << " and amount " << size);
                 priceBook.UpdateAskPrice(ticker, price, size);
             }
@@ -406,77 +439,77 @@ void MDEngineBitmex::processOrderbookData(Document& json)
     }
     else if(action == "update")
     {
-	auto& data = json["data"];
-	for(int count = 0; count < data.Size(); count++)
+        auto& data = json["data"];
+        for(int count = 0; count < data.Size(); count++)
         {
-	    auto& update = data.GetArray()[count];
+            auto& update = data.GetArray()[count];
             // each update table data row contains symbol, id, side, and size field
-	    // price is looked up using id
+            // price is looked up using id
             uint64_t id = update["id"].GetUint64();
-	    std::string side = update["side"].GetString();
-	    uint64_t size = std::round(update["size"].GetUint64() * scale_offset);
-	    int64_t price = id_to_price[id];
+            std::string side = update["side"].GetString();
+            uint64_t size = std::round(update["size"].GetUint64() * scale_offset);
+            int64_t price = id_to_price[id];
 
             if(side == "Buy")
-	    {
-	        KF_LOG_INFO(logger, "updated bid: price " << price << " and amount " << size);
-	        priceBook.UpdateBidPrice(ticker, price, size);
-	    }
+            {
+                KF_LOG_INFO(logger, "updated bid: price " << price << " and amount " << size);
+                priceBook.UpdateBidPrice(ticker, price, size);
+            }
             else
-	    {
-		KF_LOG_INFO(logger, "updated ask: price " << price << " and amount " << size);
-		priceBook.UpdateAskPrice(ticker, price, size);
+            {
+                KF_LOG_INFO(logger, "updated ask: price " << price << " and amount " << size);
+                priceBook.UpdateAskPrice(ticker, price, size);
             }
         }
     }
     else if(action == "insert")
     {
-	auto& data = json["data"];
-	for(int count = 0; count < data.Size(); count++)
-	{
-	    auto& update = data.GetArray()[count];
+        auto& data = json["data"];
+        for(int count = 0; count < data.Size(); count++)
+        {
+            auto& update = data.GetArray()[count];
             // each insert table data row contains symbol, id, side, size, and price field
-	    uint64_t id = update["id"].GetUint64();
-	    std::string side = update["side"].GetString();
-	    uint64_t size = std::round(update["size"].GetUint64() * scale_offset);
-	    int64_t price = std::round(update["price"].GetFloat() * scale_offset);
-	    // save id/price pair for future update/delete lookup
-	    id_to_price[id] = price;
+            uint64_t id = update["id"].GetUint64();
+            std::string side = update["side"].GetString();
+            uint64_t size = std::round(update["size"].GetUint64() * scale_offset);
+            int64_t price = std::round(update["price"].GetFloat() * scale_offset);
+            // save id/price pair for future update/delete lookup
+            id_to_price[id] = price;
 
-	    if(side == "Buy")
-	    {
-	        KF_LOG_INFO(logger, "new bid: price " << price << " and amount " << size);
-	        priceBook.UpdateBidPrice(ticker, price, size);
-	    }
-	    else
-	    {
-                KF_LOG_INFO(logger, "new ask: price " << price << " and amount " << size);
-		priceBook.UpdateAskPrice(ticker, price, size);
+            if(side == "Buy")
+            {
+                KF_LOG_INFO(logger, "new bid: price " << price << " and amount " << size);
+                priceBook.UpdateBidPrice(ticker, price, size);
             }
-	}
+            else
+            {
+                KF_LOG_INFO(logger, "new ask: price " << price << " and amount " << size);
+                priceBook.UpdateAskPrice(ticker, price, size);
+            }
+        }
     }
     else if(action == "delete")
     {
-	auto& data = json["data"];
-	for(int count = 0; count < data.Size(); count++)
-	{
-	    auto& update = data.GetArray()[count];
-	    // each delete table data row contains symbol, id, and side field
-	    // price is looked up using id
-	    uint64_t id = update["id"].GetUint64();
-	    std::string side = update["side"].GetString();
-	    int64_t price = id_to_price[id];
-	    id_to_price.erase(id);
+        auto& data = json["data"];
+        for(int count = 0; count < data.Size(); count++)
+        {
+            auto& update = data.GetArray()[count];
+            // each delete table data row contains symbol, id, and side field
+            // price is looked up using id
+            uint64_t id = update["id"].GetUint64();
+            std::string side = update["side"].GetString();
+            int64_t price = id_to_price[id];
+            id_to_price.erase(id);
 
-	    if(side == "Buy")
-	    {
-		KF_LOG_INFO(logger, "deleted bid: price " << price);
-		priceBook.EraseBidPrice(ticker, price);
-	    }
+            if(side == "Buy")
+            {
+                KF_LOG_INFO(logger, "deleted bid: price " << price);
+                priceBook.EraseBidPrice(ticker, price);
+            }
             else
-	    {
-	        KF_LOG_INFO(logger, "deleted ask: price " << price);
-	        priceBook.EraseAskPrice(ticker, price);
+            {
+                KF_LOG_INFO(logger, "deleted ask: price " << price);
+                priceBook.EraseAskPrice(ticker, price);
             }
         }
     }
@@ -495,41 +528,99 @@ void MDEngineBitmex::processTradingData(Document& json)
 {
     KF_LOG_INFO(logger, "processing trade data");
 
-    if(json.HasMember("data"))
+    if(!json.HasMember("data") || !json["data"].IsArray() || json["data"].Size() == 0)
     {
-        auto& data = json["data"];
-        if(data.IsArray() && data.Size() > 0)
-        {
-            for(int count = 0; count < data.Size(); count++)
-            {
-                auto& update = data.GetArray()[count];
-                std::string symbol = update["symbol"].GetString();
-                std::string ticker = whiteList.GetKeyByValue(symbol);
-                if(ticker.empty())
-                {
-                    KF_LOG_INFO(logger, "received trade symbol not in white list");
-                    continue;
-                }
-                KF_LOG_INFO(logger, "symbol is " << symbol << " and ticker is " << ticker);
+        KF_LOG_INFO(logger, "received trade does not have valid data");
+        return;
+    }
 
-                LFL2TradeField trade;
-                memset(&trade, 0, sizeof(trade));
-                strcpy(trade.InstrumentID, ticker.c_str());
-                strcpy(trade.ExchangeID, "bitmex");
+    auto& data = json["data"];
+    std::string symbol = data.GetArray()[0]["symbol"].GetString();
+    std::string ticker = whiteList.GetKeyByValue(symbol);
+    if(ticker.empty())
+    {
+        KF_LOG_INFO(logger, "received trade symbol not in white list");
+        return;
+    }
+    KF_LOG_INFO(logger, "received trade symbol is " << symbol << " and ticker is " << ticker);
 
-                int64_t price = std::round(update["price"].GetFloat() * scale_offset);
-                uint64_t amount = std::round(update["size"].GetUint64() * scale_offset);
-                std::string side = update["side"].GetString();
+    for(int count = 0; count < data.Size(); count++)
+    {
+        auto& update = data.GetArray()[count];
 
-                trade.Price = price;
-                trade.Volume = amount;
-                trade.OrderBSFlag[0] = side == "Buy" ? 'B' : 'S';
+        LFL2TradeField trade;
+        memset(&trade, 0, sizeof(trade));
+        strcpy(trade.InstrumentID, ticker.c_str());
+        strcpy(trade.ExchangeID, "bitmex");
 
-                KF_LOG_INFO(logger, "ticker " << ticker << " traded at price " << trade.Price << " with volume " << trade.Volume << " as a " << side);
+        int64_t price = std::round(update["price"].GetFloat() * scale_offset);
+        uint64_t amount = std::round(update["size"].GetUint64() * scale_offset);
+        std::string side = update["side"].GetString();
 
-                on_trade(&trade);
-            }
-        }
+        trade.Price = price;
+        trade.Volume = amount;
+        trade.OrderBSFlag[0] = side == "Buy" ? 'B' : 'S';
+
+        KF_LOG_INFO(logger, "ticker " << ticker << " traded at price " << trade.Price << " with volume " << trade.Volume << " as a " << side);
+
+        on_trade(&trade);
+    }
+}
+
+void MDEngineBitmex::processTradeBinsData(Document& json)
+{
+    KF_LOG_INFO(logger, "processing 1-min trade bins data");
+
+    if(!json.HasMember("data") || !json["data"].IsArray() || json["data"].Size() == 0)
+    {
+        KF_LOG_INFO(logger, "received 1-min trade bin does not have valid data");
+        return;
+    }
+
+    auto& data = json["data"];
+    std::string symbol = data.GetArray()[0]["symbol"].GetString();
+    std::string ticker = whiteList.GetKeyByValue(symbol);
+    if(ticker.empty())
+    {
+        KF_LOG_INFO(logger, "received 1-min trade bin symbol not in white list");
+        return;
+    }
+    KF_LOG_INFO(logger, "received 1-min trade bin symbol is " << symbol << " and ticker is " << ticker);
+
+    for(int count = 0; count < data.Size(); count++)
+    {
+        auto& update = data.GetArray()[count];
+        std::string timestamp = update["timestamp"].GetString();
+
+        LFBarMarketDataField market;
+        memset(&market, 0, sizeof(market));
+        strcpy(market.InstrumentID, ticker.c_str());
+        strcpy(market.ExchangeID, "bitmex");
+
+        struct tm cur_tm, start_tm, end_tm;
+        time_t now = time(0);
+        cur_tm = *localtime(&now);
+        strftime(market.TradingDay, 9, "%Y%m%d", &cur_tm);
+	
+        start_tm = cur_tm;
+        start_tm.tm_min -= 1;
+        market.StartUpdateMillisec = kungfu::yijinjing::parseTm(start_tm) / 1000000;
+        strftime(market.StartUpdateTime, 13, "%H:%M:%S", &start_tm);
+
+        end_tm = cur_tm;
+        market.EndUpdateMillisec = kungfu::yijinjing::parseTm(end_tm) / 1000000;
+        strftime(market.EndUpdateTime, 13, "%H:%M:%S", &end_tm);
+
+        market.PeriodMillisec = 60000;
+        market.Open = std::round(update["open"].GetFloat() * scale_offset);;
+        market.Close = std::round(update["close"].GetFloat() * scale_offset);;
+        market.Low = std::round(update["low"].GetFloat() * scale_offset);;
+        market.High = std::round(update["high"].GetFloat() * scale_offset);;
+        market.BestBidPrice = priceBook.GetBestBidPrice(ticker);
+        market.BestAskPrice = priceBook.GetBestAskPrice(ticker);
+        market.Volume = std::round(update["volume"].GetUint64() * scale_offset);;
+
+        on_market_bar_data(&market);
     }
 }
 

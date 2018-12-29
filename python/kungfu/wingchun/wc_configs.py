@@ -170,6 +170,11 @@ override_methods = [
                         ('source', 'int', SOURCE_COMMENT),
                         ('rcv_time', 'long', 'time of tick received.')]),
      'callback when tick data received', False),
+    ('on_bar_data', (None, [('context', 'context object', CONTEXT_COMMENT),
+                        ('bar_data', 'LFBarMarketDataField', 'bar data'),
+                        ('source', 'int', SOURCE_COMMENT),
+                        ('rcv_time', 'long', 'time of tick received.')]),
+     'callback when tick data received', False),
     ('on_pos', (None, [('context', 'context object', CONTEXT_COMMENT),
                        ('pos_handler', 'PosHandler', 'class of position getting and setting'),
                        ('request_id', 'int', 'request_id of req_pos, -1 if is initial callback when login td'),
@@ -335,6 +340,8 @@ wingchun_constants = [
                        ('HITBTC', 24, ''),
                        ('OCEANEX', 25, ''),
                        ('PROBIT', 27, '')
+                       ('HUOBI', 26, ''),
+                       ('PROBIT', 28, '')
                        ],
      'source index'),
     ('DIRECTION', 'char', [('Buy', '0', '买'),
