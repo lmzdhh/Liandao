@@ -49,7 +49,7 @@ int g_RequestGap=5*60;
 
 static TDEngineDaybit* global_td = nullptr;
 std::mutex g_reqMutex;
-std::mutex unit_mutex;
+std::recursive_mutex unit_mutex;
 
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
@@ -673,7 +673,7 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
     int count = 0;
     while(count < unit.maxRetryCount)
     {
-        std::unique_lock<std::mutex> lck(unit_mutex);
+        std::unique_lock<std::recursive_mutex> lck(unit_mutex);
         for(auto& order : unit.ordersMap)
         {
             if(strcmp(order.second.OrderRef,data->OrderRef) == 0)
@@ -719,7 +719,7 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
 void TDEngineDaybit::addNewOrder(AccountUnitDaybit& unit, const LfOrderStatusType OrderStatus,int64_t ref,OrderInsertInfo data)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
-    std::unique_lock<std::mutex> lck(unit_mutex);
+    std::unique_lock<std::recursive_mutex> lck(unit_mutex);
     KF_LOG_INFO(logger, "[addNewOrder]");
 	LFRtnOrderField order;
     memset(&order, 0, sizeof(LFRtnOrderField));
@@ -847,7 +847,7 @@ void TDEngineDaybit::cancel_order(AccountUnitDaybit& unit, OrderActionInfo& data
     KF_LOG_INFO(logger, "[cancel_order] (joinref) " << unit.mapSubscribeRef[TOPIC_API] << " (ref)" << getRef() << "(msg) " << req);	
     lck.unlock();  
 
-    std::unique_lock<std::mutex> lck_sec(unit_mutex);
+    std::unique_lock<std::recursive_mutex> lck_sec(unit_mutex);
     data.retryCount++;
     unit.ordersLocalActionMap.insert(std::make_pair(getRef(),data));
     lws_callback_on_writable(unit.websocketConn);
@@ -1086,7 +1086,7 @@ void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& response)
 {
     KF_LOG_INFO(logger, "TDEngineDaybit::onRtnOrder");
     AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(websocketConn);
-    std::lock_guard<std::mutex> lck(unit_mutex);
+    std::lock_guard<std::recursive_mutex> lck(unit_mutex);
     if(response.IsArray())
     {
 		for (SizeType index = 0; index < response.Size(); ++index)
@@ -1165,7 +1165,7 @@ void TDEngineDaybit::onRspOrder(struct lws* conn, Value& rsp,int64_t ref)
 {
 	KF_LOG_INFO(logger, "TDEngineDaybit::onRspOrder");
     AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(conn);
-	std::lock_guard<std::mutex> lck(unit_mutex);
+	std::lock_guard<std::recursive_mutex> lck(unit_mutex);
     
     auto it = unit.ordersLocalMap.find(ref);
     if(it == unit.ordersLocalMap.end())
@@ -1193,7 +1193,7 @@ void TDEngineDaybit::onRspError(struct lws * conn, std::string errorMsg,int64_t 
 {
     KF_LOG_INFO(logger, "TDEngineDaybit::onRspError");
     AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(conn);
-	std::lock_guard<std::mutex> lck(unit_mutex);
+	std::lock_guard<std::recursive_mutex> lck(unit_mutex);
     
     auto it = unit.ordersLocalMap.find(ref);
     if(it == unit.ordersLocalMap.end())
@@ -1207,7 +1207,7 @@ void TDEngineDaybit::onRspError(struct lws * conn, std::string errorMsg,int64_t 
         { 
             auto data = it_cancel->second;
             unit.ordersLocalActionMap.erase(it_cancel);   
-            if(data.retryCount < unit.maxRetryCount)
+            if(data.retryCount < unit.maxRetryCount && errorMsg != "order_already_closed")
             {
                  KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError retry_order_cancel");   
                  cancel_order(unit,data);
@@ -1243,7 +1243,7 @@ void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
 { 
 	KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnTrade");
 	AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(websocketConn);
-	std::lock_guard<std::mutex> lck(unit_mutex);
+	std::lock_guard<std::recursive_mutex> lck(unit_mutex);
     if(response.IsArray())
     {
 		for (SizeType index = 0; index < response.Size(); ++index)
