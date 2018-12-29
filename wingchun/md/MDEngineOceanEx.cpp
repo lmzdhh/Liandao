@@ -135,6 +135,7 @@ void MDEngineOceanEx::writeErrorLog(std::string strError)
 
 void MDEngineOceanEx::load(const json& j_config)
 {
+
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineOceanEx:: rest_get_interval_ms: " << rest_get_interval_ms);
     book_depth_count = j_config["book_depth_count"].get<int>();
@@ -226,6 +227,14 @@ void MDEngineOceanEx::readWhiteLists(const json& j_config)
 
 				}
                 */
+                    std::string strategy_coinpair = it.key();
+				    std::string exchange_coinpair = it.value();
+				    KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
+				    keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
+                    SubscribeCoinBaseQuote baseQuote;
+				    split(it.key(), "_", baseQuote);
+                    subscribeCoinBaseQuote.push_back(baseQuote);
+                    KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
                     std::string strMarketSub = makeMarketSub(it.value(),book_depth_count);
                     websocketSubscribeJsonString.push_back(std::move(strMarketSub));
                     KF_LOG_INFO(logger, "[MDEngineOceanEx::readWhiteLists] makeMarketSub: " << strMarketSub);
@@ -252,10 +261,22 @@ void MDEngineOceanEx::split(std::string str, std::string token, SubscribeCoinBas
 	}
 }
 
+std::string MDEngineOceanEx::getLiandaoCoin(const std::string& strExchangeCoin)
+{
+    for(size_t nPos = 0;nPos < subscribeCoinBaseQuote.size();++nPos)
+    {
+        auto& BaseQuote = subscribeCoinBaseQuote[nPos]; 
+        if(strExchangeCoin == BaseQuote.base + BaseQuote.quote)
+        {
+            return BaseQuote.base + "_" + BaseQuote.quote;
+        }
+    }
+}
+
 std::string MDEngineOceanEx::getWhiteListCoinpairFrom(std::string md_coinpair)
 {
-    std::string ticker = md_coinpair;
-    std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
+    std::string& ticker = md_coinpair;
+    //std::transform(ticker.begin(), ticker.end(), ticker.begin(), ::toupper);
 
     KF_LOG_INFO(logger, "[getWhiteListCoinpairFrom] find md_coinpair (md_coinpair) " << md_coinpair << " (toupper(ticker)) " << ticker);
     std::map<std::string, std::string>::iterator map_itr;
@@ -587,6 +608,7 @@ void MDEngineOceanEx::onFills(Document& json)
         auto& arrayTrades = jsonData["trades"];
         std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
         strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
+        strInstrumentID = getWhiteListCoinpairFrom(strInstrumentID);
         for(int i = 0 ; i < len; i++) {
             LFL2TradeField trade;
             memset(&trade, 0, sizeof(trade));
@@ -724,6 +746,7 @@ void MDEngineOceanEx::onDepth(Document& json)
     
     std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
     strInstrumentID = strInstrumentID.substr(0,ticker.find_first_of('-'));
+    strInstrumentID = getWhiteListCoinpairFrom(strInstrumentID);
     strcpy(md.InstrumentID, strInstrumentID.c_str());
     strcpy(md.ExchangeID, "oceanex");
 

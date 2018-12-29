@@ -12,7 +12,6 @@ WC_NAMESPACE_START
 
 using rapidjson::Document;
 
-
 struct PriceAndVolume
 {
     int64_t price;
@@ -114,6 +113,7 @@ private:
     std::string getWhiteListCoinpairFrom(std::string md_coinpair);
     bool shouldUpdateData(const LFPriceBook20Field& md);
     void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
+    std::string getLiandaoCoin(const std::string& strExchangeCoin);
     void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
     void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
     void debug_print(std::vector<std::string> &subJsonString);
