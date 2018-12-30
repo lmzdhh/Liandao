@@ -850,6 +850,7 @@ void TDEngineDaybit::cancel_order(AccountUnitDaybit& unit, OrderActionInfo& data
     std::unique_lock<std::recursive_mutex> lck_sec(unit_mutex);
     data.retryCount++;
     unit.ordersLocalActionMap.insert(std::make_pair(getRef(),data));
+    lck_sec.unlock();
     lws_callback_on_writable(unit.websocketConn);
     
 }
