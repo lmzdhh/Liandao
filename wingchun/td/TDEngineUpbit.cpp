@@ -1185,7 +1185,7 @@ std::vector<std::string> TDEngineUpbit::split(std::string str, std::string token
     return result;
 }
 
-std::int31_t TDEngineUpbit::send_order(AccountUnitUpbit& unit, const char *symbol,
+int32_t TDEngineUpbit::send_order(AccountUnitUpbit& unit, const char *symbol,
                 const char *side,
                 const char *type,
                 const char *timeInForce,
@@ -1303,7 +1303,7 @@ std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *origCl
 
     queryString.append( "uuid=" );
     queryString.append( origClientOrderId );
-    queryString getEncode(queryString);
+    queryString  = getEncode(queryString);
     string url = requestPath + queryString;
     std::string strAuthorization = getAuthorization(unit,queryString);
     const auto response = Get(Url{url},
@@ -1586,7 +1586,7 @@ void TDEngineUpbit::getChanceResponce(const AccountUnitUpbit& unit, const std::s
     d.Parse(response.text.c_str());
 }
 
-bool TDEngineUpbit::loadMarketsInfo(const AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets)
+bool TDEngineUpbit::loadMarketsInfo(AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets)
 {
     for(auto& strMarket : vstrMarkets)
     {

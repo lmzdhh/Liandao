@@ -26,7 +26,7 @@ WC_NAMESPACE_START
 struct PendingUpbitOrderStatus
 {
     char_31 InstrumentID;   //合约代码
-    char_21  ;       //报单引用
+    char_21  OrderRef;       //报单引用
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
 };
@@ -172,7 +172,7 @@ private:
     void getChanceResponce(const AccountUnitUpbit& unit, const std::string& strMarket,Document& d);
     std::int32_t getAccountResponce(const AccountUnitUpbit& unit,Document& d);
     void getAllMarkets(std::vector<std::string>& vstrMarkets);
-    bool loadMarketsInfo(const AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets);
+    bool loadMarketsInfo(AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets);
     std::string getEncode(const std::string& str);
     std::string getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery = std::string());
     void get_exchange_time(AccountUnitUpbit& unit, Document &doc);
