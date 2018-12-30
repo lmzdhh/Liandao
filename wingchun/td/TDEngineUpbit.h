@@ -26,7 +26,7 @@ WC_NAMESPACE_START
 struct PendingUpbitOrderStatus
 {
     char_31 InstrumentID;   //合约代码
-    char_21 OrderRef;       //报单引用
+    char_21  ;       //报单引用
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
 };

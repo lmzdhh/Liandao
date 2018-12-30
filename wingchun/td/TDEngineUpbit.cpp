@@ -907,7 +907,7 @@ void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
             strncpy(strOrderRef, orderResult["uuid"].GetString(), 21);      
             for(auto it = unit.pendingOrderStatus.begin();it!= unit.pendingOrderStatus.end();++it)
             {
-                if(strcmp(it->orderRef,strOrderRef) == 0)
+                if(strcmp(it->OrderRef,strOrderRef) == 0)
                 {
                     orderStatusIterator = it;
                     break;
@@ -1045,6 +1045,7 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
 
         for(int i = 0 ; i < len; i++)
         {
+             std::string newtradeId = resultTrade["trades"].GetArray()[i]["uuid"].GetString();
             if(! isExistSymbolInPendingUpbitOrderStatus(unit, tradeStatusIterator->InstrumentID, rtn_trade.OrderRef)) {
                 //all the OnRtnOrder is finished.
                 if(removeUpbitOrderIdFromPendingOnRtnTrades(unit, newtradeId))
@@ -1061,7 +1062,7 @@ bool TDEngineUpbit::removeUpbitOrderIdFromPendingOnRtnTrades(AccountUnitUpbit& u
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
     for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); )
     {
-        if(tradeIterator->UpbitOrderId == UpbitOrderId)
+        if(tradeIterator->OrderRef == UpbitOrderId)
         {
             tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
             removedOne = true;
@@ -1097,7 +1098,7 @@ void TDEngineUpbit::addNewQueryOrdersAndTrades(AccountUnitUpbit& unit, const cha
     unit.newOrderStatus.push_back(status);
 
     OnRtnOrderDoneAndWaitingOnRtnTrade waitingTrade;
-    strncpy(waitingTrade.OrderRef, OrderRef, 21);
+    waitingTrade.OrderRef = OrderRef;
     //waitingTrade.UpbitOrderId = UpbitOrderId;
     waitingTrade.Direction = Direction;
     unit.newOnRtnTrades.push_back(waitingTrade);
@@ -1108,7 +1109,7 @@ void TDEngineUpbit::addNewQueryOrdersAndTrades(AccountUnitUpbit& unit, const cha
         PendingUpbitTradeStatus tradeStatus;
         memset(&tradeStatus, 0, sizeof(PendingUpbitTradeStatus));
         strncpy(tradeStatus.InstrumentID, InstrumentID, 31);
-        tradeStatus.last_trade_id = 0;
+        tradeStatus.last_trade_id = "";
         unit.newTradeStatus.push_back(tradeStatus);
     }
 }
@@ -1184,7 +1185,7 @@ std::vector<std::string> TDEngineUpbit::split(std::string str, std::string token
     return result;
 }
 
-std::int31_2 TDEngineUpbit::send_order(AccountUnitUpbit& unit, const char *symbol,
+std::int31_t TDEngineUpbit::send_order(AccountUnitUpbit& unit, const char *symbol,
                 const char *side,
                 const char *type,
                 const char *timeInForce,
@@ -1290,7 +1291,7 @@ bool TDEngineUpbit::shouldRetry(int http_status_code, std::string errorMsg, std:
 }
 
 
-vostd::int32_t id TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *origClientOrderId, Document& json)
+std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *origClientOrderId, Document& json)
 {
     KF_LOG_INFO(logger, "[get_order]");
     long recvWindow = 5000;
@@ -1336,7 +1337,7 @@ std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *sy
         queryString.append( "symbol=" );
         queryString.append( origClientOrderId );
         queryString = getEncode(queryString);
-        std::string strAuthorization = getAuthorization(uni,strQueryString);
+        std::string strAuthorization = getAuthorization(unit,queryString);
         string url = requestPath + queryString;
 
         response = Delete(Url{url},
@@ -1542,7 +1543,7 @@ void TDEngineUpbit::getAllMarkets(std::vector<std::string>& vstrMarkets)
 
 std::string TDEngineUpbit::getEncode(const std::string& str)
 {
-   return  base64_encode((unsigned char const*)queryString.c_str(),queryString.size());
+   return  base64_encode((unsigned char const*)str.c_str(),str.size());
 }
 
 std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery)
@@ -1556,9 +1557,9 @@ std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const s
          {    
             ssPayLoad << "{access_key: " << unit.api_key <<  ",noce: " << getTimestampString()<< ",query: " << strQuery << "}";
          }
-         std::string strJWT = jwt_create(ssPayLoad.str(),unit.secret_key);
+         std::string strJWT = utils::crypto::jwt_create(ssPayLoad.str(),unit.secret_key);
         std::string strAuthorization = "Bearer ";
-        Authorization += strJWT;
+        strAuthorization += strJWT;
 
         return strAuthorization;
 }
@@ -1601,7 +1602,7 @@ bool TDEngineUpbit::loadMarketsInfo(const AccountUnitUpbit& unit, const std::vec
         std::map<std::string, SendOrderFilter>::iterator it;
         if(doc.HasMember("market") && doc.HasMember("id"))
         {
-            std::string strMarket = doc["market"]["id"].GetString();
+            //std::string strMarket = doc["market"]["id"].GetString();
             it = unit.sendOrderFilters.insert(std::make_pair(strMarket,SendOrderFilter())).first;
             if(doc.HasMember("bid") && doc["bid"].HasMember("currency") && doc["bid"].HasMember("min_total"))
             {
