@@ -24,6 +24,7 @@ enum exchange_source_index : short
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
+    SOURCE_OCEANEX2 = 27,
     SOURCE_PROBIT = 28,
     SOURCE_UNKNOWN
 };
@@ -58,6 +59,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "oceanex";
         case SOURCE_HUOBI:
             return "huobi";
+        case SOURCE_OCEANEX2:
+            return "oceanex2";
         case SOURCE_PROBIT:
             return "probit";
         default:
@@ -119,6 +122,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_HUOBI;
     }
+    else if(exch_str == "oceanex2")
+    {
+        return SOURCE_OCEANEX2;
+    }
     else if(exch_str == "probit")
     {
         return SOURCE_PROBIT;
@@ -137,6 +144,8 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_DCE "DCE" //大连商品交易所
 #define EXCHANGE_CZCE "CZCE" //郑州商品交易所
 #define EXCHANGE_BINANCE "BINANCE"
+#define EXCHANGE_INDODAX "INDODAX"
+#define EXCHANGE_OKEX "OKEX"
 #define EXCHANGE_COINMEX "COINMEX"
 #define EXCHANGE_MOCK "MOCK"
 #define EXCHANGE_BITMAX "BITMAX"
@@ -144,6 +153,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_BITMEX "BITMEX"
 #define EXCHANGE_HITBTC "HITBTC"
 #define EXCHANGE_OCEANEX "OCEANEX"
+#define EXCHANGE_OCEANEX2 "OCEANEX2"
 #define EXCHANGE_HUOBI "HUOBI"
 #define EXCHANGE_PROBIT "PROBIT"
 
@@ -154,7 +164,19 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_SHFE 12 //上海期货交易所
 #define EXCHANGE_ID_DCE 13 //大连商品交易所
 #define EXCHANGE_ID_CZCE 14 //郑州商品交易所
-
+#define EXCHANGE_ID_BINANCE  16
+#define EXCHANGE_ID_INDODAX  17
+#define EXCHANGE_ID_OKEX  18
+#define EXCHANGE_ID_COINMEX  19
+#define EXCHANGE_ID_MOCK  20
+#define EXCHANGE_ID_BITMAX  21
+#define EXCHANGE_ID_BITFINEX  22
+#define EXCHANGE_ID_BITMEX  23
+#define EXCHANGE_ID_HITBTC  24
+#define EXCHANGE_ID_OCEANEX  25
+#define EXCHANGE_ID_HUOBI  26
+#define EXCHANGE_ID_OCEANEX2  27
+#define EXCHANGE_ID_PROBIT  28
 // MsgTypes that used for LF data structure...
 const short MSG_TYPE_LF_MD            = 101;
 const short MSG_TYPE_LF_L2_MD         = 102;
@@ -166,7 +188,7 @@ const short MSG_TYPE_LF_BAR_MD        = 110;
 const short MSG_TYPE_LF_QRY_POS       = 201;
 const short MSG_TYPE_LF_RSP_POS       = 202;
 const short MSG_TYPE_LF_ORDER         = 204;
-const short     MSG_TYPE_LF_RTN_ORDER     = 205;
+const short MSG_TYPE_LF_RTN_ORDER     = 205;
 const short MSG_TYPE_LF_RTN_TRADE     = 206;
 const short MSG_TYPE_LF_ORDER_ACTION  = 207;
 const short MSG_TYPE_LF_QRY_ACCOUNT   = 208;
@@ -286,6 +308,14 @@ const short MSG_TYPE_LF_RTN_ORDER_HUOBI = 26205;
 const short MSG_TYPE_LF_RTN_TRADE_HUOBI = 26206;
 const short MSG_TYPE_LF_ORDER_ACTION_HUOBI = 26207;
 
+//OCEANEX2, idx=27
+const short MSG_TYPE_LF_MD_OCEANEX2        = 27101;
+const short MSG_TYPE_LF_QRY_POS_OCEANEX2   = 27201;
+const short MSG_TYPE_LF_RSP_POS_OCEANEX2   = 27202;
+const short MSG_TYPE_LF_ORDER_OCEANEX2     = 27204;
+const short MSG_TYPE_LF_RTN_ORDER_OCEANEX2 = 27205;
+const short MSG_TYPE_LF_RTN_TRADE_OCEANEX2 = 27206;
+const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX2 = 27207;
 //PROBIT, idx=28
 const short MSG_TYPE_LF_MD_PROBIT        	= 28101;
 const short MSG_TYPE_LF_QRY_POS_PROBIT   	= 28201;
