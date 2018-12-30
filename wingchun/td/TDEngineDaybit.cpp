@@ -685,6 +685,10 @@ void TDEngineDaybit::req_order_action(const LFOrderActionField* data, int accoun
             }
         }
         lck.unlock();
+        if(remoteOrderId != -1)
+        {
+            break;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(base_interval_ms));
         ++count;
     }
