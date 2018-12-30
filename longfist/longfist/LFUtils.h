@@ -71,7 +71,7 @@ inline JournalPair getMdJournalPair(short source)
 			return {"/shared/kungfu/journal/MD/OCEANEX/", "MD_OCEANEX"};
 		case 26:
 			return {"/shared/kungfu/journal/MD/HUOBI/", "MD_HUOBI"};
-		case 27:
+		case 28:
 			return{ "/shared/kungfu/journal/MD/PROBIT/", "MD_PROBIT" };
 		default:
 			return {"", ""};
@@ -102,7 +102,7 @@ inline JournalPair getMdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/MD_RAW/OCEANEX/", "MDRAW_OCEANEX"};
         case 26:
             return {"/shared/kungfu/journal/MD_RAW/HUOBI/", "MDRAW_HUOBI"};
-		case 27:
+		case 28:
 			return{ "/shared/kungfu/journal/MD_RAW/PROBIT/", "MDRAW_PROBIT" };
 		default:
 			return {"", ""};

@@ -24,7 +24,7 @@ enum exchange_source_index : short
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
-    SOURCE_PROBIT = 27,
+    SOURCE_PROBIT = 28,
     SOURCE_UNKNOWN
 };
 

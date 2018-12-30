@@ -339,7 +339,6 @@ wingchun_constants = [
                        ('BITMEX', 23, ''),
                        ('HITBTC', 24, ''),
                        ('OCEANEX', 25, ''),
-                       ('PROBIT', 27, '')
                        ('HUOBI', 26, ''),
                        ('PROBIT', 28, '')
                        ],
