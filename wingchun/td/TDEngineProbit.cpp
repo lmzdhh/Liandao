@@ -1199,7 +1199,7 @@ AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * w
 void TDEngineProbit::PostRequest(const std::string& url,const std::string& auth, const std::string& body, Document& json)
 {
     std::lock_guard<std::mutex> lck(g_postMutex);
-	const auto response = cpr::Post(Url{ url },Header{{ "Content-Type", "application/json" },{ "authorization", auth }},Body{ body }, Timeout{ 30000 });
+	const auto response = cpr::Post(Url{ url },cpr::VerifySsl(false),Header{{ "Content-Type", "application/json" },{ "authorization", auth }},Body{ body }, Timeout{ 30000 });
 	KF_LOG_DEBUG(logger, "[Post] (url) " << url << \
 	          " (body) " << body << \
 	          " (msg) " << auth <<  \
