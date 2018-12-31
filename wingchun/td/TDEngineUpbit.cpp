@@ -1520,7 +1520,7 @@ std::string TDEngineUpbit::getEncode(const std::string& str)
 
 std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery)
 {
-         std::sting strPayLoad;
+         std::string strPayLoad;
          if(strQuery == "")
          {
              strPayLoad = R"({"access_key":")" + unit.api_key + R"(","noce":")" +getTimestampString() + R"("})";
