@@ -165,7 +165,7 @@ private:
 
     std::int32_t  get_order(AccountUnitUpbit& unit, const char *origClientOrderId, Document& json);
     std::int32_t  cancel_order(AccountUnitUpbit& unit, const char *symbol,
-                      long orderId, const char *origClientOrderId, const char *newClientOrderId, Document &doc);
+                       const char *origClientOrderId,  Document &doc);
     void get_my_trades(AccountUnitUpbit& unit, const char *symbol, int limit, int64_t fromId, Document &doc);
     void get_open_orders(AccountUnitUpbit& unit, const char *symbol, Document &doc);
     void get_exchange_infos(AccountUnitUpbit& unit, Document &doc);
@@ -176,7 +176,6 @@ private:
     std::string getEncode(const std::string& str);
     std::string getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery = std::string());
     void get_exchange_time(AccountUnitUpbit& unit, Document &doc);
-    void get_account(AccountUnitUpbit& unit, Document &doc);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& doc);
     void printResponse(const Document& d);
     inline std::string getTimestampString();

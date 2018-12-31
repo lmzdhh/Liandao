@@ -155,14 +155,14 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
                 size_t len = d.Size();
                 KF_LOG_INFO(logger, "[load_account][get_open_orders] (length)" << len);
                 for (size_t i = 0; i < len; i++) {
-                    if(d.GetArray()[i].IsObject() && d.GetArray()[i].HasMember("symbol") && d.GetArray()[i].HasMember("clientOrderId"))
+                    if(d.GetArray()[i].IsObject() && d.GetArray()[i].HasMember("market") && d.GetArray()[i].HasMember("uuid"))
                     {
-                        if(d.GetArray()[i]["symbol"].IsString() && d.GetArray()[i]["clientOrderId"].IsString())
+                        if(d.GetArray()[i]["market"].IsString() && d.GetArray()[i]["uuid"].IsString())
                         {
-                            std::string symbol = d.GetArray()[i]["symbol"].GetString();
-                            std::string orderRef = d.GetArray()[i]["clientOrderId"].GetString();
+                            std::string symbol = d.GetArray()[i]["market"].GetString();
+                            std::string orderRef = d.GetArray()[i]["uuid"].GetString();
                             Document cancelResponse;
-                            cancel_order(unit, symbol.c_str(), 0, orderRef.c_str(), "", cancelResponse);
+                            cancel_order(unit, symbol.c_str(), orderRef.c_str(), cancelResponse);
 
                             KF_LOG_INFO(logger, "[load_account] cancel_order:");
                             printResponse(cancelResponse);
@@ -781,7 +781,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
     Document d;
-	auto nResponseCode =  cancel_order(unit, ticker.c_str(), 0, data->OrderRef, "", d);
+	auto nResponseCode =  cancel_order(unit, ticker.c_str(),  data->OrderRef,  d);
 //    KF_LOG_INFO(logger, "[req_order_action] cancel_order");
 //    printResponse(d);
 
@@ -1318,7 +1318,7 @@ std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *origCl
 }
 
 std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *symbol,
-                  long orderId, const char *origClientOrderId, const char *newClientOrderId, Document &json)
+                  const char *origClientOrderId,  Document &json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
     int retry_times = 0;
@@ -1416,47 +1416,19 @@ void TDEngineUpbit::get_open_orders(AccountUnitUpbit& unit, const char *symbol, 
     long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
-    std::string requestPath = "https://api.Upbit.com/api/v3/openOrders?";
+    std::string requestPath = "https://api.upbit.com/v1/orders?";
     std::string queryString("");
     std::string body = "";
+    
+    queryString = "state=wait&page=1";
+    queryString  = getEncode(queryString);
 
-    bool hasSetParameter = false;
-
-    if(strlen(symbol) > 0) {
-        queryString.append( "symbol=" );
-        queryString.append( symbol );
-        hasSetParameter = true;
-    }
-
-    if ( recvWindow > 0 ) {
-        if(hasSetParameter)
-        {
-            queryString.append("&recvWindow=");
-            queryString.append( to_string( recvWindow) );
-        } else {
-            queryString.append("recvWindow=");
-            queryString.append( to_string( recvWindow) );
-        }
-        hasSetParameter = true;
-    }
-
-    if(hasSetParameter)
-    {
-        queryString.append("&timestamp=");
-        queryString.append( Timestamp );
-    } else {
-        queryString.append("timestamp=");
-        queryString.append( Timestamp );
-    }
-
-    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
-    queryString.append( "&signature=");
-    queryString.append( signature );
+    std::string strAuthorization = getAuthorization(unit,queryString);
 
     string url = requestPath + queryString;
 
     const auto response = Get(Url{url},
-                                 Header{{"X-MBX-APIKEY", unit.api_key}},
+                                 Header{{"Authorization", strAuthorization}},
                                  Body{body}, Timeout{100000});
 
     KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response.status_code) " << response.status_code <<
@@ -1548,18 +1520,20 @@ std::string TDEngineUpbit::getEncode(const std::string& str)
 
 std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery)
 {
-         std::stringstream ssPayLoad;
+         std::sting strPayLoad;
          if(strQuery == "")
          {
-             ssPayLoad << "{access_key: " << unit.api_key <<  ",noce: " << getTimestampString() << "}";
+             strPayLoad = R"({"access_key":")" + unit.api_key + R"(","noce":")" +getTimestampString() + R"("})";
          }
          else
          {    
-            ssPayLoad << "{access_key: " << unit.api_key <<  ",noce: " << getTimestampString()<< ",query: " << strQuery << "}";
+            strPayLoad = R"({"access_key":")" + unit.api_key + R"(","noce":")" +getTimestampString() + R"(","query":")" + strQuery  + R"("})";
          }
-         std::string strJWT = utils::crypto::jwt_create(ssPayLoad.str(),unit.secret_key);
+         std::string strJWT = utils::crypto::jwt_create(strPayLoad,unit.secret_key);
         std::string strAuthorization = "Bearer ";
         strAuthorization += strJWT;
+
+        KF_LOG_INFO(logger, "[getAuthorization] strPayLoad:" << strPayLoad);
 
         return strAuthorization;
 }
@@ -1666,41 +1640,6 @@ void TDEngineUpbit::get_exchange_infos(AccountUnitUpbit& unit, Document &json)
     KF_LOG_INFO(logger, "[get_exchange_infos] (url) " << url << " (response.status_code) " << response.status_code <<
                                                    " (response.error.message) " << response.error.message <<
                                                    " (response.text) " << response.text.c_str());
-    return getResponse(response.status_code, response.text, response.error.message, json);
-}
-
-void TDEngineUpbit::get_account(AccountUnitUpbit& unit, Document &json)
-{
-    KF_LOG_INFO(logger, "[get_account]");
-    long recvWindow = 5000;
-    std::string Timestamp = getTimestampString();
-    std::string Method = "GET";
-    std::string requestPath = "https://api.Upbit.com/api/v3/account?";
-    std::string queryString("");
-    std::string body = "";
-
-    queryString.append("timestamp=");
-    queryString.append( Timestamp );
-
-    if ( recvWindow > 0 ) {
-        queryString.append("&recvWindow=");
-        queryString.append( std::to_string( recvWindow ) );
-    }
-
-    std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
-    queryString.append( "&signature=");
-    queryString.append( signature );
-
-    string url = requestPath + queryString;
-
-    const auto response = Get(Url{url},
-                              Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
-
-    KF_LOG_INFO(logger, "[get_account] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                      " (response.error.message) " << response.error.message <<
-                                                      " (response.text) " << response.text.c_str());
-
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
