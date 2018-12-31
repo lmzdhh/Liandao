@@ -342,7 +342,7 @@ wingchun_constants = [
                        ('HUOBI', 26, ''),
                        ('OCEANEX2', 27, ''),
                        ('PROBIT', 28, ''),
-................       ('BITHUMB', 29, '')
+                       ('BITHUMB', 29, '')
                        ],
      'source index'),
     ('DIRECTION', 'char', [('Buy', '0', '买'),
