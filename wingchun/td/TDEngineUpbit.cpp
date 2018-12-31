@@ -1515,7 +1515,8 @@ void TDEngineUpbit::getAllMarkets(std::vector<std::string>& vstrMarkets)
 
 std::string TDEngineUpbit::getEncode(const std::string& str)
 {
-   return  base64_encode((unsigned char const*)str.c_str(),str.size());
+    return str;
+   //return  base64_encode((unsigned char const*)str.c_str(),str.size());
 }
 
 std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery)
