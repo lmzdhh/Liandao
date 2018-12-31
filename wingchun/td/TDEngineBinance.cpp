@@ -1573,7 +1573,7 @@ bool TDEngineBinance::order_count_over_limit()
     }
     
     static std::queue<long long> time_queue;
-    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     if (time_queue.size() <= 0)
     {
         time_queue.push(timestamp);
@@ -1581,7 +1581,7 @@ bool TDEngineBinance::order_count_over_limit()
         return false;
     }
 
-    long long startTime = time_queue.front();
+    uint64_t startTime = time_queue.front();
     int order_time_diff_ms = timestamp - startTime;
     KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_time_diff_ms)" << order_time_diff_ms 
         << " (time_queue.size)" << time_queue.size()
@@ -1609,6 +1609,19 @@ bool TDEngineBinance::order_count_over_limit()
     time_queue.pop();
     time_queue.push(timestamp);
     order_total_count++;
+
+    //清理超过1秒的记录
+    while(time_queue.size() > 0)
+    {
+        uint64_t tmpTime = time_queue.front();
+        int tmp_time_diff_ms = timestamp - tmpTime;
+        if (tmp_time_diff_ms <= order_ms)
+        {
+            break;
+        }
+
+        time_queue.pop();
+    }
     return false;
 }
 
@@ -1663,6 +1676,12 @@ void TDEngineBinance::handle_request_weight(RequestWeightType type)
     weight_count -= front_data.weight;
     weight_data_queue.pop();
 
+    weight_data wd;
+    wd.time = timestamp;
+    wd.addWeight(type);
+    weight_count += wd.weight;
+    weight_data_queue.push(wd);
+
     //清理时间超过60000ms(1分钟)的记录
     while(weight_data_queue.size() > 0)
     {
@@ -1676,12 +1695,6 @@ void TDEngineBinance::handle_request_weight(RequestWeightType type)
         weight_count -= tmp_data.weight;
         weight_data_queue.pop();
     }
-
-    weight_data wd;
-    wd.time = timestamp;
-    wd.addWeight(type);
-    weight_count += wd.weight;
-    weight_data_queue.push(wd);
 }
 
 void TDEngineBinance::meet_429()
@@ -1699,7 +1712,7 @@ void TDEngineBinance::meet_429()
         return;
     }
 
-    startTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    startTime_429 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     bHandle_429 = true;
     KF_LOG_INFO(logger, "[meet_429] bHandle_429 " << bHandle_429 << " request_weight_per_minute " << request_weight_per_minute);
 }
@@ -1708,11 +1721,11 @@ bool TDEngineBinance::isHandling()
 {
     std::lock_guard<std::mutex> guard_mutex(*mutex_handle_429);
     uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    int handle_429_time_diff_ms = timestamp - startTime;
+    int handle_429_time_diff_ms = timestamp - startTime_429;
     if (handle_429_time_diff_ms > prohibit_order_ms)
     {
         //stop handle 429
-        startTime = 0;
+        startTime_429 = 0;
         bHandle_429 = false;
         KF_LOG_INFO(logger, "[isHandling] handle_429_time_diff_ms > prohibit_order_ms, stop handle 429");
     }

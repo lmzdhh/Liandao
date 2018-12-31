@@ -253,7 +253,7 @@ private:
     int default_429_rest_interval_ms = 1000;      //default 10s
     bool bHandle_429 = false;
     std::mutex* mutex_handle_429 = nullptr;
-    uint64_t startTime = 0;
+    uint64_t startTime_429 = 0;
 
     std::mutex* mutex_order_and_trade = nullptr;
     int SYNC_TIME_DEFAULT_INTERVAL = 10000;
