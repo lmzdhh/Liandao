@@ -180,6 +180,7 @@ private:
     void printResponse(const Document& d);
     inline std::string getTimestampString();
     LfOrderStatusType convertOrderStatus(const std::string& strStatus,int64_t nTrades);
+    void filterMarkets(std::vector<std::string>& vstrMarkets);
 
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
 

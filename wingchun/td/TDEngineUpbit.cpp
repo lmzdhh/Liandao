@@ -216,6 +216,7 @@ void TDEngineUpbit::connect(long timeout_nsec)
         {
           std::vector<std::string> vstrMarkets;
            getAllMarkets(vstrMarkets);
+           filterMarkets(vstrMarkets);
             if( loadMarketsInfo(unit,vstrMarkets))
             {
                 unit.logged_in = true;
@@ -1478,6 +1479,34 @@ void TDEngineUpbit::get_exchange_time(AccountUnitUpbit& unit, Document &json)
                                                       " (response.error.message) " << response.error.message <<
                                                       " (response.text) " << response.text.c_str());
     return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
+void TDEngineUpbit::filterMarkets(std::vector<std::string>& vstrMarkets)
+{
+    for(auto it = vstrMarkets.begin() : it != vstrMarkets.end(); )
+    {
+         bool inWhiteList = false;
+
+        for (size_t idx = 0; idx < account_units.size(); idx++)
+        {
+            AccountUnitUpbit& unit = account_units[idx];
+            std::string ticker = unit.coinPairWhiteList.GetKeyByValue(*it);
+            if(ticker.length() > 0) 
+            {
+                inWhiteList = true;
+                break;
+            }
+        }
+
+        if(inWhiteList)
+        {
+            ++it;
+        }
+         else
+         {
+            it = vstrMarkets.erase(it);
+         }
+    }
 }
 
 void TDEngineUpbit::getAllMarkets(std::vector<std::string>& vstrMarkets)
