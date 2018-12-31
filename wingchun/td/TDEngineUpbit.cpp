@@ -381,7 +381,7 @@ std::int32_t TDEngineUpbit::getAccountResponce(const AccountUnitUpbit& unit,Docu
     long recvWindow = 5000;
     std::string Method = "GET";
      std::string strQueryString = "";
-    std::string url = "https://api.Upbit.com//v1/accounts";
+    std::string url = "https://api.upbit.com/v1/accounts";
     std::string body = "";
 
     std::string Authorization = getAuthorization(unit);
@@ -1207,7 +1207,7 @@ int32_t TDEngineUpbit::send_order(AccountUnitUpbit& unit, const char *symbol,
         long recvWindow = order_insert_recvwindow_ms;
         std::string Timestamp = getTimestampString();
         std::string Method = "POST";
-        std::string requestPath = "https://api.Upbit.com/v1/order?";
+        std::string requestPath = "https://api.upbit.com/v1/order?";
         std::string queryString("");
         std::string body = "";
 
@@ -1297,7 +1297,7 @@ std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *origCl
     long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
-    std::string requestPath = "https://api.Upbit.com/api/v1/order?";
+    std::string requestPath = "https://api.upbit.com/api/v1/order?";
     std::string queryString("");
     std::string body = "";
 
@@ -1330,7 +1330,7 @@ std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *sy
         long recvWindow = order_action_recvwindow_ms;
         std::string Timestamp = getTimestampString();
         std::string Method = "DELETE";
-        std::string requestPath = "https://api.Upbit.com/v1/order?";
+        std::string requestPath = "https://api.upbit.com/v1/order?";
         std::string queryString("");
         std::string body = "";
 
@@ -1369,7 +1369,7 @@ void TDEngineUpbit::get_my_trades(AccountUnitUpbit& unit, const char *symbol, in
     long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
-    std::string requestPath = "https://api.Upbit.com/api/v3/myTrades?";
+    std::string requestPath = "https://api.upbit.com/api/v3/myTrades?";
     std::string queryString("");
     std::string body = "";
 
@@ -1464,7 +1464,7 @@ void TDEngineUpbit::get_exchange_time(AccountUnitUpbit& unit, Document &json)
     long recvWindow = 5000;
     std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
-    std::string requestPath = "https://api.Upbit.com/api/v1/time";
+    std::string requestPath = "https://api.upbit.com/api/v1/time";
     std::string queryString("");
     std::string body = "";
 
@@ -1486,7 +1486,7 @@ void TDEngineUpbit::getAllMarkets(std::vector<std::string>& vstrMarkets)
     long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
-    std::string requestPath = "https://api.Upbit.com/v1/market/all";
+    std::string requestPath = "https://api.upbit.com/v1/market/all";
     std::string queryString("");
     std::string body = "";
 
@@ -1543,7 +1543,7 @@ void TDEngineUpbit::getChanceResponce(const AccountUnitUpbit& unit, const std::s
     long recvWindow = 5000;
     std::string Method = "GET";
      std::string strQueryString = "market=";
-    std::string requestPath = "https://api.Upbit.com//v1/orders/chance?";
+    std::string requestPath = "https://api.upbit.com/v1/orders/chance?";
     std::string body = "";
 
     std::string strParamEncode = getEncode(strQueryString + strMarket);
@@ -1627,7 +1627,7 @@ void TDEngineUpbit::get_exchange_infos(AccountUnitUpbit& unit, Document &json)
     long recvWindow = 5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
-    std::string requestPath = "https://api.Upbit.com/api/v1/exchangeInfo";
+    std::string requestPath = "https://api.upbit.com/api/v1/exchangeInfo";
     std::string queryString("");
     std::string body = "";
 
