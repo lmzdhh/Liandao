@@ -143,6 +143,8 @@ private:
     void debug_print(const std::map<std::string, SendOrderFilter>&);
     SendOrderFilter getSendOrderFilter(const std::string& symbol);
 	bool OpenOrderToLFOrder(AccountUnitProbit& unit, rapidjson::Value& json, LFRtnOrderField& order);
+private:
+    LFRtnOrderField convert(const OrderFieldEx&);
 };
 
 WC_NAMESPACE_END
