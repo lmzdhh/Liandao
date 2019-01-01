@@ -1714,7 +1714,7 @@ int64_t TDEngineUpbit::getTimeDiffOfExchange(AccountUnitUpbit& unit)
 {
     KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
     //reset to 0
-    int64_t timeDiffOfExchange = 0;
+    int64_t timeDiffOfExchange = 1000 * 60 * 60;
 //
 //    int calculateTimes = 3;
 //    int64_t accumulationDiffTime = 0;
