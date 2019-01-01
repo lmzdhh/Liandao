@@ -1704,7 +1704,7 @@ std::string TDEngineUpbit::getTimestampString()
     KF_LOG_INFO(logger, "[getTimestampString] (new timestamp)" << timestamp);
     std::string timestampStr;
     std::stringstream convertStream;
-    convertStream << timestamp;
+    convertStream << (timestamp + 1000 * 60 * 60);
     convertStream >> timestampStr;
     return timestampStr;
 }
