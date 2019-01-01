@@ -1483,7 +1483,7 @@ void TDEngineUpbit::get_exchange_time(AccountUnitUpbit& unit, Document &json)
 
 void TDEngineUpbit::filterMarkets(std::vector<std::string>& vstrMarkets)
 {
-    for(auto it = vstrMarkets.begin() : it != vstrMarkets.end(); )
+    for(auto it = vstrMarkets.begin(); it != vstrMarkets.end(); )
     {
          bool inWhiteList = false;
 
