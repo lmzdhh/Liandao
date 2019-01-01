@@ -199,7 +199,7 @@ private:
 
     int SYNC_TIME_DEFAULT_INTERVAL = 10000;
     int sync_time_interval;
-    int64_t timeDiffOfExchange = 0;
+    int64_t timeDiffOfExchange = 1000 * 60 * 60;
     int exchange_shift_ms = 0;
 
     int max_rest_retry_times = 3;

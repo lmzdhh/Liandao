@@ -147,6 +147,7 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
             KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID) of exchange coinpair: " << map_itr->second);
 
             Document d;
+            getAccountResponce(unit,d);
             get_open_orders(unit, map_itr->second.c_str(), d);
             KF_LOG_INFO(logger, "[load_account] print get_open_orders");
             printResponse(d);
@@ -1704,7 +1705,7 @@ std::string TDEngineUpbit::getTimestampString()
     KF_LOG_INFO(logger, "[getTimestampString] (new timestamp)" << timestamp);
     std::string timestampStr;
     std::stringstream convertStream;
-    convertStream << (timestamp + 1000 * 60 * 60);
+    convertStream << timestamp;
     convertStream >> timestampStr;
     return timestampStr;
 }
