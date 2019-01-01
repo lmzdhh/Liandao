@@ -46,21 +46,21 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 	{
 		case LWS_CALLBACK_CLIENT_ESTABLISHED:
 		{
-            //ss << "established.";
-            //global_md->writeErrorLog(ss.str());
+            ss << "LWS_CALLBACK_CLIENT_ESTABLISHED.";
+            global_md->writeErrorLog(ss.str());
 			lws_callback_on_writable( wsi );
 			break;
 		}
 		case LWS_CALLBACK_PROTOCOL_INIT:
         {
-			 ss << "init.";
+			 ss << "LWS_CALLBACK_PROTOCOL_INIT.";
             global_md->writeErrorLog(ss.str());
 			break;
 		}
 		case LWS_CALLBACK_CLIENT_RECEIVE:
 		{
-		     //ss << "on_data.";
-            //global_md->writeErrorLog(ss.str());
+		     ss << "LWS_CALLBACK_CLIENT_RECEIVE.";
+            global_md->writeErrorLog(ss.str());
 			if(global_md)
 			{
 				global_md->on_lws_data(wsi, (const char*)in, len);
@@ -69,8 +69,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		}
 		case LWS_CALLBACK_CLIENT_WRITEABLE:
 		{
-		    // ss << "writeable.";
-            //global_md->writeErrorLog(ss.str());
+		    ss << "LWS_CALLBACK_CLIENT_WRITEABLE.";
+            global_md->writeErrorLog(ss.str());
 			int ret = 0;
 			if(global_md)
 			{
@@ -80,13 +80,13 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		}
 		case LWS_CALLBACK_CLOSED:
         {
-            ss << "close.";
+            ss << "LWS_CALLBACK_CLOSED.";
             global_md->writeErrorLog(ss.str());
             break;
         }
 		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
 		{
-            ss << "connect_error.";
+            ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
             global_md->writeErrorLog(ss.str());
  			if(global_md)
 			{
@@ -491,7 +491,7 @@ std::string MDEngineOceanEx::dealDataSprit(const char* src)
 void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
-	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
+	//KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
     Document json;
 	json.Parse(data);
 
@@ -767,7 +767,7 @@ std::string MDEngineOceanEx::parseJsonToString(const char* in)
 	d.Accept(writer);
 
 	return buffer.GetString();
-}
+}lws_service
 
 /*
 Name    Type    Required    Description
@@ -877,6 +877,7 @@ void MDEngineOceanEx::loop()
 {
 		while(isRunning)
 		{
+            KF_LOG_INFO(logger, "MDEngineOceanEx::loop:lws_service");
 			lws_service( context, rest_get_interval_ms );
 		}
 }
