@@ -1693,7 +1693,7 @@ void TDEngineUpbit::getResponse(int http_status_code, std::string responseText, 
 inline int64_t TDEngineUpbit::getTimestamp()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    return timestamp;
+    return timestamp + 1000 * 60 * 60;
 }
 
 std::string TDEngineUpbit::getTimestampString()
