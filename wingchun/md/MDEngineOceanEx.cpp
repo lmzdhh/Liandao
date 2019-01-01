@@ -767,7 +767,7 @@ std::string MDEngineOceanEx::parseJsonToString(const char* in)
 	d.Accept(writer);
 
 	return buffer.GetString();
-}lws_service
+}
 
 /*
 Name    Type    Required    Description
