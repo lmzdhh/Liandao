@@ -391,7 +391,7 @@ std::int32_t TDEngineUpbit::getAccountResponce(const AccountUnitUpbit& unit,Docu
     const auto response = Get(Url{url},
                             Header{{  "Authorization", Authorization}},
                             Body{body}, Timeout{100000});
-    KF_LOG_INFO(logger, "[getChanceResponce] (url) " << url << " (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[getAccountResponce] (url) " << url << " (response.status_code) " << response.status_code <<
                                                 " (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
 
@@ -1554,11 +1554,11 @@ std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const s
          std::string strPayLoad;
          if(strQuery == "")
          {
-             strPayLoad = R"({"access_key":")" + unit.api_key + R"(","noce":")" +getTimestampString() + R"("})";
+             strPayLoad = R"({"access_key": ")" + unit.api_key + R"(","nonce": ")" +getTimestampString() + R"("})";
          }
          else
          {    
-            strPayLoad = R"({"access_key":")" + unit.api_key + R"(","noce":")" +getTimestampString() + R"(","query":")" + strQuery  + R"("})";
+            strPayLoad = R"({"access_key":")" + unit.api_key + R"(","nonce":")" +getTimestampString() + R"(","query":")" + strQuery  + R"("})";
          }
          std::string strJWT = utils::crypto::jwt_create(strPayLoad,unit.secret_key);
         std::string strAuthorization = "Bearer ";
@@ -1694,7 +1694,7 @@ void TDEngineUpbit::getResponse(int http_status_code, std::string responseText, 
 inline int64_t TDEngineUpbit::getTimestamp()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    return timestamp + 1000 * 60 * 60;
+    return timestamp ;
 }
 
 std::string TDEngineUpbit::getTimestampString()
@@ -1715,7 +1715,7 @@ int64_t TDEngineUpbit::getTimeDiffOfExchange(AccountUnitUpbit& unit)
 {
     KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
     //reset to 0
-    int64_t timeDiffOfExchange = 1000 * 60 * 60;
+    int64_t timeDiffOfExchange = 0;
 //
 //    int calculateTimes = 3;
 //    int64_t accumulationDiffTime = 0;
