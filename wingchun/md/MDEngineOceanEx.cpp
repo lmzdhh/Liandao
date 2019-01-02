@@ -80,13 +80,14 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		}
 		case LWS_CALLBACK_CLOSED:
         {
-            ss << "LWS_CALLBACK_CLOSED.";
-            global_md->writeErrorLog(ss.str());
-            break;
+           // ss << "LWS_CALLBACK_CLOSED.";
+           // global_md->writeErrorLog(ss.str());
+           // break;
         }
+        case LWS_CALLBACK_WSI_DESTROY:
 		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
 		{
-            ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
+           // ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
             global_md->writeErrorLog(ss.str());
  			if(global_md)
 			{
@@ -95,6 +96,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 			break;
 		}
 		default:
+              global_md->writeErrorLog(ss.str());
 			break;
 	}
 
