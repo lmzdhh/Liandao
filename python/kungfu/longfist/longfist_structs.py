@@ -629,9 +629,9 @@ DataFieldMap = {
 		'MiscInfo': 'c30',
 		'StopPrice': 'd',
         'MassOrderSeqId':'i64',
-        'MassOrderIndex':'i',
-        'MassOrderTotalNum':'i',
-    },
+	    'MassOrderIndex':'i',
+	    'MassOrderTotalNum':'i',
+	},
 	'LFRtnOrderField': {
 		'InstrumentID': 'c31',
 		'ExchangeID': 'c11',
@@ -761,8 +761,8 @@ DataFieldMap = {
 		'RequestID': 'i',
 		'OrderSysID': 'c31',
         'MassOrderSeqId':'i64',
-        'MassOrderIndex':'i',
-        'MassOrderTotalNum':'i',
+	    'MassOrderIndex':'i',
+	    'MassOrderTotalNum':'i',
 	},
 }
 

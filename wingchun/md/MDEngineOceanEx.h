@@ -12,7 +12,6 @@ WC_NAMESPACE_START
 
 using rapidjson::Document;
 
-
 struct PriceAndVolume
 {
     int64_t price;
@@ -77,7 +76,7 @@ public:
     void on_lws_data(struct lws* conn, const char* data, size_t len);
     void on_lws_connection_error(struct lws* conn);
     int lws_write_subscribe(struct lws* conn);
-
+    void writeErrorLog(std::string strError);
 private:
     void onDepth(Document& json);
     void onTickers(Document& json);
@@ -89,7 +88,7 @@ private:
     std::string createFillsJsonString(std::string base, std::string quote);
     void clearPriceBook();
     void loop();
-
+    std::string dealDataSprit(const char* src);
 
     virtual void set_reader_thread() override;
 private:
@@ -98,7 +97,7 @@ private:
     bool logged_in = false;
 
     int rest_get_interval_ms = 500;
-
+    int book_depth_count = 5;
     static constexpr int scale_offset = 1e8;
 
     struct lws_context *context = nullptr;
@@ -112,8 +111,9 @@ private:
 private:
     void readWhiteLists(const json& j_config);
     std::string getWhiteListCoinpairFrom(std::string md_coinpair);
-
+    bool shouldUpdateData(const LFPriceBook20Field& md);
     void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
+    std::string getLiandaoCoin(const std::string& strExchangeCoin);
     void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
     void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
     void debug_print(std::vector<std::string> &subJsonString);
@@ -121,7 +121,7 @@ private:
     std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
 
     std::vector<std::string> websocketSubscribeJsonString;
-
+    std::map<std::string,LFPriceBook20Field> mapLastData;
     //in MD, lookup direction is:
     // incoming exchange coinpair ---> our strategy recognized coinpair
     //if coming data 's coinpair is not in this map ,ignore it

@@ -24,8 +24,9 @@ enum exchange_source_index : short
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
-    SOURCE_OCEANEX2 = 27,
+	SOURCE_OCEANEX2 = 27,
     SOURCE_PROBIT = 28,
+    SOURCE_BITHUMB = 29,
     SOURCE_UNKNOWN
 };
 
@@ -63,6 +64,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "oceanex2";
         case SOURCE_PROBIT:
             return "probit";
+        case SOURCE_BITHUMB:
+            return "bithumb";
         default:
             return "unknown";
 	}
@@ -122,18 +125,22 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_HUOBI;
     }
-    else if(exch_str == "oceanex2")
-    {
-        return SOURCE_OCEANEX2;
-    }
+	else if (exch_str == "oceanex2")
+	{
+		return SOURCE_OCEANEX2;
+	}
     else if(exch_str == "probit")
     {
         return SOURCE_PROBIT;
     }
-    else
+    else if(exch_str == "bithumb")
     {
-        return SOURCE_UNKNOWN;
+		return SOURCE_BITHUMB;
     }
+    else {
+		return SOURCE_UNKNOWN;
+    }
+
 }
 
 // Exchange names
@@ -155,7 +162,9 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_OCEANEX "OCEANEX"
 #define EXCHANGE_OCEANEX2 "OCEANEX2"
 #define EXCHANGE_HUOBI "HUOBI"
+#define EXCHANGE_OCEANEX2 "OCEANEX2"
 #define EXCHANGE_PROBIT "PROBIT"
+#define EXCHANGE_BITHUMB "BITHUMB"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -324,6 +333,16 @@ const short MSG_TYPE_LF_ORDER_PROBIT     	= 28204;
 const short MSG_TYPE_LF_RTN_ORDER_PROBIT 	= 28205;
 const short MSG_TYPE_LF_RTN_TRADE_PROBIT 	= 28206;
 const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 28207;
+
+//BITHUMB, idx=29
+const short MSG_TYPE_LF_MD_BITHUMB             = 29101;
+const short MSG_TYPE_LF_QRY_POS_BITHUMB           = 29201;
+const short MSG_TYPE_LF_RSP_POS_BITHUMB           = 29202;
+const short MSG_TYPE_LF_ORDER_BITHUMB             = 29204;
+const short MSG_TYPE_LF_RTN_ORDER_BITHUMB         = 29205;
+const short MSG_TYPE_LF_RTN_TRADE_BITHUMB         = 29206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITHUMB     = 29207;
+
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
