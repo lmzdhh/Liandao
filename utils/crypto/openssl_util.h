@@ -344,7 +344,7 @@ inline std::string jwt_hs256_create(const std::string& data,const std::string& p
     std::string encoded_payload=base64_url_encode((const unsigned char*)payload.c_str(),payload.length());
     std::string data_to_sign = encoded_header +"."+encoded_payload;
     auto signature = hmac_sha256_byte(private_key.c_str(),data_to_sign.c_str());
-    std::string secret = base64_url_encode(signature,strlen(signature);
+    std::string secret = base64_url_encode(signature,strlen((const char*)signature));
 
     std::string jwt = data_to_sign+"."+secret;
     return  jwt;
