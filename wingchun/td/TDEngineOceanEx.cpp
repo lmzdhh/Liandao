@@ -515,7 +515,7 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
             //first send onRtnOrder about the status change or VolumeTraded change
             strcpy(rtn_order.ExchangeID, "oceanex");
             strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_order.InstrumentID, ticker.c_str(), 31);
+            strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
             rtn_order.Direction = GetDirection(dataRsp["side"].GetString());
             //No this setting on OceanEx
             rtn_order.TimeCondition = LF_CHAR_GTC;
