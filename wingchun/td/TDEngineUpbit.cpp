@@ -1554,7 +1554,7 @@ std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const s
          std::string strPayLoad;
          if(strQuery == "")
          {
-             strPayLoad = R"({"access_key": ")" + unit.api_key + R"(","nonce": ")" +getTimestampString() + R"("})";
+             strPayLoad = R"({"access_key": ")" + unit.api_key + R"(","nonce": )" +getTimestampString() + R"(})";
          }
          else
          {    
