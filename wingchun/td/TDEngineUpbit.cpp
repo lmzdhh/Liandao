@@ -1554,13 +1554,13 @@ std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const s
          std::string strPayLoad;
          if(strQuery == "")
          {
-             strPayLoad = R"({"access_key": ")" + unit.api_key + R"(","nonce": )" +getTimestampString() + R"(})";
+             strPayLoad = R"({"access_key": ")" + unit.api_key + R"(","nonce": ")" +getTimestampString() + R"("})";
          }
          else
          {    
             strPayLoad = R"({"access_key":")" + unit.api_key + R"(","nonce":")" +getTimestampString() + R"(","query":")" + strQuery  + R"("})";
          }
-         std::string strJWT = utils::crypto::jwt_create(strPayLoad,unit.secret_key);
+         std::string strJWT = utils::crypto::jwt_hs256_create(strPayLoad,unit.secret_key);
         std::string strAuthorization = "Bearer ";
         strAuthorization += strJWT;
 

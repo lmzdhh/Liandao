@@ -332,4 +332,22 @@ inline std::string jwt_create(const std::string& data,const std::string& private
     return  jwt;
 }
 
+inline std::string jwt_hs256_create(const std::string& data,const std::string& private_key)
+{
+    //JWT:
+    //1. secret =  RSASHA256(base64UrlEncode(header) + "." + base64UrlEncode(payload),private_key)
+    //2. jwt = base64UrlEncode(header) + "." + base64UrlEncode(payload) +base64UrlEncode(secret)
+    std::string header =R"({"alg":"HS256","typ":"JWT"})";
+    std::string payload = data;
+
+    std::string encoded_header = base64_url_encode((const unsigned char*)header.c_str(),header.length());
+    std::string encoded_payload=base64_url_encode((const unsigned char*)payload.c_str(),payload.length());
+    std::string data_to_sign = encoded_header +"."+encoded_payload;
+    std::string signature = hmac_sha256_byte(private_key,data_to_sign);
+    std::string secret = base64_url_encode((const unsigned char*)signature.c_str(),signature.length());
+
+    std::string jwt = data_to_sign+"."+secret;
+    return  jwt;
+}
+
 }}
