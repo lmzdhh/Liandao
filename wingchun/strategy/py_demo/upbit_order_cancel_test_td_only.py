@@ -17,7 +17,7 @@ limitations under the License.
 '''
 test limit order and order cancelling for new wingchun strategy system.
 you may run this program by:
-wingchun strategy -n my_test -p binance_order_cancel_test.py
+wingchun strategy -n my_test -p upbit_order_cancel_test_td_only.py
 '''
 
 def initialize(context):
