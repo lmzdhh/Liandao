@@ -847,7 +847,7 @@ void TDEngineUpbit::GetAndHandleOrderTradeResponse()
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
         AccountUnitUpbit& unit = account_units[idx];
-        KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (api_key)" << unit.api_key);
+        //KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
             continue;
@@ -865,7 +865,7 @@ void TDEngineUpbit::GetAndHandleOrderTradeResponse()
         KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
     }
 
-    KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
+  //  KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
 }
 
 
