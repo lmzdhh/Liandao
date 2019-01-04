@@ -1,721 +1,540 @@
 {
-  "monitor":
-  {
-      "daemon":
-      {
-       "localHost":"127.0.0.1:45678",
-       "scriptPath":"/root/fgl/md_strat/build/script/autorefresh.sh"
-      }
-  },
-  "md":
-  {
-    "ctp":
-    {
-      "FrontUri": "tcp://180.168.212.228:41213",
-      "UserId": "YOUR_USER_ID",
-      "BrokerId": "YOUR_BROKER_ID",
-      "Password": "YOUR_PASSWORD"
-    },
-    "xtp":
-    {
-      "Ip": "120.27.164.138",
-      "Port": 6016,
-      "UserId": "YOUR_USER_ID",
-      "Password": "YOUR_PASSWORD",
-      "ClientId": 1
-    },
-    "binance":
-    {
-      "whiteLists":{
-        "etc_eth": "ETCETH",
-        "trx_btc": "TRXBTC"
-      },
-      "book_depth_count": 5,
-      "trade_count": 10,
-      "rest_get_interval_ms": 2000
-    },
-    "coinmex": {
-      "book_depth_count": 5,
-      "trade_count": 10,
-      "whiteLists": {
-        "strategy_coinpair(base_quote)": "exchange_coinpair",
-        "etc_eth": "ETC_ETH",
-        "ltc_btc": "LTC_BTC",
-        "ltc_usdt": "LTC_USDT",
-        "bch_btc": "BCH_BTC",
-        "bch_usdt": "BCH_USDT",
-        "etc_btc": "ETC_BTC",
-        "eth_btc": "ETH_BTC",
-        "etc_usdt": "ETC_USDT",
-        "eth_usdt": "ETH_USDT",
-        "btc_usdt": "BTC_USDT"
-      },
-      "rest_get_interval_ms": 500
-    },
-    "mock": {
-      "book_depth_count": 5,
-      "trade_count": 10,
-      "whiteLists": {
-        "strategy_coinpair(base_quote)": "exchange_coinpair",
-        "btc_usdt": "BTC_USDT",
-        "etc_eth": "ETC_ETH",
-        "mvp_btc": "MVP_BTC"
-      },
-      "rest_get_interval_ms": 500
-    },
-    "bitmax": {
-      "book_depth_count": 5,
-      "trade_count": 10,
-      "whiteLists": {
-        "strategy_coinpair(base_quote)": "exchange_coinpair",
-        "eth_btc": "ETH/BTC",
-        "bch_btc": "BCH/BTC",
-        "ltc_btc": "LTC/BTC",
-        "bch_eth": "BCH/ETH",
-        "ltc_eth": "LTC/ETH"
-      },
-      "rest_get_interval_ms": 500
-    },
-    "bitfinex": {
-      "book_depth_count": 25,
-      "trade_count": 10,
-      "whiteLists": {
-        "strategy_coinpair(base_quote)": "exchange_coinpair",
-        "eth_btc": "tETHBTC",
-        "bch_btc": "tBCHBTC",
-        "ltc_btc": "tLTCBTC",
-        "bch_eth": "tBCHETH",
-        "ltc_eth": "tLTCETH"
-      },
-      "rest_get_interval_ms": 500
-    },
-    "bitmex": {
-      "book_depth_count": 5,
-      "trade_count": 10,
-      "whiteLists": {
-        "strategy_coinpair(base_quote)": "exchange_coinpair",
-        "btc_usd": "XBTUSD",
-        "btc_u18": "XBTU18",
-        "eth_u18": "ETHU18"
-      },
-      "rest_get_interval_ms": 500
-    },
-    "hitbtc": {
-      "book_depth_count": 25,
-      "trade_count": 10,
-      "whiteLists": {
-        "strategy_coinpair(base_quote)": "exchange_coinpair",
-        "eth_btc": "tETHBTC",
-        "bch_btc": "tBCHBTC",
-        "ltc_btc": "tLTCBTC",
-        "bch_eth": "tBCHETH",
-        "ltc_eth": "tLTCETH"
-      },
-      "rest_get_interval_ms": 500
-    },
-    "oceanex": {
-      "book_depth_count": 5,
-      "trade_count": 10,
-      "whiteLists": {
-        "strategy_coinpair(base_quote)": "exchange_coinpair",
-        "btc_usdt": "btcusdt",
-        "eth_usdt": "ethusdt",
-        "vet_usdt": "vetusdt",
-        "eth_btc": "ethbtc",
-        "vet_btc": "vetbtc",
-        "vet_eth": "veteth"
-      },
-      "rest_get_interval_ms": 500
-    },
-    "huobi":
-    {
-          "exchange_url":"wss://api.huobi.pro:443/ws",
-          "monitor_url":"ws://127.0.0.1:45678/",
-          "name":"md_huobi",
-          "book_depth_count": 5,
-          "trade_count": 10,
-          "whiteLists": {
-            "btc_usd": "btcusdt",
-            "eth_usd": "etcusdt"
-          },
-          "rest_get_interval_ms": 500
-     }
-  },
-  "td": {
-    "binance": {
-      "accounts": [
-      {
-        "protocol":"wss://",
-        "ip":"api.huobi.pro",
-        "port":443,
-        "path":"/ws",
-        "book_depth_count": 5,
-        "trade_count": 10,
-        "whiteLists": {
-          "btc_usd": "btcusdt",
-          "eth_usd": "etcusdt"
-        },
-        "rest_get_interval_ms": 500
-      },
-    "probit":
-    {
-      "book_depth_count": 5,
-      "trade_count": 10,
-      "whiteLists": 
-        {
-            "etc_eth": "ETC-ETH",
-            "ltc_btc": "LTC-BTC",
-            "ltc_usdt": "LTC-USDT",
-            "bch_btc": "BCH-BTC",
-            "bch_usdt": "BCH-USDT",
-            "etc_btc": "ETC-BTC",
-            "eth_btc": "ETH-BTC",
-            "etc_usdt": "ETC-USDT",
-            "eth_usdt": "ETH-USDT",
-            "btc_usdt": "BTC-USDT"
-        },
-      "rest_get_interval_ms": 500
-    }
-  },
-  "td":
-  {
-  "probit":
-      {
-          "accounts":
-          [
-              {
-                "info":
-                {
-                  "APIKey": "D81508AB2EE22C68",
-                  "SecretKey": "412D577DF51116A653B56A2AD4A9",
-                  "passphrase": "EFF9EBF0",
-                  "baseUrl": "https://demo-api.probit.com",
-		          "acountUrl": "https://demo-accounts.probit.com",
-                  "wsUrl":"demo-api.probit.com",
-                  "whiteLists": {
-                                  "btc_usdt": "BTC_USDT",
-				                  "xrp_usdt":"XRP-USDT"
-                                },
-                  "rest_get_interval_ms": 500
-                },
-                "clients": ["mm_strategy1","mm_strategy2","mm_strategy3"],
-                "is_default": true
-              }
-          ],
-          "FeeSetup":
-          {
-              "stock":
-              {
-                "type": "amount",
-                "fee_multi": 0.0003,
-                "ctr_multi": 1,
-                "min_fee": 0
-              },
-              "future":
-              {
-                "type": "amount",
-                "fee_multi": [0.000023, 0.00069, 0.000023],
-                "ctr_multi": 200,
-                "min_fee": 0
-              },
-              "future_exotic": null
-          }
-      },
-    "binance":
-    {
-      "accounts":
-        [
-          {
-            "info":
-            {
-              "APIKey": "your-api-key",
-              "SecretKey": "your-secret-key",
-              "whiteLists":{
-                "etc_eth": "ETCETH",
-                "trx_btc": "TRXBTC"
-              },
-              "positionWhiteLists":{
-                              "ETC": "ETC",
-                              "BTC": "BTC"
-               },
-              "exchange_shift_ms": -2000,
-              "order_insert_recvwindow_ms": 5000,
-              "order_action_recvwindow_ms": 5000,
-              "max_rest_retry_times":3,
-              "retry_interval_milliseconds": 1000,
-              "rest_get_interval_ms": 2000,
-              "sync_time_interval": 10000
-            },
-            "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
-            "is_default": true
-          }
-        ],
-        "FeeSetup":
-        {
-          "stock":
-          {
-            "type": "amount",
-            "fee_multi": 0.0003,
-            "ctr_multi": 1,
-            "min_fee": 0
-          },
-          "future":
-          {
-            "type": "amount",
-            "fee_multi": [0.000023, 0.00069, 0.000023],
-            "ctr_multi": 200,
-            "min_fee": 0
-          },
-          "future_exotic": null
-        }
-    },
-    "coinmex":
-    {
-      "accounts":
-        [
-          {
-            "info":
-            {
-              "APIKey": "cmx-ee744311de9a1f52e3e75837f0847dfe",
-              "SecretKey": "99369bb84b9916624236b06a15396dd27b3b1c16f0a8c7cd55dfa72235fb6b23",
-              "passphrase": "qGr547re3",
-              "baseUrl": "https://www.coinmex.com",
-              "whiteLists": {
-                      "etc_eth": "ETC_ETH",
-                      "ltc_btc": "LTC_BTC",
-                      "ltc_usdt": "LTC_USDT",
-                      "bch_btc": "BCH_BTC",
-                      "bch_usdt": "BCH_USDT",
-                      "etc_btc": "ETC_BTC",
-                      "eth_btc": "ETH_BTC",
-                      "etc_usdt": "ETC_USDT",
-                      "eth_usdt": "ETH_USDT",
-                      "btc_usdt": "BTC_USDT"
-                    },
-               "positionWhiteLists":{
-                    "ETC": "ETC",
-                    "ETH": "ETH",
-                    "LTC": "LTC",
-                    "USDT": "USDT",
-                    "BCH": "BCH",
-                    "BTC": "BTC"
-                   },
-              "use_restful_to_receive_status": 1,
-              "max_rest_retry_times":4,
-              "retry_interval_milliseconds":1100,
-              "orderaction_max_waiting_seconds": 30,
-              "rest_get_interval_ms": 100
-            },
-            "clients": ["mm_strategy1", "mm_strategy2"],
-            "is_default": true
-          }
-        ],
-        "FeeSetup":
-        {
-          "stock":
-          {
-            "type": "amount",
-            "fee_multi": 0.0003,
-            "ctr_multi": 1,
-            "min_fee": 0
-          },
-          "future":
-          {
-            "type": "amount",
-            "fee_multi": [0.000023, 0.00069, 0.000023],
-            "ctr_multi": 200,
-            "min_fee": 0
-          },
-          "future_exotic": null
-        }
-    },
-    "mock": {
-      "accounts": [
-        {
-          "info": {
-            "APIKey": "your-api-key",
-            "SecretKey": "your-secret-key",
-            "passphrase": "your-passphrase",
-            "baseUrl": "https://www.mock.com",
-            "whiteLists": {
-              "strategy_coinpair(base_quote)": "exchange_coinpair",
-              "btc_usdt": "BTC_USDT",
-              "etc_eth": "ETC_ETH",
-              "mvp_btc": "MVP_BTC"
-            },
-            "positionWhiteLists": {
-              "ETC": "ETC",
-              "BTC": "BTC"
-            },
-            "rest_get_interval_ms": 2000
-          },
-          "clients": [ "YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3" ],
-          "is_default": true
-        }
-      ],
-      "FeeSetup": {
-        "stock": {
-          "type": "amount",
-          "fee_multi": 0.0003,
-          "ctr_multi": 1,
-          "min_fee": 0
-        },
-        "future": {
-          "type": "amount",
-          "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-          "ctr_multi": 200,
-          "min_fee": 0
-        },
-        "future_exotic": null
-      }
-    },
-    "bitmax": {
-      "accounts": [
-        {
-          "info": {
-            "APIKey": "your-api-key",
-            "SecretKey": "your-secret-key",
-            "passphrase": "your-passphrase",
-            "baseUrl": "https://www.bitmax.io",
-            "whiteLists": {
-              "strategy_coinpair(base_quote)": "exchange_coinpair",
-              "eth_btc": "ETH/BTC",
-              "bch_btc": "BCH/BTC",
-              "ltc_btc": "LTC/BTC",
-              "bch_eth": "BCH/ETH",
-              "ltc_eth": "LTC/ETH"
-            },
-            "positionWhiteLists": {
-              "ETC": "ETC",
-              "BTC": "BTC"
-            },
-            "rest_get_interval_ms": 2000
-          },
-          "clients": [ "YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3" ],
-          "is_default": true
-        }
-      ],
-      "FeeSetup": {
-        "stock": {
-          "type": "amount",
-          "fee_multi": 0.0003,
-          "ctr_multi": 1,
-          "min_fee": 0
-        },
-        "future": {
-          "type": "amount",
-          "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-          "ctr_multi": 200,
-          "min_fee": 0
-        },
-        "future_exotic": null
-      }
-    },
-    "bitfinex": {
-      "accounts": [
-        {
-          "info": {
-            "APIKey": "your-api-key",
-            "SecretKey": "your-secret-key",
-            "passphrase": "your-passphrase",
-            "baseUrl": "https://api.bitfinex.com",
-            "whiteLists": {
-              "strategy_coinpair(base_quote)": "exchange_coinpair",
-              "eth_btc": "tETHBTC",
-              "bch_btc": "tBCHBTC",
-              "ltc_btc": "tLTCBTC",
-              "bch_eth": "tBCHETH",
-              "ltc_eth": "tLTCETH"
-            },
-            "positionWhiteLists": {
-              "ETC": "ETC",
-              "BTC": "BTC"
-            },
-            "rest_get_interval_ms": 2000
-          },
-          "clients": [ "YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3" ],
-          "is_default": true
-        }
-      ],
-      "FeeSetup": {
-        "stock": {
-          "type": "amount",
-          "fee_multi": 0.0003,
-          "ctr_multi": 1,
-          "min_fee": 0
-        },
-        "future": {
-          "type": "amount",
-          "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-          "ctr_multi": 200,
-          "min_fee": 0
-        },
-        "future_exotic": null
-      }
-    },
-    "bitmex": {
-      "accounts": [
-        {
-          "info": {
-            "APIKey": "your-api-key",
-            "SecretKey": "your-secret-key",
-            "passphrase": "your-passphrase",
-            "baseUrl": "https://api.bitmex.com",
-            "whiteLists": {
-              "strategy_coinpair(base_quote)": "exchange_coinpair",
-              "eth_btc": "tETHBTC",
-              "bch_btc": "tBCHBTC",
-              "ltc_btc": "tLTCBTC",
-              "bch_eth": "tBCHETH",
-              "ltc_eth": "tLTCETH"
-            },
-            "positionWhiteLists": {
-              "ETC": "ETC",
-              "BTC": "BTC"
-            },
-            "rest_get_interval_ms": 2000
-          },
-          "clients": [ "YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3" ],
-          "is_default": true
-        }
-      ],
-      "FeeSetup": {
-        "stock": {
-          "type": "amount",
-          "fee_multi": 0.0003,
-          "ctr_multi": 1,
-          "min_fee": 0
-        },
-        "future": {
-          "type": "amount",
-          "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-          "ctr_multi": 200,
-          "min_fee": 0
-        },
-        "future_exotic": null
-      }
-    },
-    "hitbtc": {
-      "accounts": [
-        {
-          "info": {
-            "APIKey": "your-api-key",
-            "SecretKey": "your-secret-key",
-            "passphrase": "your-passphrase",
-            "baseUrl": "https://api.hitbtc.com",
-            "whiteLists": {
-              "strategy_coinpair(base_quote)": "exchange_coinpair",
-              "eth_btc": "tETHBTC",
-              "bch_btc": "tBCHBTC",
-              "ltc_btc": "tLTCBTC",
-              "bch_eth": "tBCHETH",
-              "ltc_eth": "tLTCETH"
-            },
-            "positionWhiteLists": {
-              "ETC": "ETC",
-              "BTC": "BTC"
-            },
-            "rest_get_interval_ms": 2000
-          },
-          "clients": [ "YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3" ],
-          "is_default": true
-        }
-      ],
-      "FeeSetup": {
-        "stock": {
-          "type": "amount",
-          "fee_multi": 0.0003,
-          "ctr_multi": 1,
-          "min_fee": 0
-        },
-        "future": {
-          "type": "amount",
-          "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-          "ctr_multi": 200,
-          "min_fee": 0
-        },
-        "future_exotic": null
-      }
-    },
-    "oceanex": {
-      "accounts": [
-        {
-          "info": {
-            "APIKey": "ID6EFBCC1AD7",
-            "SecretKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEA458porjF1U171LWTBjl5RU9qJn7rebcsaUPWERPPXooybNnu\nleluEEzmXRXKtIcPNUCfRCfoSgfTwDl1s/t3QaPh4BTjEzWMQCU27xMCmXZodpml\ncFVWVkLcRypHJmVg1o6JhOJZq0CEhcZBovnhHi6ucD192rJRL8oImjKy6JpgSFZ+\nLadJvcF/eEcj5muWObQNI7wBPb72DsEGA2VwPLx5Xv+HadgUo/n73dBHAB0/HvaX\npcDhGB4c/E7NkuAZdssgbNwqPyUVgGedNL7DseGHC0S/9HBjr5/LflqPAIGMn98a\nbYDRYgT8lmFBHM1dZPjkUlPG8RLFOpwv89klQQIDAQABAoIBAA5gH/YJ61ykTxzI\n9ucevBz3fgG+ZErEmcZwJVXgxWj4G2UqglnvaycWZDoexTWPjhNT6Hsadh4uzl3G\ngzuBty9rFTnct9afvCLU9to0fiaJBuHupDcq/I/oGxdXgTTYlDwYtnCxBu683WHB\neqW7WE9arWOjTo6AUoZNISvz5b6w2sJMH7gHbO48POs9V9ekyKyFFk4NHn3MyT4d\nZLTlbqYFn0J83yamwKzeqIUqPzN2qrUxYXlQe2fzkmu+LEkQ37JmfZzczPaxJJiL\nd6t+Qn0K18o5hXpMENqm+aPTu5zvS75mZIH/rVcRbcSLJPlpjjGrq5569lF0sntN\nCsiLwJ0CgYEA9q8EldEKUGhMrP8GcdgF87n9aG5v6ZEnfDHmPEJW6ca2J2SeWnS/\nbYNhXpmMmPzKDVBZEw6jldfQw8Wc5A7ec3qgLqr9xAjjcb7P4yTJpuaOoFx+Nehz\nlTs2Dld9AO8QL0IM9pLEvW6/invlEDterukizMAXHFDphmyxapJlHMsCgYEA7DfZ\nuxPeKsYDoDiqFYNRY9NJ297VrTvxxoB447aoQJp/9o5RfOXjEeesQju+TphksA2S\n5nT5v0GaNLPIPQ+ny0OX/H9ai1qOYOo5g9JbySdGer/D5egExp38vWlU9h8eElxE\nIvbdhKhyPFtfNnl9jNKu3F7tQz9NTuK6dd29cKMCgYA8Wzgw+9OdNtfD4CYQhr12\nE8S334WMTVKu5XqitcyUKGV7H/hKw5Pu1J1nSwSGjhtVxJn2urc1u3c930Ty29x7\nvr4gjP/IDjCwLPKqbd7U8kZlYBwVTomxMqqYObnBF70LAwsu7VwryUQeOxAht5UE\nENDN7hX5fKaWmFOUcrtAnwKBgAtfKPEzpKdkfvowoCeG+d0XZ9/Y22qKjzoiJy+3\nNGRfy7c/5LZhjsvm3kkV/TRla7t5+89yZC+L5fORkBs4bLiBWYjDTMWWp3IM9JXf\nA6IsbN0t7C1ePRSeuHMZ5ggvOVBi9rjEL6faQB2dvHiv4pZr8hUT0NJC8uLQUW+p\nLByHAoGASw/by1ukxLNHR711jCBgJMpAJZtYT8D6uNSPSaC8xwpS5eeTWIiANU3O\n5HepCIpv9aT8PRkv5V8iLa9BCsSUHnTgTxFYzzqZAl7nBRB1oBeFy/WR2zq+Y46y\nco2fTziiNA7RbZxTM7sX/667ZAVUgEXGdU5ZhKpuHu2CwE+pUQQ=\n-----END RSA PRIVATE KEY-----\n",
-            "passphrase": "your-passphrase",
-            "baseUrl": "https://api.oceanex.cc/v1",
-            "whiteLists": {
-              "strategy_coinpair(base_quote)": "exchange_coinpair",
-              "btc_usdt": "btcusdt",
-              "eth_usdt": "ethusdt",
-              "vet_usdt": "vetusdt",
-              "eth_btc": "ethbtc",
-              "vet_btc": "vetbtc",
-              "vet_eth": "veteth"
-            },
-            "positionWhiteLists": {
-              "ETC": "ETC",
-              "BTC": "BTC"
-            },
-            "rest_get_interval_ms": 2000
-          },
-          "clients": [ "YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3" ],
-          "is_default": true
-        }
-      ],
-      "FeeSetup": {
-        "stock": {
-          "type": "amount",
-          "fee_multi": 0.0003,
-          "ctr_multi": 1,
-          "min_fee": 0
-        },
-        "future": {
-          "type": "amount",
-          "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-          "ctr_multi": 200,
-          "min_fee": 0
-        },
-        "future_exotic": null
-      }
-    },
-    "oceanex2": {
-      "accounts": [
-        {
-          "info": {
-            "APIKey": "ID6EFBCC1AD7",
-            "SecretKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEA458porjF1U171LWTBjl5RU9qJn7rebcsaUPWERPPXooybNnu\nleluEEzmXRXKtIcPNUCfRCfoSgfTwDl1s/t3QaPh4BTjEzWMQCU27xMCmXZodpml\ncFVWVkLcRypHJmVg1o6JhOJZq0CEhcZBovnhHi6ucD192rJRL8oImjKy6JpgSFZ+\nLadJvcF/eEcj5muWObQNI7wBPb72DsEGA2VwPLx5Xv+HadgUo/n73dBHAB0/HvaX\npcDhGB4c/E7NkuAZdssgbNwqPyUVgGedNL7DseGHC0S/9HBjr5/LflqPAIGMn98a\nbYDRYgT8lmFBHM1dZPjkUlPG8RLFOpwv89klQQIDAQABAoIBAA5gH/YJ61ykTxzI\n9ucevBz3fgG+ZErEmcZwJVXgxWj4G2UqglnvaycWZDoexTWPjhNT6Hsadh4uzl3G\ngzuBty9rFTnct9afvCLU9to0fiaJBuHupDcq/I/oGxdXgTTYlDwYtnCxBu683WHB\neqW7WE9arWOjTo6AUoZNISvz5b6w2sJMH7gHbO48POs9V9ekyKyFFk4NHn3MyT4d\nZLTlbqYFn0J83yamwKzeqIUqPzN2qrUxYXlQe2fzkmu+LEkQ37JmfZzczPaxJJiL\nd6t+Qn0K18o5hXpMENqm+aPTu5zvS75mZIH/rVcRbcSLJPlpjjGrq5569lF0sntN\nCsiLwJ0CgYEA9q8EldEKUGhMrP8GcdgF87n9aG5v6ZEnfDHmPEJW6ca2J2SeWnS/\nbYNhXpmMmPzKDVBZEw6jldfQw8Wc5A7ec3qgLqr9xAjjcb7P4yTJpuaOoFx+Nehz\nlTs2Dld9AO8QL0IM9pLEvW6/invlEDterukizMAXHFDphmyxapJlHMsCgYEA7DfZ\nuxPeKsYDoDiqFYNRY9NJ297VrTvxxoB447aoQJp/9o5RfOXjEeesQju+TphksA2S\n5nT5v0GaNLPIPQ+ny0OX/H9ai1qOYOo5g9JbySdGer/D5egExp38vWlU9h8eElxE\nIvbdhKhyPFtfNnl9jNKu3F7tQz9NTuK6dd29cKMCgYA8Wzgw+9OdNtfD4CYQhr12\nE8S334WMTVKu5XqitcyUKGV7H/hKw5Pu1J1nSwSGjhtVxJn2urc1u3c930Ty29x7\nvr4gjP/IDjCwLPKqbd7U8kZlYBwVTomxMqqYObnBF70LAwsu7VwryUQeOxAht5UE\nENDN7hX5fKaWmFOUcrtAnwKBgAtfKPEzpKdkfvowoCeG+d0XZ9/Y22qKjzoiJy+3\nNGRfy7c/5LZhjsvm3kkV/TRla7t5+89yZC+L5fORkBs4bLiBWYjDTMWWp3IM9JXf\nA6IsbN0t7C1ePRSeuHMZ5ggvOVBi9rjEL6faQB2dvHiv4pZr8hUT0NJC8uLQUW+p\nLByHAoGASw/by1ukxLNHR711jCBgJMpAJZtYT8D6uNSPSaC8xwpS5eeTWIiANU3O\n5HepCIpv9aT8PRkv5V8iLa9BCsSUHnTgTxFYzzqZAl7nBRB1oBeFy/WR2zq+Y46y\nco2fTziiNA7RbZxTM7sX/667ZAVUgEXGdU5ZhKpuHu2CwE+pUQQ=\n-----END RSA PRIVATE KEY-----\n",
-            "passphrase": "your-passphrase",
-            "baseUrl": "https://api.oceanex.cc/v1",
-            "whiteLists": {
-              "strategy_coinpair(base_quote)": "exchange_coinpair",
-              "btc_usdt": "btcusdt",
-              "eth_usdt": "ethusdt",
-              "vet_usdt": "vetusdt",
-              "eth_btc": "ethbtc",
-              "vet_btc": "vetbtc",
-              "vet_eth": "veteth"
-            },
-            "positionWhiteLists": {
-              "ETC": "ETC",
-              "BTC": "BTC"
-            },
-            "rest_get_interval_ms": 2000
-          },
-          "clients": [ "YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3" ],
-          "is_default": true
-        }
-      ],
-      "FeeSetup": {
-        "stock": {
-          "type": "amount",
-          "fee_multi": 0.0003,
-          "ctr_multi": 1,
-          "min_fee": 0
-        },
-        "future": {
-          "type": "amount",
-          "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-          "ctr_multi": 200,
-          "min_fee": 0
-        },
-        "future_exotic": null
-      }
-    },
-    "ctp": {
-      "FrontUri": "tcp://180.168.146.187:10000",
-      "NeedAuth": false,
-      "NeedSettleConfirm": true,
-      "accounts": [
-        {
-          "info": {
-            "UserId": "YOUR_USER_ID",
-            "InvestorId": "YOUR_INVESTOR_ID",
-            "BrokerId": "YOUR_BROKER_ID",
-            "Password": "YOUR_PASSWORD"
-          },
-          "clients": [ "YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3" ],
-          "is_default": true
-        }
-      ],
-      "FeeSetup": {
-        "stock": {
-          "type": "amount",
-          "fee_multi": 0.0003,
-          "ctr_multi": 1,
-          "min_fee": 0
-        },
-        "future": {
-          "type": "amount",
-          "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-          "ctr_multi": 200,
-          "min_fee": 0
-        },
-        "future_exotic": {
-          "rb": {
-            "type": "amount",
-            "fee_multi": 0.0001,
-            "ctr_multi": 10,
-            "min_fee": 0
-          },
-          "rb1801": {
-            "type": "amount",
-            "fee_multi": [ 0.0001, 0.0005, 0.0001 ],
-            "ctr_multi": 10,
-            "min_fee": 0
-          },
-          "c": {
-            "type": "volume",
-            "fee_multi": 1.2,
-            "ctr_multi": 10,
-            "min_fee": 0
-          },
-          "c1803": {
-            "type": "volume",
-            "fee_multi": 0.2,
-            "ctr_multi": 10,
-            "min_fee": 0
-          },
-          "ic": {
-            "type": "amount",
-            "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-            "ctr_multi": 200,
-            "min_fee": 0
-          }
-        }
-      }
-    },
-    "xtp": {
-      "Key": "YOUR_XTP_GATEWAY_KEY",
-      "Ip": "120.27.164.69",
-      "Port": 6001,
-      "ClientId": 1,
-      "accounts": [
-        {
-          "info": {
-            "UserId": "YOUR_USER_ID",
-            "Password": "YOUR_PASSWORD"
-          },
-          "clients": [ "YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3" ],
-          "is_default": true
-        }
-      ],
-      "FeeSetup": {
-        "stock": {
-          "type": "amount",
-          "fee_multi": 0.0003,
-          "ctr_multi": 1,
-          "min_fee": 0
-        },
-        "future": {
-          "type": "amount",
-          "fee_multi": [ 0.000023, 0.00069, 0.000023 ],
-          "ctr_multi": 200,
-          "min_fee": 0
-        },
-        "future_exotic": null
-      }
-    }
-  }
+	"monitor": {
+		"daemon": {
+			"localHost": "127.0.0.1:45678",
+			"scriptPath": "/root/fgl/md_strat/build/script/autorefresh.sh"
+		}
+	},
+	"md": {
+		"binance": {
+			"whiteLists": {
+				"etc_eth": "ETCETH",
+				"trx_btc": "TRXBTC"
+			},
+			"book_depth_count": 5,
+			"trade_count": 10,
+			"rest_get_interval_ms": 2000
+		},
+		"coinmex": {
+			"book_depth_count": 5,
+			"trade_count": 10,
+			"whiteLists": {
+				"strategy_coinpair(base_quote)": "exchange_coinpair",
+				"etc_eth": "ETC_ETH",
+				"ltc_btc": "LTC_BTC",
+				"ltc_usdt": "LTC_USDT",
+				"bch_btc": "BCH_BTC",
+				"bch_usdt": "BCH_USDT",
+				"etc_btc": "ETC_BTC",
+				"eth_btc": "ETH_BTC",
+				"etc_usdt": "ETC_USDT",
+				"eth_usdt": "ETH_USDT",
+				"btc_usdt": "BTC_USDT"
+			},
+			"rest_get_interval_ms": 500
+		},
+		"bitmax": {
+			"book_depth_count": 5,
+			"trade_count": 10,
+			"whiteLists": {
+				"strategy_coinpair(base_quote)": "exchange_coinpair",
+				"eth_btc": "ETH/BTC",
+				"bch_btc": "BCH/BTC",
+				"ltc_btc": "LTC/BTC",
+				"bch_eth": "BCH/ETH",
+				"ltc_eth": "LTC/ETH"
+			},
+			"rest_get_interval_ms": 500
+		},
+		"bitfinex": {
+			"book_depth_count": 25,
+			"trade_count": 10,
+			"whiteLists": {
+				"strategy_coinpair(base_quote)": "exchange_coinpair",
+				"eth_btc": "tETHBTC",
+				"bch_btc": "tBCHBTC",
+				"ltc_btc": "tLTCBTC",
+				"bch_eth": "tBCHETH",
+				"ltc_eth": "tLTCETH"
+			},
+			"rest_get_interval_ms": 500
+		},
+		"bitmex": {
+			"book_depth_count": 5,
+			"trade_count": 10,
+			"whiteLists": {
+				"strategy_coinpair(base_quote)": "exchange_coinpair",
+				"btc_usd": "XBTUSD",
+				"btc_u18": "XBTU18",
+				"eth_u18": "ETHU18"
+			},
+			"rest_get_interval_ms": 500
+		},
+		"hitbtc": {
+			"book_depth_count": 25,
+			"trade_count": 10,
+			"whiteLists": {
+				"strategy_coinpair(base_quote)": "exchange_coinpair",
+				"eth_btc": "tETHBTC",
+				"bch_btc": "tBCHBTC",
+				"ltc_btc": "tLTCBTC",
+				"bch_eth": "tBCHETH",
+				"ltc_eth": "tLTCETH"
+			},
+			"rest_get_interval_ms": 500
+		},
+		"oceanex": {
+			"book_depth_count": 5,
+			"trade_count": 10,
+			"whiteLists": {
+				"strategy_coinpair(base_quote)": "exchange_coinpair",
+				"btc_usdt": "btcusdt",
+				"eth_usdt": "ethusdt",
+				"vet_usdt": "vetusdt",
+				"eth_btc": "ethbtc",
+				"vet_btc": "vetbtc",
+				"vet_eth": "veteth"
+			},
+			"rest_get_interval_ms": 500
+		},
+		"huobi": {
+			"exchange_url": "wss://api.huobi.pro:443/ws",
+			"monitor_url": "ws://127.0.0.1:45678/",
+			"name": "md_huobi",
+			"book_depth_count": 5,
+			"trade_count": 10,
+			"whiteLists": {
+				"btc_usd": "btcusdt",
+				"eth_usd": "etcusdt"
+			},
+			"rest_get_interval_ms": 500
+		},
+		"probit": {
+			"book_depth_count": 5,
+			"trade_count": 10,
+			"whiteLists": {
+				"etc_eth": "ETC-ETH",
+				"ltc_btc": "LTC-BTC",
+				"ltc_usdt": "LTC-USDT",
+				"bch_btc": "BCH-BTC",
+				"bch_usdt": "BCH-USDT",
+				"etc_btc": "ETC-BTC",
+				"eth_btc": "ETH-BTC",
+				"etc_usdt": "ETC-USDT",
+				"eth_usdt": "ETH-USDT",
+				"btc_usdt": "BTC-USDT"
+			},
+			"rest_get_interval_ms": 500
+		}
+	},
+	"td": {
+		"probit": {
+			"monitor_url": "ws://127.0.0.1:45678/",
+			"name": "probit",
+			"accounts": [{
+				"info": {
+					"APIKey": "D81508AB2EE22C68",
+					"SecretKey": "412D577DF51116A653B56A2AD4A9",
+					"passphrase": "EFF9EBF0",
+					"baseUrl": "https://demo-api.probit.com",
+					"acountUrl": "https://demo-accounts.probit.com",
+					"wsUrl": "demo-api.probit.com",
+					"whiteLists": {
+						"btc_usdt": "BTC_USDT",
+						"xrp_usdt": "XRP-USDT"
+					},
+					"rest_get_interval_ms": 500
+				},
+				"clients": ["mm_strategy1", "mm_strategy2", "mm_strategy3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
+		},
+		"binance": {
+			"accounts": [{
+				"info": {
+					"APIKey": "your-api-key",
+					"SecretKey": "your-secret-key",
+					"whiteLists": {
+						"etc_eth": "ETCETH",
+						"trx_btc": "TRXBTC"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"BTC": "BTC"
+					},
+					"exchange_shift_ms": -2000,
+					"order_insert_recvwindow_ms": 5000,
+					"order_action_recvwindow_ms": 5000,
+					"max_rest_retry_times": 3,
+					"retry_interval_milliseconds": 1000,
+					"rest_get_interval_ms": 2000,
+					"sync_time_interval": 10000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
+		},
+		"coinmex": {
+			"accounts": [{
+				"info": {
+					"APIKey": "cmx-ee744311de9a1f52e3e75837f0847dfe",
+					"SecretKey": "99369bb84b9916624236b06a15396dd27b3b1c16f0a8c7cd55dfa72235fb6b23",
+					"passphrase": "qGr547re3",
+					"baseUrl": "https://www.coinmex.com",
+					"whiteLists": {
+						"etc_eth": "ETC_ETH",
+						"ltc_btc": "LTC_BTC",
+						"ltc_usdt": "LTC_USDT",
+						"bch_btc": "BCH_BTC",
+						"bch_usdt": "BCH_USDT",
+						"etc_btc": "ETC_BTC",
+						"eth_btc": "ETH_BTC",
+						"etc_usdt": "ETC_USDT",
+						"eth_usdt": "ETH_USDT",
+						"btc_usdt": "BTC_USDT"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"ETH": "ETH",
+						"LTC": "LTC",
+						"USDT": "USDT",
+						"BCH": "BCH",
+						"BTC": "BTC"
+					},
+					"use_restful_to_receive_status": 1,
+					"max_rest_retry_times": 4,
+					"retry_interval_milliseconds": 1100,
+					"orderaction_max_waiting_seconds": 30,
+					"rest_get_interval_ms": 100
+				},
+				"clients": ["mm_strategy1", "mm_strategy2"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
+		},
+		"mock": {
+			"accounts": [{
+				"info": {
+					"APIKey": "your-api-key",
+					"SecretKey": "your-secret-key",
+					"passphrase": "your-passphrase",
+					"baseUrl": "https://www.mock.com",
+					"whiteLists": {
+						"strategy_coinpair(base_quote)": "exchange_coinpair",
+						"btc_usdt": "BTC_USDT",
+						"etc_eth": "ETC_ETH",
+						"mvp_btc": "MVP_BTC"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"BTC": "BTC"
+					},
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
+		},
+		"bitmax": {
+			"accounts": [{
+				"info": {
+					"APIKey": "your-api-key",
+					"SecretKey": "your-secret-key",
+					"passphrase": "your-passphrase",
+					"baseUrl": "https://www.bitmax.io",
+					"whiteLists": {
+						"strategy_coinpair(base_quote)": "exchange_coinpair",
+						"eth_btc": "ETH/BTC",
+						"bch_btc": "BCH/BTC",
+						"ltc_btc": "LTC/BTC",
+						"bch_eth": "BCH/ETH",
+						"ltc_eth": "LTC/ETH"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"BTC": "BTC"
+					},
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
+		},
+		"bitfinex": {
+			"accounts": [{
+				"info": {
+					"APIKey": "your-api-key",
+					"SecretKey": "your-secret-key",
+					"passphrase": "your-passphrase",
+					"baseUrl": "https://api.bitfinex.com",
+					"whiteLists": {
+						"strategy_coinpair(base_quote)": "exchange_coinpair",
+						"eth_btc": "tETHBTC",
+						"bch_btc": "tBCHBTC",
+						"ltc_btc": "tLTCBTC",
+						"bch_eth": "tBCHETH",
+						"ltc_eth": "tLTCETH"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"BTC": "BTC"
+					},
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
+		},
+		"bitmex": {
+			"accounts": [{
+				"info": {
+					"APIKey": "your-api-key",
+					"SecretKey": "your-secret-key",
+					"passphrase": "your-passphrase",
+					"baseUrl": "https://api.bitmex.com",
+					"whiteLists": {
+						"strategy_coinpair(base_quote)": "exchange_coinpair",
+						"eth_btc": "tETHBTC",
+						"bch_btc": "tBCHBTC",
+						"ltc_btc": "tLTCBTC",
+						"bch_eth": "tBCHETH",
+						"ltc_eth": "tLTCETH"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"BTC": "BTC"
+					},
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
+		},
+		"hitbtc": {
+			"accounts": [{
+				"info": {
+					"APIKey": "your-api-key",
+					"SecretKey": "your-secret-key",
+					"passphrase": "your-passphrase",
+					"baseUrl": "https://api.hitbtc.com",
+					"whiteLists": {
+						"strategy_coinpair(base_quote)": "exchange_coinpair",
+						"eth_btc": "tETHBTC",
+						"bch_btc": "tBCHBTC",
+						"ltc_btc": "tLTCBTC",
+						"bch_eth": "tBCHETH",
+						"ltc_eth": "tLTCETH"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"BTC": "BTC"
+					},
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
+		},
+		"oceanex": {
+			"accounts": [{
+				"info": {
+					"APIKey": "ID6EFBCC1AD7",
+					"SecretKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEA458porjF1U171LWTBjl5RU9qJn7rebcsaUPWERPPXooybNnu\nleluEEzmXRXKtIcPNUCfRCfoSgfTwDl1s/t3QaPh4BTjEzWMQCU27xMCmXZodpml\ncFVWVkLcRypHJmVg1o6JhOJZq0CEhcZBovnhHi6ucD192rJRL8oImjKy6JpgSFZ+\nLadJvcF/eEcj5muWObQNI7wBPb72DsEGA2VwPLx5Xv+HadgUo/n73dBHAB0/HvaX\npcDhGB4c/E7NkuAZdssgbNwqPyUVgGedNL7DseGHC0S/9HBjr5/LflqPAIGMn98a\nbYDRYgT8lmFBHM1dZPjkUlPG8RLFOpwv89klQQIDAQABAoIBAA5gH/YJ61ykTxzI\n9ucevBz3fgG+ZErEmcZwJVXgxWj4G2UqglnvaycWZDoexTWPjhNT6Hsadh4uzl3G\ngzuBty9rFTnct9afvCLU9to0fiaJBuHupDcq/I/oGxdXgTTYlDwYtnCxBu683WHB\neqW7WE9arWOjTo6AUoZNISvz5b6w2sJMH7gHbO48POs9V9ekyKyFFk4NHn3MyT4d\nZLTlbqYFn0J83yamwKzeqIUqPzN2qrUxYXlQe2fzkmu+LEkQ37JmfZzczPaxJJiL\nd6t+Qn0K18o5hXpMENqm+aPTu5zvS75mZIH/rVcRbcSLJPlpjjGrq5569lF0sntN\nCsiLwJ0CgYEA9q8EldEKUGhMrP8GcdgF87n9aG5v6ZEnfDHmPEJW6ca2J2SeWnS/\nbYNhXpmMmPzKDVBZEw6jldfQw8Wc5A7ec3qgLqr9xAjjcb7P4yTJpuaOoFx+Nehz\nlTs2Dld9AO8QL0IM9pLEvW6/invlEDterukizMAXHFDphmyxapJlHMsCgYEA7DfZ\nuxPeKsYDoDiqFYNRY9NJ297VrTvxxoB447aoQJp/9o5RfOXjEeesQju+TphksA2S\n5nT5v0GaNLPIPQ+ny0OX/H9ai1qOYOo5g9JbySdGer/D5egExp38vWlU9h8eElxE\nIvbdhKhyPFtfNnl9jNKu3F7tQz9NTuK6dd29cKMCgYA8Wzgw+9OdNtfD4CYQhr12\nE8S334WMTVKu5XqitcyUKGV7H/hKw5Pu1J1nSwSGjhtVxJn2urc1u3c930Ty29x7\nvr4gjP/IDjCwLPKqbd7U8kZlYBwVTomxMqqYObnBF70LAwsu7VwryUQeOxAht5UE\nENDN7hX5fKaWmFOUcrtAnwKBgAtfKPEzpKdkfvowoCeG+d0XZ9/Y22qKjzoiJy+3\nNGRfy7c/5LZhjsvm3kkV/TRla7t5+89yZC+L5fORkBs4bLiBWYjDTMWWp3IM9JXf\nA6IsbN0t7C1ePRSeuHMZ5ggvOVBi9rjEL6faQB2dvHiv4pZr8hUT0NJC8uLQUW+p\nLByHAoGASw/by1ukxLNHR711jCBgJMpAJZtYT8D6uNSPSaC8xwpS5eeTWIiANU3O\n5HepCIpv9aT8PRkv5V8iLa9BCsSUHnTgTxFYzzqZAl7nBRB1oBeFy/WR2zq+Y46y\nco2fTziiNA7RbZxTM7sX/667ZAVUgEXGdU5ZhKpuHu2CwE+pUQQ=\n-----END RSA PRIVATE KEY-----\n",
+					"passphrase": "your-passphrase",
+					"baseUrl": "https://api.oceanex.cc/v1",
+					"whiteLists": {
+						"strategy_coinpair(base_quote)": "exchange_coinpair",
+						"btc_usdt": "btcusdt",
+						"eth_usdt": "ethusdt",
+						"vet_usdt": "vetusdt",
+						"eth_btc": "ethbtc",
+						"vet_btc": "vetbtc",
+						"vet_eth": "veteth"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"BTC": "BTC"
+					},
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
+		},
+		"oceanex2": {
+			"accounts": [{
+				"info": {
+					"APIKey": "ID6EFBCC1AD7",
+					"SecretKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEA458porjF1U171LWTBjl5RU9qJn7rebcsaUPWERPPXooybNnu\nleluEEzmXRXKtIcPNUCfRCfoSgfTwDl1s/t3QaPh4BTjEzWMQCU27xMCmXZodpml\ncFVWVkLcRypHJmVg1o6JhOJZq0CEhcZBovnhHi6ucD192rJRL8oImjKy6JpgSFZ+\nLadJvcF/eEcj5muWObQNI7wBPb72DsEGA2VwPLx5Xv+HadgUo/n73dBHAB0/HvaX\npcDhGB4c/E7NkuAZdssgbNwqPyUVgGedNL7DseGHC0S/9HBjr5/LflqPAIGMn98a\nbYDRYgT8lmFBHM1dZPjkUlPG8RLFOpwv89klQQIDAQABAoIBAA5gH/YJ61ykTxzI\n9ucevBz3fgG+ZErEmcZwJVXgxWj4G2UqglnvaycWZDoexTWPjhNT6Hsadh4uzl3G\ngzuBty9rFTnct9afvCLU9to0fiaJBuHupDcq/I/oGxdXgTTYlDwYtnCxBu683WHB\neqW7WE9arWOjTo6AUoZNISvz5b6w2sJMH7gHbO48POs9V9ekyKyFFk4NHn3MyT4d\nZLTlbqYFn0J83yamwKzeqIUqPzN2qrUxYXlQe2fzkmu+LEkQ37JmfZzczPaxJJiL\nd6t+Qn0K18o5hXpMENqm+aPTu5zvS75mZIH/rVcRbcSLJPlpjjGrq5569lF0sntN\nCsiLwJ0CgYEA9q8EldEKUGhMrP8GcdgF87n9aG5v6ZEnfDHmPEJW6ca2J2SeWnS/\nbYNhXpmMmPzKDVBZEw6jldfQw8Wc5A7ec3qgLqr9xAjjcb7P4yTJpuaOoFx+Nehz\nlTs2Dld9AO8QL0IM9pLEvW6/invlEDterukizMAXHFDphmyxapJlHMsCgYEA7DfZ\nuxPeKsYDoDiqFYNRY9NJ297VrTvxxoB447aoQJp/9o5RfOXjEeesQju+TphksA2S\n5nT5v0GaNLPIPQ+ny0OX/H9ai1qOYOo5g9JbySdGer/D5egExp38vWlU9h8eElxE\nIvbdhKhyPFtfNnl9jNKu3F7tQz9NTuK6dd29cKMCgYA8Wzgw+9OdNtfD4CYQhr12\nE8S334WMTVKu5XqitcyUKGV7H/hKw5Pu1J1nSwSGjhtVxJn2urc1u3c930Ty29x7\nvr4gjP/IDjCwLPKqbd7U8kZlYBwVTomxMqqYObnBF70LAwsu7VwryUQeOxAht5UE\nENDN7hX5fKaWmFOUcrtAnwKBgAtfKPEzpKdkfvowoCeG+d0XZ9/Y22qKjzoiJy+3\nNGRfy7c/5LZhjsvm3kkV/TRla7t5+89yZC+L5fORkBs4bLiBWYjDTMWWp3IM9JXf\nA6IsbN0t7C1ePRSeuHMZ5ggvOVBi9rjEL6faQB2dvHiv4pZr8hUT0NJC8uLQUW+p\nLByHAoGASw/by1ukxLNHR711jCBgJMpAJZtYT8D6uNSPSaC8xwpS5eeTWIiANU3O\n5HepCIpv9aT8PRkv5V8iLa9BCsSUHnTgTxFYzzqZAl7nBRB1oBeFy/WR2zq+Y46y\nco2fTziiNA7RbZxTM7sX/667ZAVUgEXGdU5ZhKpuHu2CwE+pUQQ=\n-----END RSA PRIVATE KEY-----\n",
+					"passphrase": "your-passphrase",
+					"baseUrl": "https://api.oceanex.cc/v1",
+					"whiteLists": {
+						"strategy_coinpair(base_quote)": "exchange_coinpair",
+						"btc_usdt": "btcusdt",
+						"eth_usdt": "ethusdt",
+						"vet_usdt": "vetusdt",
+						"eth_btc": "ethbtc",
+						"vet_btc": "vetbtc",
+						"vet_eth": "veteth"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"BTC": "BTC"
+					},
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
+		}
+	}
 }
