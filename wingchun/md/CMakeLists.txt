@@ -67,7 +67,8 @@ ADD_LIBRARY(oceanexmd SHARED ${OCEANEX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(oceanexmd journal kflog ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS oceanexmd DESTINATION "lib/wingchun")
 
-SET(HUOBI_SOURCE_FILES MDEngineHuobi.cpp MDEngineHuobi.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h PriceBook20Assembler.cpp PriceBook20Assembler.h ../../utils/common/Utils.h ../../utils/common/Utils.cpp)
+
+SET(HUOBI_SOURCE_FILES MDEngineHuobi.cpp MDEngineHuobi.h  IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h PriceBook20Assembler.cpp PriceBook20Assembler.h ../../utils/common/ld_utils.h ../../utils/common/ld_utils.cpp)
 ADD_LIBRARY(huobimd SHARED ${HUOBI_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(huobimd journal kflog ${Boost_LIBRARIES}  ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so ${CMAKE_SOURCE_DIR}/utils/zlib/lib/libz.so.1.2.11)
 INSTALL(TARGETS huobimd DESTINATION "lib/wingchun")

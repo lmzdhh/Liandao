@@ -67,6 +67,7 @@ OPTION(USE_HASH_CODE "use hash code when writing" ON)
 ADD_SUBDIRECTORY(longfist)
 ADD_SUBDIRECTORY(yijinjing)
 ADD_SUBDIRECTORY(wingchun)
+ADD_SUBDIRECTORY(monitor)
 #ADD_SUBDIRECTORY(test)
 
 ############################################################

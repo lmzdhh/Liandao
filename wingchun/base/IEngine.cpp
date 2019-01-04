@@ -39,8 +39,13 @@ USING_WC_NAMESPACE
 
 volatile int IEngine::signal_received = -1;
 
-IEngine::IEngine(short source): isRunning(false), source_id(source)
-{}
+IEngine::IEngine(short source):
+    isRunning(false),
+    source_id(source),
+    m_monitorClient(MonitorClient::create())
+{
+
+}
 
 IEngine::~IEngine()
 {
@@ -80,6 +85,8 @@ bool IEngine::stop()
         return true;
     }
     WRITE_ENGINE_STATUS(WC_ENGINE_STATUS_STOP_FAIL)
+    m_monitorClient->setCallback(nullptr);
+    m_monitorClient.reset();
     return false;
 }
 
@@ -156,6 +163,23 @@ void IEngine::initialize(const string& conf_str)
     pre_load(j_config);
     // load config information
     load(j_config);
+    std::string monitor_url = j_config["monitor_url"].get<std::string>();
+    std::string name = j_config["name"].get<std::string>();
+    if (!connectMonitor(monitor_url, name))
+    {
+        KF_LOG_INFO(logger, "connect to monitor error,name@" << name << ",url@" << monitor_url);
+    }
+}
+
+bool IEngine::connectMonitor(const std::string& url, const std::string& name)
+{
+    m_monitorClient->init(logger);
+    m_monitorClient->setCallback(this);
+    if(!m_monitorClient->connect(url))
+    {
+        return false;
+    }
+    return m_monitorClient->login(name);
 }
 
 void IEngine::cutEngineIndex(std::string& str)

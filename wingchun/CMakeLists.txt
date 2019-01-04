@@ -25,10 +25,12 @@ INCLUDE_DIRECTORIES(../yijinjing/journal)
 INCLUDE_DIRECTORIES(../yijinjing/log)
 INCLUDE_DIRECTORIES(../yijinjing/paged)
 INCLUDE_DIRECTORIES(../yijinjing/utils)
+INCLUDE_DIRECTORIES(../monitor)
 
 INCLUDE_DIRECTORIES(base)
 
 LINK_DIRECTORIES(../yijinjing)
+LINK_DIRECTORIES(../monitor)
 
 ADD_SUBDIRECTORY(md)
 ADD_SUBDIRECTORY(td)

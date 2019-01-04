@@ -1,20 +1,32 @@
 {
-  "md": {
-    "ctp": {
+  "monitor":
+  {
+      "daemon":
+      {
+       "localHost":"127.0.0.1:45678",
+       "scriptPath":"/root/fgl/md_strat/build/script/autorefresh.sh"
+      }
+  },
+  "md":
+  {
+    "ctp":
+    {
       "FrontUri": "tcp://180.168.212.228:41213",
       "UserId": "YOUR_USER_ID",
       "BrokerId": "YOUR_BROKER_ID",
       "Password": "YOUR_PASSWORD"
     },
-    "xtp": {
+    "xtp":
+    {
       "Ip": "120.27.164.138",
       "Port": 6016,
       "UserId": "YOUR_USER_ID",
       "Password": "YOUR_PASSWORD",
       "ClientId": 1
     },
-    "binance": {
-      "whiteLists": {
+    "binance":
+    {
+      "whiteLists":{
         "etc_eth": "ETCETH",
         "trx_btc": "TRXBTC"
       },
@@ -115,19 +127,19 @@
       },
       "rest_get_interval_ms": 500
     },
-    "huobi": {
-      "protocol": "wss://",
-      "ip": "api.huobi.pro",
-      "port": 443,
-      "path": "/ws",
-      "book_depth_count": 5,
-      "trade_count": 10,
-      "whiteLists": {
-        "btc_usd": "btcusdt",
-        "eth_usd": "etcusdt"
-      },
-      "rest_get_interval_ms": 500
-    }
+    "huobi":
+    {
+          "exchange_url":"wss://api.huobi.pro:443/ws",
+          "monitor_url":"ws://127.0.0.1:45678/",
+          "name":"md_huobi",
+          "book_depth_count": 5,
+          "trade_count": 10,
+          "whiteLists": {
+            "btc_usd": "btcusdt",
+            "eth_usd": "etcusdt"
+          },
+          "rest_get_interval_ms": 500
+     }
   },
   "td": {
     "binance": {

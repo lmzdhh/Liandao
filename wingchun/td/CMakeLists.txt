@@ -15,6 +15,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.7)
 PROJECT(wingchuntd)
 
+SET(COMMON_LIBRARLIES journal kflog monitorapi)
 SET(TD_SOURCE_FILES  ITDEngine.cpp ITDEngine.h ../base/IEngine.cpp ../base/IEngine.h ../base/TDUserStruct.cpp ../base/TDUserStruct.h)
 
 #SET(CTP_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineCTP.cpp TDEngineCTP.h)
