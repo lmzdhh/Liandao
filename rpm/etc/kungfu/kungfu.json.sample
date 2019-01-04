@@ -130,7 +130,7 @@
 	"td": {
 		"probit": {
 			"monitor_url": "ws://127.0.0.1:45678/",
-			"name": "probit",
+			"name": "td_probit",
 			"accounts": [{
 				"info": {
 					"APIKey": "D81508AB2EE22C68",
