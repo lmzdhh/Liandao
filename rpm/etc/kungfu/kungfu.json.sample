@@ -726,12 +726,12 @@
               "APIKey": " YOU API KEY",
               "SecretKey": "YOU SECRET KEY",
               "whiteLists":{
-                "etc_eth": "ETCETH",
-                "trx_btc": "TRXBTC"
+                "krw_btc": "KRW-BTC",
+                "krw_eth": "KRW-ETH"
               },
               "positionWhiteLists":{
-                              "ETC": "ETC",
-                              "BTC": "BTC"
+                              "krw_btc": "KRW-BTC",
+                              "krw_eth": "KRW-ETH"
                },
               "exchange_shift_ms": 0,
               "order_insert_recvwindow_ms": 5000,

@@ -22,7 +22,7 @@ wingchun strategy -n my_test -p upbit_order_cancel_test_td_only.py
 
 def initialize(context):
     #context.add_md(source=SOURCE.COINMEX)
-    context.ticker = 'trx_btc'
+    context.ticker = 'krw_btc'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
@@ -44,7 +44,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.print_pos(pos_handler)
             #context.stop()
             print '----will test buy cancel----'
-            context.buy_price = 208 #market_data.LowerLimitPrice
+            context.buy_price = 10000 #market_data.LowerLimitPrice
             context.sell_price = 999999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
