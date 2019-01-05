@@ -27,7 +27,7 @@
 #include "YJJ_DECLARE.h"
 /** almost all wingchun engine needs multi-threading */
 #include <thread>
-
+#include <string>
 #define KUNGFU_RUNTIME_FOLDER KUNGFU_FOLDER "runtime/"
 
 typedef boost::shared_ptr<std::thread> ThreadPtr;
@@ -47,5 +47,4 @@ typedef boost::shared_ptr<std::thread> ThreadPtr;
             PyErr_Print();\
             throw std::runtime_error(__func__); \
         }
-
 #endif //WINGCHUN_DECLARE_H

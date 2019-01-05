@@ -64,4 +64,13 @@ typedef std::pair<int, int> IntPair;
 /** fast type convert for moving address forward */
 #define ADDRESS_ADD(x, delta) (void*)((uintptr_t)x + delta)
 
+
+struct UrlInfo
+{
+    std::string  protocol;
+    std::string  ip;
+    int          port;
+    std::string  path;
+};
+
 #endif //YIJINJING_DECLARE_H

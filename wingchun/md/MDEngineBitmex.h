@@ -39,7 +39,7 @@ public:
     void processData(struct lws* conn, const char* data, size_t len);
     // reconnect when previous websocket connection was unable to complete a handshake with server
     void handleConnectionError(struct lws* conn);
-
+  
 private:
     ThreadPtr read_thread;
     struct lws_context* context = nullptr;

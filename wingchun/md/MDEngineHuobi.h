@@ -4,12 +4,11 @@
 
 #ifndef KUNGFU_MDENGINEHUOBI_H
 #define KUNGFU_MDENGINEHUOBI_H
+#include "IMDEngine.h"
 #include <map>
 #include <vector>
 #include "CoinPairWhiteList.h"
-#include "IMDEngine.h"
 #include "PriceBook20Assembler.h"
-
 struct lws_context;
 struct lws;
 
@@ -39,6 +38,8 @@ public:
     void onWrite(struct lws*);
     void reset();
 protected:
+    //url format is xxx://xxx.xxx.xxx:xxx/
+    bool parseAddress(const std::string& exch_url);
     void parsePingMsg(const rapidjson::Document&);
     void parseRspSubscribe(const rapidjson::Document&);
     void parseSubscribeData(const rapidjson::Document&);
@@ -70,11 +71,9 @@ private:
 private:
     struct lws_context*         m_lwsContext = nullptr;
     struct lws*                 m_lwsConnection = nullptr;
-    std::string                 m_protocol;
-    std::string                 m_ip;
-    int                         m_port;
-    std::string                 m_path;
-
+    UrlInfo                     m_exchUrl;
+private:
+    MonitorClientPtr            m_monitorClient;
 };
 DECLARE_PTR(MDEngineHuobi);
 WC_NAMESPACE_END
