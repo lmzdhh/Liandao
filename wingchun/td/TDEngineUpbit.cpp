@@ -1002,7 +1002,7 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
     strcpy(rtn_trade.ExchangeID, "upbit");
     strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
     std::string strMarket = resultTrade["market"].GetString();
-    std::string strInstrumentID = coinPairWhiteList.GetKeyByValue(strMarket);
+    std::string strInstrumentID = unit.coinPairWhiteList.GetKeyByValue(strMarket);
     strncpy(rtn_trade.InstrumentID, strInstrumentID.c_str(), 31);
     //must be Array
     int len = resultTrade["trades"].Size();
