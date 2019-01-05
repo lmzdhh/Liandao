@@ -298,18 +298,18 @@ bool TDEngineUpbit::is_connected() const
 
 std::string TDEngineUpbit::GetSide(const LfDirectionType& input) {
     if (LF_CHAR_Buy == input) {
-        return "BUY";
+        return "bid";
     } else if (LF_CHAR_Sell == input) {
-        return "SELL";
+        return "ask";
     } else {
         return "UNKNOWN";
     }
 }
 
  LfDirectionType TDEngineUpbit::GetDirection(std::string input) {
-    if ("BUY" == input) {
+    if ("bid" == input) {
         return LF_CHAR_Buy;
-    } else if ("SELL" == input) {
+    } else if ("ask" == input) {
         return LF_CHAR_Sell;
     } else {
         return LF_CHAR_Buy;
@@ -318,10 +318,9 @@ std::string TDEngineUpbit::GetSide(const LfDirectionType& input) {
 
 std::string TDEngineUpbit::GetType(const LfOrderPriceTypeType& input) {
     if (LF_CHAR_LimitPrice == input) {
-        return "LIMIT";
-    } else if (LF_CHAR_AnyPrice == input) {
-        return "MARKET";
-    } else {
+        return "limit";
+    } 
+    else {
         return "UNKNOWN";
     }
 }
@@ -1209,7 +1208,7 @@ int32_t TDEngineUpbit::send_order(AccountUnitUpbit& unit, const char *symbol,
         long recvWindow = order_insert_recvwindow_ms;
         std::string Timestamp = getTimestampString();
         std::string Method = "POST";
-        std::string requestPath = "https://api.upbit.com/v1/order?";
+        std::string requestPath = "https://api.upbit.com/v1/orders";
         std::string queryString("");
         std::string body = "";
 
