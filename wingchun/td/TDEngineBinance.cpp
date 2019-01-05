@@ -1708,13 +1708,13 @@ void TDEngineBinance::meet_429()
 
     if (bHandle_429)
     {
-        KF_LOG_INFO(logger, "[meet_429] bHandle_429 already true, return");
+        KF_LOG_INFO(logger, "[meet_429] 418 prevention mechanism already activated, return");
         return;
     }
 
     startTime_429 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     bHandle_429 = true;
-    KF_LOG_INFO(logger, "[meet_429] bHandle_429 " << bHandle_429 << " request_weight_per_minute " << request_weight_per_minute);
+    KF_LOG_INFO(logger, "[meet_429] 429 warning received, current request_weight_per_minute: " << request_weight_per_minute);
 }
 
 bool TDEngineBinance::isHandling()
