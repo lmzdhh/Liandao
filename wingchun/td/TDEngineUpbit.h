@@ -66,12 +66,12 @@ struct AccountUnitUpbit
     bool    logged_in;
     std::vector<PendingUpbitOrderStatus> newOrderStatus;
     std::vector<PendingUpbitOrderStatus> pendingOrderStatus;
-    std::vector<PendingUpbitTradeStatus> newTradeStatus;
-    std::vector<PendingUpbitTradeStatus> pendingTradeStatus;
+    //std::vector<PendingUpbitTradeStatus> newTradeStatus;
+    //std::vector<PendingUpbitTradeStatus> pendingTradeStatus;
 
-    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> newOnRtnTrades;
-    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
-    std::vector<std::string> whiteListInstrumentIDs;
+    //std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> newOnRtnTrades;
+    //std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
+    //std::vector<std::string> whiteListInstrumentIDs;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
     
     // the trade id that has been called on_rtn_trade. Do not send it again.
@@ -143,7 +143,7 @@ private:
     void retrieveTradeStatus(AccountUnitUpbit& unit,Document& d);
     void retrieveOrderAndTradesStatus(AccountUnitUpbit& unit);
     void moveNewtoPending(AccountUnitUpbit& unit);
-    bool isExistSymbolInPendingTradeStatus(AccountUnitUpbit& unit, const char_31 InstrumentID);
+    //bool isExistSymbolInPendingTradeStatus(AccountUnitUpbit& unit, const char_31 InstrumentID);
     bool isExistSymbolInPendingUpbitOrderStatus(AccountUnitUpbit& unit, const char_31 InstrumentID, const char_21 OrderRef);
     bool removeUpbitOrderIdFromPendingOnRtnTrades(AccountUnitUpbit& unit, const std::string& UpbitOrderId);
 

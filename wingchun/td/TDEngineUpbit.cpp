@@ -574,7 +574,7 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
     //paser the order/trade info in the response result
     if(!d.HasParseError() && d.IsObject() && !d.HasMember("error"))
     {
-        std::stirng uuid = d["state"].GetString();
+        std::string uuid = d["uuid"].GetString();
         unit.mapOrderRef2UUID[data->OrderRef] = uuid;
         std::string strStatus=d["state"].GetString();
         int64_t nTrades = atoi(d["trades_count"].GetString());
@@ -714,7 +714,7 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     rtn_trade.Direction = data->Direction;
 
     Document d;
-    std::string uuid = getValue(unit.mapOrderRef2UUID,data->OrderRef);
+    std::string uuid = findValue(unit.mapOrderRef2UUID,data->OrderRef);
     get_order(unit,uuid.c_str(),d);
     //we have strike price, emit OnRtnTrade
     int fills_size = atoi(d["trades"].GetString());
@@ -785,7 +785,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
     Document d;
-    std::string uuid = getValue(unit.mapOrderRef2UUID,data->OrderRef);
+    std::string uuid = findValue(unit.mapOrderRef2UUID,data->OrderRef);
 	auto nResponseCode =  cancel_order(unit, ticker.c_str(), uuid.c_str() ,  d);
 //    KF_LOG_INFO(logger, "[req_order_action] cancel_order");
 //    printResponse(d);
@@ -830,7 +830,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
             }
 
             Document orderResult;
-            std::string uuid = getValue(unit.mapOrderRef2UUID,orderStatusIterator->OrderRef);
+            std::string uuid = findValue(unit.mapOrderRef2UUID,orderStatusIterator->OrderRef);
             get_order(unit, uuid.c_str(), orderResult);
             KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
                                                                             << " (orderId)" << orderStatusIterator->OrderRef);
@@ -884,18 +884,18 @@ void TDEngineUpbit::moveNewtoPending(AccountUnitUpbit& unit)
         newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
     }
 
-    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
-    for(tradeIterator = unit.newOnRtnTrades.begin(); tradeIterator != unit.newOnRtnTrades.end();)
-    {
-        unit.pendingOnRtnTrades.push_back(*tradeIterator);
-        tradeIterator = unit.newOnRtnTrades.erase(tradeIterator);
-    }
+    //std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
+    //for(tradeIterator = unit.newOnRtnTrades.begin(); tradeIterator != unit.newOnRtnTrades.end();)
+   // {
+    //    unit.pendingOnRtnTrades.push_back(*tradeIterator);
+    //    tradeIterator = unit.newOnRtnTrades.erase(tradeIterator);
+    //}
 
-    std::vector<PendingUpbitTradeStatus>::iterator newTradeStatusIterator;
-    for(newTradeStatusIterator = unit.newTradeStatus.begin(); newTradeStatusIterator != unit.newTradeStatus.end();) {
-        unit.pendingTradeStatus.push_back(*newTradeStatusIterator);
-        newTradeStatusIterator = unit.newTradeStatus.erase(newTradeStatusIterator);
-    }
+   // std::vector<PendingUpbitTradeStatus>::iterator newTradeStatusIterator;
+   // for(newTradeStatusIterator = unit.newTradeStatus.begin(); newTradeStatusIterator != unit.newTradeStatus.end();) {
+    //    unit.pendingTradeStatus.push_back(*newTradeStatusIterator);
+    //    newTradeStatusIterator = unit.newTradeStatus.erase(newTradeStatusIterator);
+    //}
 
     std::vector<std::string>::iterator newSentTradeIdsIterator;
     for(newSentTradeIdsIterator = unit.newSentTradeIds.begin(); newSentTradeIdsIterator != unit.newSentTradeIds.end();) {
@@ -906,11 +906,12 @@ void TDEngineUpbit::moveNewtoPending(AccountUnitUpbit& unit)
 
 void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderResult)
 {
+      char_21 strOrderRef;
+      std::string uuid = orderResult["uuid"].GetString();
+      strncpy(strOrderRef, findKey(unit.mapOrderRef2UUID,uuid).c_str(), 21);  
       auto orderStatusIterator = unit.pendingOrderStatus.end();
         if(orderResult.IsObject())
         {
-            char_21 strOrderRef;
-            strncpy(strOrderRef, orderResult["uuid"].GetString(), 21);      
             for(auto it = unit.pendingOrderStatus.begin();it!= unit.pendingOrderStatus.end();++it)
             {
                 if(strcmp(it->OrderRef,strOrderRef) == 0)
@@ -928,7 +929,7 @@ void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
             rtn_order.OrderStatus = convertOrderStatus(orderResult["state"].GetString(),atoi(orderResult["trades"].GetString()));
             rtn_order.VolumeTraded = std::round(stod(orderResult["executed_volume"].GetString()) * scale_offset);
-            strncpy(rtn_order.OrderRef, orderResult["uuid"].GetString(), 21);
+            strncpy(rtn_order.OrderRef, strOrderRef, 21);
           
             //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
             if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
@@ -953,14 +954,14 @@ void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
                 orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
 
                 //is status is canceled, dont need get the orderref's trade info
-                if(orderStatusIterator->OrderStatus == LF_CHAR_Canceled) {
-                    if(removeUpbitOrderIdFromPendingOnRtnTrades(unit, rtn_order.OrderRef))
-                    {
-                        KF_LOG_INFO(logger, "[retrieveTradeStatus] the (OrderRef) "
-                                            << orderStatusIterator->OrderRef
-                                            << " is LF_CHAR_Canceled. ");
-                    }
-                }
+                //if(orderStatusIterator->OrderStatus == LF_CHAR_Canceled) {
+                 //   if(removeUpbitOrderIdFromPendingOnRtnTrades(unit, rtn_order.OrderRef))
+                 //   {
+                //        KF_LOG_INFO(logger, "[retrieveTradeStatus] the (OrderRef) "
+                 //                           << orderStatusIterator->OrderRef
+                  //                          << " is LF_CHAR_Canceled. ");
+                //    }
+               // }
             }
         } else {
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
@@ -982,20 +983,20 @@ void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
 void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultTrade)
 {
     KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())"
-                        << unit.pendingOrderStatus.size() << " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size());
+                        << unit.pendingOrderStatus.size() /*<< " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size()*/);
     //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
-    if(unit.pendingOrderStatus.size() == 0 && unit.pendingOnRtnTrades.size() == 0) return;
-    std::vector<PendingUpbitTradeStatus>::iterator tradeStatusIterator;
-    int indexNum = 0;
-    for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
-    {
-        KF_LOG_INFO(logger, "[retrieveTradeStatus] pendingTradeStatus [" << indexNum <<"]"
-                                                                << "  (InstrumentID) "<< tradeStatusIterator->InstrumentID
-                                                                <<"  (last_trade_id) " << tradeStatusIterator->last_trade_id);
-        indexNum++;
-    }
+    if(unit.pendingOrderStatus.size() == 0 /*&& unit.pendingOnRtnTrades.size() == 0*/) return;
+    //std::vector<PendingUpbitTradeStatus>::iterator tradeStatusIterator;
+    //int indexNum = 0;
+    //for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
+    //{
+    //    KF_LOG_INFO(logger, "[retrieveTradeStatus] pendingTradeStatus [" << indexNum <<"]"
+     //                                                           << "  (InstrumentID) "<< tradeStatusIterator->InstrumentID
+     //                                                           <<"  (last_trade_id) " << tradeStatusIterator->last_trade_id);
+     //   indexNum++;
+    //}
 
-    KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 3 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
+    //KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 3 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
     LFRtnTradeField rtn_trade;
     memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
     strcpy(rtn_trade.ExchangeID, "upbit");
@@ -1019,65 +1020,68 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
             continue;
         }
 
-        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
+       // KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
         rtn_trade.Volume = std::round(stod(resultTrade["trades"].GetArray()[i]["volume"].GetString()) * scale_offset);
         rtn_trade.Price = std::round(stod(resultTrade["trades"].GetArray()[i]["price"].GetString()) * scale_offset);
 
         //apply the direction of the OrderRef
-        std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
+       // std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
 
-        bool match_one = false;
-        for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
-        {
-            if(tradeIterator->OrderRef == newtradeId)
-            {
-                rtn_trade.Direction = tradeIterator->Direction;
-                strncpy(rtn_trade.OrderRef, tradeIterator->OrderRef.c_str(), 13);
-                match_one = true;
-            }
-        }
-        if(match_one) {
+       // bool match_one = false;
+
+        //for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
+       // {
+        //    if(tradeIterator->OrderRef == newtradeId)
+         //   {
+               std::string side = resultTrade["trades"].GetArray()[i]["side"].GetString();
+                rtn_trade.Direction = GetDirection(side);
+                std::string uuid = resultTrade["uuid"].GetString();
+                strncpy(rtn_trade.OrderRef, findKey(unit.mapOrderRef2UUID,uuid).c_str(), 13);
+        //        match_one = true;
+        //    }
+        //}
+      //  if(match_one) {
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                     source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);
-        } else {
+       // } else {
             //this order is not me sent out, maybe other strategy's order or manuelly open orders.
-        }
+       // }
        
     }
 
         //here, use another for-loop is for there maybe more than one trades on the same orderRef:
         //if the first one remove pendingOnRtnTrades, the second one could not get the Direction.
 
-        for(int i = 0 ; i < len; i++)
-        {
-             std::string newtradeId = resultTrade["trades"].GetArray()[i]["uuid"].GetString();
-            if(! isExistSymbolInPendingUpbitOrderStatus(unit, tradeStatusIterator->InstrumentID, rtn_trade.OrderRef)) {
+      //  for(int i = 0 ; i < len; i++)
+       // {
+        //     std::string newtradeId = resultTrade["trades"].GetArray()[i]["uuid"].GetString();
+         //   if(! isExistSymbolInPendingUpbitOrderStatus(unit, tradeStatusIterator->InstrumentID, rtn_trade.OrderRef)) {
                 //all the OnRtnOrder is finished.
-                if(removeUpbitOrderIdFromPendingOnRtnTrades(unit, newtradeId))
-                {
-                    KF_LOG_INFO(logger, "[retrieveTradeStatus] there is no pendingOrderStatus(LF_CHAR_AllTraded/LF_CHAR_Canceled/LF_CHAR_Error occur). this is the last turn of get_myTrades on (symbol)" << tradeStatusIterator->InstrumentID);
-                }
-            }
-        }
+        //        if(removeUpbitOrderIdFromPendingOnRtnTrades(unit, newtradeId))
+          //      {
+              //      KF_LOG_INFO(logger, "[retrieveTradeStatus] there is no pendingOrderStatus(LF_CHAR_AllTraded/LF_CHAR_Canceled/LF_CHAR_Error occur). this is the last turn of get_myTrades on (symbol)" << tradeStatusIterator->InstrumentID);
+            //    }
+          //  }
+     //   }
 }
 
-bool TDEngineUpbit::removeUpbitOrderIdFromPendingOnRtnTrades(AccountUnitUpbit& unit, const std::string& UpbitOrderId)
-{
-    bool removedOne = false;
-    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
-    for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); )
-    {
-        if(tradeIterator->OrderRef == UpbitOrderId)
-        {
-            tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
-            removedOne = true;
-        } else {
-            ++tradeIterator;
-        }
-    }
-    return removedOne;
-}
+//bool TDEngineUpbit::removeUpbitOrderIdFromPendingOnRtnTrades(AccountUnitUpbit& unit, const std::string& UpbitOrderId)
+//{
+ //   bool removedOne = false;
+//    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
+//    for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); )
+ //   {
+  //      if(tradeIterator->OrderRef == UpbitOrderId)
+   //     {
+   //         tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
+    //        removedOne = true;
+    //    } else {
+    //        ++tradeIterator;
+  //      }
+ //   }
+ //   return removedOne;
+//}
 
 
 void TDEngineUpbit::addNewSentTradeIds(AccountUnitUpbit& unit, const std::string& newSentTradeIds)
@@ -1103,36 +1107,36 @@ void TDEngineUpbit::addNewQueryOrdersAndTrades(AccountUnitUpbit& unit, const cha
     status.VolumeTraded = VolumeTraded;
     unit.newOrderStatus.push_back(status);
 
-    OnRtnOrderDoneAndWaitingOnRtnTrade waitingTrade;
-    waitingTrade.OrderRef = OrderRef;
+    //OnRtnOrderDoneAndWaitingOnRtnTrade waitingTrade;
+    //waitingTrade.OrderRef = OrderRef;
     //waitingTrade.UpbitOrderId = UpbitOrderId;
-    waitingTrade.Direction = Direction;
-    unit.newOnRtnTrades.push_back(waitingTrade);
+   // waitingTrade.Direction = Direction;
+    //unit.newOnRtnTrades.push_back(waitingTrade);
 
     //add new symbol for GetAndHandleOrderTradeResponse if had no this symbol before
-    if(!isExistSymbolInPendingTradeStatus(unit, InstrumentID))
-    {
-        PendingUpbitTradeStatus tradeStatus;
-        memset(&tradeStatus, 0, sizeof(PendingUpbitTradeStatus));
-        strncpy(tradeStatus.InstrumentID, InstrumentID, 31);
-        tradeStatus.last_trade_id = "";
-        unit.newTradeStatus.push_back(tradeStatus);
-    }
+   // if(!isExistSymbolInPendingTradeStatus(unit, InstrumentID))
+    //{
+    //    PendingUpbitTradeStatus tradeStatus;
+    //    memset(&tradeStatus, 0, sizeof(PendingUpbitTradeStatus));
+    //    strncpy(tradeStatus.InstrumentID, InstrumentID, 31);
+   //     tradeStatus.last_trade_id = "";
+    //    unit.newTradeStatus.push_back(tradeStatus);
+   // }
 }
 
-bool TDEngineUpbit::isExistSymbolInPendingTradeStatus(AccountUnitUpbit& unit, const char_31 InstrumentID)
-{
-    std::vector<PendingUpbitTradeStatus>::iterator tradeStatusIterator;
+//bool TDEngineUpbit::isExistSymbolInPendingTradeStatus(AccountUnitUpbit& unit, const char_31 InstrumentID)
+//{
+//    std::vector<PendingUpbitTradeStatus>::iterator tradeStatusIterator;
 
-    for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
-    {
-        if(strcmp(tradeStatusIterator->InstrumentID, InstrumentID) == 0)
-        {
-            return true;
-        }
-    }
-    return false;
-}
+//    for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
+//    {
+ //       if(strcmp(tradeStatusIterator->InstrumentID, InstrumentID) == 0)
+//        {
+ //           return true;
+////        }
+ //   }
+//    return false;
+//}
 
 
 bool TDEngineUpbit::isExistSymbolInPendingUpbitOrderStatus(AccountUnitUpbit& unit, const char_31 InstrumentID, const char_21 OrderRef)
@@ -1488,7 +1492,7 @@ void TDEngineUpbit::get_exchange_time(AccountUnitUpbit& unit, Document &json)
 
     std::string TDEngineUpbit::findValue(const std::map<std::string,std::string>& mapSrc,const std::string& strKey)
     {
-            auto it =mapSrc.find(strkey);
+            auto it =mapSrc.find(strKey);
             if(it != mapSrc.end())
             {
                 return it->second;
