@@ -21,20 +21,7 @@
             "UserId": "YOUR_USER_ID",
             "Password": "YOUR_PASSWORD",
             "ClientId": 1
-        },
-        "mock":
-        {
-            "book_depth_count": 5,
-            "trade_count": 10,
-            "whiteLists": 
-            {
-                "strategy_coinpair(base_quote)": "exchange_coinpair",
-                "btc_usdt": "BTC_USDT",
-                "etc_eth": "ETC_ETH",
-                "mvp_btc": "MVP_BTC"
-            },
-            "rest_get_interval_ms": 500
-        },
+        },        
         "binance":
         {
             "whiteLists":
@@ -80,7 +67,20 @@
 				"btc_usdt": "BTC_USDT"
             },
             "rest_get_interval_ms": 500
-        },        
+        },
+        "mock":
+        {
+            "book_depth_count": 5,
+            "trade_count": 10,
+            "whiteLists": 
+            {
+                "strategy_coinpair(base_quote)": "exchange_coinpair",
+                "btc_usdt": "BTC_USDT",
+                "etc_eth": "ETC_ETH",
+                "mvp_btc": "MVP_BTC"
+            },
+            "rest_get_interval_ms": 500
+        },
         "bitmax":
         {
             "book_depth_count": 5,
@@ -188,30 +188,99 @@
     },
     "td":
     {
-        "probit":
+        "ctp":
         {
-            "monitor_url": "ws://127.0.0.1:45678/",
-			"name": "td_probit",
+            "FrontUri": "tcp://180.168.146.187:10000",
+            "NeedAuth": false,
+            "NeedSettleConfirm": true,
             "accounts":
-            [{
-                "info":
+            [
                 {
-                    "APIKey":"your-api-key",
-                    "SecretKey":"your-secret-key",
-                    "passphrase":"your-passphrase",
-                    "baseUrl":"https://demo-api.probit.com",
-                    "acountUrl":"https://demo-accounts.probit.com",
-                    "wsUrl":"demo-api.probit.com",
-                    "whiteLists": {
-                        "btc_usdt":"BTC-USDT",
-                        "xrp_usdt":"XRP-USDT",
-                        "eos_eth" :"EOS-ETH"
+                    "info":
+                    {
+                        "UserId": "YOUR_USER_ID",
+                        "InvestorId": "YOUR_INVESTOR_ID",
+                        "BrokerId": "YOUR_BROKER_ID",
+                        "Password": "YOUR_PASSWORD"
                     },
-                    "rest_get_interval_ms": 500
+                    "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
+                    "is_default": true
+                }
+            ],
+            "FeeSetup":
+            {
+                "stock":
+                {
+                    "type": "amount",
+                    "fee_multi": 0.0003,
+                    "ctr_multi": 1,
+                    "min_fee": 0
                 },
-                "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
-                "is_default": true
-            }],
+                "future":
+                {
+                    "type": "amount",
+                    "fee_multi": [0.000023, 0.00069, 0.000023],
+                    "ctr_multi": 200,
+                    "min_fee": 0
+                },
+                "future_exotic":
+                {
+                    "rb":
+                    {
+                        "type": "amount",
+                        "fee_multi": 0.0001,
+                        "ctr_multi": 10,
+                        "min_fee": 0
+                    },
+                    "rb1801":
+                    {
+                        "type": "amount",
+                        "fee_multi": [0.0001, 0.0005, 0.0001],
+                        "ctr_multi": 10,
+                        "min_fee": 0
+                    },
+                    "c":
+                    {
+                        "type": "volume",
+                        "fee_multi": 1.2,
+                        "ctr_multi": 10,
+                        "min_fee": 0
+                    },
+                    "c1803":
+                    {
+                        "type": "volume",
+                        "fee_multi": 0.2,
+                        "ctr_multi": 10,
+                        "min_fee": 0
+                    },
+                    "ic":
+                    {
+                        "type": "amount",
+                        "fee_multi": [0.000023, 0.00069, 0.000023],
+                        "ctr_multi": 200,
+                        "min_fee": 0
+                    }
+                }
+            }
+        },
+        "xtp":
+        {
+            "Key": "YOUR_XTP_GATEWAY_KEY",
+            "Ip": "120.27.164.69",
+            "Port": 6001,
+            "ClientId": 1,
+            "accounts":
+            [
+                {
+                    "info":
+                    {
+                        "UserId": "YOUR_USER_ID",
+                        "Password": "YOUR_PASSWORD"
+                    },
+                    "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
+                    "is_default": true
+                }
+            ],
             "FeeSetup":
             {
                 "stock":
@@ -588,7 +657,7 @@
                 },
                 "future_exotic": null
             }
-        },
+        },        
         "oceanex":
         {
             "accounts":
@@ -681,99 +750,30 @@
 				"future_exotic": null
 			}
 		},
-        "ctp":
+        "probit":
         {
-            "FrontUri": "tcp://180.168.146.187:10000",
-            "NeedAuth": false,
-            "NeedSettleConfirm": true,
+            "monitor_url": "ws://127.0.0.1:45678/",
+			"name": "td_probit",
             "accounts":
-            [
+            [{
+                "info":
                 {
-                    "info":
-                    {
-                        "UserId": "YOUR_USER_ID",
-                        "InvestorId": "YOUR_INVESTOR_ID",
-                        "BrokerId": "YOUR_BROKER_ID",
-                        "Password": "YOUR_PASSWORD"
+                    "APIKey":"your-api-key",
+                    "SecretKey":"your-secret-key",
+                    "passphrase":"your-passphrase",
+                    "baseUrl":"https://demo-api.probit.com",
+                    "acountUrl":"https://demo-accounts.probit.com",
+                    "wsUrl":"demo-api.probit.com",
+                    "whiteLists": {
+                        "btc_usdt":"BTC-USDT",
+                        "xrp_usdt":"XRP-USDT",
+                        "eos_eth" :"EOS-ETH"
                     },
-                    "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
-                    "is_default": true
-                }
-            ],
-            "FeeSetup":
-            {
-                "stock":
-                {
-                    "type": "amount",
-                    "fee_multi": 0.0003,
-                    "ctr_multi": 1,
-                    "min_fee": 0
+                    "rest_get_interval_ms": 500
                 },
-                "future":
-                {
-                    "type": "amount",
-                    "fee_multi": [0.000023, 0.00069, 0.000023],
-                    "ctr_multi": 200,
-                    "min_fee": 0
-                },
-                "future_exotic":
-                {
-                    "rb":
-                    {
-                        "type": "amount",
-                        "fee_multi": 0.0001,
-                        "ctr_multi": 10,
-                        "min_fee": 0
-                    },
-                    "rb1801":
-                    {
-                        "type": "amount",
-                        "fee_multi": [0.0001, 0.0005, 0.0001],
-                        "ctr_multi": 10,
-                        "min_fee": 0
-                    },
-                    "c":
-                    {
-                        "type": "volume",
-                        "fee_multi": 1.2,
-                        "ctr_multi": 10,
-                        "min_fee": 0
-                    },
-                    "c1803":
-                    {
-                        "type": "volume",
-                        "fee_multi": 0.2,
-                        "ctr_multi": 10,
-                        "min_fee": 0
-                    },
-                    "ic":
-                    {
-                        "type": "amount",
-                        "fee_multi": [0.000023, 0.00069, 0.000023],
-                        "ctr_multi": 200,
-                        "min_fee": 0
-                    }
-                }
-            }
-        },
-        "xtp":
-        {
-            "Key": "YOUR_XTP_GATEWAY_KEY",
-            "Ip": "120.27.164.69",
-            "Port": 6001,
-            "ClientId": 1,
-            "accounts":
-            [
-                {
-                    "info":
-                    {
-                        "UserId": "YOUR_USER_ID",
-                        "Password": "YOUR_PASSWORD"
-                    },
-                    "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
-                    "is_default": true
-                }
-            ],
+                "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
+                "is_default": true
+            }],
             "FeeSetup":
             {
                 "stock":
