@@ -1001,7 +1001,9 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
     memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
     strcpy(rtn_trade.ExchangeID, "upbit");
     strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
+    std::string strMarket = resultTrade["market"].GetString();
+    std::string strInstrumentID = coinPairWhiteList.GetKeyByValue(strMarket);
+    strncpy(rtn_trade.InstrumentID, strInstrumentID.c_str(), 31);
     //must be Array
     int len = resultTrade["trades"].Size();
     for(int i = 0 ; i < len; i++)
