@@ -1495,7 +1495,7 @@ void TDEngineUpbit::get_exchange_time(AccountUnitUpbit& unit, Document &json)
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-   OrderInfo TDEngineUpbit::findValue(const std::map<std::string,std::string>& mapSrc,const std::string& strKey)
+   OrderInfo TDEngineUpbit::findValue(const std::map<std::string,OrderInfo>& mapSrc,const std::string& strKey)
     {
             auto it =mapSrc.find(strKey);
             if(it != mapSrc.end())
@@ -1507,7 +1507,7 @@ void TDEngineUpbit::get_exchange_time(AccountUnitUpbit& unit, Document &json)
             }
     }
 
-    std::string TDEngineUpbit::findKey(const std::map<std::string,std::string>& mapSrc,const std::string& strValue)
+    std::string TDEngineUpbit::findKey(const std::map<std::string,OrderInfo>& mapSrc,const std::string& strValue)
     {
             for(auto it = mapSrc.begin();it!=mapSrc.end();++it)
             {

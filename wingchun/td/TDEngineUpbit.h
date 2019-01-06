@@ -189,8 +189,8 @@ private:
     inline std::string getTimestampString();
     LfOrderStatusType convertOrderStatus(const std::string& strStatus,int64_t nTrades);
     void filterMarkets(std::vector<std::string>& vstrMarkets);
-    OrderInfo findValue(const std::map<std::string,std::string>& mapSrc,const std::string& strKey);
-    std::string findKey(const std::map<std::string,std::string>& mapSrc,const std::string& strValue);
+    OrderInfo findValue(const std::map<std::string,OrderInfo>& mapSrc,const std::string& strKey);
+    std::string findKey(const std::map<std::string,OrderInfo>& mapSrc,const std::string& strValue);
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
 
     SendOrderFilter getSendOrderFilter(AccountUnitUpbit& unit, const char *symbol);
