@@ -62,7 +62,7 @@ struct OrderInfo
 {
     int64_t nRequestID = -1;
     std::string strRemoteUUID = "";
-}
+};
 
 struct AccountUnitUpbit
 {
