@@ -574,8 +574,10 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
     //paser the order/trade info in the response result
     if(!d.HasParseError() && d.IsObject() && !d.HasMember("error"))
     {
-        std::string uuid = d["uuid"].GetString();
-        unit.mapOrderRef2UUID[data->OrderRef] = uuid;
+        OrderInfo stOrderInfo;
+        stOrderInfo.strRemoteUUID = d["uuid"].GetString();
+        stOrderInfo.nRequestID = requestId;
+        unit.mapOrderRef2OrderInfo[data->OrderRef] = stOrderInfo;
         std::string strStatus=d["state"].GetString();
         int64_t nTrades = atoi(d["trades_count"].GetString());
         auto cStatus = convertOrderStatus(strStatus,nTrades);
@@ -712,10 +714,9 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     strncpy(rtn_trade.InstrumentID, data->InstrumentID, 31);
     strncpy(rtn_trade.OrderRef, data->OrderRef, 13);
     rtn_trade.Direction = data->Direction;
-
     Document d;
-    std::string uuid = findValue(unit.mapOrderRef2UUID,data->OrderRef);
-    get_order(unit,uuid.c_str(),d);
+    auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,data->OrderRef);
+    get_order(unit,stOrderInfo.strRemoteUUID.c_str(),d);
     //we have strike price, emit OnRtnTrade
     int fills_size = atoi(d["trades"].GetString());
 
@@ -785,8 +786,8 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
     Document d;
-    std::string uuid = findValue(unit.mapOrderRef2UUID,data->OrderRef);
-	auto nResponseCode =  cancel_order(unit, ticker.c_str(), uuid.c_str() ,  d);
+    auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,data->OrderRef);
+	auto nResponseCode =  cancel_order(unit, ticker.c_str(), stOrderInfo.strRemoteUUID.c_str() ,  d);
 //    KF_LOG_INFO(logger, "[req_order_action] cancel_order");
 //    printResponse(d);
 
@@ -830,8 +831,8 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
             }
 
             Document orderResult;
-            std::string uuid = findValue(unit.mapOrderRef2UUID,orderStatusIterator->OrderRef);
-            get_order(unit, uuid.c_str(), orderResult);
+           auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,orderStatusIterator->OrderRef);
+            get_order(unit, stOrderInfo.strRemoteUUID.c_str(), orderResult);
             KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
                                                                             << " (orderId)" << orderStatusIterator->OrderRef);
             //printResponse(orderResult);
@@ -908,7 +909,8 @@ void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
 {
       char_21 strOrderRef;
       std::string uuid = orderResult["uuid"].GetString();
-      strncpy(strOrderRef, findKey(unit.mapOrderRef2UUID,uuid).c_str(), 21);  
+      strncpy(strOrderRef, findKey(unit.mapOrderRef2OrderInfo,uuid).c_str(), 21); 
+      auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,strOrderRef); 
       auto orderStatusIterator = unit.pendingOrderStatus.end();
         if(orderResult.IsObject())
         {
@@ -945,6 +947,7 @@ void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
                 rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["volume"].GetString()) * scale_offset);
                 rtn_order.LimitPrice = std::round(stod(orderResult["price"].GetString()) * scale_offset);
                 rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
+                rtn_order.RequestID  = stOrderInfo.nRequestID;
                 on_rtn_order(&rtn_order);
                 raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                                         source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
@@ -1038,7 +1041,7 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
                std::string side = resultTrade["trades"].GetArray()[i]["side"].GetString();
                 rtn_trade.Direction = GetDirection(side);
                 std::string uuid = resultTrade["uuid"].GetString();
-                strncpy(rtn_trade.OrderRef, findKey(unit.mapOrderRef2UUID,uuid).c_str(), 13);
+                strncpy(rtn_trade.OrderRef, findKey(unit.mapOrderRef2OrderInfo,uuid).c_str(), 13);
         //        match_one = true;
         //    }
         //}
@@ -1492,7 +1495,7 @@ void TDEngineUpbit::get_exchange_time(AccountUnitUpbit& unit, Document &json)
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-    std::string TDEngineUpbit::findValue(const std::map<std::string,std::string>& mapSrc,const std::string& strKey)
+   OrderInfo TDEngineUpbit::findValue(const std::map<std::string,std::string>& mapSrc,const std::string& strKey)
     {
             auto it =mapSrc.find(strKey);
             if(it != mapSrc.end())
@@ -1500,7 +1503,7 @@ void TDEngineUpbit::get_exchange_time(AccountUnitUpbit& unit, Document &json)
                 return it->second;
             }
             else{
-                return "";
+                return OrderInfo();
             }
     }
 
@@ -1508,7 +1511,7 @@ void TDEngineUpbit::get_exchange_time(AccountUnitUpbit& unit, Document &json)
     {
             for(auto it = mapSrc.begin();it!=mapSrc.end();++it)
             {
-                if(it->second == strValue)
+                if(it->second.strRemoteUUID == strValue)
                 {
                     return it->first;
                 }

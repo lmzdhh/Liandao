@@ -58,6 +58,12 @@ struct SendOrderFilter
     //...other
 };
 
+struct OrderInfo
+{
+    int64_t nRequestID = -1;
+    std::string strRemoteUUID = "";
+}
+
 struct AccountUnitUpbit
 {
     std::string api_key;
@@ -81,7 +87,7 @@ struct AccountUnitUpbit
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
 
-    std::map<std::string,std::string> mapOrderRef2UUID;
+    std::map<std::string,OrderInfo> mapOrderRef2OrderInfo;
 };
 
 /**
@@ -183,7 +189,7 @@ private:
     inline std::string getTimestampString();
     LfOrderStatusType convertOrderStatus(const std::string& strStatus,int64_t nTrades);
     void filterMarkets(std::vector<std::string>& vstrMarkets);
-    std::string findValue(const std::map<std::string,std::string>& mapSrc,const std::string& strKey);
+    OrderInfo findValue(const std::map<std::string,std::string>& mapSrc,const std::string& strKey);
     std::string findKey(const std::map<std::string,std::string>& mapSrc,const std::string& strValue);
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
 
