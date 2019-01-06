@@ -89,7 +89,7 @@ void DaemonWrapper::wait()
 bool DaemonWrapper::parseConfig(const std::string &json)
 {
     nlohmann::json jsonConfig = nlohmann::json::parse(json);
-    auto localHost = parseCsv(jsonConfig["localHost"].get<std::string>());
+    auto localHost = parseCsv(jsonConfig["localHost"].get<std::string>(), ":");
     if (localHost.size() != 2)
     {
         KF_LOG_INFO(m_logger, "parse daemon local host error,must be xxx.xxx.xxx:xxx");
@@ -99,18 +99,18 @@ bool DaemonWrapper::parseConfig(const std::string &json)
     g_daemon_config.port = std::atoi(localHost[1].c_str());
     KF_LOG_INFO(m_logger,"parse daemon local host,ip:" << g_daemon_config.ip  << ",port:" << g_daemon_config.port);
     g_daemon_config.scriptPath= jsonConfig["scriptPath"].get<std::string>();
-    auto whiteList = parseCsv(jsonConfig["whiteList"].get<std::string>());
+    auto whiteList = parseCsv(jsonConfig["whiteList"].get<std::string>(), ",");
     g_daemon_config.whiteList.insert(whiteList.begin(), whiteList.end());
     return true;
 }
 
 //url -> 127.0.0.1:8989
-std::vector<std::string> DaemonWrapper::parseCsv(const std::string& csv)
+std::vector<std::string> DaemonWrapper::parseCsv(const std::string& csv, const std::string& key)
 {
     std::vector<std::string> result{};
     try
     {
-        boost::split(result, csv, boost::is_any_of(":"));
+        boost::split(result, csv, boost::is_any_of(key));
     }
     catch (std::exception& e)
     {

@@ -22,7 +22,7 @@ public:
     void wait();
 private:
     bool parseConfig(const std::string& json);
-    std::vector<std::string> parseCsv(const std::string& localHost);
+    std::vector<std::string> parseCsv(const std::string& localHost, const std::string& key);
 private:
     Daemon*  m_daemon;
     KfLogPtr m_logger;
