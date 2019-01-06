@@ -8,6 +8,7 @@
 #include "MONITOR_DECLARE.h"
 USING_YJJ_NAMESPACE
 MONITOR_NAMESPACE_START
+class DaemonConfig;
 class Daemon;
 class DaemonWrapper
 {
@@ -19,6 +20,9 @@ public:
     bool start();
     void stop();
     void wait();
+private:
+    bool parseConfig(const std::string& json);
+    std::vector<std::string> parseCsv(const std::string& localHost);
 private:
     Daemon*  m_daemon;
     KfLogPtr m_logger;

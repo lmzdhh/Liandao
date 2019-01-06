@@ -80,13 +80,16 @@ bool IEngine::stop()
     {
         reader_thread->join();
         reader_thread.reset();
-        KF_LOG_INFO(logger, "reader thread expired...");
         WRITE_ENGINE_STATUS(WC_ENGINE_STATUS_STOPPED);
+        if (m_monitorClient)
+        {
+            m_monitorClient->setCallback(nullptr);
+            m_monitorClient.reset();
+        }
+        KF_LOG_INFO(logger, "reader thread expired...");
         return true;
     }
     WRITE_ENGINE_STATUS(WC_ENGINE_STATUS_STOP_FAIL)
-    m_monitorClient->setCallback(nullptr);
-    m_monitorClient.reset();
     return false;
 }
 

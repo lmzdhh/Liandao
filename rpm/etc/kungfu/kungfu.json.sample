@@ -2,7 +2,8 @@
 	"monitor": {
 		"daemon": {
 			"localHost": "127.0.0.1:45678",
-			"scriptPath": "/root/fgl/md_strat/build/script/autorefresh.sh"
+			"scriptPath": "/autorefresh.sh",
+			"whiteList":"td_probit,md_huobi"
 		}
 	},
 	"md": {
@@ -99,7 +100,7 @@
 		},
 		"huobi": {
 			"exchange_url": "wss://api.huobi.pro:443/ws",
-			"monitor_url": "ws://127.0.0.1:45678/",
+			"monitor_url": "ws://127.0.0.1:45678",
 			"name": "md_huobi",
 			"book_depth_count": 5,
 			"trade_count": 10,
@@ -147,22 +148,7 @@
 				},
 				"clients": ["mm_strategy1", "mm_strategy2", "mm_strategy3"],
 				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
+			}]
 		},
 		"binance": {
 			"accounts": [{
@@ -187,22 +173,7 @@
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
+			}]
 		},
 		"coinmex": {
 			"accounts": [{
@@ -239,22 +210,7 @@
 				},
 				"clients": ["mm_strategy1", "mm_strategy2"],
 				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
+			}]
 		},
 		"mock": {
 			"accounts": [{
@@ -277,22 +233,7 @@
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
+			}]
 		},
 		"bitmax": {
 			"accounts": [{
@@ -317,22 +258,7 @@
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
+			}]
 		},
 		"bitfinex": {
 			"accounts": [{
@@ -357,22 +283,7 @@
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
+			}]
 		},
 		"bitmex": {
 			"accounts": [{
@@ -397,22 +308,7 @@
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
+			}]
 		},
 		"hitbtc": {
 			"accounts": [{
@@ -437,22 +333,7 @@
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
+			}]
 		},
 		"oceanex": {
 			"accounts": [{
@@ -478,22 +359,7 @@
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
+			}]
 		},
 		"oceanex2": {
 			"accounts": [{
@@ -519,22 +385,7 @@
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
+			}]
 		}
 	}
 }

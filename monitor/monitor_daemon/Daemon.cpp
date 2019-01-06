@@ -4,11 +4,10 @@
 #include "Daemon.h"
 #include <iostream>
 #include <thread>
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/split.hpp>
 using namespace std;
 MONITOR_NAMESPACE_START
 volatile int g_signal_received = -1;
+DaemonConfig g_daemon_config{};
 Daemon::Daemon(KfLogPtr log):m_logger(log)
 {
     m_isRunning = true;
@@ -19,14 +18,8 @@ Daemon::~Daemon()
     stop();
 }
 
-bool Daemon::init(DaemonConfig&& config)
+bool Daemon::init()
 {
-    m_config = config;
-    if (!parseUrl())
-    {
-        KF_LOG_INFO(m_logger, "Daemon init error");
-        exit(-1);
-    }
     m_hub.onConnection(std::bind(&Daemon::onConnection,this, std::placeholders::_1, std::placeholders::_2));
     m_hub.onDisconnection(std::bind(&Daemon::onDisconnection,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,std::placeholders::_4));
     m_hub.onMessage(std::bind(&Daemon::onMessage,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,std::placeholders::_4));
@@ -34,18 +27,18 @@ bool Daemon::init(DaemonConfig&& config)
     m_hub.onPing(std::bind(&Daemon::onPing,this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     startPingThread();
     startReqThread();
-    KF_LOG_INFO(m_logger, "Daemon init ok");
+    KF_LOG_INFO(m_logger, "Daemon init success");
     return true;
 }
 
 bool Daemon::start()
 {
-    if(!m_hub.listen(m_url.ip.c_str(), m_url.port))
+    if(!m_hub.listen(g_daemon_config.ip.c_str(), g_daemon_config.port))
     {
         KF_LOG_INFO(m_logger, "Daemon start error");
         return false;
     }
-    KF_LOG_INFO(m_logger, "Daemon listen on " << m_url.ip << ":" << m_url.port) ;
+    KF_LOG_INFO(m_logger, "Daemon listen on " << g_daemon_config.ip << ":" << g_daemon_config.port) ;
     return true;
 }
 
@@ -123,7 +116,7 @@ void Daemon::onDisconnection(WebSocket<SERVER> *ws, int code, char *, size_t)
     if(cur_iter != m_clients.end())
     {
         KF_LOG_DEBUG(m_logger, "user disconnect,name:" << cur_iter->second.clientInfo.name << ",ws:" << ws <<",code:" << code);
-        push(std::make_shared<RestartReq>(cur_iter->second.clientInfo.name, cur_iter->second.clientInfo.type, m_config.scriptPath));
+        push(std::make_shared<RestartReq>(cur_iter->second.clientInfo.name, cur_iter->second.clientInfo.type, g_daemon_config.scriptPath));
         m_clients.erase(cur_iter);
     }
 }
@@ -136,7 +129,7 @@ void Daemon::onPing(WebSocket<SERVER> *, char *, size_t)
 void Daemon::onPong(WebSocket<SERVER> *ws, char *data, size_t len)
 {
     std::string value(data, len);
-    int64_t pongValue = std::strtoll(value.c_str(),NULL,10);
+    int64_t pongValue = std::strtoll(value.c_str(), NULL, 10);
     {
         std::unique_lock<std::mutex> l(m_clientMutex);
         auto cur_iter = m_clients.find(ws);
@@ -148,30 +141,7 @@ void Daemon::onPong(WebSocket<SERVER> *ws, char *data, size_t len)
     }
 }
 
-//url -> 127.0.0.1:8989
-bool Daemon::parseUrl()
-{
-    try
-    {
-        std::vector<std::string> result;
-        //url format is xxx.xxx.xxx:xxx
-        boost::split(result, m_config.localHost, boost::is_any_of(":"));
-        if (result.size() != 2)
-        {
-            KF_LOG_INFO(m_logger, "parse daemon local host error,must be xxx.xxx.xxx:xxx,cur host:" << m_config.localHost);
-            return false;
-        }
-        m_url.ip = result[0];
-        m_url.port = std::atoi(result[1].c_str());
-        KF_LOG_INFO(m_logger,"parse daemon local host,ip:" << m_url.ip << ",port:" << m_url.port);
-        return  true;
-    }
-    catch (std::exception& e)
-    {
-        KF_LOG_INFO(m_logger, "parse daemon local host,exception:"<< e.what());
-    }
-    return false;
-}
+
 
 void Daemon::startPingThread()
 {
@@ -205,7 +175,7 @@ void Daemon::checkClient()
         {
             clientIter->first->close();
             KF_LOG_DEBUG(m_logger, "user:" << clientInfo.clientInfo.name << ",ws:" << clientIter->first << " is timeout,close it");
-            push(std::make_shared<RestartReq>(clientInfo.clientInfo.name, clientInfo.clientInfo.type, m_config.scriptPath));
+            push(std::make_shared<RestartReq>(clientInfo.clientInfo.name, clientInfo.clientInfo.type, g_daemon_config.scriptPath));
             clientIter = m_clients.erase(clientIter);
             continue;
         }

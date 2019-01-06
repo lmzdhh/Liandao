@@ -144,6 +144,14 @@ bool wsclient::parseAddress(const std::string& monitor_url)
 {
     try
     {
+        Poco::URI uri(monitor_url);
+        m_monitorUrl.protocol = uri.getScheme();
+        m_monitorUrl.ip = uri.getHost();
+        m_monitorUrl.port = uri.getPort();
+        m_monitorUrl.path = uri.getPath();
+        KF_LOG_INFO(m_logger, "daemon api parse daemon url success,scheme@"<<m_monitorUrl.protocol<<",host@"<<m_monitorUrl.ip<<",port@"<<m_monitorUrl.port);
+        return  true;
+        /*
         std::vector<std::string> result;
         //url format is xxx://xxx.xxx.xxx:xxx/
         boost::split(result, monitor_url, boost::is_any_of("//:/"));
@@ -158,6 +166,7 @@ bool wsclient::parseAddress(const std::string& monitor_url)
         m_monitorUrl.path = result[5];
         KF_LOG_INFO(m_logger, "daemon api parse daemon url ok:"<<monitor_url);
         return  true;
+         */
     }
     catch (std::exception& e)
     {

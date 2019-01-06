@@ -16,15 +16,19 @@
 #include "rapidjson/writer.h"
 #include "process/process.h"
 #include <queue>
+#include <set>
 using rapidjson::Document;
 using namespace rapidjson;
 using namespace uWS;
 MONITOR_NAMESPACE_START
 extern volatile int g_signal_received;
+extern DaemonConfig g_daemon_config;
 struct DaemonConfig
 {
-    std::string localHost{};
+    std::string ip{};
+    int         port{};
     std::string scriptPath{};
+    std::set<std::string> whiteList{};
 };
 struct ClientInfo
 {
@@ -66,9 +70,14 @@ public:
     {
         try
         {
-            if (m_args.size() != 3 )
+            if (m_args.size() != 3)
             {
                 KF_LOG_INFO(m_logger, "restart error:must 3 args");
+                return -1;
+            }
+            if (g_daemon_config.whiteList.find(m_type + "_" + m_name) == g_daemon_config.whiteList.end())
+            {
+                KF_LOG_INFO(m_logger, "restart info:" << m_name <<" needn't be restarted");
                 return -1;
             }
             KF_LOG_DEBUG(m_logger, "restart command args:bash " << m_args[0]<< " " << m_args[1] << " " << m_args[2]);
@@ -96,7 +105,7 @@ public:
     Daemon(KfLogPtr);
     ~Daemon();
 public:
-    bool init(DaemonConfig&&);
+    bool init();
     bool start();
     void stop();
     void wait();
@@ -121,9 +130,7 @@ private:
 private:
     Hub                     m_hub;
     KfLogPtr                m_logger;
-    UrlInfo                 m_url;
     std::atomic<bool>       m_isRunning;
-    DaemonConfig            m_config;
 private:
     std::thread             m_pingThread;
     std::mutex              m_pingMutex;

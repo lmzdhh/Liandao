@@ -26,12 +26,12 @@
 #include "WCStrategyUtil.h"
 #include "WCDataWrapper.h"
 #include "KfLog.h"
+#include "monitor_api/MonitorClient.h"
+USING_MONITOR_NAMESPACE
 
 WC_NAMESPACE_START
-
 using yijinjing::KfLogPtr;
-
-class IWCStrategy: public IWCDataProcessor
+class IWCStrategy: public IWCDataProcessor, MonitorClientSpi
 {
 protected:
     bool td_is_ready(short source) const;
@@ -93,6 +93,12 @@ public:
     /* block process by data thread */
     void block();
 
+private:
+    bool connectMonitor(const std::string& url, const std::string& name);
+
+protected:
+    virtual void OnMessage(const std::string& ){ };
+
 protected:
     /** logger, will be improved later */
     KfLogPtr logger;
@@ -104,6 +110,8 @@ protected:
     WCDataWrapperPtr data;
     /** data thread */
     ThreadPtr data_thread;
+
+    MonitorClientPtr m_monitorClient;
 };
 
 WC_NAMESPACE_END

@@ -9,6 +9,7 @@
 #include "../common/MONITOR_DECLARE.h"
 #include <mutex>
 #include <queue>
+#include <Poco/URI.h>
 struct lws_context;
 struct lws;
 MONITOR_NAMESPACE_START

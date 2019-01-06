@@ -1,13 +1,15 @@
 //
 // Created by wang on 11/18/18.
 //
+#include "Daemon.h"
 #include "DaemonWrapper.h"
 #include <boost/python.hpp>
 #include <pythonrun.h>
 #include <memory>
-#include "json.hpp"
 #include <csignal>
-#include "Daemon.h"
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include "json.hpp"
 using namespace nlohmann;
 using namespace boost::python;
 using namespace boost;
@@ -42,18 +44,18 @@ DaemonWrapper::~DaemonWrapper()
 
 bool DaemonWrapper::init(const string &json)
 {
-    if(m_daemon)
+    if(!m_daemon)
     {
-        nlohmann::json jsonConfig = nlohmann::json::parse(json);
-        DaemonConfig config;
-        config.localHost = jsonConfig["localHost"].get<std::string>();
-        config.scriptPath= jsonConfig["scriptPath"].get<std::string>();
-        if (m_daemon->init(std::move(config)))
+        exit(-1);
+    }
+    if (parseConfig(json))
+    {
+        if (m_daemon->init())
         {
             return true;
         }
     }
-    exit(0);
+    exit(-1);
 }
 
 bool DaemonWrapper::start()
@@ -83,6 +85,40 @@ void DaemonWrapper::wait()
         m_daemon->wait();
     }
 }
+
+bool DaemonWrapper::parseConfig(const std::string &json)
+{
+    nlohmann::json jsonConfig = nlohmann::json::parse(json);
+    auto localHost = parseCsv(jsonConfig["localHost"].get<std::string>());
+    if (localHost.size() != 2)
+    {
+        KF_LOG_INFO(m_logger, "parse daemon local host error,must be xxx.xxx.xxx:xxx");
+        return false;
+    }
+    g_daemon_config.ip = localHost[0];
+    g_daemon_config.port = std::atoi(localHost[1].c_str());
+    KF_LOG_INFO(m_logger,"parse daemon local host,ip:" << g_daemon_config.ip  << ",port:" << g_daemon_config.port);
+    g_daemon_config.scriptPath= jsonConfig["scriptPath"].get<std::string>();
+    auto whiteList = parseCsv(jsonConfig["whiteList"].get<std::string>());
+    g_daemon_config.whiteList.insert(whiteList.begin(), whiteList.end());
+    return true;
+}
+
+//url -> 127.0.0.1:8989
+std::vector<std::string> DaemonWrapper::parseCsv(const std::string& csv)
+{
+    std::vector<std::string> result{};
+    try
+    {
+        boost::split(result, csv, boost::is_any_of(":"));
+    }
+    catch (std::exception& e)
+    {
+        KF_LOG_INFO(m_logger, "parse csv " << csv << " exception:"<< e.what());
+    }
+    return std::move(result);
+}
+
 
 BOOST_PYTHON_MODULE(libmonitordaemon)
 {

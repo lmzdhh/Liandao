@@ -125,6 +125,7 @@ protected:
     std::string m_engineIndex {};
 private:
     void cutEngineIndex(std::string&);
+
     bool connectMonitor(const std::string& url, const std::string& name);
 };
 
