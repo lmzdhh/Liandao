@@ -153,6 +153,9 @@
 		"binance": {
 			"accounts": [{
 				"info": {
+				        "interfaces": "",
+					"interface_timeout_ms": 30000,
+					"interface_switch":1,
 					"APIKey": "your-api-key",
 					"SecretKey": "your-secret-key",
 					"whiteLists": {
