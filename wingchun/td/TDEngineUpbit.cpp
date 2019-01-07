@@ -579,7 +579,7 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
         stOrderInfo.nRequestID = requestId;
         unit.mapOrderRef2OrderInfo[data->OrderRef] = stOrderInfo;
         std::string strStatus=d["state"].GetString();
-        int64_t nTrades = atoi(d["trades_count"].GetString());
+        int64_t nTrades = d["trades_count"].GetInt64();
         auto cStatus = convertOrderStatus(strStatus,nTrades);
         if(cStatus == LF_CHAR_NoTradeQueueing)
         {//no status, it is ACK
@@ -654,7 +654,7 @@ void TDEngineUpbit::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUn
     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
     rtn_order.LimitPrice = std::round(stod(result["price"].GetString()) * scale_offset);
     rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus =  convertOrderStatus(result["state"].GetString(),atoi(result["trades_count"].GetString()));
+    rtn_order.OrderStatus =  convertOrderStatus(result["state"].GetString(),result["trades_count"].GetInt64());
     on_rtn_order(&rtn_order);
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                             source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
@@ -701,7 +701,7 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, data->OrderRef, 13);
     rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus = convertOrderStatus(result["state"].GetString(),atoi(result["trades_count"].GetString()));
+    rtn_order.OrderStatus = convertOrderStatus(result["state"].GetString(),result["trades_count"].GetInt64());
 
     uint64_t volumeTotalOriginal = std::round(stod(result["volume"].GetString()) * scale_offset);
     //数量
