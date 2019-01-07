@@ -206,13 +206,12 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
     string path = j_config["path"].get<string>();
     base_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     base_interval_ms = std::max(base_interval_ms,(int64_t)500);
-    //int clientID = j_config["client_id"].get<int>();
+    int clientID = j_config["client_id"].get<int>();
 
-    //std::time_t baseNow = std::time(nullptr);
-    //struct tm* tm = std::localtime(&baseNow);
-    //tm->tm_sec += 30;
-    //m_ref = clientID*10000000+tm->tm_sec;
-    //m_ref*=1000000;
+    std::time_t baseNow = std::time(nullptr);
+    struct tm* tm = std::localtime(&baseNow);
+    m_ref = clientID*1000000000+tm->tm_yday*1000000+tm->tm_hour*10000+tm->tm_min*100+tm->tm_sec;
+    m_ref*=10000000;
     AccountUnitDaybit& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
