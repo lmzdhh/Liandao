@@ -425,9 +425,9 @@ void TDEngineUpbit::req_investor_position(const LFQryPositionField* data, int ac
     if(!d.HasParseError() && d.IsObject() && d.HasMember("error"))
     {
         errorId = nResponseCode;
-        if(d.HasMember("message") && d["message"].IsString())
+        if(d.HasMember("name") && d["name"].IsString())
         {
-            errorMsg = d["message"].GetString();
+            errorMsg = d["name"].GetString();
         }
 
         KF_LOG_ERROR(logger, "[req_investor_position] get_account failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
@@ -558,9 +558,9 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
     if(!d.HasParseError() && d.IsObject() && d.HasMember("error"))
     {
         errorId = nRsponseCode;
-        if(d["error"].HasMember("message"))
+        if(d["error"].HasMember("name"))
         {
-            errorMsg = d["error"]["message"].GetString();
+            errorMsg = d["error"]["name"].GetString();
         }
         KF_LOG_ERROR(logger, "[req_order_insert] send_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
@@ -800,9 +800,9 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
     if(!d.HasParseError() && d.IsObject() && d.HasMember("error"))
     {
         errorId = nResponseCode;
-        if(d.HasMember("message") && d["message"].IsString())
+        if(d.HasMember("name") && d["name"].IsString())
         {
-            errorMsg = d["message"].GetString();
+            errorMsg = d["name"].GetString();
         }
         KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
