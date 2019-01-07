@@ -119,7 +119,7 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
     unit.api_key = api_key;
     unit.secret_key = secret_key;
 
-    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key);
+    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << "(SecretKey)" << secret_key);
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
