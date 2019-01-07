@@ -1255,7 +1255,6 @@ int32_t TDEngineUpbit::send_order(AccountUnitUpbit& unit, const char *symbol,
         //    body.append("&identifier=");
        //     body.append( newClientOrderId );
        // }
-       std::string strBody = 
        queryString = getEncode(body);
        std::string strAuthorization  = getAuthorization(unit,queryString);
        const  std::string& url = requestPath;
