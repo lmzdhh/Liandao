@@ -171,12 +171,12 @@ void TDEngineDaybit::init()
     KF_LOG_INFO(logger, "[init]");
 
 
-    std::time_t baseNow = std::time(nullptr);
-    struct tm* tm = std::localtime(&baseNow);
-    tm->tm_sec += 30;
-    std::time_t next = std::mktime(tm);
+    //std::time_t baseNow = std::time(nullptr);
+    //struct tm* tm = std::localtime(&baseNow);
+    //tm->tm_sec += 30;
+    //std::time_t next = std::mktime(tm);
 
-    std::cout << "std::to_string(next):" << std::to_string(next)<< std::endl;
+    //std::cout << "std::to_string(next):" << std::to_string(next)<< std::endl;
 
     std::cout << "getTimestamp:" << std::to_string(getTimestamp())<< std::endl;
 
@@ -206,7 +206,13 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
     string path = j_config["path"].get<string>();
     base_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     base_interval_ms = std::max(base_interval_ms,(int64_t)500);
+    //int clientID = j_config["client_id"].get<int>();
 
+    //std::time_t baseNow = std::time(nullptr);
+    //struct tm* tm = std::localtime(&baseNow);
+    //tm->tm_sec += 30;
+    //m_ref = clientID*10000000+tm->tm_sec;
+    //m_ref*=1000000;
     AccountUnitDaybit& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
@@ -879,8 +885,6 @@ int64_t TDEngineDaybit::getTimestamp()
 }
 
 
-
-
 void TDEngineDaybit::on_lws_connection_error(struct lws* conn)
 {
     KF_LOG_ERROR(logger, "TDEngineDaybit::on_lws_connection_error.");
@@ -1181,8 +1185,11 @@ void TDEngineDaybit::onRspOrder(struct lws* conn, Value& rsp,int64_t ref)
     if(rsp.IsObject() && rsp.HasMember("id"))
     {
         auto& rtnOrder = it->second.order;
-        unit.ordersMap.insert(std::make_pair(rsp["id"].GetInt64(),rtnOrder));
+        int64_t nOrderID = rsp["id"].GetInt64();
+        unit.ordersMap.insert(std::make_pair(nOrderID,rtnOrder));
         KF_LOG_INFO(logger, "TDEngineDaybit::onRspOrder,rtn_order");
+        std::string strOrderID = std::to_string(nOrderID);
+        strncpy(rtnOrder.BusinessUnit,strOrderID.c_str(),21);
 		on_rtn_order(&rtnOrder);
 		raw_writer->write_frame(&rtnOrder, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_ORDER_DAYBIT,1, (rtnOrder.RequestID > 0) ? rtnOrder.RequestID : -1);
         unit.ordersLocalMap.erase(it);
@@ -1260,7 +1267,7 @@ void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
 		        for (SizeType i = 0; i < dataItems.Size(); ++i)
                 {
                     auto& trade = dataItems[i];
-                    if(trade.HasMember("price") && trade.HasMember("order_id") &&  trade.HasMember("sell") && trade.HasMember("quote_amount") 
+                    if(trade.HasMember("id") && trade.HasMember("price") && trade.HasMember("order_id") &&  trade.HasMember("sell") && trade.HasMember("quote_amount") 
                     && trade.HasMember("base_amount") )	
                     {	
 			            LFRtnTradeField rtn_trade;
@@ -1287,7 +1294,11 @@ void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
                         //    rtn_trade.Volume = int64_t(aTof(trade["quote_amount"].GetString())*scale_offset);
                         //}					        
                         rtn_trade.Price = int64_t(aTof(trade["price"].GetString())*scale_offset);
-                        
+                        int64_t ntradeID = trade["id"].GetInt64();
+                        std::string strOrderID = std::to_string(id);
+                        std::string strTradeID = std::to_string(ntradeID);
+                        strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
+                        strncpy(rtn_trade.TradeID,strTradeID.c_str(),21);
                         KF_LOG_ERROR(logger, "TDEngineDaybit::onTrade,rtn_trade");
                         on_rtn_trade(&rtn_trade);
                         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),source_id, MSG_TYPE_LF_RTN_TRADE_DAYBIT, 1, -1);
