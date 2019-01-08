@@ -806,6 +806,9 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
     }
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_UPBIT, 1, requestId, errorId, errorMsg.c_str());
+
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+    unit.cancelOrders.push_back(data->OrderRef);
 }
 
     void TDEngineUpbit::retrieveOrderAndTradesStatus(AccountUnitUpbit& unit)
@@ -876,6 +879,18 @@ void TDEngineUpbit::moveNewtoPending(AccountUnitUpbit& unit)
 {
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
+    for(auto& strOrderRef : unit.cancelOrders)
+    {
+        for(auto it = unit.pendingOrderStatus.begin(); it != unit.pendingOrderStatus.end();++it)
+        {
+            if(strOrderRef == it->OrderRef)
+            {
+                unit.pendingOrderStatus.erase(it);
+                break;
+            }
+        }
+    }
+
     std::vector<PendingUpbitOrderStatus>::iterator newOrderStatusIterator;
     for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
     {
@@ -883,24 +898,12 @@ void TDEngineUpbit::moveNewtoPending(AccountUnitUpbit& unit)
         newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
     }
 
-    //std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
-    //for(tradeIterator = unit.newOnRtnTrades.begin(); tradeIterator != unit.newOnRtnTrades.end();)
-   // {
-    //    unit.pendingOnRtnTrades.push_back(*tradeIterator);
-    //    tradeIterator = unit.newOnRtnTrades.erase(tradeIterator);
-    //}
-
-   // std::vector<PendingUpbitTradeStatus>::iterator newTradeStatusIterator;
-   // for(newTradeStatusIterator = unit.newTradeStatus.begin(); newTradeStatusIterator != unit.newTradeStatus.end();) {
-    //    unit.pendingTradeStatus.push_back(*newTradeStatusIterator);
-    //    newTradeStatusIterator = unit.newTradeStatus.erase(newTradeStatusIterator);
-    //}
-
     std::vector<std::string>::iterator newSentTradeIdsIterator;
     for(newSentTradeIdsIterator = unit.newSentTradeIds.begin(); newSentTradeIdsIterator != unit.newSentTradeIds.end();) {
         unit.sentTradeIds.push_back(*newSentTradeIdsIterator);
         newSentTradeIdsIterator = unit.newSentTradeIds.erase(newSentTradeIdsIterator);
     }
+
 }
 
 void TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderResult)

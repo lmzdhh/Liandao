@@ -72,12 +72,7 @@ struct AccountUnitUpbit
     bool    logged_in;
     std::vector<PendingUpbitOrderStatus> newOrderStatus;
     std::vector<PendingUpbitOrderStatus> pendingOrderStatus;
-    //std::vector<PendingUpbitTradeStatus> newTradeStatus;
-    //std::vector<PendingUpbitTradeStatus> pendingTradeStatus;
-
-    //std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> newOnRtnTrades;
-    //std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
-    //std::vector<std::string> whiteListInstrumentIDs;
+    std::vector<std::string> cancelOrders;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
     
     // the trade id that has been called on_rtn_trade. Do not send it again.
