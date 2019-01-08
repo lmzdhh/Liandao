@@ -805,7 +805,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
     }
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_UPBIT, 1, requestId, errorId, errorMsg.c_str());
 
-    KF_LOG_INFO(logger, "[req_order_action] success (orderRef)" <<  data->OrderRef);
+    KF_LOG_INFO(logger, "[req_order_action] (orderRef)" <<  data->OrderRef << "(retCode)" << errorId);
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
     unit.cancelOrders.push_back(data->OrderRef); 
 }
@@ -1226,7 +1226,7 @@ std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *uuid, 
     KF_LOG_INFO(logger, "[get_order]");
     long recvWindow = 5000;
     std::string Method = "GET";
-    std::string requestPath = "https://api.upbit.com/api/v1/order?";
+    std::string requestPath = "https://api.upbit.com/v1/order?";
     std::string queryString("");
     std::string body = "";
 
@@ -1270,7 +1270,6 @@ std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *sy
         should_retry = false;
 
         long recvWindow = order_action_recvwindow_ms;
-        std::string Timestamp = getTimestampString();
         std::string Method = "DELETE";
         std::string requestPath = "https://api.upbit.com/v1/order?";
         std::string queryString("");
@@ -1291,7 +1290,7 @@ std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *sy
                                                  " (response.text) " << response.text.c_str());
 
 
-        if(response.status_code != 200) {
+        if(response.status_code != 200 && response.status_code != 404) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
