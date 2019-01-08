@@ -947,7 +947,7 @@ bool TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
                 strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);       
                 rtn_order.Direction = GetDirection(orderResult["side"].GetString());
                 rtn_order.TimeCondition = LF_CHAR_GTC;
-                rtn_order.OrderPriceType = GetPriceType(orderResult["type"].GetString());
+                rtn_order.OrderPriceType = GetPriceType(orderResult["ord_typ"].GetString());
                 strncpy(rtn_order.InstrumentID, pendingOrderStatus.InstrumentID, 31);
                 rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["volume"].GetString()) * scale_offset);
                 rtn_order.LimitPrice = std::round(stod(orderResult["price"].GetString()) * scale_offset);
