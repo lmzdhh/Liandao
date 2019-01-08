@@ -934,7 +934,7 @@ bool TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
         {
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.OrderStatus = convertOrderStatus(orderResult["state"].GetString(),atoi(orderResult["trades"].GetString()));
+            rtn_order.OrderStatus = convertOrderStatus(orderResult["state"].GetString(),orderResult["trades_count"].GetInt64());
             rtn_order.VolumeTraded = std::round(stod(orderResult["executed_volume"].GetString()) * scale_offset);
             strncpy(rtn_order.OrderRef, strOrderRef, 21);
           
