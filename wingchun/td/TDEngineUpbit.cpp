@@ -140,8 +140,6 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
     //cancel all openning orders on TD startup
     if(unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().size() > 0)
     {
-            KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID) of exchange coinpair: " << map_itr->second);
-
             Document d;
             //getAccountResponce(unit,d);
             get_open_orders(unit, d);
