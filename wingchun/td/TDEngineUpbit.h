@@ -153,7 +153,7 @@ private:
     std::int32_t  get_order(AccountUnitUpbit& unit, const char *origClientOrderId, Document& json);
     std::int32_t  cancel_order(AccountUnitUpbit& unit, const char *symbol,
                        const char *origClientOrderId,  Document &doc);
-    void get_open_orders(AccountUnitUpbit& unit, const char *symbol, Document &doc);
+    void get_open_orders(AccountUnitUpbit& unit, Document &doc);
     void getChanceResponce(const AccountUnitUpbit& unit, const std::string& strMarket,Document& d);
     std::int32_t getAccountResponce(const AccountUnitUpbit& unit,Document& d);
     void getAllMarkets(std::vector<std::string>& vstrMarkets);

@@ -140,18 +140,14 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
     //cancel all openning orders on TD startup
     if(unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().size() > 0)
     {
-        std::unordered_map<std::string, std::string>::iterator map_itr;
-        map_itr = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
-        while(map_itr != unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end())
-        {
             KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (cancel_all_orders of instrumentID) of exchange coinpair: " << map_itr->second);
 
             Document d;
             //getAccountResponce(unit,d);
-            get_open_orders(unit, map_itr->second.c_str(), d);
+            get_open_orders(unit, d);
             KF_LOG_INFO(logger, "[load_account] print get_open_orders");
             printResponse(d);
-
+            
             if(!d.HasParseError() && d.IsArray()) { // expected success response is array
                 size_t len = d.Size();
                 KF_LOG_INFO(logger, "[load_account][get_open_orders] (length)" << len);
@@ -161,11 +157,17 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
                         if(d.GetArray()[i]["market"].IsString() && d.GetArray()[i]["uuid"].IsString())
                         {
                             std::string symbol = d.GetArray()[i]["market"].GetString();
+                            std::string strTicker  = unit.coinPairWhiteList.GetKeyByValue(symbol);
+                            if(strTicker.length() <= 0)
+                            {
+                                 KF_LOG_INFO(logger, "[load_account] " << symbol << "is not in coinPairWhiteList");
+                                continue;
+                            }
                             std::string orderRef = d.GetArray()[i]["uuid"].GetString();
                             Document cancelResponse;
                             cancel_order(unit, symbol.c_str(), orderRef.c_str(), cancelResponse);
 
-                            KF_LOG_INFO(logger, "[load_account] cancel_order:");
+                            KF_LOG_INFO(logger, "[load_account] cancel_order:(orderRef)" <<orderRef<< "(Ticker)" << strTicker);
                             printResponse(cancelResponse);
                             int errorId = 0;
                             std::string errorMsg = "";
@@ -189,9 +191,6 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
                     }
                 }
             }
-
-            map_itr++;
-        }
     }
 
     // set up
@@ -1301,14 +1300,14 @@ std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *sy
         }
     } while(should_retry && retry_times < max_rest_retry_times);
 
-    KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[cancel_order] out_retry (response.status_code) " << response.status_code <<
                                                                          " (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
     getResponse(response.status_code, response.text, response.error.message, json);
     return response.status_code;
 }
 
-void TDEngineUpbit::get_open_orders(AccountUnitUpbit& unit, const char *symbol, Document &json)
+void TDEngineUpbit::get_open_orders(AccountUnitUpbit& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_open_orders]");
     long recvWindow = 5000;
