@@ -180,7 +180,7 @@
                 "SecretKey": "kQ4eMfse0TKsCe838iP_6AAw7gZNMpUh",
                 "baseUrl": "api.staging.daybit.com",
 				        "path":"/v1/user_api_socket/websocket",
-                "client_id":1,
+                "sys_id":1,
                 "whiteLists":{
                   "btc_bat": "BTC-BAT"
                 },

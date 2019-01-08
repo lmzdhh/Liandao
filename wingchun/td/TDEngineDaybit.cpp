@@ -206,7 +206,7 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
     string path = j_config["path"].get<string>();
     base_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     base_interval_ms = std::max(base_interval_ms,(int64_t)500);
-    int clientID = j_config["client_id"].get<int>();
+    int clientID = j_config["sys_id"].get<int>();
 
     std::time_t baseNow = std::time(nullptr);
     struct tm* tm = std::localtime(&baseNow);
