@@ -594,21 +594,13 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
                 onRspNewOrderFULL(data, unit, d, requestId);
             }
         }
+        KF_LOG_DEBUG(logger, "[req_order_insert] success");
     }
 }
 
 
 void TDEngineUpbit::onRspNewOrderACK(const LFInputOrderField* data, AccountUnitUpbit& unit, Document& result, int requestId)
 {
-    /*Response ACK:
-                    {
-                      "symbol": "BTCUSDT",
-                      "orderId": 28,
-                      "clientOrderId": "6gCrw2kRUAF9CvJDGP16IP",
-                      "transactTime": 1507725176595
-                    }
-    */
-
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
     char noneStatus = '\0';
     addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction, requestId);
@@ -716,7 +708,10 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     rtn_trade.Direction = data->Direction;
     Document d;
     auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,data->OrderRef);
-    get_order(unit,stOrderInfo.strRemoteUUID.c_str(),d);
+    if(200 != get_order(unit,stOrderInfo.strRemoteUUID.c_str(),d))
+    {
+         KF_LOG_DEBUG(logger, "TDEngineUpbit::onRspNewOrderFULL:order not found ");
+    }
     //we have strike price, emit OnRtnTrade
     int fills_size = atoi(d["trades"].GetString());
 
@@ -832,7 +827,10 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
 
             Document orderResult;
            auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,orderStatusIterator->OrderRef);
-            get_order(unit, stOrderInfo.strRemoteUUID.c_str(), orderResult);
+            if(200 != get_order(unit, stOrderInfo.strRemoteUUID.c_str(), orderResult))
+            {
+                continue;
+            }
             KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
                                                                             << " (orderId)" << orderStatusIterator->OrderRef);
             //printResponse(orderResult);
@@ -1112,21 +1110,6 @@ void TDEngineUpbit::addNewQueryOrdersAndTrades(AccountUnitUpbit& unit, const cha
     status.VolumeTraded = VolumeTraded;
     unit.newOrderStatus.push_back(status);
 
-    //OnRtnOrderDoneAndWaitingOnRtnTrade waitingTrade;
-    //waitingTrade.OrderRef = OrderRef;
-    //waitingTrade.UpbitOrderId = UpbitOrderId;
-   // waitingTrade.Direction = Direction;
-    //unit.newOnRtnTrades.push_back(waitingTrade);
-
-    //add new symbol for GetAndHandleOrderTradeResponse if had no this symbol before
-   // if(!isExistSymbolInPendingTradeStatus(unit, InstrumentID))
-    //{
-    //    PendingUpbitTradeStatus tradeStatus;
-    //    memset(&tradeStatus, 0, sizeof(PendingUpbitTradeStatus));
-    //    strncpy(tradeStatus.InstrumentID, InstrumentID, 31);
-   //     tradeStatus.last_trade_id = "";
-    //    unit.newTradeStatus.push_back(tradeStatus);
-   // }
 }
 
 //bool TDEngineUpbit::isExistSymbolInPendingTradeStatus(AccountUnitUpbit& unit, const char_31 InstrumentID)
