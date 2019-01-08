@@ -29,19 +29,8 @@ struct PendingUpbitOrderStatus
     char_21  OrderRef;       //报单引用
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
-};
-
-struct PendingUpbitTradeStatus
-{
-    char_31 InstrumentID;   //合约代码
-    std::string last_trade_id; //for myTrade
-};
-
-//当Order已经全部成交完成之后，到get_myTrades拿到这个OrderRef记录的信息以后， 删除记录，不再get_myTrades
-struct OnRtnOrderDoneAndWaitingOnRtnTrade
-{
-    std::string OrderRef;       //Upbit 报单引用
-    LfDirectionType Direction;  //买卖方向
+     // the trade id that has been called on_rtn_trade. Do not send it again.
+    std::vector<std::string> sentTradeIds;
 };
 
 struct SendOrderFilter
@@ -75,10 +64,6 @@ struct AccountUnitUpbit
     std::vector<std::string> cancelOrders;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
     
-    // the trade id that has been called on_rtn_trade. Do not send it again.
-    std::vector<std::string> newSentTradeIds;
-    std::vector<std::string> sentTradeIds;
-
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
 
@@ -132,7 +117,6 @@ private:
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
-    void addNewSentTradeIds(AccountUnitUpbit& unit,const std::string& newSentTradeIds);
     void addNewQueryOrdersAndTrades(AccountUnitUpbit& unit, const char_31 InstrumentID,
                                         const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, int64_t UpbitOrderId);
 
@@ -140,8 +124,8 @@ private:
     inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitUpbit& unit, Document& result, int requestId);
     inline void onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitUpbit& unit, Document& result, int requestId);
 
-    void retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderResult);
-    void retrieveTradeStatus(AccountUnitUpbit& unit,Document& d);
+    bool retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderResult,PendingUpbitOrderStatus& pendingOrderStatus);
+    void retrieveTradeStatus(AccountUnitUpbit& unit,Document& d,std::vector<std::string>& sentTradeIds);
     void retrieveOrderAndTradesStatus(AccountUnitUpbit& unit);
     void moveNewtoPending(AccountUnitUpbit& unit);
     //bool isExistSymbolInPendingTradeStatus(AccountUnitUpbit& unit, const char_31 InstrumentID);
@@ -169,9 +153,7 @@ private:
     std::int32_t  get_order(AccountUnitUpbit& unit, const char *origClientOrderId, Document& json);
     std::int32_t  cancel_order(AccountUnitUpbit& unit, const char *symbol,
                        const char *origClientOrderId,  Document &doc);
-    void get_my_trades(AccountUnitUpbit& unit, const char *symbol, int limit, int64_t fromId, Document &doc);
     void get_open_orders(AccountUnitUpbit& unit, const char *symbol, Document &doc);
-    void get_exchange_infos(AccountUnitUpbit& unit, Document &doc);
     void getChanceResponce(const AccountUnitUpbit& unit, const std::string& strMarket,Document& d);
     std::int32_t getAccountResponce(const AccountUnitUpbit& unit,Document& d);
     void getAllMarkets(std::vector<std::string>& vstrMarkets);
