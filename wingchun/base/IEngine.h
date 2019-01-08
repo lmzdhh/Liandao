@@ -126,7 +126,7 @@ protected:
 private:
     void cutEngineIndex(std::string&);
 
-    bool connectMonitor(const std::string& url, const std::string& name);
+    void connectMonitor(const json& j_config);
 };
 
 DECLARE_PTR(IEngine);

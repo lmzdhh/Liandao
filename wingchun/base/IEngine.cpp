@@ -166,23 +166,30 @@ void IEngine::initialize(const string& conf_str)
     pre_load(j_config);
     // load config information
     load(j_config);
-    std::string monitor_url = j_config["monitor_url"].get<std::string>();
-    std::string name = j_config["name"].get<std::string>();
-    if (!connectMonitor(monitor_url, name))
-    {
-        KF_LOG_INFO(logger, "connect to monitor error,name@" << name << ",url@" << monitor_url);
-    }
+    connectMonitor(j_config);
 }
 
-bool IEngine::connectMonitor(const std::string& url, const std::string& name)
+void IEngine::connectMonitor(const json& j_config)
 {
+    if (j_config.find("monitor_url")==j_config.end() || j_config.find("name")==j_config.end())
+    {
+        KF_LOG_INFO(logger, "connect to monitor error:kungfu.json has no [monitor_url] or [name]");
+        return;
+    }
+    std::string monitor_url = j_config["monitor_url"].get<std::string>();
+    std::string name = j_config["name"].get<std::string>();
     m_monitorClient->init(logger);
     m_monitorClient->setCallback(this);
-    if(!m_monitorClient->connect(url))
+    if(!m_monitorClient->connect(monitor_url))
     {
-        return false;
+        KF_LOG_INFO(logger, "connect to monitor error,name@" << name << ",url@" << monitor_url);
+        return;
     }
-    return m_monitorClient->login(name);
+    if (!m_monitorClient->login(name))
+    {
+        KF_LOG_INFO(logger, "login to monitor error,name@" << name << ",url@" << monitor_url);
+        return;
+    }
 }
 
 void IEngine::cutEngineIndex(std::string& str)
