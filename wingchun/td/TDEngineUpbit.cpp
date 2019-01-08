@@ -809,6 +809,8 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
 
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
     unit.cancelOrders.push_back(data->OrderRef);
+
+     KF_LOG_DEBUG(logger, "[req_order_action] success" );
 }
 
     void TDEngineUpbit::retrieveOrderAndTradesStatus(AccountUnitUpbit& unit)
