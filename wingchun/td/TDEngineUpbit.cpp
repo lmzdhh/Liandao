@@ -1242,7 +1242,7 @@ std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *uuid, 
         should_retry = false;
         std::string strAuthorization = getAuthorization(unit,queryString);
         response = Get(Url{url},
-                              Header{{"Autorization", strAuthorization}},
+                              Header{{"Authorization", strAuthorization}},
                               Body{body}, Timeout{100000});
 
         KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
