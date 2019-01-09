@@ -972,9 +972,12 @@ bool TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
         if(pendingOrderStatus.OrderStatus == LF_CHAR_AllTraded  || pendingOrderStatus.OrderStatus == LF_CHAR_Canceled
            || pendingOrderStatus.OrderStatus == LF_CHAR_Error)
         {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] order all traded. (OrderRef)" << pendingOrderStatus.OrderRef);
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] order all traded. (OrderRef)" << pendingOrderStatus.OrderRef
+                             << "(status)" << (int)pendingOrderStatus.OrderStatus);
             return true;
         }
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] order part traded. (OrderRef)" << pendingOrderStatus.OrderRef
+                        << "(status)" << (int)pendingOrderStatus.OrderStatus);
         return false;
 }
 
