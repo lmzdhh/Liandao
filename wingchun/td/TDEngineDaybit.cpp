@@ -865,7 +865,7 @@ void TDEngineDaybit::cancel_order(AccountUnitDaybit& unit, OrderActionInfo& data
 void TDEngineDaybit::new_order(AccountUnitDaybit& unit,OrderInsertInfo& data)
 {
     std::unique_lock<std::mutex> lck(g_reqMutex);
-    int ref = makeRef();    
+    int64_t ref = makeRef();    
     auto req =  createNewOrderReq(unit.mapSubscribeRef[TOPIC_API],data.amount,data.price,data.symbol,data.isSell,ref);                                            
     unit.listMessageToSend.push(req);
      KF_LOG_INFO(logger, "[new_order] (joinref) " << unit.mapSubscribeRef[TOPIC_API] << " (ref)" << ref << "(msg) " << req);	
