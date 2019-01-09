@@ -19,3 +19,4 @@ SET(MONITORAPI_SOURCE_FILES MonitorClient.h  MonitorClient.cpp wsclient.h wsclie
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${MONITORAPI_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}  python kflog ${Boost_LIBRARIES}  ${CMAKE_SOURCE_DIR}/utils/poco/lib/libPocoFoundation.a ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS ${PROJECT_NAME} DESTINATION "lib/wingchun")
+INSTALL(FILES MonitorClient.h ./common/MONITOR_DECLARE.h DESTINATION "include")
