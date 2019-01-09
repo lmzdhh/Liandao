@@ -976,7 +976,7 @@ bool TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
                              << "(status)" << (int)pendingOrderStatus.OrderStatus);
             return true;
         }
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] order part traded. (OrderRef)" << pendingOrderStatus.OrderRef
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] get status end. (OrderRef)" << pendingOrderStatus.OrderRef
                         << "(status)" << (int)pendingOrderStatus.OrderStatus);
         return false;
 }
@@ -1027,8 +1027,8 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);  
-
-        KF_LOG_INFO(logger, "[retrieveTradeStatus]  on_rtn_trade orderRef" << rtn_trade.OrderRef);
+        sentTradeIds.push_back(newtradeId);
+        KF_LOG_INFO(logger, "[retrieveTradeStatus]  on_rtn_trade (orderRef)" << rtn_trade.OrderRef);
     }
 }
 
