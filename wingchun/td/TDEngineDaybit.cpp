@@ -160,7 +160,6 @@ TDEngineDaybit::~TDEngineDaybit()
 {
 }
 int64_t TDEngineDaybit::makeRef(){ return ++m_ref;}
-int64_t TDEngineDaybit::getRef(){ return m_ref;}
 //int64_t TDEngineDaybit::makeJoinRef(){return ++m_joinRef;}
 //int64_t TDEngineDaybit::getJoinRef(){ return m_joinRef;}
 void TDEngineDaybit::init()
@@ -245,25 +244,24 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
 void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit,bool only_api_topic)
 {
     std::lock_guard<std::mutex> lck(g_reqMutex);
-    
+    int64_t ref=-1;
     unit.listMessageToSend = std::queue<std::string>(); 
-    unit.listMessageToSend.push(createJoinReq(0,TOPIC_API));
-    unit.mapSubscribeRef.insert(std::make_pair(TOPIC_API,getRef()));
+    unit.listMessageToSend.push(createJoinReq(0,TOPIC_API,ref));
+    unit.mapSubscribeRef.insert(std::make_pair(TOPIC_API,ref));
     if(only_api_topic)
     {   
         isSyncServerTime = false;         
     }
     else
     {
-        unit.listMessageToSend.push(createJoinReq(0,TOPIC_MARKET));
-        unit.mapSubscribeRef.insert(std::make_pair(TOPIC_MARKET,getRef()));
-        unit.listMessageToSend.push(createJoinReq(0,TOPIC_ORDER));
-        unit.mapSubscribeRef.insert(std::make_pair(TOPIC_ORDER,getRef()));
-        unit.listMessageToSend.push(createJoinReq(0,TOPIC_TRADE));
-        unit.mapSubscribeRef.insert(std::make_pair(TOPIC_TRADE,getRef()));
+        unit.listMessageToSend.push(createJoinReq(0,TOPIC_MARKET,ref));
+        unit.mapSubscribeRef.insert(std::make_pair(TOPIC_MARKET,ref));
+        unit.listMessageToSend.push(createJoinReq(0,TOPIC_ORDER,ref));
+        unit.mapSubscribeRef.insert(std::make_pair(TOPIC_ORDER,ref));
+        unit.listMessageToSend.push(createJoinReq(0,TOPIC_TRADE,ref));
+        unit.mapSubscribeRef.insert(std::make_pair(TOPIC_TRADE,ref));
         //cancel_all_orders(unit);
     }
-    //std::cout << "InitSubscribeMsg, ref test " << getRef() << " hhhhh " <<getRef() << std::endl;
 }
 void TDEngineDaybit::heartbeat_loop()
 {
@@ -838,7 +836,7 @@ void TDEngineDaybit::cancel_all_orders(AccountUnitDaybit& unit)
     
     auto req = createCancelAllOrdersReq(unit.mapSubscribeRef[TOPIC_API]);
     unit.listMessageToSend.push(req);
-    KF_LOG_INFO(logger, "[cancel_all_orders] (joinref) " << unit.mapSubscribeRef[TOPIC_API] << " (ref)" << getRef() << "(msg) " << req);
+   
 }
 
 
@@ -846,14 +844,14 @@ void TDEngineDaybit::cancel_order(AccountUnitDaybit& unit, OrderActionInfo& data
 {
     std::unique_lock<std::mutex> lck(g_reqMutex);
     KF_LOG_INFO(logger, "[cancel_order] (order_id)" << data.orderId);  
-    auto req = createCancelOrderReq(unit.mapSubscribeRef[TOPIC_API],data.orderId);
+    int64_t ref=-1;
+    auto req = createCancelOrderReq(unit.mapSubscribeRef[TOPIC_API],data.orderId,ref);
     unit.listMessageToSend.push(req);
-    KF_LOG_INFO(logger, "[cancel_order] (joinref) " << unit.mapSubscribeRef[TOPIC_API] << " (ref)" << getRef() << "(msg) " << req);	
     lck.unlock();  
 
     std::unique_lock<std::recursive_mutex> lck_sec(unit_mutex);
     data.retryCount++;
-    unit.ordersLocalActionMap.insert(std::make_pair(getRef(),data));
+    unit.ordersLocalActionMap.insert(std::make_pair(ref,data));
     lck_sec.unlock();
     lws_callback_on_writable(unit.websocketConn);
     
@@ -861,13 +859,14 @@ void TDEngineDaybit::cancel_order(AccountUnitDaybit& unit, OrderActionInfo& data
 
 void TDEngineDaybit::new_order(AccountUnitDaybit& unit,OrderInsertInfo& data)
 {
-    std::unique_lock<std::mutex> lck(g_reqMutex);    
-    auto req =  createNewOrderReq(unit.mapSubscribeRef[TOPIC_API],data.amount,data.price,data.symbol,data.isSell);                                            
+    std::unique_lock<std::mutex> lck(g_reqMutex);
+    int ref = makeRef();    
+    auto req =  createNewOrderReq(unit.mapSubscribeRef[TOPIC_API],data.amount,data.price,data.symbol,data.isSell,ref);                                            
     unit.listMessageToSend.push(req);
-     KF_LOG_INFO(logger, "[new_order] (joinref) " << unit.mapSubscribeRef[TOPIC_API] << " (ref)" << getRef() << "(msg) " << req);	
+     KF_LOG_INFO(logger, "[new_order] (joinref) " << unit.mapSubscribeRef[TOPIC_API] << " (ref)" << ref << "(msg) " << req);	
     lck.unlock();  
     data.retryCount++;
-	addNewOrder(unit, LF_CHAR_NotTouched,getRef(),data); 
+	addNewOrder(unit, LF_CHAR_NotTouched,ref,data); 
     lws_callback_on_writable(unit.websocketConn);
 }
 
@@ -1333,10 +1332,10 @@ std::string TDEngineDaybit::createHeartBeatReq()
     doc.Accept(writer);
     return buffer.GetString();
 }
-std::string TDEngineDaybit::createJoinReq(int64_t joinref,const std::string& topic)
+std::string TDEngineDaybit::createJoinReq(int64_t joinref,const std::string& topic,int64_t& ref)
 {
     Value obj(rapidjson::kObjectType);
-    int64_t ref = makeRef();
+    ref = makeRef();
     return createPhoenixMsg(ref,topic,"phx_join",obj,ref);
 }
 std::string TDEngineDaybit::createLeaveReq(int64_t joinref,const std::string& topic)
@@ -1374,7 +1373,7 @@ std::string TDEngineDaybit::createPhoenixMsg(int64_t joinref,const std::string& 
     return buffer.GetString();
 }
 
-std::string TDEngineDaybit::createNewOrderReq(int64_t joinref,double amount,double price,const std::string& symbol,bool isSell )
+std::string TDEngineDaybit::createNewOrderReq(int64_t joinref,double amount,double price,const std::string& symbol,bool isSell ,int64_t ref)
 {
     Document doc;
     doc.SetObject();
@@ -1392,9 +1391,9 @@ std::string TDEngineDaybit::createNewOrderReq(int64_t joinref,double amount,doub
     payload_obj.AddMember(StringRef("quote"),StringRef(pairCoin.first.c_str()),allocator);
     payload_obj.AddMember(StringRef("sell"),isSell,allocator);
     payload_obj.AddMember(StringRef("timeout"),-1,allocator);
-    return createPhoenixMsg(joinref,TOPIC_API,"create_order",payload_obj,makeRef());
+    return createPhoenixMsg(joinref,TOPIC_API,"create_order",payload_obj,ref);
 }
-std::string TDEngineDaybit::createCancelOrderReq(int64_t joinref,int64_t orderID)
+std::string TDEngineDaybit::createCancelOrderReq(int64_t joinref,int64_t orderID,int64_t ref)
 {
     Document doc;
     doc.SetObject();
@@ -1402,8 +1401,11 @@ std::string TDEngineDaybit::createCancelOrderReq(int64_t joinref,int64_t orderID
     Value payload_obj(rapidjson::kObjectType);
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp(),allocator);
     payload_obj.AddMember(StringRef("order_id"),orderID,allocator);
-    payload_obj.AddMember(StringRef("timeout"),-1,allocator);
-    return createPhoenixMsg(joinref,TOPIC_API,"cancel_order",payload_obj,makeRef());
+    payload_obj.AddMember(StringRef("timeout"),-1,allocator);    
+    ref = makeRef();
+    auto req = createPhoenixMsg(joinref,TOPIC_API,"cancel_order",payload_obj,ref);
+    KF_LOG_INFO(logger, "[cancel_order] (joinref) " << joinref << " (ref)" << ref << "(msg) " << req);
+    return req;
 }
 std::string TDEngineDaybit::createCancelAllOrdersReq(int64_t joinref)
 {
@@ -1415,7 +1417,10 @@ std::string TDEngineDaybit::createCancelAllOrdersReq(int64_t joinref)
     //payload_obj.AddMember("order_id",orderID,allocator);
     payload_obj.AddMember(StringRef("timeout"),-1,allocator);
     std::cout << "server_time_diff" << m_time_diff_with_server<<std::endl;
-    return createPhoenixMsg(joinref,TOPIC_API,"cancel_all_my_orders",payload_obj,makeRef());
+    int64_t ref = makeRef();
+    auto req = createPhoenixMsg(joinref,TOPIC_API,"cancel_all_my_orders",payload_obj,ref);
+    KF_LOG_INFO(logger, "[cancel_all_orders] (joinref) " << joinref << " (ref)" << ref << "(msg) " << req);
+    return req;
 }
 std::string TDEngineDaybit::createSubscribeOrderReq(int64_t joinref)
 {

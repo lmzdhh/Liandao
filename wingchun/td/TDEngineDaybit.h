@@ -150,7 +150,6 @@ private:
     int64_t						m_joinRef = 0;
 	int64_t						m_ref = 0;
 	int64_t makeRef();
-    int64_t getRef();
 	int64_t makeJoinRef();
     int64_t getJoinRef();
     void get_account(AccountUnitDaybit& unit, Document& json);
@@ -169,10 +168,10 @@ private:
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
     SendOrderFilter getSendOrderFilter(AccountUnitDaybit& unit, const std::string& symbol);
 	bool ShouldRetry(const Document& json);
-    std::string createJoinReq(int64_t joinref,const std::string& topic);
+    std::string createJoinReq(int64_t joinref,const std::string& topic,int64_t& ref);
     std::string createLeaveReq(int64_t joinref,const std::string& topic);
-    std::string createNewOrderReq(int64_t joinref,double amount,double price,const std::string& symbol,bool isSell );
-    std::string createCancelOrderReq(int64_t joinref,int64_t orderID);
+    std::string createNewOrderReq(int64_t joinref,double amount,double price,const std::string& symbol,bool isSell,int64_t ref);
+    std::string createCancelOrderReq(int64_t joinref,int64_t orderID,int64_t ref);
     std::string createCancelAllOrdersReq(int64_t joinref);
     std::string createSubscribeOrderReq(int64_t joinref);
     std::string createSubscribeTradeReq(int64_t joinref);
