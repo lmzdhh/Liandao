@@ -590,7 +590,7 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
         std::string strStatus=d["state"].GetString();
         int64_t nTrades = d["trades_count"].GetInt64();
         auto cStatus = convertOrderStatus(strStatus,nTrades);
-         KF_LOG_INFO(logger, "[req_order_insert] (cStatus)" << (int)cStatus);
+         KF_LOG_INFO(logger, "[req_order_insert] (cStatus)" << cStatus);
         if(cStatus == LF_CHAR_NoTradeQueueing)
         {//no status, it is ACK
             onRspNewOrderACK(data, unit, d, requestId);
@@ -659,6 +659,8 @@ void TDEngineUpbit::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUn
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus =  convertOrderStatus(result["state"].GetString(),result["trades_count"].GetInt64());
     on_rtn_order(&rtn_order);
+    KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_order (orderRef)" << rtn_order.OrderRef
+                                     << "(requestId)" << requestId << "(status)" << rtn_order.OrderStatus);
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                             source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
                             1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
@@ -677,12 +679,14 @@ void TDEngineUpbit::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUn
         rtn_trade.Price = std::round(stod(result["price"].GetString()) * scale_offset);
         
         on_rtn_trade(&rtn_trade);
+         KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_trade (orderRef)" << rtn_order.OrderRef
+                                     << "(requestId)" << requestId );
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);
         //this response has no tradeId, so dont call unit.newSentTradeIds.push_back(tradeid)
 
-         KF_LOG_INFO(logger, "TDEngineUpbit::onRspNewOrderRESULT:AllTraded");
-    }else{ KF_LOG_ERROR(logger, "TDEngineUpbit::onRspNewOrderRESULT:ERROR");}
+         KF_LOG_INFO(logger, "TDEngineUpbit::onRspNewOrderRESULT:AllTraded  (RequestID)" << rtn_order.RequestID);
+    }else{ KF_LOG_ERROR(logger, "TDEngineUpbit::onRspNewOrderRESULT:ERROR  (RequestID)" << rtn_order.RequestID);}
 }
 
 void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitUpbit& unit, Document& result, int requestId)
@@ -738,6 +742,8 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
             rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
         }
         on_rtn_order(&rtn_order);
+        KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_order (orderRef)" << rtn_order.OrderRef
+                                    << "(requestId)" << requestId << "(status)" << rtn_order.OrderStatus);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                                 source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
                                 1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
@@ -745,9 +751,10 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
         rtn_trade.Volume = volume;
         rtn_trade.Price = price;
         on_rtn_trade(&rtn_trade);
+        KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_trade (orderRef)" << rtn_order.OrderRef
+                                    << "(requestId)" << requestId );
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_INFO(logger, "TDEngineUpbit::onRspNewOrderFULL:on_rtn_Trade and on_rtn_order (orderRef)" << data->OrderRef);
     }
 }
 
@@ -960,7 +967,8 @@ bool TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
                 //update last status
                pendingOrderStatus.OrderStatus = rtn_order.OrderStatus;
                 pendingOrderStatus.VolumeTraded = rtn_order.VolumeTraded;
-                KF_LOG_INFO(logger,"[retrieveOrderStatus] on_rtn_order (orderRef)" << strOrderRef);
+                KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_order (orderRef)" << rtn_order.OrderRef
+                                     << "(requestId)" << stOrderInfo.nRequestID << "(status)" << rtn_order.OrderStatus);
             }
         } else 
         {
@@ -973,11 +981,11 @@ bool TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
            || pendingOrderStatus.OrderStatus == LF_CHAR_Error)
         {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] order all traded. (OrderRef)" << pendingOrderStatus.OrderRef
-                             << "(status)" << (int)pendingOrderStatus.OrderStatus);
+                             << "(status)" << pendingOrderStatus.OrderStatus);
             return true;
         }
         KF_LOG_INFO(logger, "[retrieveOrderStatus] get status end. (OrderRef)" << pendingOrderStatus.OrderRef
-                        << "(status)" << (int)pendingOrderStatus.OrderStatus);
+                        << "(status)" << pendingOrderStatus.OrderStatus);
         return false;
 }
 
