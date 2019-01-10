@@ -188,8 +188,9 @@
                                 "BAT": "ETC",
                                 "BTC": "BTC"
                  },
-                "rest_get_interval_ms": 2000,
-                "sync_time_interval": 10000
+                "rest_get_interval_ms": 1000,
+                "retry_count": 3,
+                "sync_time_interval": 500
               },
               "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
               "is_default": true

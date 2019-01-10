@@ -127,10 +127,8 @@ private:
     void addNewOrder(AccountUnitDaybit& unit,const LfOrderStatusType OrderStatus,int64_t ref,OrderInsertInfo data);
     static constexpr int scale_offset = 1e8;
 
+    int64_t resub_interval_ms=500;
     int64_t base_interval_ms=500;
-    //std::map<std::string, int64_t> localOrderRefRemoteOrderId;
-    int m_limitRate_Remain = 0;
-    int64_t m_TimeStamp_Reset;
     int64_t m_time_diff_with_server=0;
     bool isSyncServerTime = false;
 //websocket
@@ -180,6 +178,7 @@ private:
     std::string createGetServerTimeReq(int64_t joinref);
     std::string createHeartBeatReq();
     void InitSubscribeMsg(AccountUnitDaybit& unit,bool only_api_topic = true);
+    void ReSubscribeOrders(AccountUnitDaybit& unit);
     void heartbeat_loop();
 };
 

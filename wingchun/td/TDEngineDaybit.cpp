@@ -203,8 +203,10 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
 
     string baseUrl = j_config["baseUrl"].get<string>();
     string path = j_config["path"].get<string>();
+    resub_interval_ms =j_config["sync_time_interval"].get<int>();   
+    resub_interval_ms  = std::max(resub_interval_ms,(int64_t)0); 
     base_interval_ms = j_config["rest_get_interval_ms"].get<int>();
-    base_interval_ms = std::max(base_interval_ms,(int64_t)500);   
+    base_interval_ms = std::max(base_interval_ms,(int64_t)500); 
     int maxRetryTimes = j_config["retry_count"].get<int>();
     int clientID = j_config["sys_id"].get<int>();
     std::time_t baseNow = std::time(nullptr);
@@ -267,6 +269,23 @@ void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit,bool only_api_topi
         unit.listMessageToSend.push(createJoinReq(0,TOPIC_TRADE,ref));
         unit.mapSubscribeRef.insert(std::make_pair(TOPIC_TRADE,ref));
         //cancel_all_orders(unit);
+    }
+}
+int64_t lastSubTime = 0;
+void TDEngineDaybit::ReSubscribeOrders(AccountUnitDaybit& unit)
+{
+    int64_t nowTime = getTimestamp();
+    if((nowTime - lastSubTime) > 30000)
+    {
+        std::unique_lock<std::mutex> lck(g_reqMutex);
+        int64_t ref =-1;
+        unit.listMessageToSend.push(createJoinReq(0,TOPIC_ORDER,ref));
+        unit.mapSubscribeRef[TOPIC_ORDER] = ref;
+        req = createSubscribeOrderReq(ref);
+        unit.listMessageToSend.push(req);
+        lastSubTime = nowTime+1000;
+        lck.unlock();
+        lws_callback_on_writable(unit.websocketConn);
     }
 }
 void TDEngineDaybit::heartbeat_loop()
@@ -1225,6 +1244,8 @@ void TDEngineDaybit::onRspError(struct lws * conn, std::string errorMsg,int64_t 
             }
             else
             {
+                ReSubscribeOrders(unit);
+                std::this_thread::sleep_for(std::chrono::milliseconds(resub_interval_ms));
                 int errorId = 1;
                 KF_LOG_ERROR(logger, "[req_order_action] error"
                              << " (rid)" << data.requestID << " (orderRef)" << data.action.OrderRef << " (errorMsg)" << errorMsg);
@@ -1246,7 +1267,8 @@ void TDEngineDaybit::onRspError(struct lws * conn, std::string errorMsg,int64_t 
         {
             auto& inputOrder = data.input;
             on_rsp_order_insert(&inputOrder, data.requestID, 1, errorMsg.c_str());
-            KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError on_rsp_order_insert");            
+            KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError on_rsp_order_insert");  
+            raw_writer->write_error_frame(&inputOrder, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_DAYBIT, 1, data.requestID, 1, errorMsg.c_str());          
         }
     }
 }
