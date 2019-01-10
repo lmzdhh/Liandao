@@ -186,6 +186,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_HUOBI  26
 #define EXCHANGE_ID_OCEANEX2  27
 #define EXCHANGE_ID_PROBIT  28
+#define EXCHANGE_ID_BITHUMB  29
 // MsgTypes that used for LF data structure...
 const short MSG_TYPE_LF_MD            = 101;
 const short MSG_TYPE_LF_L2_MD         = 102;

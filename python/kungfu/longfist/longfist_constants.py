@@ -159,12 +159,12 @@ class MsgTypes:
     MSG_TYPE_LF_ORDER_ACTION_PROBIT		= 28207
 
     MSG_TYPE_LF_MD_BITHUMB               = 29101
-    MSG_TYPE_LF_QRY_POS_BITHUMB                  = 29201
-    MSG_TYPE_LF_RSP_POS_BITHUMB                  = 29202
-    MSG_TYPE_LF_ORDER_BITHUMB                    = 29204
-    MSG_TYPE_LF_RTN_ORDER_BITHUMB                = 29205
-    MSG_TYPE_LF_RTN_TRADE_BITHUMB                = 29206
-    MSG_TYPE_LF_ORDER_ACTION_BITHUMB             = 29207
+    MSG_TYPE_LF_QRY_POS_BITHUMB          = 29201
+    MSG_TYPE_LF_RSP_POS_BITHUMB          = 29202
+    MSG_TYPE_LF_ORDER_BITHUMB            = 29204
+    MSG_TYPE_LF_RTN_ORDER_BITHUMB        = 29205
+    MSG_TYPE_LF_RTN_TRADE_BITHUMB        = 29206
+    MSG_TYPE_LF_ORDER_ACTION_BITHUMB     = 29207
 
 
 ###################################

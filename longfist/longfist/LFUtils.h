@@ -49,6 +49,8 @@ inline std::string getExchangeName(short exchange_id)
 			return EXCHANGE_OCEANEX2;
 		case EXCHANGE_ID_PROBIT:
 			return EXCHANGE_PROBIT;
+		case EXCHANGE_ID_BITHUMB:
+			return EXCHANGE_BITHUMB;
 		default:
 			return "";
 	}
@@ -95,6 +97,8 @@ inline int getExchangeId(std::string exchange_name)
 		return EXCHANGE_ID_OCEANEX2;
 	else if (exchange_name.compare(EXCHANGE_PROBIT) == 0) 
 		return EXCHANGE_ID_PROBIT;
+	else if (exchange_name.compare(EXCHANGE_BITHUMB) == 0) 
+		return EXCHANGE_ID_BITHUMB;
 	return -1;
 }
 
@@ -166,7 +170,7 @@ inline JournalPair getMdRawJournalPair(short source)
 		case 28:
 			return{ "/shared/kungfu/journal/MD_RAW/PROBIT/", "MDRAW_PROBIT" };
 		case 29:
-                   	return{ "/shared/kungfu/journal/MD_RAW/BITHUMB/", "MDRAW_BITHUMB" };
+            return{ "/shared/kungfu/journal/MD_RAW/BITHUMB/", "MDRAW_BITHUMB" };
 		default:
 			return {"", ""};
 	}
