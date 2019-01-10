@@ -204,9 +204,9 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
     string baseUrl = j_config["baseUrl"].get<string>();
     string path = j_config["path"].get<string>();
     base_interval_ms = j_config["rest_get_interval_ms"].get<int>();
-    base_interval_ms = std::max(base_interval_ms,(int64_t)500);
+    base_interval_ms = std::max(base_interval_ms,(int64_t)500);   
+    int maxRetryTimes = j_config["retry_count"].get<int>();
     int clientID = j_config["sys_id"].get<int>();
-
     std::time_t baseNow = std::time(nullptr);
     struct tm* tm = std::localtime(&baseNow);
     m_ref = clientID*1000000000+tm->tm_yday*1000000+tm->tm_hour*10000+tm->tm_min*100+tm->tm_sec;
@@ -216,6 +216,7 @@ TradeAccount TDEngineDaybit::load_account(int idx, const json& j_config)
     unit.secret_key = secret_key;
     unit.baseUrl = baseUrl;
     unit.path = path;
+    unit.maxRetryCount = maxRetryTimes;
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
@@ -849,7 +850,7 @@ void TDEngineDaybit::cancel_order(AccountUnitDaybit& unit, OrderActionInfo& data
 {
     std::unique_lock<std::mutex> lck(g_reqMutex);
     KF_LOG_INFO(logger, "[cancel_order] (order_id)" << data.orderId);  
-    int64_t ref=-1;
+    int64_t ref=makeRef();
     auto req = createCancelOrderReq(unit.mapSubscribeRef[TOPIC_API],data.orderId,ref);
     unit.listMessageToSend.push(req);
     lck.unlock();  
@@ -867,8 +868,7 @@ void TDEngineDaybit::new_order(AccountUnitDaybit& unit,OrderInsertInfo& data)
     std::unique_lock<std::mutex> lck(g_reqMutex);
     int64_t ref = makeRef();    
     auto req =  createNewOrderReq(unit.mapSubscribeRef[TOPIC_API],data.amount,data.price,data.symbol,data.isSell,ref);                                            
-    unit.listMessageToSend.push(req);
-     KF_LOG_INFO(logger, "[new_order] (joinref) " << unit.mapSubscribeRef[TOPIC_API] << " (ref)" << ref << "(msg) " << req);	
+    unit.listMessageToSend.push(req);	
     lck.unlock();  
     data.retryCount++;
 	addNewOrder(unit, LF_CHAR_NotTouched,ref,data); 
@@ -1211,6 +1211,7 @@ void TDEngineDaybit::onRspError(struct lws * conn, std::string errorMsg,int64_t 
         auto it_cancel = unit.ordersLocalActionMap.find(ref);
         if(it_cancel == unit.ordersLocalActionMap.end())
         {
+            KF_LOG_ERROR(logger, "TDEngineDaybit::onRspError not found in actionMap:"<<ref);   
             return;
         }
         else
@@ -1401,7 +1402,9 @@ std::string TDEngineDaybit::createNewOrderReq(int64_t joinref,double amount,doub
     payload_obj.AddMember(StringRef("quote"),StringRef(pairCoin.first.c_str()),allocator);
     payload_obj.AddMember(StringRef("sell"),isSell,allocator);
     payload_obj.AddMember(StringRef("timeout"),-1,allocator);
-    return createPhoenixMsg(joinref,TOPIC_API,"create_order",payload_obj,ref);
+    auto req = createPhoenixMsg(joinref,TOPIC_API,"create_order",payload_obj,ref);   
+    KF_LOG_INFO(logger, "[new_order] (joinref) " << joinref << " (ref)" << ref << "(msg) " << req);
+    return req;
 }
 std::string TDEngineDaybit::createCancelOrderReq(int64_t joinref,int64_t orderID,int64_t ref)
 {
@@ -1412,7 +1415,6 @@ std::string TDEngineDaybit::createCancelOrderReq(int64_t joinref,int64_t orderID
     payload_obj.AddMember(StringRef("timestamp"),getTimestamp(),allocator);
     payload_obj.AddMember(StringRef("order_id"),orderID,allocator);
     payload_obj.AddMember(StringRef("timeout"),-1,allocator);    
-    ref = makeRef();
     auto req = createPhoenixMsg(joinref,TOPIC_API,"cancel_order",payload_obj,ref);
     KF_LOG_INFO(logger, "[cancel_order] (joinref) " << joinref << " (ref)" << ref << "(msg) " << req);
     return req;
