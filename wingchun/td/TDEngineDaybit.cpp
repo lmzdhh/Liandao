@@ -274,6 +274,7 @@ void TDEngineDaybit::InitSubscribeMsg(AccountUnitDaybit& unit,bool only_api_topi
 int64_t lastSubTime = 0;
 void TDEngineDaybit::ReSubscribeOrders(AccountUnitDaybit& unit)
 {
+    KF_LOG_INFO(logger, "TDEngineDaybit::ReSubscribeOrders");
     int64_t nowTime = getTimestamp();
     if((nowTime - lastSubTime) > 30000)
     {
@@ -285,6 +286,7 @@ void TDEngineDaybit::ReSubscribeOrders(AccountUnitDaybit& unit)
         unit.listMessageToSend.push(req);
         lastSubTime = nowTime+1000;
         lck.unlock();
+        KF_LOG_INFO(logger, "TDEngineDaybit::ReSubscribeOrders:" << req);
         lws_callback_on_writable(unit.websocketConn);
     }
 }
@@ -831,7 +833,7 @@ std::string TDEngineDaybit::getResponse(Value& payload, Value& response)
             else if(!response.HasMember("data"))
             {
                 retMsg = "join ok";
-                KF_LOG_ERROR(logger, "[getResponse]  (message)" << retMsg);
+                KF_LOG_INFO(logger, "[getResponse]  (message)" << retMsg);
             }
             else
             {
@@ -1274,7 +1276,7 @@ void TDEngineDaybit::onRspError(struct lws * conn, std::string errorMsg,int64_t 
 }
 void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
 { 
-	KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnTrade");
+	KF_LOG_INFO(logger, "TDEngineDaybit::onRtnTrade");
 	AccountUnitDaybit &unit = findAccountUnitByWebsocketConn(websocketConn);
 	std::lock_guard<std::recursive_mutex> lck(unit_mutex);
     if(response.IsArray())
@@ -1320,7 +1322,7 @@ void TDEngineDaybit::onRtnTrade(struct lws * websocketConn, Value& response)
                         std::string strTradeID = std::to_string(ntradeID);
                         strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
                         strncpy(rtn_trade.TradeID,strTradeID.c_str(),21);
-                        KF_LOG_ERROR(logger, "TDEngineDaybit::onTrade,rtn_trade");
+                        KF_LOG_INFO(logger, "TDEngineDaybit::onTrade,rtn_trade");
                         on_rtn_trade(&rtn_trade);
                         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),source_id, MSG_TYPE_LF_RTN_TRADE_DAYBIT, 1, -1);
                     }
@@ -1342,7 +1344,7 @@ void TDEngineDaybit::onRtnMarket(struct lws * websocketConn, Value& response)
     }
     else
     {
-        KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnTrade unknown message");
+        KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnMarket unknown message");
     }
     
 }
