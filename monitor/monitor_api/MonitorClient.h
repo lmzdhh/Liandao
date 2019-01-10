@@ -6,7 +6,7 @@
 #include <KfLog.h>
 #include <string>
 #include <memory>
-#include "../common/MONITOR_DECLARE.h"
+#include "common/MONITOR_DECLARE.h"
 USING_YJJ_NAMESPACE
 MONITOR_NAMESPACE_START
 
