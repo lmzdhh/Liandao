@@ -14,7 +14,7 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.7)
 PROJECT(monitorapi)
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/utils/rapidjson/include/ ${CMAKE_SOURCE_DIR}/utils/libwebsockets/include/)
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/utils/rapidjson/include/ ${CMAKE_SOURCE_DIR}/utils/libwebsockets/include/ ${CMAKE_SOURCE_DIR}/monitor/)
 SET(MONITORAPI_SOURCE_FILES MonitorClient.h  MonitorClient.cpp wsclient.h wsclient.cpp)
 ADD_LIBRARY(${PROJECT_NAME} SHARED ${MONITORAPI_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}  python kflog ${Boost_LIBRARIES}  ${CMAKE_SOURCE_DIR}/utils/poco/lib/libPocoFoundation.a ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
