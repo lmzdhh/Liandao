@@ -281,7 +281,7 @@ void TDEngineDaybit::ReSubscribeOrders(AccountUnitDaybit& unit)
         int64_t ref =-1;
         unit.listMessageToSend.push(createJoinReq(0,TOPIC_ORDER,ref));
         unit.mapSubscribeRef[TOPIC_ORDER] = ref;
-        req = createSubscribeOrderReq(ref);
+        auto req = createSubscribeOrderReq(ref);
         unit.listMessageToSend.push(req);
         lastSubTime = nowTime+1000;
         lck.unlock();
