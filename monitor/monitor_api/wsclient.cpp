@@ -27,6 +27,7 @@ wsclient::~wsclient()
 {
     release();
 }
+
 void wsclient::init(KfLogPtr logger)
 {
     m_logger = logger;
@@ -57,9 +58,9 @@ bool wsclient::connect(const std::string& url)
         return false;
     }
     m_wsThread = std::thread([&]{
-        KF_LOG_INFO(m_logger, "start event thread:"<<std::this_thread::get_id());
+        KF_LOG_INFO(m_logger, "start event thread:" << std::this_thread::get_id());
         lwsEventLoop();
-        KF_LOG_INFO(m_logger, "exit event thread:"<<std::this_thread::get_id());
+        KF_LOG_INFO(m_logger, "exit event thread:" << std::this_thread::get_id());
     });
     return  true;
 }
@@ -67,15 +68,15 @@ bool wsclient::connect(const std::string& url)
 //{"type":"login","clientType":"md","name":"xxx"}
 bool wsclient::login(const std::string& name)
 {
-    KF_LOG_INFO(m_logger, "login daemon server");
     try
     {
-        std::vector<std::string> results;
+        KF_LOG_DEBUG(m_logger, name << " login daemon start");
+        std::vector<std::string> results {};
         //td_huobi
         boost::split(results, name, boost::is_any_of("_"));
         if (results.size() != 2)
         {
-            KF_LOG_INFO(m_logger, "parse module name error, must be xxx:xxx");
+            KF_LOG_INFO(m_logger, "parse module name error,must be xxx:xxx,but is " << name);
             return false;
         }
         rapidjson::StringBuffer buffer;
@@ -88,13 +89,16 @@ bool wsclient::login(const std::string& name)
         writer.Key("name");
         writer.String(results[1].c_str());
         writer.EndObject();
-        sendmsg(buffer.GetString());
+        std::string msg = buffer.GetString();
+        sendmsg(msg);
+        KF_LOG_DEBUG(m_logger, name << " login daemon end:" << msg);
+        return  true;
     }
     catch (const std::exception& e)
     {
-        KF_LOG_INFO(m_logger, "login exception@" << e.what());
+        KF_LOG_INFO(m_logger, name << " login daemon exception:" << e.what());
     }
-    return  true;
+    return  false;
 }
 
 void wsclient::logout() {}
@@ -109,13 +113,13 @@ bool wsclient::createWsContext()
     creation_info.max_http_header_pool = 1024;
     creation_info.fd_limit_per_thread = 1024;
     m_lwsContext = lws_create_context( &creation_info );
-    if (!m_lwsContext)
+    if (m_lwsContext)
     {
-        KF_LOG_INFO(m_logger, "daemon api create context error");
-        return false;
+        KF_LOG_DEBUG(m_logger, "daemon api create context success");
+        return true;
     }
-    KF_LOG_INFO(m_logger, "daemon api create context success");
-    return true;
+    KF_LOG_INFO(m_logger, "daemon api create context error");
+    return false;
 }
 
 bool wsclient::createConnection()
@@ -132,7 +136,7 @@ bool wsclient::createConnection()
     m_lwsConnection = lws_client_connect_via_info(&conn_info);
     if(m_lwsConnection)
     {
-        KF_LOG_INFO(m_logger, "daemon api connect to " << m_monitorUrl.protocol << conn_info.address <<":" << conn_info.port << "/"<< m_monitorUrl.path << " success");
+        KF_LOG_DEBUG(m_logger, "daemon api connect to " << m_monitorUrl.protocol << conn_info.address <<":" << conn_info.port << "/"<< m_monitorUrl.path << " success");
         return  true;
 
     }
@@ -149,28 +153,12 @@ bool wsclient::parseAddress(const std::string& monitor_url)
         m_monitorUrl.ip = uri.getHost();
         m_monitorUrl.port = uri.getPort();
         m_monitorUrl.path = uri.getPath();
-        KF_LOG_INFO(m_logger, "daemon api parse daemon url success,scheme@"<<m_monitorUrl.protocol<<",host@"<<m_monitorUrl.ip<<",port@"<<m_monitorUrl.port);
+        KF_LOG_INFO(m_logger, "parse daemon url success,scheme:"<<m_monitorUrl.protocol<<",host:"<<m_monitorUrl.ip<<",port:"<<m_monitorUrl.port);
         return  true;
-        /*
-        std::vector<std::string> result;
-        //url format is xxx://xxx.xxx.xxx:xxx/
-        boost::split(result, monitor_url, boost::is_any_of("//:/"));
-        if (result.size() != 6)
-        {
-            KF_LOG_INFO(m_logger, "daemon api parse daemon url error, must be xxx://xxx.xxx.xxx:xxx/");
-            return false;
-        }
-        m_monitorUrl.protocol = result[0] + "://";
-        m_monitorUrl.ip = result[3];
-        m_monitorUrl.port = std::atoi(result[4].c_str());
-        m_monitorUrl.path = result[5];
-        KF_LOG_INFO(m_logger, "daemon api parse daemon url ok:"<<monitor_url);
-        return  true;
-         */
     }
     catch (std::exception& e)
     {
-        KF_LOG_INFO(m_logger, "daemon api parse daemon url exception@" << e.what());
+        KF_LOG_INFO(m_logger, "parse daemon url exception:" << e.what());
     }
     return false;
 }
@@ -179,7 +167,6 @@ void wsclient::lwsWrite(std::string&& msg)
 {
     if (!msg.empty())
     {
-        KF_LOG_DEBUG(m_logger, "send msg to daemon:" << msg);
         msg.insert(msg.begin(),  LWS_PRE, 0x00);
         lws_write(m_lwsConnection, (uint8_t*)(msg.data() + LWS_PRE), msg.size() - LWS_PRE, LWS_WRITE_TEXT);
     }
