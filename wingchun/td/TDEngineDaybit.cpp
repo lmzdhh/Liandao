@@ -1129,8 +1129,8 @@ void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& response)
                     if(order.HasMember("id") && order.HasMember("status") && order.HasMember("close_type") && order.HasMember("unfilled")
                     && order.HasMember("sell") && order.HasMember("filled") && order.HasMember("filled_quote"))
                     {
-                        int64_t OrderRef= order["id"].GetInt64();
-                        auto it = unit.ordersMap.find(OrderRef);
+                        int64_t OrderID= order["id"].GetInt64();
+                        auto it = unit.ordersMap.find(OrderID);
                         if (it == unit.ordersMap.end())
                         { 
                             KF_LOG_ERROR(logger, "TDEngineDaybit::onRtnOrder,no order match");
@@ -1172,6 +1172,14 @@ void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& response)
                                 rtn_order.OrderStatus == LF_CHAR_Canceled || rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing || rtn_order.OrderStatus == LF_CHAR_Error)
                             {
                                 unit.ordersMap.erase(it);
+                                for(auto it_action = unit.ordersLocalActionMap.begin();it_action != unit.ordersLocalActionMap.end(); ++it_action)
+                                {
+                                    if(it->second.orderId == OrderID)
+                                    {
+                                        unit.ordersLocalActionMap.erase(it_action);
+                                        break;
+                                    }
+                                }
                             }
                         }
                         else
