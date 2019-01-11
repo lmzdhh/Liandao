@@ -46,7 +46,7 @@ IWCStrategy::IWCStrategy(const string &name): name(name), m_monitorClient(Monito
 void IWCStrategy::start()
 {
     data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
-    KF_LOG_INFO(logger, "[start] data started");
+    KF_LOG_INFO(logger, "[start] data started,name:" << name);
     if (!connectMonitor("ws://127.0.0.1:45678", std::string("st_") + name))
     {
         KF_LOG_INFO(logger, "connect to monitor error,name@" << name << ",url@" << "ws://127.0.0.1:45678");
