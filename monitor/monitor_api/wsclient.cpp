@@ -66,28 +66,21 @@ bool wsclient::connect(const std::string& url)
 }
 
 //{"type":"login","clientType":"md","name":"xxx"}
-bool wsclient::login(const std::string& name)
+bool wsclient::login(const std::string& name, const std::string& type)
 {
     try
     {
         KF_LOG_DEBUG(m_logger, name << " login daemon start");
         std::vector<std::string> results {};
-        //td_huobi
-        boost::split(results, name, boost::is_any_of("_"));
-        if (results.size() != 2)
-        {
-            KF_LOG_INFO(m_logger, "parse module name error,must be xxx:xxx,but is " << name);
-            return false;
-        }
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         writer.StartObject();
         writer.Key("messageType");
         writer.String("login");
         writer.Key("clientType");
-        writer.String(results[0].c_str());
+        writer.String(type.c_str());
         writer.Key("name");
-        writer.String(results[1].c_str());
+        writer.String(name.c_str());
         writer.EndObject();
         std::string msg = buffer.GetString();
         sendmsg(msg);

@@ -28,7 +28,7 @@ public:
     //url format is xxx://xxx.xxx.xxx:xxx/
     virtual bool connect(const std::string& url) = 0;
     //{"type":"login","clientType":"md","name":"xxx"}
-    virtual bool login(const std::string&) = 0;
+    virtual bool login(const std::string& name, const std::string& type) = 0;
     virtual void logout() = 0;
     virtual void sendmsg(const std::string& json) = 0;
 protected:

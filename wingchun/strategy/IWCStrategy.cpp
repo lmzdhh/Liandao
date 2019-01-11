@@ -47,9 +47,7 @@ void IWCStrategy::start()
 {
     data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
     KF_LOG_INFO(logger, "[start] data started,name:" << name);
-    std::string st_name("st_");
-    st_name += name;
-    if (!connectMonitor("ws://127.0.0.1:45678", st_name))
+    if (!connectMonitor("ws://127.0.0.1:45678", name, "st"))
     {
         KF_LOG_INFO(logger, "connect to monitor error,name@" << name << ",url@" << "ws://127.0.0.1:45678");
     }
@@ -298,7 +296,7 @@ int IWCStrategy::cancel_order(short source, int order_id)
     return util->cancel_order(source, order_id);
 }
 
-bool IWCStrategy::connectMonitor(const std::string &url, const std::string &name)
+bool IWCStrategy::connectMonitor(const std::string &url, const std::string &name, const std::string &type)
 {
     m_monitorClient->init(logger);
     m_monitorClient->setCallback(this);
@@ -306,5 +304,5 @@ bool IWCStrategy::connectMonitor(const std::string &url, const std::string &name
     {
         return false;
     }
-    return m_monitorClient->login(name);
+    return m_monitorClient->login(name, type);
 }

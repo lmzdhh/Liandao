@@ -27,7 +27,8 @@
 #include "TypeConvert.hpp"
 #include <unistd.h>
 #include <csignal>
-
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 USING_WC_NAMESPACE
 
 #define WRITE_ENGINE_STATUS(name) \
@@ -178,6 +179,14 @@ void IEngine::connectMonitor(const json& j_config)
     }
     std::string monitor_url = j_config["monitor_url"].get<std::string>();
     std::string name = j_config["name"].get<std::string>();
+    std::vector<std::string> results {};
+    //td_huobi
+    boost::split(results, name, boost::is_any_of("_"));
+    if (results.size() != 2)
+    {
+        KF_LOG_INFO(logger, "parse name error,must be xxx_xxx,but is " << name);
+        return ;
+    }
     m_monitorClient->init(logger);
     m_monitorClient->setCallback(this);
     if(!m_monitorClient->connect(monitor_url))
@@ -185,7 +194,7 @@ void IEngine::connectMonitor(const json& j_config)
         KF_LOG_INFO(logger, "connect to monitor error,name@" << name << ",url@" << monitor_url);
         return;
     }
-    if (!m_monitorClient->login(name))
+    if (!m_monitorClient->login(results[1], results[0]))
     {
         KF_LOG_INFO(logger, "login to monitor error,name@" << name << ",url@" << monitor_url);
         return;

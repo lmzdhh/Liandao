@@ -24,7 +24,7 @@ public:
     virtual void init(KfLogPtr) override;
     //url format is xxx://xxx.xxx.xxx:xxx/
     virtual bool connect(const std::string& url) override;
-    virtual bool login(const std::string& name) override;
+    virtual bool login(const std::string& name, const std::string& type) override;
     virtual void logout() override;
     virtual void sendmsg(const std::string& json) override;
 public:

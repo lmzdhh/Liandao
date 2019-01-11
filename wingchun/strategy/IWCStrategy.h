@@ -94,7 +94,7 @@ public:
     void block();
 
 private:
-    bool connectMonitor(const std::string& url, const std::string& name);
+    bool connectMonitor(const std::string& url, const std::string& name, const std::string &type);
 
 protected:
     virtual void OnMessage(const std::string& ){ };
