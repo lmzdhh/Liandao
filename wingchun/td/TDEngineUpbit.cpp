@@ -625,7 +625,7 @@ LfOrderStatusType TDEngineUpbit::convertOrderStatus(const std::string& strStatus
         {
             return LF_CHAR_PartTradedQueueing;
         }
-        return LF_CHAR_NoTradeQueueing;
+        return LF_CHAR_NotTouched;
     }
      if(strStatus == "done")
      {
