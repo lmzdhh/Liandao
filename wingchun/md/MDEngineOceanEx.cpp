@@ -173,7 +173,7 @@ std::string makeMarketSub(const std::string& strCode,int nDepthCount)
         auto it = mapPrecision.find(strCode);
         if(it != mapPrecision.end())
         {
-            nPrecision = *it;
+            nPrecision = it->second;
         }
         sprintf(buf,"market-%s-%d-global",strCode.c_str(),nPrecision);
         writer.String(buf);
