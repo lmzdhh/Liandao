@@ -35,7 +35,7 @@ std::map<std::string,int> mapPrecision{
     {"vetbtc",8},
     {"veteth",8},
     {"vthovet",4}
-}
+};
 //coinmex use base and quote to sub depth data
 struct SubscribeCoinBaseQuote
 {
