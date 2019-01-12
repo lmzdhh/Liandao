@@ -1,5 +1,5 @@
 {
-    "md_exchanges" : ["binance"],
+    "md_exchanges" : ["binance","oceanex"],
 
     "td_exchanges" : ["binance"]
 }
