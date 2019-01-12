@@ -493,7 +493,7 @@ std::string MDEngineOceanEx::dealDataSprit(const char* src)
 void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
-	//KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
+	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
     Document json;
 	json.Parse(data);
 
