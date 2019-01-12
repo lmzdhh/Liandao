@@ -169,7 +169,13 @@ std::string makeMarketSub(const std::string& strCode,int nDepthCount)
         writer.StartObject();
         writer.Key("channel");
         char buf[128] = {0};
-        sprintf(buf,"market-%s-%d-global",strCode.c_str(),8);
+        int nPrecision = 0;
+        auto it = mapPrecision.find(strCode);
+        if(it != mapPrecision.end())
+        {
+            nPrecision = *it;
+        }
+        sprintf(buf,"market-%s-%d-global",strCode.c_str(),nPrecision);
         writer.String(buf);
         writer.EndObject();
         writer.EndObject();
