@@ -172,8 +172,14 @@ void TDEngineProbit::resize_accounts(int account_num)
 TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
-    m_retryCounts = j_config["retryCounts"].get<int>();;
-    m_retryIntervalMs = j_config["retryIntervalMs"].get<int>();;
+    if (j_config.find("retryCounts") != j_config.end())
+    {
+        m_retryCounts = j_config["retryCounts"].get<int>();
+    }
+    if (j_config.find("retryIntervalMs") != j_config.end())
+    {
+        m_retryIntervalMs = j_config["retryIntervalMs"].get<int>();
+    }
     m_restIntervalms = j_config["rest_get_interval_ms"].get<int>();
     AccountUnitProbit& unit = account_units[idx];
     unit.api_key = j_config["APIKey"].get<string>();
@@ -780,7 +786,7 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
             break;
         }
         KF_LOG_DEBUG(logger, "[send_order] try "<<retryCounts << " times,client_order_id:" << client_id);
-        std::this_thread::sleep_for(std::chrono::milliseconds(m_restIntervalms));
+        std::this_thread::sleep_for(std::chrono::milliseconds(m_retryIntervalMs));
     }while(retryCounts--);
 }
 
@@ -801,7 +807,7 @@ void TDEngineProbit::cancel_order(const AccountUnitProbit& unit, const std::stri
             break;
         }
         KF_LOG_DEBUG(logger, "[cancel_order] try "<<retryCounts << " times,remote_order_id:" << orderId);
-        std::this_thread::sleep_for(std::chrono::milliseconds(m_restIntervalms));
+        std::this_thread::sleep_for(std::chrono::milliseconds(m_retryIntervalMs));
     }while(retryCounts--);
 }
 
