@@ -56,7 +56,7 @@ inline std::string getExchangeName(short exchange_id)
 
 inline int getExchangeId(std::string exchange_name)
 {
-	std::transform(exchange_name.begin(),exchange_name.end(),exchange_name.begin(),tolower);
+	std::transform(exchange_name.begin(),exchange_name.end(),exchange_name.begin(),toupper);
 	if (exchange_name.compare(EXCHANGE_SZE) == 0) //深圳证券交易所
 		return EXCHANGE_ID_SZE;
 	else if (exchange_name.compare(EXCHANGE_CFFEX) == 0) //中国金融期货交易所
