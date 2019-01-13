@@ -455,11 +455,11 @@ int64_t TDEngineProbit::fixPriceTickSize(const std::string& ticker, int64_t pric
     }
     int divided = 8 - filter.ticksize;
     int64_t cutter = pow(10, divided);
-    int64_t new_price = price/cutter;
-    if(!isBuy)
-    {
+    int64_t new_price = price / cutter;
+    //if(!isBuy)
+    //{
         new_price += 1;
-    }
+    //}
     return new_price * cutter;
 }
 
@@ -1099,7 +1099,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         }
         // on_rtn_order
         auto rtnOrder = convert(rtnOrderEx);
-        if (!rtnOrderEx.isSentNotTouched)
+        if (!rtnOrderEx.isSentNotTouched && rtnOrder.OrderStatus != LF_CHAR_NotTouched)
         {
             auto status = rtnOrder.OrderStatus;
             rtnOrder.OrderStatus = LF_CHAR_NotTouched;
