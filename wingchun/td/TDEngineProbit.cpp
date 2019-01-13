@@ -172,6 +172,8 @@ void TDEngineProbit::resize_accounts(int account_num)
 TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
+    m_retryCounts = j_config["retryCounts"].get<int>();;
+    m_retryIntervalMs = j_config["retryIntervalMs"].get<int>();;
     m_restIntervalms = j_config["rest_get_interval_ms"].get<int>();
     AccountUnitProbit& unit = account_units[idx];
     unit.api_key = j_config["APIKey"].get<string>();
@@ -189,7 +191,6 @@ TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
         KF_LOG_ERROR(logger, "[load_account] CoinPairWhiteList is empty");
         exit(0);
     }
-    cancel_all_orders(unit);
     // set up
     TradeAccount account {};
     //partly copy this fields
@@ -538,7 +539,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         std::unique_lock<std::mutex> l(g_orderMutex);
         unit.ordersMap.erase(clientId);
     }
-    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
+    //raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, errorId, errorMsg.c_str());
 }
 
 void TDEngineProbit::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
@@ -720,8 +721,6 @@ void TDEngineProbit::get_products(const AccountUnitProbit& unit, Document& json)
 
 void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code, const char *side, const char *type, double size, double price,double cost, const std::string& clientId,  Document& json)
 {
-    KF_LOG_DEBUG(logger, "[send_order]");
-
     std::string priceStr;
     std::stringstream convertPriceStream;
     convertPriceStream <<std::fixed << std::setprecision(8) << price;
@@ -736,7 +735,6 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
 	std::stringstream convertCostStream;
 	convertCostStream << std::fixed << std::setprecision(8) << cost;
 	convertCostStream >> costStr;
-    KF_LOG_DEBUG(logger, "[send_order] (code) " << code << " (side) "<< side << " (type) " << type << " (size) "<< sizeStr << " (price) "<< priceStr);
     Document document;
     document.SetObject();
     Document::AllocatorType& allocator = document.GetAllocator();
@@ -772,93 +770,39 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
     document.Accept(writer);
     std::string body = jsonStr.GetString();
 	std::string url = unit.baseUrl + std::string("/api/exchange/v1/new_order");
-    std::string authToken = getAuthToken(unit);
-    PostRequest(url , "Bearer " + authToken , body, json);
-}
-
-void TDEngineProbit::cancel_all_orders(AccountUnitProbit& unit)
-{
-	return;
-	//
-    KF_LOG_INFO(logger, "[cancel_all_orders](get history open order)");
-    std::string requestPath = "/api/exchange/v1/order_history";
-	std::string authToken = getAuthToken(unit);	
-	int64_t timeStamp = getTimestamp();
-	std::string startTime = TimeToFormatISO8601(timeStamp - g_gpTimes);
-	std::string endTime = TimeToFormatISO8601(timeStamp);
-	std::string reqParams = "start_time=" + startTime + "&end_time=" + endTime + "&limit=1000";
-	string url = unit.baseUrl + requestPath + "?" + reqParams;
-
-    const auto response = Get(Url{url},
-                                 Header{{"Content-Type", "application/json"},
-										{"authorization", "Bearer " + authToken} 
-										},
-                                 Timeout{30000});
-
-    KF_LOG_INFO(logger, "[history_orders] (url) " << url  << " (response.status_code) " << response.status_code <<
-                                                     " (response.error.message) " << response.error.message <<
-                                                     " (response.text) " << response.text.c_str());
-	Document d;
-    getResponse(response.status_code, response.text, response.error.message, d);
-
-	if (d.HasParseError() || !d.IsObject())
-	{
-		int errorId = 100;
-		std::string errorMsg = "history_orders http response has parse error or is not json. please check the log";
-		KF_LOG_ERROR(logger, "[history_orders] history_orders error!  (errorId)" << errorId << " (errorMsg) " << errorMsg);
-	}
-	else if (d.HasMember("data") && d["data"].IsArray())
-	{
-		auto& arrayData = d["data"];
-		for (SizeType index = 0; index = arrayData.Size(); ++index)
-		{
-			auto& item = arrayData[index];
-			if (item.HasMember("status") && item["status"].GetString() == "open")
-			{
-				KF_LOG_INFO(logger, "[history_order] (open order)  (cid)" << item["client_order_id"].GetString());
-				LFRtnOrderField order;
-				memset(&order, 0, sizeof(order));
-				bool isOk = OpenOrderToLFOrder(unit, item, order);
-                OrderFieldEx orderEx;
-				if (isOk)
-				{
-					unit.ordersMap.insert(std::make_pair(order.OrderRef, orderEx));
-				}
-			}
-			
-		}
-		for(auto& orderItem :unit.ordersMap)
-		{
-			Document json;
-			//cancel_order(unit, orderItem.second.OrderRef, orderItem.second.InstrumentID,orderItem.second.VolumeTotal*1.0/ scale_offset,json);
-		}
-
-		//success, only record raw data
-		//raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_PROBIT, 1, requestId, 0, "");
-	}
-	else if (d.HasMember("code") && d["code"].IsNumber())
-	{
-		//send error, example: http timeout.
-		std::string errorMsg;
-		int errorId = d["code"].GetInt();
-		if (d.HasMember("message") && d["message"].IsString())
-		{
-			errorMsg = d["message"].GetString();
-		}
-		KF_LOG_ERROR(logger, "[history_orders] failed! (errorId)" << errorId << " (errorMsg) " << errorMsg);
-	}
+    std::string authToken("Bearer ");
+    authToken += getAuthToken(unit);
+    auto retryCounts = m_retryCounts;
+    do
+    {
+        if (PostRequest(url ,authToken , body, json))
+        {
+            break;
+        }
+        KF_LOG_DEBUG(logger, "[send_order] try "<<retryCounts << " times,client_order_id:" << client_id);
+        std::this_thread::sleep_for(std::chrono::milliseconds(m_restIntervalms));
+    }while(retryCounts--);
 }
 
 void TDEngineProbit::cancel_order(const AccountUnitProbit& unit, const std::string& orderId, const std::string& marketID, double quantity,  Document& json)
 {
-    KF_LOG_INFO(logger, "[cancel_order]");
     std::string requestPath = "/api/exchange/v1/cancel_order";
 	char strQuantity[20]{};
 	sprintf(strQuantity, "%.4f", quantity);
 	std::string body = "{\"market_id\":\"" + marketID + "\",\"order_id\":\"" + orderId + "\",\"limit_open_quantity\":\"0\"}";
-	std::string authToken = getAuthToken(unit);
+    std::string authToken("Bearer ");
+    authToken += getAuthToken(unit);
     string url = unit.baseUrl + requestPath;
-    PostRequest(url, "Bearer " + authToken, body, json);
+    auto retryCounts = m_retryCounts;
+    do
+    {
+        if (PostRequest(url , authToken , body, json))
+        {
+            break;
+        }
+        KF_LOG_DEBUG(logger, "[cancel_order] try "<<retryCounts << " times,remote_order_id:" << orderId);
+        std::this_thread::sleep_for(std::chrono::milliseconds(m_restIntervalms));
+    }while(retryCounts--);
 }
 
 int64_t TDEngineProbit::getTimestamp()
@@ -1197,7 +1141,7 @@ AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * w
     return account_units[0];
 }
 
-void TDEngineProbit::PostRequest(const std::string& url,const std::string& auth, const std::string& body, Document& json)
+bool TDEngineProbit::PostRequest(const std::string& url,const std::string& auth, const std::string& body, Document& json)
 {
     std::lock_guard<std::mutex> lck(g_postMutex);
 	const auto response = cpr::Post(Url{ url },cpr::VerifySsl(false),Header{{ "Content-Type", "application/json" },{ "authorization", auth }},Body{ body }, Timeout{ 30000 });
@@ -1208,6 +1152,7 @@ void TDEngineProbit::PostRequest(const std::string& url,const std::string& auth,
 	          " (response.error.message) " << response.error.message << \
 	          " (response.text) " << response.text.c_str());
 	getResponse(response.status_code, response.text, response.error.message, json);
+	return response.status_code == HTTP_RESPONSE_OK ? true : false;
 }
 
 std::string TDEngineProbit::getAuthToken(const AccountUnitProbit& unit )
@@ -1318,7 +1263,7 @@ void TDEngineProbit::doCancelOrder(const CancelOrderReq & req)
         return;
     }
     KF_LOG_DEBUG(logger, "[doCancelOrder] cancel_order success!" << " (rid)" << requestId <<"(order ref)"<< data->OrderRef);
-    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
+    //raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_PROBIT, 1, requestId, errorId, errorMsg.c_str());
 }
 
 void TDEngineProbit::pushCancelTask(CancelOrderReq && req)

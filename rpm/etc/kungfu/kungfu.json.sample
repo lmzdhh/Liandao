@@ -144,7 +144,9 @@
 						"btc_usdt": "BTC_USDT",
 						"xrp_usdt": "XRP-USDT"
 					},
-					"rest_get_interval_ms": 500
+					"rest_get_interval_ms": 500,
+					"retryCounts": 5,
+                    "retryIntervalMs": 500
 				},
 				"clients": ["mm_strategy1", "mm_strategy2", "mm_strategy3"],
 				"is_default": true
