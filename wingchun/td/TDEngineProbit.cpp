@@ -1099,6 +1099,14 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         }
         // on_rtn_order
         auto rtnOrder = convert(rtnOrderEx);
+        if (!rtnOrderEx.isSentNotTouched)
+        {
+            auto status = rtnOrder.OrderStatus;
+            rtnOrder.OrderStatus = LF_CHAR_NotTouched;
+            on_rtn_order(&rtnOrder);
+            rtnOrderEx.isSentNotTouched = true;
+            rtnOrder.OrderStatus = status;
+        }
         on_rtn_order(&rtnOrder);
         raw_writer->write_frame(&rtnOrder, sizeof(LFRtnOrderField), source_id, MSG_TYPE_LF_RTN_ORDER_PROBIT, 1, (rtnOrderEx.RequestID > 0) ? rtnOrderEx.RequestID : -1);
         KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder, ticker:" << rtnOrderEx.InstrumentID <<",curFilledCost:"<< cur_filledCost << ", curQuantity:" << cur_filled_quantity <<", requestId:" << rtnOrderEx.RequestID);

@@ -31,9 +31,10 @@ enum class AccountStatus
 };
 struct OrderFieldEx:public LFRtnOrderField
 {
-    double     preFilledCost = 0.0;
-    double     preFilledQuantity = 0.0;
+    double      preFilledCost = 0.0;
+    double      preFilledQuantity = 0.0;
     std::string remoteOrderRef {};
+    bool        isSentNotTouched = false;
 
 };
 struct AccountUnitProbit
