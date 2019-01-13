@@ -1013,7 +1013,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"market_id\"");
         }
-        strncpy(rtnOrderEx.InstrumentID, order["market_id"].GetString(), sizeof(rtnOrderEx.InstrumentID) - 1);
+        strncpy(rtnOrderEx.InstrumentID, unit.coinPairWhiteList.GetKeyByValue(order["market_id"].GetString()).c_str(), sizeof(rtnOrderEx.InstrumentID) - 1);
 
         if (!order.HasMember("side") || !order["side"].IsString())
         {
