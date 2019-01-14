@@ -45,8 +45,8 @@ inline std::string getExchangeName(short exchange_id)
 			return EXCHANGE_OCEANEX;
 		case EXCHANGE_ID_HUOBI:
 			return EXCHANGE_HUOBI;
-		case EXCHANGE_ID_OCEANEX2:
-			return EXCHANGE_OCEANEX2;
+		case EXCHANGE_ID_OCEANEXB:
+			return EXCHANGE_OCEANEXB;
 		case EXCHANGE_ID_PROBIT:
 			return EXCHANGE_PROBIT;
 		default:
@@ -91,8 +91,8 @@ inline int getExchangeId(std::string exchange_name)
 		return EXCHANGE_ID_OCEANEX;
 	else if (exchange_name.compare(EXCHANGE_HUOBI) == 0) 
 		return EXCHANGE_ID_HUOBI;
-	else if (exchange_name.compare(EXCHANGE_OCEANEX2) == 0) 
-		return EXCHANGE_ID_OCEANEX2;
+	else if (exchange_name.compare(EXCHANGE_OCEANEXB) == 0) 
+		return EXCHANGE_ID_OCEANEXB;
 	else if (exchange_name.compare(EXCHANGE_PROBIT) == 0) 
 		return EXCHANGE_ID_PROBIT;
 	return -1;
@@ -127,7 +127,7 @@ inline JournalPair getMdJournalPair(short source)
 		case 26:
 			return {"/shared/kungfu/journal/MD/HUOBI/", "MD_HUOBI"};
 		//case 27:
-		//	return { "/shared/kungfu/journal/MD/OCEANEX2/", "MD_OCEANEX2" };
+		//	return { "/shared/kungfu/journal/MD/OCEANEXB/", "MD_OCEANEXB" };
 		case 28:
 			return{ "/shared/kungfu/journal/MD/PROBIT/", "MD_PROBIT" };
 		case 29:
@@ -162,7 +162,7 @@ inline JournalPair getMdRawJournalPair(short source)
         case 26:
             return {"/shared/kungfu/journal/MD_RAW/HUOBI/", "MDRAW_HUOBI"};
 		//case 27:
-		//	return { "/shared/kungfu/journal/MD_RAW/OCEANEX2/", "MDRAW_OCEANEX2" };
+		//	return { "/shared/kungfu/journal/MD_RAW/OCEANEXB/", "MDRAW_OCEANEXB" };
 		case 28:
 			return{ "/shared/kungfu/journal/MD_RAW/PROBIT/", "MDRAW_PROBIT" };
 		case 29:
@@ -199,7 +199,7 @@ inline JournalPair getTdJournalPair(short source)
 		case 26:
 			return {"/shared/kungfu/journal/TD/HUOBI/", "TD_HUOBI"};
 		case 27:
-			return { "/shared/kungfu/journal/TD/OCEANEX2/", "TD_OCEANEX2" };
+			return { "/shared/kungfu/journal/TD/OCEANEXB/", "TD_OCEANEXB" };
 		case 28:
 			return {"/shared/kungfu/journal/TD/PROBIT/", "TD_PROBIT"};
 		case 29:
@@ -237,7 +237,7 @@ inline JournalPair getTdSendJournalPair(short source)
         case 26:
             return {"/shared/kungfu/journal/TD_SEND/HUOBI/", "TD_SEND_HUOBI"};
 		case 27:
-			return { "/shared/kungfu/journal/TD_SEND/OCEANEX2/", "TD_SEND_OCEANEX2" };
+			return { "/shared/kungfu/journal/TD_SEND/OCEANEXB/", "TD_SEND_OCEANEXB" };
         case 28:
 			return {"/shared/kungfu/journal/TD_SEND/PROBIT/", "TD_SEND_PROBIT"};
 		case 29:
@@ -275,7 +275,7 @@ inline JournalPair getTdRawJournalPair(short source)
         case 26:
             return {"/shared/kungfu/journal/TD_RAW/HUOBI/", "TD_RAW_HUOBI"};
 		case 27:
-			return { "/shared/kungfu/journal/TD_RAW/OCEANEX2/", "TD_RAW_OCEANEX2" };
+			return { "/shared/kungfu/journal/TD_RAW/OCEANEXB/", "TD_RAW_OCEANEXB" };
         case 28:
 			return {"/shared/kungfu/journal/TD_RAW/PROBIT/", "TD_RAW_PROBIT"};
 		case 29:
@@ -313,7 +313,7 @@ inline JournalPair getTdQJournalPair(short source)
         case 26:
             return {"/shared/kungfu/journal/TD_Q/HUOBI/", "TD_Q_HUOBI"};
 		case 27:
-			return { "/shared/kungfu/journal/TD_Q/OCEANEX2/", "TD_Q_OCEANEX2" };
+			return { "/shared/kungfu/journal/TD_Q/OCEANEXB/", "TD_Q_OCEANEXB" };
 		case 28:
 			return {"/shared/kungfu/journal/TD_Q/PROBIT/", "TD_Q_PROBIT"};
 		case 29:

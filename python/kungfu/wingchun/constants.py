@@ -27,7 +27,7 @@ class SOURCE:
     HITBTC = 24
     OCEANEX = 25
     HUOBI = 26
-    OCEANEX2 = 27
+    OCEANEXB = 27
     PROBIT = 28
     BITHUMB = 29
 
