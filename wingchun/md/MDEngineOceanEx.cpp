@@ -169,7 +169,13 @@ std::string makeMarketSub(const std::string& strCode,int nDepthCount)
         writer.StartObject();
         writer.Key("channel");
         char buf[128] = {0};
-        sprintf(buf,"market-%s-%d-global",strCode.c_str(),nDepthCount);
+        int nPrecision = 0;
+        auto it = mapPrecision.find(strCode);
+        if(it != mapPrecision.end())
+        {
+            nPrecision = it->second;
+        }
+        sprintf(buf,"market-%s-%d-global",strCode.c_str(),nPrecision);
         writer.String(buf);
         writer.EndObject();
         writer.EndObject();
@@ -493,7 +499,7 @@ std::string MDEngineOceanEx::dealDataSprit(const char* src)
 void MDEngineOceanEx::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
-	//KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
+	KF_LOG_INFO(logger, "MDEngineOceanEx::on_lws_data: " << data);
     Document json;
 	json.Parse(data);
 
