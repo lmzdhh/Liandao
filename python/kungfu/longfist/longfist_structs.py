@@ -845,8 +845,7 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_ORDER_PROBIT: LFInputOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_PROBIT: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_PROBIT: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_PROBIT: LFOrderActionField
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_COINMEX: LFOrderActionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_PROBIT: LFOrderActionField,
 
     lf.MsgTypes.MSG_TYPE_LF_MD_DAYBIT: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_DAYBIT: LFQryPositionField,
