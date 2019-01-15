@@ -86,6 +86,14 @@ class Strategy:
                 return func(context, data, source, nano)
             self.strategy.set_on_data(lf.MsgTypes.PRICE_BOOK_20, partial(func_parse, price_func))
 
+    def set_bar_data(self, func_name):
+        bar_func = getattr(self.module, func_name, None)
+        if bar_func is not None:
+            def func_parse(func, raw_data, source, nano):
+                data = ctypes.cast(raw_data, ctypes.POINTER(structs.MsgType2LFStruct[lf.MsgTypes.BAR_MD])).contents
+                return func(context, data, source, nano)
+            self.strategy.set_on_data(lf.MsgTypes.BAR_MD, partial(func_parse, bar_func))
+
     def set_func_error(self, func_name):
         bar_func = getattr(self.module, func_name, None)
         if bar_func is not None:
@@ -108,6 +116,7 @@ class Strategy:
         self.strategy.set_init(partial(init_func, context))
 
         self.set_bar('on_bar')
+        self.set_bar_data('on_bar_data')
         self.set_price_book20('on_price_book')
         self.set_func(lf.MsgTypes.MD, 'on_tick')
         self.set_func_rid(lf.MsgTypes.RTN_ORDER, 'on_rtn_order')

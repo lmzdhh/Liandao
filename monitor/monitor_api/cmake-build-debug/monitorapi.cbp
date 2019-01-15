@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="monitorapi"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="monitorapi">
+				<Option output="/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/libmonitorapi.so" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/wang/work/liandao/monitor/monitor_api/utils/rapidjson/include"/>
+					<Add directory="/home/wang/work/liandao/monitor/monitor_api/utils/libwebsockets/include"/>
+					<Add directory="/home/wang/work/liandao/monitor/monitor_api/../../yijinjing/log"/>
+					<Add directory="/home/wang/work/liandao/monitor/monitor_api/../../yijinjing/utils"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../../../include/c++/4.8.5"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../../../include/c++/4.8.5/x86_64-redhat-linux"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../../../include/c++/4.8.5/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 monitorapi"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="monitorapi/fast">
+				<Option output="/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/libmonitorapi.so" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/wang/work/liandao/monitor/monitor_api/utils/rapidjson/include"/>
+					<Add directory="/home/wang/work/liandao/monitor/monitor_api/utils/libwebsockets/include"/>
+					<Add directory="/home/wang/work/liandao/monitor/monitor_api/../../yijinjing/log"/>
+					<Add directory="/home/wang/work/liandao/monitor/monitor_api/../../yijinjing/utils"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../../../include/c++/4.8.5"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../../../include/c++/4.8.5/x86_64-redhat-linux"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/4.8.5/../../../../include/c++/4.8.5/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 monitorapi/fast"/>
+					<CompileFile command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/gmake -j8 -f &quot;/home/wang/work/liandao/monitor/monitor_api/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/wang/work/liandao/monitor/monitor_api/MonitorClient.cpp">
+			<Option target="monitorapi"/>
+		</Unit>
+		<Unit filename="/home/wang/work/liandao/monitor/monitor_api/MonitorClient.h">
+			<Option target="monitorapi"/>
+		</Unit>
+		<Unit filename="/home/wang/work/liandao/monitor/monitor_api/wsclient.cpp">
+			<Option target="monitorapi"/>
+		</Unit>
+		<Unit filename="/home/wang/work/liandao/monitor/monitor_api/wsclient.h">
+			<Option target="monitorapi"/>
+		</Unit>
+		<Unit filename="/home/wang/work/liandao/monitor/monitor_api/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

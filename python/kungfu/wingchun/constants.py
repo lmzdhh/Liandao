@@ -26,7 +26,10 @@ class SOURCE:
     BITMEX = 23
     HITBTC = 24
     OCEANEX = 25
+    HUOBI = 26
+    OCEANEXB = 27
     PROBIT = 28
+    BITHUMB = 29
     DAYBIT = 31
 
 class EXCHANGE:

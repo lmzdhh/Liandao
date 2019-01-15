@@ -78,8 +78,11 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_HITBTC);
     loadJournalInfo(SOURCE_OCEANEX);
     loadJournalInfo(SOURCE_HUOBI);
+	loadJournalInfo(SOURCE_OCEANEXB);
     loadJournalInfo(SOURCE_PROBIT);
+    loadJournalInfo(SOURCE_BITHUMB);
     loadJournalInfo(SOURCE_DAYBIT);
+
 
     loadJournalInfo(0, getSystemJournalPair);
 

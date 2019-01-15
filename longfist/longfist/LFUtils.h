@@ -6,40 +6,95 @@
 #include "LFDataStruct.h"
 
 #include <string>
-
+#include <algorithm>
 inline std::string getExchangeName(short exchange_id)
 {
 	switch(exchange_id)
 	{
-		case 2: // 深圳证券交易所
-			return "SZE";
-		case 11: // 中国金融期货交易所
-			return "CFFEX";
-		case 1: // 上海证券交易所
-			return "SSE";
-		case 13: // 大连商品交易所
-			return "DCE";
-		case 12: // 上海期货交易所
-			return "SHFE";
-		case 14: // 郑州商品交易所
-			return "CZCE";
+		case EXCHANGE_ID_SZE: // 深圳证券交易所
+			return EXCHANGE_SZE;
+		case EXCHANGE_ID_CFFEX: // 中国金融期货交易所
+			return EXCHANGE_CFFEX;
+		case EXCHANGE_ID_SSE: // 上海证券交易所
+			return EXCHANGE_SSE;
+		case EXCHANGE_ID_DCE: // 大连商品交易所
+			return EXCHANGE_DCE;
+		case EXCHANGE_ID_SHFE: // 上海期货交易所
+			return EXCHANGE_SHFE;
+		case EXCHANGE_ID_CZCE: // 郑州商品交易所
+			return EXCHANGE_CZCE;
+		case EXCHANGE_ID_BINANCE:
+			return EXCHANGE_BINANCE;
+		case EXCHANGE_ID_INDODAX:
+			return EXCHANGE_INDODAX;
+		case EXCHANGE_ID_OKEX:
+			return EXCHANGE_OKEX;
+		case EXCHANGE_ID_COINMEX:
+			return EXCHANGE_COINMEX;
+		case EXCHANGE_ID_MOCK:
+			return EXCHANGE_MOCK;
+		case EXCHANGE_ID_BITMAX:
+			return EXCHANGE_BITMAX;
+		case EXCHANGE_ID_BITFINEX:
+			return EXCHANGE_BITFINEX;
+		case EXCHANGE_ID_BITMEX:
+			return EXCHANGE_BITMEX;
+		case EXCHANGE_ID_HITBTC:
+			return EXCHANGE_HITBTC;
+		case EXCHANGE_ID_OCEANEX:
+			return EXCHANGE_OCEANEX;
+		case EXCHANGE_ID_HUOBI:
+			return EXCHANGE_HUOBI;
+		case EXCHANGE_ID_OCEANEXB:
+			return EXCHANGE_OCEANEXB;
+		case EXCHANGE_ID_PROBIT:
+			return EXCHANGE_PROBIT;
+		default:
+			return "";
 	}
 }
 
 inline int getExchangeId(std::string exchange_name)
 {
-	if (exchange_name.compare("SZE") == 0 || exchange_name.compare("sze") == 0) //深圳证券交易所
-		return 2;
-	if (exchange_name.compare("CFFEX") == 0 || exchange_name.compare("cffex") == 0) //中国金融期货交易所
-		return 11;
-	if (exchange_name.compare("SSE") == 0 || exchange_name.compare("sse") == 0) //上海证券交易所
-		return 1;
-	if (exchange_name.compare("DCE") == 0 || exchange_name.compare("dce") == 0) //大连商品交易所
-		return 13;
-	if (exchange_name.compare("SHFE") == 0 || exchange_name.compare("shfe") == 0) //上海期货交易所
-		return 12;
-	if (exchange_name.compare("CZCE") == 0 || exchange_name.compare("czce") == 0) //郑州商品交易所
-		return 14;
+	std::transform(exchange_name.begin(),exchange_name.end(),exchange_name.begin(),toupper);
+	if (exchange_name.compare(EXCHANGE_SZE) == 0) //深圳证券交易所
+		return EXCHANGE_ID_SZE;
+	else if (exchange_name.compare(EXCHANGE_CFFEX) == 0) //中国金融期货交易所
+		return EXCHANGE_ID_CFFEX;
+	else if (exchange_name.compare(EXCHANGE_SSE) == 0) //上海证券交易所
+		return EXCHANGE_ID_SSE;
+	else if (exchange_name.compare(EXCHANGE_DCE) == 0) //大连商品交易所
+		return EXCHANGE_ID_DCE;
+	else if (exchange_name.compare(EXCHANGE_SHFE) == 0) //上海期货交易所
+		return EXCHANGE_ID_SHFE;
+	else if (exchange_name.compare(EXCHANGE_CZCE) == 0) //郑州商品交易所
+		return EXCHANGE_ID_CZCE;
+	else if (exchange_name.compare(EXCHANGE_BINANCE) == 0) 
+		return EXCHANGE_ID_BINANCE;
+	else if (exchange_name.compare(EXCHANGE_INDODAX) == 0) 
+		return EXCHANGE_ID_INDODAX;
+	else if (exchange_name.compare(EXCHANGE_OKEX) == 0) 
+		return EXCHANGE_ID_OKEX;
+	else if (exchange_name.compare(EXCHANGE_COINMEX) == 0) 
+		return EXCHANGE_ID_COINMEX;
+	else if (exchange_name.compare(EXCHANGE_MOCK) == 0) 
+		return EXCHANGE_ID_MOCK;
+	else if (exchange_name.compare(EXCHANGE_BITMAX) == 0) 
+		return EXCHANGE_ID_BITMAX;
+	else if (exchange_name.compare(EXCHANGE_BITFINEX) == 0) 
+		return EXCHANGE_ID_BITFINEX;
+	else if (exchange_name.compare(EXCHANGE_BITMEX) == 0) 
+		return EXCHANGE_ID_BITMEX;
+	else if (exchange_name.compare(EXCHANGE_HITBTC) == 0) 
+		return EXCHANGE_ID_HITBTC;
+	else if (exchange_name.compare(EXCHANGE_OCEANEX) == 0) 
+		return EXCHANGE_ID_OCEANEX;
+	else if (exchange_name.compare(EXCHANGE_HUOBI) == 0) 
+		return EXCHANGE_ID_HUOBI;
+	else if (exchange_name.compare(EXCHANGE_OCEANEXB) == 0) 
+		return EXCHANGE_ID_OCEANEXB;
+	else if (exchange_name.compare(EXCHANGE_PROBIT) == 0) 
+		return EXCHANGE_ID_PROBIT;
 	return -1;
 }
 
@@ -71,8 +126,12 @@ inline JournalPair getMdJournalPair(short source)
 			return {"/shared/kungfu/journal/MD/OCEANEX/", "MD_OCEANEX"};
 		case 26:
 			return {"/shared/kungfu/journal/MD/HUOBI/", "MD_HUOBI"};
+		//case 27:
+		//	return { "/shared/kungfu/journal/MD/OCEANEXB/", "MD_OCEANEXB" };
 		case 28:
 			return{ "/shared/kungfu/journal/MD/PROBIT/", "MD_PROBIT" };
+		case 29:
+			return { "/shared/kungfu/journal/MD/BITHUMB/", "MD_BITHUMB" };
 		case 31:
 			return{ "/shared/kungfu/journal/MD/DAYBIT/", "MD_DAYBIT" };
 		default:
@@ -104,8 +163,12 @@ inline JournalPair getMdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/MD_RAW/OCEANEX/", "MDRAW_OCEANEX"};
         case 26:
             return {"/shared/kungfu/journal/MD_RAW/HUOBI/", "MDRAW_HUOBI"};
+		//case 27:
+		//	return { "/shared/kungfu/journal/MD_RAW/OCEANEXB/", "MDRAW_OCEANEXB" };
 		case 28:
 			return{ "/shared/kungfu/journal/MD_RAW/PROBIT/", "MDRAW_PROBIT" };
+		case 29:
+                   	return{ "/shared/kungfu/journal/MD_RAW/BITHUMB/", "MDRAW_BITHUMB" };
 		case 31:
 			return{ "/shared/kungfu/journal/MD_RAW/DAYBIT/", "MDRAW_DAYBIT" };
 		default:
@@ -139,8 +202,12 @@ inline JournalPair getTdJournalPair(short source)
 			return {"/shared/kungfu/journal/TD/OCEANEX/", "TD_OCEANEX"};
 		case 26:
 			return {"/shared/kungfu/journal/TD/HUOBI/", "TD_HUOBI"};
+		case 27:
+			return { "/shared/kungfu/journal/TD/OCEANEXB/", "TD_OCEANEXB" };
 		case 28:
 			return {"/shared/kungfu/journal/TD/PROBIT/", "TD_PROBIT"};
+		case 29:
+			return {"/shared/kungfu/journal/TD/BITHUMB/", "TD_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD/DAYBIT/", "TD_DAYBIT"};
 		default:
@@ -174,8 +241,12 @@ inline JournalPair getTdSendJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_SEND/OCEANEX/", "TD_SEND_OCEANEX"};
         case 26:
             return {"/shared/kungfu/journal/TD_SEND/HUOBI/", "TD_SEND_HUOBI"};
+		case 27:
+			return { "/shared/kungfu/journal/TD_SEND/OCEANEXB/", "TD_SEND_OCEANEXB" };
         case 28:
 			return {"/shared/kungfu/journal/TD_SEND/PROBIT/", "TD_SEND_PROBIT"};
+		case 29:
+			return {"/shared/kungfu/journal/TD_SEND/BITHUMB/", "TD_SEND_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD_SEND/DAYBIT/", "TD_SEND_DAYBIT"};
 		default:
@@ -209,8 +280,12 @@ inline JournalPair getTdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_RAW/OCEANEX/", "TD_RAW_OCEANEX"};
         case 26:
             return {"/shared/kungfu/journal/TD_RAW/HUOBI/", "TD_RAW_HUOBI"};
+		case 27:
+			return { "/shared/kungfu/journal/TD_RAW/OCEANEXB/", "TD_RAW_OCEANEXB" };
         case 28:
 			return {"/shared/kungfu/journal/TD_RAW/PROBIT/", "TD_RAW_PROBIT"};
+		case 29:
+			return {"/shared/kungfu/journal/TD_RAW/BITHUMB/", "TD_RAW_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD_RAW/DAYBIT/", "TD_RAW_DAYBIT"};
 		default:
@@ -244,8 +319,12 @@ inline JournalPair getTdQJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_Q/OCEANEX/", "TD_Q_OCEANEX"};
         case 26:
             return {"/shared/kungfu/journal/TD_Q/HUOBI/", "TD_Q_HUOBI"};
-        case 28:
+		case 27:
+			return { "/shared/kungfu/journal/TD_Q/OCEANEXB/", "TD_Q_OCEANEXB" };
+		case 28:
 			return {"/shared/kungfu/journal/TD_Q/PROBIT/", "TD_Q_PROBIT"};
+		case 29:
+			return {"/shared/kungfu/journal/TD_Q/BITHUMB/", "TD_Q_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD_Q/DAYBIT/", "TD_Q_DAYBIT"};
 		default:

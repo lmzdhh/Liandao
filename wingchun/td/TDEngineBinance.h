@@ -5,6 +5,7 @@
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
 #include "CoinPairWhiteList.h"
+#include "InterfaceMgr.h"
 #include <vector>
 #include <algorithm>
 #include <iomanip>
@@ -110,6 +111,7 @@ private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
     vector<AccountUnitBinance> account_units;
+	InterfaceMgr m_interfaceMgr;
 
     std::string GetSide(const LfDirectionType& input);
     LfDirectionType GetDirection(std::string input);
@@ -174,6 +176,56 @@ private:
     SendOrderFilter getSendOrderFilter(AccountUnitBinance& unit, const char *symbol);
 
     bool shouldRetry(int http_status_code, std::string errorMsg, std::string text);
+    bool order_count_over_limit();
+
+    enum RequestWeightType
+    {
+        Unkonw = 0,
+        GetOpenOrder_Type,
+        SendOrder_Type,
+        CancelOrder_Type,
+        GetOrder_Type,
+        TradeList_Type
+    };
+    struct weight_data
+    {
+        int weight;
+        uint64_t time;
+
+        weight_data()
+        {
+            memset(this, 0, sizeof(weight_data));
+        }
+
+        void addWeight(RequestWeightType type)
+        {
+            switch(type)
+            {
+                case GetOpenOrder_Type:
+                    weight = 1;
+                    break;
+                case SendOrder_Type:
+                    weight = 1;
+                    break;
+                case CancelOrder_Type:
+                    weight = 1;
+                    break;
+                case GetOrder_Type:
+                    weight = 1;
+                    break;
+                case TradeList_Type:
+                    weight = 5;
+                    break;
+                default:
+                    weight = 0;
+                    break;
+            }
+        }
+    };
+    void handle_request_weight(RequestWeightType type);
+    void meet_429();
+    bool isHandling();
+    
 private:
     static constexpr int scale_offset = 1e8;
     ThreadPtr rest_thread;
@@ -182,8 +234,28 @@ private:
 
     uint64_t order_insert_recvwindow_ms = 5000;
     uint64_t order_action_recvwindow_ms = 5000;
-    std::mutex* mutex_order_and_trade = nullptr;
 
+    /////////////// order_count_over_limit ////////////////
+    //code=-1429,msg:order count over 10000 limit.
+    int order_count_per_second = 5;
+    uint64_t order_total_count = 0;
+
+    /////////////// request weight ////////////////
+    //<=0，do nothing even meet 429
+    //>0，limit weight per minute；
+    int request_weight_per_minute = 1000;
+    uint64_t weight_count = 0;
+    std::mutex* mutex_weight = nullptr;
+
+    //handle 429,prohibit send/cencel order time,ms
+    //code=-1429,msg:order count over 10000 limit.
+    int prohibit_order_ms = 10000;      //default 10s
+    int default_429_rest_interval_ms = 1000;      //default 10s
+    bool bHandle_429 = false;
+    std::mutex* mutex_handle_429 = nullptr;
+    uint64_t startTime_429 = 0;
+
+    std::mutex* mutex_order_and_trade = nullptr;
     int SYNC_TIME_DEFAULT_INTERVAL = 10000;
     int sync_time_interval;
     int64_t timeDiffOfExchange = 0;
@@ -191,6 +263,7 @@ private:
 
     int max_rest_retry_times = 3;
     int retry_interval_milliseconds = 1000;
+	int m_interface_switch = 0;
 };
 
 WC_NAMESPACE_END
