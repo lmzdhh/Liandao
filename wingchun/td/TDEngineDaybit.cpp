@@ -1174,7 +1174,7 @@ void TDEngineDaybit::onRtnOrder(struct lws * websocketConn, Value& response)
                                 unit.ordersMap.erase(it);
                                 for(auto it_action = unit.ordersLocalActionMap.begin();it_action != unit.ordersLocalActionMap.end(); ++it_action)
                                 {
-                                    if(it->second.orderId == OrderID)
+                                    if(it_action->second.orderId == OrderID)
                                     {
                                         unit.ordersLocalActionMap.erase(it_action);
                                         break;
