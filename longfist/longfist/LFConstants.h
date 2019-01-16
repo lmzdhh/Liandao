@@ -136,7 +136,6 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_PROBIT;
     }
-
     else if(exch_str == "daybit")
     {
         return SOURCE_DAYBIT;
@@ -145,7 +144,8 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
 		return SOURCE_BITHUMB;
     }
-    else {
+    else 
+    {
 		return SOURCE_UNKNOWN;
     }
 

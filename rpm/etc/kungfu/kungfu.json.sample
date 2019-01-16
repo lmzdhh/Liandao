@@ -127,69 +127,69 @@
 			},
 			"rest_get_interval_ms": 500
 		},
-    "daybit":
-     {
-		"baseUrl":	"api.daybit.com",
-		"path": "/v1/user_api_socket/websocket?api_key=M0f-KWvkb1y28wv-nT-4vwPBnomZMNrt&api_secret=Hbj4zKZiwbXQB25Te39TwDuqbo9oiicY",
-		"book_depth_count": 20,
-		"trade_count": 10,
-		"whiteLists":
+		"daybit":
 		{
-			"strategy_coinpair(base_quote)": "quote;base",
-			"bch_eth": "ETH;BCH",
-			"ltc_btc": "BTC;LTC",
-			"btc_usdt": "USDT;BTC"
+			"baseUrl":	"api.daybit.com",
+			"path": "/v1/user_api_socket/websocket?api_key=M0f-KWvkb1y28wv-nT-4vwPBnomZMNrt&api_secret=Hbj4zKZiwbXQB25Te39TwDuqbo9oiicY",
+			"book_depth_count": 20,
+			"trade_count": 10,
+			"whiteLists":
+			{
+				"strategy_coinpair(base_quote)": "quote;base",
+				"bch_eth": "ETH;BCH",
+				"ltc_btc": "BTC;LTC",
+				"btc_usdt": "USDT;BTC"
+			}
 		}
-     }
 	},
 	"td": {
 		"daybit":
-      {
-        "accounts":
-          [
-            {
-              "info":
-              {
-                "APIKey": "6nIg0pkRWfb0JhFtUsO9bM1GTpTYfgJs",
-                "SecretKey": "kQ4eMfse0TKsCe838iP_6AAw7gZNMpUh",
-                "baseUrl": "api.staging.daybit.com",
-				        "path":"/v1/user_api_socket/websocket",
-                "sys_id":1,
-                "whiteLists":{
-                  "btc_bat": "BTC-BAT"
-                },
-                "positionWhiteLists":{
-                                "BAT": "ETC",
-                                "BTC": "BTC"
-                 },
-                "rest_get_interval_ms": 1000,
-                "retry_count": 3,
-                "sync_time_interval": 500
-              },
-              "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
-              "is_default": true
-            }
-          ],
-          "FeeSetup":
-          {
-            "stock":
-            {
-              "type": "amount",
-              "fee_multi": 0.0003,
-              "ctr_multi": 1,
-              "min_fee": 0
-            },
-            "future":
-            {
-              "type": "amount",
-              "fee_multi": [0.000023, 0.00069, 0.000023],
-              "ctr_multi": 200,
-              "min_fee": 0
-            },
-            "future_exotic": null
-          }
+		{
+			"accounts":
+			[
+				{
+				"info":
+				{
+					"APIKey": "6nIg0pkRWfb0JhFtUsO9bM1GTpTYfgJs",
+					"SecretKey": "kQ4eMfse0TKsCe838iP_6AAw7gZNMpUh",
+					"baseUrl": "api.staging.daybit.com",
+							"path":"/v1/user_api_socket/websocket",
+					"sys_id":1,
+					"whiteLists":{
+					"btc_bat": "BTC-BAT"
+					},
+					"positionWhiteLists":{
+									"BAT": "ETC",
+									"BTC": "BTC"
+					},
+					"rest_get_interval_ms": 1000,
+					"retry_count": 3,
+					"sync_time_interval": 500
+				},
+				"clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],
+				"is_default": true
+				}
+			],
+			"FeeSetup":
+			{
+				"stock":
+				{
+				"type": "amount",
+				"fee_multi": 0.0003,
+				"ctr_multi": 1,
+				"min_fee": 0
+				},
+				"future":
+				{
+				"type": "amount",
+				"fee_multi": [0.000023, 0.00069, 0.000023],
+				"ctr_multi": 200,
+				"min_fee": 0
+				},
+				"future_exotic": null
+			}
 
-      },
+		},
 		"probit": {
 			"monitor_url": "ws://127.0.0.1:45678/",
 			"name": "td_probit",
@@ -444,23 +444,19 @@
 		"bitmex": {
 			"accounts": [{
 				"info": {
-					"APIKey": "your-api-key",
-					"SecretKey": "your-secret-key",
+					"APIKey": "fHDwOC4W8PZezvNHkibrdKkY",
+					"SecretKey": "o7ihEtQth_2kEF_fRDT7UkOdEO3PFESWVarwy6S4Ljirz9Z2",
 					"passphrase": "your-passphrase",
-					"baseUrl": "https://api.bitmex.com",
+					"baseUrl": "https://www.bitmex.com",
 					"whiteLists": {
 						"strategy_coinpair(base_quote)": "exchange_coinpair",
-						"eth_btc": "tETHBTC",
-						"bch_btc": "tBCHBTC",
-						"ltc_btc": "tLTCBTC",
-						"bch_eth": "tBCHETH",
-						"ltc_eth": "tLTCETH"
+						"btc_usd": "XBTUSD"
 					},
 					"positionWhiteLists": {
 						"ETC": "ETC",
 						"BTC": "BTC"
 					},
-					"rest_get_interval_ms": 2000
+					"rest_get_interval_ms": 1000
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true

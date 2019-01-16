@@ -95,6 +95,8 @@ inline int getExchangeId(std::string exchange_name)
 		return EXCHANGE_ID_OCEANEXB;
 	else if (exchange_name.compare(EXCHANGE_PROBIT) == 0) 
 		return EXCHANGE_ID_PROBIT;
+	else if (exchange_name.compare(EXCHANGE_BITHUMB) == 0) 
+		return EXCHANGE_ID_BITHUMB;
 	return -1;
 }
 
