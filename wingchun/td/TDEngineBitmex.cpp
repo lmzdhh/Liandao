@@ -1359,10 +1359,18 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 				continue;
 			}
 			LFRtnOrderField& rtn_order = it->second;
+            char status=LF_CHAR_NotTouched;
 			if (order.HasMember("ordStatus"))
-				rtn_order.OrderStatus = GetOrderStatus(order["ordStatus"].GetString());
+            {   
+                status = GetOrderStatus(order["ordStatus"].GetString());				
+            }
+            if(status == LF_CHAR_NotTouched &&  rtn_order.OrderStatus = status)
+            {
+                KF_LOG_INFO(logger, "TDEngineBitmex::onOrder,status is not changed");
+                continue;
+            }
 			if (order.HasMember("leavesQty"))
-				rtn_order.VolumeTraded = int64_t(order["leavesQty"].GetDouble()*scale_offset);	
+				rtn_order.VolumeTotal = int64_t(order["leavesQty"].GetDouble()*scale_offset);	
 			if (order.HasMember("side"))
 				rtn_order.Direction = GetDirection(order["side"].GetString());
 			if (order.HasMember("ordType"))
@@ -1372,7 +1380,7 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 			if (order.HasMember("price") && order["price"].IsNumber())
 				rtn_order.LimitPrice = order["price"].GetDouble()*scale_offset;
 			if (order.HasMember("cumQty"))
-				rtn_order.VolumeTotal = int64_t(order["cumQty"].GetDouble()*scale_offset);
+				rtn_order.VolumeTraded= int64_t(order["cumQty"].GetDouble()*scale_offset);
 			KF_LOG_INFO(logger, "TDEngineBitmex::onOrder,rtn_order");
 			on_rtn_order(&rtn_order);
 			raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
