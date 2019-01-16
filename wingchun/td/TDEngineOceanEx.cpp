@@ -478,23 +478,23 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
         if(code == 0) {
             /*
              {
-  "code": 0,
-  "data": {
-    "remaining_volume": "0.25",
-    "trades_count": 0,
-    "created_at": "2018-09-19T02:31:45Z",
-    "side": "buy",
-    "id": 1,
-    "volume": "0.25",
-    "ord_type": "limit",
-    "price": "10.0",
-    "avg_price": "0.0",
-    "state": "wait",
-    "executed_volume": "0.0",
-    "market": "vetusd"
-    },
-  "message": "Operation is successful"
-}
+                "code": 0,
+                "data": {
+                    "remaining_volume": "0.25",
+                    "trades_count": 0,
+                    "created_at": "2018-09-19T02:31:45Z",
+                    "side": "buy",
+                    "id": 1,
+                    "volume": "0.25",
+                    "ord_type": "limit",
+                    "price": "10.0",
+                    "avg_price": "0.0",
+                    "state": "wait",
+                    "executed_volume": "0.0",
+                    "market": "vetusd"
+                    },
+                "message": "Operation is successful"
+                }
              * */
             //if send successful and the exchange has received ok, then add to  pending query order list
             int64_t remoteOrderId = d["data"]["id"].GetInt64();
@@ -526,6 +526,8 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
             rtn_order.VolumeTotal = std::round(
                     std::stod(dataRsp["remaining_volume"].GetString()) * scale_offset);
 
+            std::string strOrderID = std::to_string(remoteOrderId);
+            strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
             on_rtn_order(&rtn_order);
             raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                                     source_id, MSG_TYPE_LF_RTN_ORDER_OCEANEX,
@@ -1026,10 +1028,11 @@ std::string TDEngineOceanEx::createInsertOrdertring(const char *code,
 
     writer.Key("volume");
     writer.Double(size);
-
-    writer.Key("price");
-    writer.Double(price);
-
+    if(strcmp("market",type) != 0)
+    {
+        writer.Key("price");
+        writer.Double(price);
+    }
     writer.Key("ord_type");
     writer.String(type);
 
