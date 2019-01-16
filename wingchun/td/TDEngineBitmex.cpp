@@ -1364,7 +1364,7 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
             {   
                 status = GetOrderStatus(order["ordStatus"].GetString());				
             }
-            if(status == LF_CHAR_NotTouched &&  rtn_order.OrderStatus = status)
+            if(status == LF_CHAR_NotTouched &&  rtn_order.OrderStatus == status)
             {
                 KF_LOG_INFO(logger, "TDEngineBitmex::onOrder,status is not changed");
                 continue;
