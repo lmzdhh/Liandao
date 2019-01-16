@@ -522,7 +522,8 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
             rtn_order.OrderPriceType = GetPriceType(dataRsp["ord_type"].GetString());
             strncpy(rtn_order.OrderRef, data->OrderRef, 13);
             rtn_order.VolumeTotalOriginal = std::round(std::stod(dataRsp["volume"].GetString()) * scale_offset);
-            rtn_order.LimitPrice = std::round(std::stod(dataRsp["price"].GetString()) * scale_offset);
+            if(dataRsp.HasMember("price") && dataRsp["price"].IsString())
+                rtn_order.LimitPrice = std::round(std::stod(dataRsp["price"].GetString()) * scale_offset);
             rtn_order.VolumeTotal = std::round(
                     std::stod(dataRsp["remaining_volume"].GetString()) * scale_offset);
 
@@ -798,7 +799,8 @@ void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
                 responsedOrderStatus.Direction = GetDirection(data["side"].GetString());
                 //报单状态
                 responsedOrderStatus.OrderStatus = GetOrderStatus(data["state"].GetString());
-                responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
+                if(data.HasMember("price") && data["price"].IsString())
+                    responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
                 responsedOrderStatus.volume = std::round(std::stod(data["volume"].GetString()) * scale_offset);
                 //今成交数量
                 responsedOrderStatus.VolumeTraded = std::round(
