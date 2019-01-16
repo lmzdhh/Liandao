@@ -1167,6 +1167,10 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
             //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+
+            std::string strOrderID = std::to_string(orderStatusIterator->remoteOrderId);
+            strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
+
             rtn_order.OrderStatus = LF_CHAR_PartTradedNotQueueing;
             rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
             //first send onRtnOrder about the status change or VolumeTraded change
@@ -1204,7 +1208,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
             rtn_trade.Price = responsedOrderStatus.price;//(newAmount - oldAmount)/(rtn_trade.Volume);
-
+            strncpy(rtn_trade.OrderSysID,rtn_order.BusinessUnit,31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                     source_id, MSG_TYPE_LF_RTN_TRADE_OCEANEX, 1, -1);
@@ -1214,6 +1218,10 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
         //emit the LF_CHAR_Canceled status
         LFRtnOrderField rtn_order;
         memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+
+        std::string strOrderID = std::to_string(orderStatusIterator->remoteOrderId);
+        strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
+
         rtn_order.OrderStatus = LF_CHAR_Canceled;
         rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
 
@@ -1248,6 +1256,9 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
         //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
         LFRtnOrderField rtn_order;
         memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+
+        std::string strOrderID = std::to_string(orderStatusIterator->remoteOrderId);
+        strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
 
         KF_LOG_INFO(logger, "[handlerResponseOrderStatus] VolumeTraded Change  LastOrderPsp:" << orderStatusIterator->VolumeTraded << ", NewOrderRsp: " << responsedOrderStatus.VolumeTraded  <<
                                                         " NewOrderRsp.Status " << responsedOrderStatus.OrderStatus);
