@@ -1369,6 +1369,7 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
                 KF_LOG_INFO(logger, "TDEngineBitmex::onOrder,status is not changed");
                 continue;
             }
+            rtn_order.OrderStatus = status;
 			if (order.HasMember("leavesQty"))
 				rtn_order.VolumeTotal = int64_t(order["leavesQty"].GetDouble()*scale_offset);	
 			if (order.HasMember("side"))
