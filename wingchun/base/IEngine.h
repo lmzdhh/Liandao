@@ -31,6 +31,9 @@
 #include "EngineUtil.hpp"
 #include "KfLog.h"
 #include "json.hpp"
+#include "monitor_api/MonitorClient.h"
+
+USING_MONITOR_NAMESPACE
 
 using json = nlohmann::json;
 
@@ -42,7 +45,7 @@ using yijinjing::JournalReaderPtr;
 using yijinjing::JournalWriterPtr;
 using yijinjing::KfLogPtr;
 
-class IEngine
+class IEngine:public MonitorClientSpi
 {
 protected:
     /** source identifier */
@@ -57,7 +60,8 @@ protected:
     bool isRunning;
     /** reader thread with reader keep reading */
     ThreadPtr reader_thread;
-
+protected:
+    MonitorClientPtr m_monitorClient;
 protected:
     /** default constructor */
     IEngine(short source_id);
@@ -73,7 +77,7 @@ protected:
 public:
     /** initialize engine, pass-in parameters as json format
      * internally call init virtual function to further setup */
-    void initialize(const string& conf_str);
+    void initialize(const string& json_str);
     /** engine start, entrance */
     bool start();
     /** officially stop all threading */
@@ -115,11 +119,14 @@ public:
     virtual bool is_logged_in() const = 0;
     /** get engine's name */
     virtual string name() const = 0;
-
+protected:
+    virtual void OnMessage(const std::string& ){ };
 protected:
     std::string m_engineIndex {};
 private:
     void cutEngineIndex(std::string&);
+
+    void connectMonitor(const json& j_config);
 };
 
 DECLARE_PTR(IEngine);

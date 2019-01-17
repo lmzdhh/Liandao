@@ -24,9 +24,10 @@ enum exchange_source_index : short
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
-	SOURCE_OCEANEX2 = 27,
+	SOURCE_OCEANEXB = 27,
     SOURCE_PROBIT = 28,
     SOURCE_BITHUMB = 29,
+    SOURCE_DAYBIT = 31,
     SOURCE_UNKNOWN
 };
 
@@ -60,14 +61,16 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "oceanex";
         case SOURCE_HUOBI:
             return "huobi";
-        case SOURCE_OCEANEX2:
-            return "oceanex2";
+        case SOURCE_OCEANEXB:
+            return "oceanexb";
         case SOURCE_PROBIT:
             return "probit";
         case SOURCE_BITHUMB:
             return "bithumb";
-        default:
-            return "unknown";
+        case SOURCE_DAYBIT:
+            return "daybit";
+		default:
+			return "unknown";
 	}
 }
 
@@ -125,19 +128,24 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_HUOBI;
     }
-	else if (exch_str == "oceanex2")
+	else if (exch_str == "oceanexb")
 	{
-		return SOURCE_OCEANEX2;
+		return SOURCE_OCEANEXB;
 	}
     else if(exch_str == "probit")
     {
         return SOURCE_PROBIT;
     }
+    else if(exch_str == "daybit")
+    {
+        return SOURCE_DAYBIT;
+    }
     else if(exch_str == "bithumb")
     {
 		return SOURCE_BITHUMB;
     }
-    else {
+    else 
+    {
 		return SOURCE_UNKNOWN;
     }
 
@@ -160,11 +168,11 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_BITMEX "BITMEX"
 #define EXCHANGE_HITBTC "HITBTC"
 #define EXCHANGE_OCEANEX "OCEANEX"
-#define EXCHANGE_OCEANEX2 "OCEANEX2"
 #define EXCHANGE_HUOBI "HUOBI"
-#define EXCHANGE_OCEANEX2 "OCEANEX2"
+#define EXCHANGE_OCEANEXB "OCEANEXB"
 #define EXCHANGE_PROBIT "PROBIT"
 #define EXCHANGE_BITHUMB "BITHUMB"
+#define EXCHANGE_DAYBIT "DAYBIT"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -184,9 +192,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_HITBTC  24
 #define EXCHANGE_ID_OCEANEX  25
 #define EXCHANGE_ID_HUOBI  26
-#define EXCHANGE_ID_OCEANEX2  27
+#define EXCHANGE_ID_OCEANEXB  27
 #define EXCHANGE_ID_PROBIT  28
 #define EXCHANGE_ID_BITHUMB  29
+#define EXCHANGE_ID_DAYBIT  31
 // MsgTypes that used for LF data structure...
 const short MSG_TYPE_LF_MD            = 101;
 const short MSG_TYPE_LF_L2_MD         = 102;
@@ -318,14 +327,14 @@ const short MSG_TYPE_LF_RTN_ORDER_HUOBI = 26205;
 const short MSG_TYPE_LF_RTN_TRADE_HUOBI = 26206;
 const short MSG_TYPE_LF_ORDER_ACTION_HUOBI = 26207;
 
-//OCEANEX2, idx=27
-const short MSG_TYPE_LF_MD_OCEANEX2        = 27101;
-const short MSG_TYPE_LF_QRY_POS_OCEANEX2   = 27201;
-const short MSG_TYPE_LF_RSP_POS_OCEANEX2   = 27202;
-const short MSG_TYPE_LF_ORDER_OCEANEX2     = 27204;
-const short MSG_TYPE_LF_RTN_ORDER_OCEANEX2 = 27205;
-const short MSG_TYPE_LF_RTN_TRADE_OCEANEX2 = 27206;
-const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX2 = 27207;
+//OCEANEXB, idx=27
+const short MSG_TYPE_LF_MD_OCEANEXB        = 27101;
+const short MSG_TYPE_LF_QRY_POS_OCEANEXB   = 27201;
+const short MSG_TYPE_LF_RSP_POS_OCEANEXB   = 27202;
+const short MSG_TYPE_LF_ORDER_OCEANEXB     = 27204;
+const short MSG_TYPE_LF_RTN_ORDER_OCEANEXB = 27205;
+const short MSG_TYPE_LF_RTN_TRADE_OCEANEXB = 27206;
+const short MSG_TYPE_LF_ORDER_ACTION_OCEANEXB = 27207;
 //PROBIT, idx=28
 const short MSG_TYPE_LF_MD_PROBIT        	= 28101;
 const short MSG_TYPE_LF_QRY_POS_PROBIT   	= 28201;
@@ -345,6 +354,15 @@ const short MSG_TYPE_LF_RTN_TRADE_BITHUMB         = 29206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITHUMB     = 29207;
 
 
+
+//DAYBIT, idx=31
+const short MSG_TYPE_LF_MD_DAYBIT        	= 31101;
+const short MSG_TYPE_LF_QRY_POS_DAYBIT   	= 31201;
+const short MSG_TYPE_LF_RSP_POS_DAYBIT   	= 31202;
+const short MSG_TYPE_LF_ORDER_DAYBIT     	= 31204;
+const short MSG_TYPE_LF_RTN_ORDER_DAYBIT 	= 31205;
+const short MSG_TYPE_LF_RTN_TRADE_DAYBIT 	= 31206;
+const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
 ///////////////////////////////////

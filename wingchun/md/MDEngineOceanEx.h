@@ -26,6 +26,16 @@ struct PriceAndVolume
     }
 };
 
+std::map<std::string,int> mapPrecision{
+    {"btcusdt",2},
+    {"ethusdt",2},
+    {"ethbtc",6},
+    {"shavet",4},
+    {"vetusdt",5},
+    {"vetbtc",8},
+    {"veteth",8},
+    {"vthovet",4}
+};
 //coinmex use base and quote to sub depth data
 struct SubscribeCoinBaseQuote
 {

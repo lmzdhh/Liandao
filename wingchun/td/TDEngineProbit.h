@@ -31,9 +31,10 @@ enum class AccountStatus
 };
 struct OrderFieldEx:public LFRtnOrderField
 {
-    double     preFilledCost = 0.0;
-    double     preFilledQuantity = 0.0;
+    double      preFilledCost = 0.0;
+    double      preFilledQuantity = 0.0;
     std::string remoteOrderRef {};
+    bool        isSentNotTouched = false;
 
 };
 struct AccountUnitProbit
@@ -93,7 +94,7 @@ public:
     int Round(std::string tickSizeStr);
 		//2018-01-01T00:00:00.000Z
     std::string TimeToFormatISO8601(int64_t timestamp);
-	void PostRequest(const std::string& url,const std::string& auth, const std::string& body,Document& json);
+	bool PostRequest(const std::string& url,const std::string& auth, const std::string& body,Document& json);
 private:
     void sendMessage(std::string&& msg,struct lws * conn);
     void genUniqueKey();
@@ -132,7 +133,6 @@ private:
     void get_account(const AccountUnitProbit& unit,  Document& json);
     void get_products(const AccountUnitProbit& unit, Document& json);
     void send_order(const AccountUnitProbit& unit, const char *code,const char *side, const char *type, double size, double price,double cost, const std::string& orderRef, Document& json);
-    void cancel_all_orders(AccountUnitProbit& unit);
     void cancel_order(const AccountUnitProbit& unit, const std::string& orderId, const std::string& marketID, double quantity, Document& json);
     void getResponse(int http_status_code, const std::string& responseText, const std::string& errorMsg, Document& json);
     void printResponse(const Document& d);
@@ -145,6 +145,8 @@ private:
 	bool OpenOrderToLFOrder(AccountUnitProbit& unit, rapidjson::Value& json, LFRtnOrderField& order);
 private:
     LFRtnOrderField convert(const OrderFieldEx&);
+    int m_retryCounts = 1;
+    int m_retryIntervalMs = 500;
 };
 
 WC_NAMESPACE_END

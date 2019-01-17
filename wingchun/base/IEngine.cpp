@@ -27,7 +27,8 @@
 #include "TypeConvert.hpp"
 #include <unistd.h>
 #include <csignal>
-
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 USING_WC_NAMESPACE
 
 #define WRITE_ENGINE_STATUS(name) \
@@ -39,8 +40,13 @@ USING_WC_NAMESPACE
 
 volatile int IEngine::signal_received = -1;
 
-IEngine::IEngine(short source): isRunning(false), source_id(source)
-{}
+IEngine::IEngine(short source):
+    isRunning(false),
+    source_id(source),
+    m_monitorClient(MonitorClient::create())
+{
+
+}
 
 IEngine::~IEngine()
 {
@@ -75,8 +81,13 @@ bool IEngine::stop()
     {
         reader_thread->join();
         reader_thread.reset();
-        KF_LOG_INFO(logger, "reader thread expired...");
         WRITE_ENGINE_STATUS(WC_ENGINE_STATUS_STOPPED);
+        if (m_monitorClient)
+        {
+            m_monitorClient->setCallback(nullptr);
+            m_monitorClient.reset();
+        }
+        KF_LOG_INFO(logger, "reader thread expired...");
         return true;
     }
     WRITE_ENGINE_STATUS(WC_ENGINE_STATUS_STOP_FAIL)
@@ -156,6 +167,38 @@ void IEngine::initialize(const string& conf_str)
     pre_load(j_config);
     // load config information
     load(j_config);
+    connectMonitor(j_config);
+}
+
+void IEngine::connectMonitor(const json& j_config)
+{
+    if (j_config.find("monitor_url")==j_config.end() || j_config.find("name")==j_config.end())
+    {
+        KF_LOG_INFO(logger, "connect to monitor error:kungfu.json has no [monitor_url] or [name]");
+        return;
+    }
+    std::string monitor_url = j_config["monitor_url"].get<std::string>();
+    std::string name = j_config["name"].get<std::string>();
+    std::vector<std::string> results {};
+    //td_huobi
+    boost::split(results, name, boost::is_any_of("_"));
+    if (results.size() != 2)
+    {
+        KF_LOG_INFO(logger, "parse name error,must be xxx_xxx,but is " << name);
+        return ;
+    }
+    m_monitorClient->init(logger);
+    m_monitorClient->setCallback(this);
+    if(!m_monitorClient->connect(monitor_url))
+    {
+        KF_LOG_INFO(logger, "connect to monitor error,name@" << name << ",url@" << monitor_url);
+        return;
+    }
+    if (!m_monitorClient->login(results[1], results[0]))
+    {
+        KF_LOG_INFO(logger, "login to monitor error,name@" << name << ",url@" << monitor_url);
+        return;
+    }
 }
 
 void IEngine::cutEngineIndex(std::string& str)

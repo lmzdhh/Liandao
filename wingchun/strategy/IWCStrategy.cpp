@@ -34,7 +34,7 @@ void setup_signal_callback()
     std::signal(SIGKILL, IWCDataProcessor::signal_handler);
 }
 
-IWCStrategy::IWCStrategy(const string &name): name(name)
+IWCStrategy::IWCStrategy(const string &name): name(name), m_monitorClient(MonitorClient::create())
 {
     logger = yijinjing::KfLog::getStrategyLogger(name, name);
     util = WCStrategyUtilPtr(new WCStrategyUtil(name));
@@ -46,7 +46,11 @@ IWCStrategy::IWCStrategy(const string &name): name(name)
 void IWCStrategy::start()
 {
     data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
-    KF_LOG_INFO(logger, "[start] data started");
+    KF_LOG_INFO(logger, "[start] data started,name:" << name);
+    if (!connectMonitor("ws://127.0.0.1:45678", name, "st"))
+    {
+        KF_LOG_INFO(logger, "connect to monitor error,name@" << name << ",url@" << "ws://127.0.0.1:45678");
+    }
 }
 
 IWCStrategy::~IWCStrategy()
@@ -76,6 +80,11 @@ void IWCStrategy::stop()
     if (data.get() != nullptr)
     {
         data->stop();
+    }
+    if (m_monitorClient)
+    {
+        m_monitorClient->setCallback(nullptr);
+        m_monitorClient.reset();
     }
 }
 
@@ -285,4 +294,15 @@ int IWCStrategy::cancel_order(short source, int order_id)
 {
     CHECK_TD_READY(source);
     return util->cancel_order(source, order_id);
+}
+
+bool IWCStrategy::connectMonitor(const std::string &url, const std::string &name, const std::string &type)
+{
+    m_monitorClient->init(logger);
+    m_monitorClient->setCallback(this);
+    if(!m_monitorClient->connect(url))
+    {
+        return false;
+    }
+    return m_monitorClient->login(name, type);
 }
