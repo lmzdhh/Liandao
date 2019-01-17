@@ -49,6 +49,10 @@ inline std::string getExchangeName(short exchange_id)
 			return EXCHANGE_OCEANEXB;
 		case EXCHANGE_ID_PROBIT:
 			return EXCHANGE_PROBIT;
+		case EXCHANGE_ID_BITHUMB:
+			return EXCHANGE_BITHUMB;
+		case EXCHANGE_ID_DAYBIT:
+			return EXCHANGE_DAYBIT;
 		default:
 			return "";
 	}
@@ -97,6 +101,8 @@ inline int getExchangeId(std::string exchange_name)
 		return EXCHANGE_ID_PROBIT;
 	else if (exchange_name.compare(EXCHANGE_BITHUMB) == 0) 
 		return EXCHANGE_ID_BITHUMB;
+	else if (exchange_name.compare(EXCHANGE_DAYBIT) == 0) 
+		return EXCHANGE_ID_DAYBIT;
 	return -1;
 }
 
