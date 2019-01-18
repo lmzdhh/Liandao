@@ -28,7 +28,7 @@ WC_NAMESPACE_START
             LfOrderStatusType OrderStatus;  //报单状态
             uint64_t VolumeTraded;  //今成交数量
             int64_t averagePrice;// given averagePrice on response of query_order
-            int64_t remoteOrderId;// sender_order response order id://{"orderId":19319936159776,"result":true}
+            std::string remoteOrderId;// sender_order response order id://{"orderId":19319936159776,"result":true}
         };
 
         struct OrderActionSentTime
@@ -81,6 +81,7 @@ WC_NAMESPACE_START
 
             std::vector<std::string> newPendingSendMsg;
             std::vector<std::string> pendingSendMsg;
+            std::map<std::string,LFRtnOrderField> mapOrders;
         };
 
 
@@ -133,12 +134,11 @@ WC_NAMESPACE_START
             void loop();
             std::vector<std::string> split(std::string str, std::string token);
             void GetAndHandleOrderTradeResponse();
-            void addNewQueryOrdersAndTrades(AccountUnitBithumb& unit, const char_31 InstrumentID,
-                                            const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                            const uint64_t VolumeTraded, int64_t remoteOrderId);
             void retrieveOrderStatus(AccountUnitBithumb& unit);
-            void moveNewOrderStatusToPending(AccountUnitBithumb& unit);
 
+
+            void onRtnTrade(AccountUnitBithumb& unit,LFRtnOrderField& order,Value& json);
+            void onRtnOrder(AccountUnitBithumb& unit,LFRtnOrderField& order,Value& json);
             void handlerResponseOrderStatus(AccountUnitBithumb& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
             void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
 
@@ -155,18 +155,17 @@ WC_NAMESPACE_START
         private:
             void get_account(AccountUnitBithumb& unit, Document& json);
             void send_order(AccountUnitBithumb& unit, const char *code,
-                            const char *side, const char *type, double size, double price, double funds, Document& json);
+                            const char *side, double size, double price,bool isLimit, Document& json);
 
             void cancel_all_orders(AccountUnitBithumb& unit, std::string code, Document& json);
-            void cancel_order(AccountUnitBithumb& unit, std::string code, std::string orderId, Document& json);
+            void cancel_order(AccountUnitBithumb& unit, std::string code, std::string orderId,bool isBuy, Document& json);
             void query_order(AccountUnitBithumb& unit, std::string code, std::string orderId, Document& json);
+            void query_trade(AccountUnitBithumb& unit, std::string code, std::string orderId,bool isBuy, Document& json);
             void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
-            void printResponse(const Document& d);
 
             bool shouldRetry(Document& d);
 
-            std::string construct_request_body(const AccountUnitBithumb& unit,const std::string& endPoint,const  std::string& data);
-            std::string createInsertOrdertring(const char *code,const char *side, const char *type, double size, double price);
+            std::string construct_request_body(const AccountUnitBithumb& unit,const std::string& endPoint,const  std::string& data,const std::string& timeStamp);
 
             cpr::Response Get(const std::string& url,const std::string& body, AccountUnitBithumb& unit);
             cpr::Response Post(const std::string& url,const std::string& body, AccountUnitBithumb& unit);
@@ -187,7 +186,7 @@ WC_NAMESPACE_START
             std::mutex* mutex_response_order_status = nullptr;
             std::mutex* mutex_orderaction_waiting_response = nullptr;
 
-            std::map<std::string, int64_t> localOrderRefRemoteOrderId;
+            std::map<std::string, std::string> localOrderRefRemoteOrderId;
 
             //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
             std::map<int64_t, OrderActionSentTime> remoteOrderIdOrderActionSentTime;
