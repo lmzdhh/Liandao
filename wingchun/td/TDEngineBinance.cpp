@@ -673,7 +673,7 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
     */
 
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
-    char noneStatus = '\0';
+    char noneStatus = LF_CHAR_Unknown;
     int64_t binanceOrderId =  result["orderId"].GetInt64();
     addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction, binanceOrderId);
 }
@@ -856,8 +856,11 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
         int64_t binanceOrderId =  result["orderId"].GetInt64();
+        LfOrderStatusType status =  rtn_order.OrderStatus;
+        if( fills_size <= 0)
+            status = LF_CHAR_Unknown;
         addNewQueryOrdersAndTrades(unit, data->InstrumentID,
-                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
+                                       rtn_order.OrderRef,status, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
 
