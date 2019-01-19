@@ -644,6 +644,8 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     //paser the order/trade info in the response result
     if(!d.HasParseError() && d.IsObject() && !d.HasMember("code"))
     {
+        //order insert success,on_rtn_order with NotTouched status first
+        onRtnNewOrder(data, unit, requestId);
         if(!d.HasMember("status"))
         {//no status, it is ACK
             onRspNewOrderACK(data, unit, d, requestId);
@@ -660,7 +662,28 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     }
 }
 
-
+void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBinance& unit, int requestId)
+{
+    LFRtnOrderField rtn_order;
+    memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+    strcpy(rtn_order.ExchangeID, "binance");
+    strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+    strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
+    rtn_order.Direction = data->Direction;
+    rtn_order.TimeCondition = data->TimeCondition;
+    rtn_order.OrderPriceType = data->OrderPriceType;
+    strncpy(rtn_order.OrderRef, data->OrderRef, 13);
+    rtn_order.VolumeTraded = 0;
+    rtn_order.VolumeTotalOriginal = data->Volume;
+    rtn_order.VolumeTotal = data->Volume;
+    rtn_order.LimitPrice = data->LimitPrice;
+    rtn_order.RequestID = requestId;
+    rtn_order.OrderStatus = LF_CHAR_NotTouched;
+    on_rtn_order(&rtn_order);
+    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                            source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
+                            1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+}
 void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId)
 {
     /*Response ACK:
@@ -673,7 +696,7 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
     */
 
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
-    char noneStatus = LF_CHAR_Unknown;
+    char noneStatus = LF_CHAR_NotTouched;
     int64_t binanceOrderId =  result["orderId"].GetInt64();
     addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction, binanceOrderId);
 }
@@ -716,10 +739,13 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     rtn_order.LimitPrice = std::round(stod(result["price"].GetString()) * scale_offset);
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus = GetOrderStatus(result["status"].GetString());
-    on_rtn_order(&rtn_order);
-    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                            source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
-                            1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+    if(rtn_order.OrderStatus != LF_CHAR_NotTouched)
+    {
+        on_rtn_order(&rtn_order);
+        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
+                                1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+    }
 
     //if All Traded, emit OnRtnTrade
     if(rtn_order.OrderStatus == LF_CHAR_AllTraded)
@@ -858,7 +884,7 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
         int64_t binanceOrderId =  result["orderId"].GetInt64();
         LfOrderStatusType status =  rtn_order.OrderStatus;
         if( fills_size <= 0)
-            status = LF_CHAR_Unknown;
+            status = LF_CHAR_NotTouched;
         addNewQueryOrdersAndTrades(unit, data->InstrumentID,
                                        rtn_order.OrderRef,status, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
