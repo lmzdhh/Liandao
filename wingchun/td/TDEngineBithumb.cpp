@@ -1000,14 +1000,60 @@ void TDEngineBithumb::query_trade(AccountUnitBithumb& unit, std::string code, st
 
     getResponse(response.status_code, response.text, response.error.message, json);
 }
-
+double str2double(const std::string& src)
+{
+    return std::stod(data["units_traded"].GetString()) + 0.000000001;
+}
 void TDEngineBithumb::onRtnTrade(AccountUnitBithumb& unit,LFRtnOrderField& order,Value& json)
 {
-    
+    LFRtnTradeField rtn_trade;
+    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+    strcpy(rtn_trade.ExchangeID, "bithumb");
+    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+    strncpy(rtn_trade.InstrumentID, order.InstrumentID, 31);
+    strncpy(rtn_trade.OrderRef, order.OrderRef, 13);
+    rtn_trade.Direction = order.Direction;
+    if(json.HasMember("units_traded") && json.HasMember("price"))
+    {
+        rtn_trade.Volume = std::round(str2double(data["units_traded"].GetString()) * scale_offset);
+        rtn_trade.Price = std::round(str2double(data["units_traded"].GetString()) * scale_offset);
+        KF_LOG_INFO(logger, "[onRtnTrade] rtn_trade (symbol)" << rtn_trade.InstrumentID << " (orderRef)" << rtn_trade.OrderRef << " (volume)" << rtn_trade.Volume << " (price)" << rtn_trade.Price);
+        on_rtn_trade(&rtn_trade);
+        raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),source_id, MSG_TYPE_LF_RTN_TRADE_BITHUMB, 1, -1);
+    }
+    else
+    {
+        KF_LOG_INFO(logger, "[onRtnTrade] error (symbol)" << rtn_trade.InstrumentID << " (orderRef)" << rtn_trade.OrderRef);
+    }
+                                    
 }
 void TDEngineBithumb::onRtnOrder(AccountUnitBithumb& unit,LFRtnOrderField& order,Value& json)
 {
-
+    if(json.HasMember("status")  && json.HasMember("units_remaining") && json.HasMember("price"))
+    {
+        LfOrderStatusType status = GetOrderStatus(json["status"].GetString());
+        int64_t volume = -1.remain =-1,price=-1;         
+        if(data["units_remaining"].IsString())
+        {
+            remain = std::round(str2double(data["units_remaining"].GetString()) * scale_offset);
+            if(remain != order.VolumeTotal)
+            {
+                status = LF_CHAR_PartTradedQueueing;                
+            }
+        }
+        if(data["price"].IsString())
+        {
+            order.Price = std::round(str2double(data["price"].GetString()) * scale_offset);
+        }
+        if(status != order.OrderStatus || (remain != -1 && remain != order.VolumeTotal))
+        {
+            order.OrderStatus = status;
+            order.VolumeTotal = remain;
+            on_rtn_order(&order);
+            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_ORDER_BITHUMB,1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+        }
+    }
+    
 }
 void TDEngineBithumb::handlerResponseOrderStatus(AccountUnitBithumb& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
 {
