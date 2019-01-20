@@ -771,7 +771,7 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
         int64_t binanceOrderId =  result["orderId"].GetInt64();
-        addNewQueryOrdersAndTrades(unit, data->InstrumentID,,data->LimitPrice
+        addNewQueryOrdersAndTrades(unit, data->InstrumentID,data->LimitPrice,
                                        rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
@@ -884,7 +884,7 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
         LfOrderStatusType status =  rtn_order.OrderStatus;
         if( fills_size <= 0)
             status = LF_CHAR_NotTouched;
-        addNewQueryOrdersAndTrades(unit, data->InstrumentID,,data->LimitPrice
+        addNewQueryOrdersAndTrades(unit, data->InstrumentID,data->LimitPrice,
                                        rtn_order.OrderRef,status, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
