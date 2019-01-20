@@ -30,6 +30,7 @@ struct PendingBinanceOrderStatus
     char_21 OrderRef;       //报单引用
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
+    int64_t LimitPrice;
 };
 
 struct PendingBinanceTradeStatus
@@ -127,7 +128,7 @@ private:
     bool loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc);
     void GetAndHandleOrderTradeResponse();
     void addNewSentTradeIds(AccountUnitBinance& unit, int64_t newSentTradeIds);
-    void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
+    void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,int64_t limitPrice,
                                         const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, int64_t binanceOrderId);
 
     inline void onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
