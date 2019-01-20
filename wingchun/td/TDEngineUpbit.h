@@ -16,9 +16,9 @@
 #include <document.h>
 
 using rapidjson::Document;
-
+ 
 WC_NAMESPACE_START
-
+ 
 /**
  * account information unit extra is here.
  */
@@ -61,7 +61,8 @@ struct AccountUnitUpbit
     bool    logged_in;
     std::vector<PendingUpbitOrderStatus> newOrderStatus;
     std::vector<PendingUpbitOrderStatus> pendingOrderStatus;
-    std::vector<std::string> cancelOrders;
+    std::map<std::string,OrderInfo> mapNewCancelOrders;
+    std::map<std::string,OrderInfo> mapCancelOrders;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
     
     CoinPairWhiteList coinPairWhiteList;

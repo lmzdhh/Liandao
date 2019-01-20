@@ -591,18 +591,18 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
         int64_t nTrades = d["trades_count"].GetInt64();
         auto cStatus = convertOrderStatus(strStatus,nTrades);
          KF_LOG_INFO(logger, "[req_order_insert] (cStatus)" << cStatus);
-        if(cStatus == LF_CHAR_NoTradeQueueing)
+        if(cStatus == LF_CHAR_NotTouched)
         {//no status, it is ACK
             onRspNewOrderACK(data, unit, d, requestId);
         } else {
-            if(cStatus == LF_CHAR_AllTraded)
-            {
+           // if(cStatus == LF_CHAR_AllTraded)
+            //{
                 // it is RESULT
-                onRspNewOrderRESULT(data, unit, d, requestId);
-            } else {
+            //    onRspNewOrderRESULT(data, unit, d, requestId);
+            //} else {
                 // it is FULL
                 onRspNewOrderFULL(data, unit, d, requestId);
-            }
+            //}
         }
         KF_LOG_INFO(logger, "[req_order_insert] success");
     }
@@ -717,6 +717,10 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     rtn_trade.Direction = data->Direction;
     Document d;
     auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,data->OrderRef);
+
+    std::string strRemoteUUID = result["uuid"].GetString();
+    strncpy(rtn_order.BusinessUnit,strRemoteUUID.c_str(),21);
+    strncpy(rtn_trade.OrderSysID,strRemoteUUID.c_str(),31);
     if(200 != get_order(unit,stOrderInfo.strRemoteUUID.c_str(),d))
     {
          KF_LOG_DEBUG(logger, "TDEngineUpbit::onRspNewOrderFULL:order not found ");
@@ -734,10 +738,10 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
         //剩余数量
         volumeTotalOriginal = volumeTotalOriginal - volume;
         rtn_order.VolumeTotal = volumeTotalOriginal;
- 
+
         if(i == fills_size - 1) {
             //the last one
-            rtn_order.OrderStatus = LF_CHAR_AllTraded;
+            rtn_order.OrderStatus = convertOrderStatus(result["state"].GetString(),result["trades_count"].GetInt64());
         } else {
             rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
         }
@@ -750,12 +754,19 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
 
         rtn_trade.Volume = volume;
         rtn_trade.Price = price;
+        strncpy(rtn_trade.TradeID,result["trades"].GetArray()[i]["uuid"].GetString(),21);
+         strncpy(rtn_trade.OrderSysID,strRemoteUUID.c_str(),31);
         on_rtn_trade(&rtn_trade);
         KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_trade (orderRef)" << rtn_order.OrderRef
                                     << "(requestId)" << requestId );
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);
     }
+
+    if(rtn_order.OrderStatus == LF_CHAR_PartTradedQueueing)
+    {
+        addNewQueryOrdersAndTrades(unit,rtn_order.InstrumentID,rtn_order.OrderRef,rtn_order.OrderStatus,rtn_order.VolumeTraded,rtn_order.Direction,requestId);
+    }  
 }
 
 
@@ -808,13 +819,14 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
     if(errorId != 200)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        KF_LOG_INFO(logger, "[req_order_action] error (reeorId)" <<  errorId);
+        std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+        unit.mapNewCancelOrders[data->OrderRef] = stOrderInfo; 
+        KF_LOG_INFO(logger, "[req_order_action] error (reeorId)  while retry after" <<  errorId);
     }
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_UPBIT, 1, requestId, errorId, errorMsg.c_str());
 
     KF_LOG_INFO(logger, "[req_order_action] (orderRef)" <<  data->OrderRef << "(retCode)" << errorId);
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
-    unit.cancelOrders.push_back(data->OrderRef); 
+    
 }
 
     void TDEngineUpbit::retrieveOrderAndTradesStatus(AccountUnitUpbit& unit)
@@ -860,9 +872,9 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
                 continue;
             }
             //parse order status
-            bool isAllTrade = retrieveOrderStatus(unit,orderResult,*orderStatusIterator);
+            bool isAllTradeOrCancel = retrieveOrderStatus(unit,orderResult,*orderStatusIterator);
              retrieveTradeStatus(unit,orderResult,orderStatusIterator->sentTradeIds);
-            if(isAllTrade)
+            if(isAllTradeOrCancel)
             {
                 orderStatusIterator =  unit.pendingOrderStatus.erase(orderStatusIterator);
             }
@@ -885,6 +897,22 @@ void TDEngineUpbit::GetAndHandleOrderTradeResponse()
             continue;
         }
 
+        for(auto it = unit.mapCancelOrders.begin(); it != unit.mapCancelOrders.end();)
+        {
+            Document d;
+           auto nCode = cancel_order(unit,nullptr,it->second.strRemoteUUID.c_str(),d);
+           if(nCode == 200)
+           {
+               it = unit.mapCancelOrders.erase(it);
+                KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (req_order_action) (nRequestID)" << it->second.nRequestID
+                    <<"(OrderRef)"<<it->second.nRequestID);
+           }
+           else
+           {
+               ++it;
+           }      
+        }
+
         moveNewtoPending(unit);
         retrieveOrderAndTradesStatus(unit);
     }//end every account
@@ -905,17 +933,9 @@ void TDEngineUpbit::moveNewtoPending(AccountUnitUpbit& unit)
 {
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
-    for(auto& strOrderRef : unit.cancelOrders)
+    for(auto it = unit.mapNewCancelOrders.begin() ; it != unit.mapNewCancelOrders.end();++it)
     {
-        for(auto it = unit.pendingOrderStatus.begin(); it != unit.pendingOrderStatus.end();++it)
-        {
-            if(strOrderRef == it->OrderRef)
-            {
-                unit.pendingOrderStatus.erase(it);
-                KF_LOG_INFO(logger,"[moveNewtoPending] remove cancel order (ordrRef)" << strOrderRef);
-                break;
-            }
-        }
+         unit.mapCancelOrders.insert(*it);
     }
 
     std::vector<PendingUpbitOrderStatus>::iterator newOrderStatusIterator;
@@ -960,6 +980,7 @@ bool TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
                 rtn_order.LimitPrice = std::round(stod(orderResult["price"].GetString()) * scale_offset);
                 rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
                 rtn_order.RequestID  = stOrderInfo.nRequestID;
+                 strncpy(rtn_order.BusinessUnit,uuid.c_str(),21);
                 on_rtn_order(&rtn_order);
                 raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                                         source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
@@ -980,7 +1001,7 @@ bool TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
         if(pendingOrderStatus.OrderStatus == LF_CHAR_AllTraded  || pendingOrderStatus.OrderStatus == LF_CHAR_Canceled
            || pendingOrderStatus.OrderStatus == LF_CHAR_Error)
         {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] order all traded. (OrderRef)" << pendingOrderStatus.OrderRef
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] order all traded  or cancel. (OrderRef)" << pendingOrderStatus.OrderRef
                              << "(status)" << pendingOrderStatus.OrderStatus);
             return true;
         }
@@ -1027,7 +1048,8 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
             KF_LOG_INFO(logger, "[retrieveTradeStatus]  (hasSendThisTradeId)" << hasSendThisTradeId << " (newtradeId)" << newtradeId);
             continue;
         }
-
+        strncpy(rtn_trade.TradeID,newtradeId.c_str(),21);
+        strncpy(rtn_trade.OrderSysID,uuid.c_str(),31);
        // KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
         rtn_trade.Volume = std::round(stod(resultTrade["trades"].GetArray()[i]["volume"].GetString()) * scale_offset);
         rtn_trade.Price = std::round(stod(resultTrade["trades"].GetArray()[i]["price"].GetString()) * scale_offset);
