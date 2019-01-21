@@ -127,7 +127,26 @@ cpr::Response TDEngineOceanEx::Post(const std::string& method_url,const std::str
                                        " (response.text) " << response.text.c_str());
     return response;
 }
-
+int64_t TDEngineOceanEx::checkPrice(int64_t price,std::string coinPair)
+{
+    //如117.17精度为2
+    //转换为LF标准应当为11717000000
+    //当117.17 表现为117.16999998 时，LF价格为11716999998，应当使用此算法矫正
+    int64_t base = 8;
+    auto it = mapPricePrecision.find(coinPair);
+    if(it == mapPricePrecision.end())
+    {
+        return price;
+    }
+    base = std::pow(10,base-it->second);//1000000
+    int64_t frontPart = price/base;//11716
+    int64_t backPart = price%base;//999998
+    if(backPart*2 >= base)
+    {
+        frontPart+=1;//11717
+    }
+    return frontPart*base;//11717000000
+}
 void TDEngineOceanEx::init()
 {
     ITDEngine::init();
@@ -205,7 +224,21 @@ TradeAccount TDEngineOceanEx::load_account(int idx, const json& j_config)
         KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
         KF_LOG_ERROR(logger, "},");
     }
-
+    //precision
+    if(j_config.find("pricePrecision") != j_config.end()) {
+                //has whiteLists
+        json precision = j_config["pricePrecision"].get<json>();
+        if(precision.is_object())
+        {
+            for (json::iterator it = precision.begin(); it != precision.end(); ++it)
+            {
+                std::string strategy_coinpair = it.key();
+                int pair_precision = it.value();
+                std::cout <<  "[pricePrecision] (strategy_coinpair) " << strategy_coinpair << " (precision) " << pair_precision<< std::endl;
+                mapPricePrecision.insert(std::make_pair(strategy_coinpair, pair_precision));
+            }
+        }
+    }
     //test
     Document json;
     get_account(unit, json);
@@ -1212,7 +1245,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            rtn_trade.Price = std::llround((newAmount - oldAmount)*1.0/(rtn_trade.Volume)+0.1);//(newAmount - oldAmount)/(rtn_trade.Volume);
+            rtn_trade.Price = checkPrice((newAmount - oldAmount)*1.0/(rtn_trade.Volume),orderStatusIterator->InstrumentID);//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
@@ -1310,7 +1343,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            rtn_trade.Price = std::llround((newAmount - oldAmount)*1.0/(rtn_trade.Volume)+0.1);//(newAmount - oldAmount)/(rtn_trade.Volume);
+            rtn_trade.Price = checkPrice((newAmount - oldAmount)*1.0/(rtn_trade.Volume),orderStatusIterator->InstrumentID);//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
