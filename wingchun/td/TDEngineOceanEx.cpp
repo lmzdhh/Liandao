@@ -1212,7 +1212,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
+            rtn_trade.Price = std::llround((newAmount - oldAmount)*1.0/(rtn_trade.Volume)+0.1);//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
@@ -1310,7 +1310,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            rtn_trade.Price = (newAmount - oldAmount)/(rtn_trade.Volume);
+            rtn_trade.Price = std::llround((newAmount - oldAmount)*1.0/(rtn_trade.Volume)+0.1);//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
