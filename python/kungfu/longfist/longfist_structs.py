@@ -363,6 +363,7 @@ class LFOrderActionField(Structure):
         ("LimitPrice", c_int64),	# 价格 
         ("VolumeChange", c_uint64),	# 数量变化 
         ("KfOrderID", c_int),	# Kf系统内订单ID 
+        ("MiscInfo", c_char * 30),	# 委托自定义标签 
         ("MassOrderSeqId", c_uint64),	
         ("MassOrderIndex", c_int),	
         ("MassOrderTotalNum", c_int),	
@@ -760,6 +761,7 @@ DataFieldMap = {
 		'BrokerID': 'c11',
 		'RequestID': 'i',
 		'OrderSysID': 'c31',
+        'MiscInfo': 'c30',
         'MassOrderSeqId':'i64',
 	    'MassOrderIndex':'i',
 	    'MassOrderTotalNum':'i',
