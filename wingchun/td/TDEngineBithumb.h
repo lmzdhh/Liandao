@@ -73,8 +73,8 @@ WC_NAMESPACE_START
             string baseUrl;
             // internal flags
             bool    logged_in;
-            std::vector<PendingOrderStatus> newOrderStatus;
-            std::vector<PendingOrderStatus> pendingOrderStatus;
+            //std::vector<PendingOrderStatus> newOrderStatus;
+            //std::vector<PendingOrderStatus> pendingOrderStatus;
 
             CoinPairWhiteList coinPairWhiteList;
             CoinPairWhiteList positionWhiteList;
@@ -132,26 +132,12 @@ WC_NAMESPACE_START
 
             virtual void set_reader_thread() override;
             void loop();
-            std::vector<std::string> split(std::string str, std::string token);
             void GetAndHandleOrderTradeResponse();
             void retrieveOrderStatus(AccountUnitBithumb& unit);
 
 
-            void onRtnTrade(AccountUnitBithumb& unit,LFRtnOrderField& order,Value& json);
-            void onRtnOrder(AccountUnitBithumb& unit,LFRtnOrderField& order,Value& json);
-            void handlerResponseOrderStatus(AccountUnitBithumb& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
-            void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
-
-
-
-            std::string parseJsonToString(Document &d);
-
-            void handlerResponsedOrderStatus(AccountUnitBithumb& unit);
-
-            void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, int64_t remoteOrderId);
-
-            void loopOrderActionNoResponseTimeOut();
-            void orderActionNoResponseTimeOut();
+            void onRtnTrade(AccountUnitBithumb& unit,LFRtnOrderField& order,rapidjson::Value& json);
+            bool onRtnOrder(AccountUnitBithumb& unit,LFRtnOrderField& order,rapidjson::Value& json);
         private:
             void get_account(AccountUnitBithumb& unit, Document& json);
             void send_order(AccountUnitBithumb& unit, const char *code,
