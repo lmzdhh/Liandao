@@ -819,12 +819,12 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
     if(errorId != 200)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
-        unit.mapNewCancelOrders[data->OrderRef] = stOrderInfo; 
         KF_LOG_INFO(logger, "[req_order_action] error (reeorId)  while retry after" <<  errorId);
     }
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_UPBIT, 1, requestId, errorId, errorMsg.c_str());
 
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+    unit.mapNewCancelOrders[data->OrderRef] = stOrderInfo; 
     KF_LOG_INFO(logger, "[req_order_action] (orderRef)" <<  data->OrderRef << "(retCode)" << errorId);
     
 }
