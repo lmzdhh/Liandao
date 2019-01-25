@@ -105,7 +105,8 @@ cpr::Response TDEngineBithumb::Post(const std::string& method_url,const std::str
                            {"Content-Length", to_string(reqbody.size())},
                            {"Api-Key", unit.api_key},
                            {"Api-Sign", strSign},
-                           {"Api-Nonce", strTimeStamp}
+                           {"Api-Nonce", strTimeStamp},
+                           {"api-client-type","1"}
                            },
                     Body{reqbody}, Timeout{30000});
     lock.unlock();
@@ -791,12 +792,14 @@ std::string TDEngineBithumb::construct_request_body(const AccountUnitBithumb& un
 {
     //std::string strPost = "endpoint="+endPoint+"&"+data;
     //std::string strEncode = utils::crypto::url_encode(strPost.c_str());
-    size_t nLen = data.length()+endPoint.length()+timeStamp.length()+3;
-    char* strData = new char[nLen]();
-    sprintf(strData,"%s%c%s%c%s",endPoint.c_str(),(char)1,data.c_str(),(char)1,timeStamp.c_str());
-    std::string strSHASign = hmac_sha512(unit.secret_key.c_str(),unit.secret_key.length(),strData,nLen);
+    //size_t nLen = data.length()+endPoint.length()+timeStamp.length()+3;
+    //char* strData = new char[nLen]();
+    //sprintf(strData,"%s%c%s%c%s",endPoint.c_str(),(char)1,data.c_str(),(char)1,timeStamp.c_str());
+    std::string strData=endPoint+(char)1+data+(char)1+timeStamp;
+    std::string strSHASign = hmac_sha512(unit.secret_key.c_str(),unit.secret_key.length(),strData,strData.length());
     std::string strSign = base64_encode((const unsigned char*)strSHASign.c_str(),(unsigned long)strSHASign.length(),false);
-    delete[] strData;
+    //delete[] strData;
+    KF_LOG_INFO(logger, "[construct_request_body] data" << strData << " len:" << strData.length() << "sha512" << strSHASign);
     return strSign;
 }
 
