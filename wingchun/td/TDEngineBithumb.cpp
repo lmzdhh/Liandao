@@ -793,9 +793,9 @@ std::string TDEngineBithumb::construct_request_body(const AccountUnitBithumb& un
     //std::string strEncode = utils::crypto::url_encode(strPost.c_str());
     size_t nLen = data.length()+endPoint.length()+timeStamp.length()+3;
     char* strData = new char[nLen]();
-    sprintf(strData,"%s%c%s%c%s",endPoint.c_str(),(char)0,data.c_str(),(char)0,timeStamp.c_str());
+    sprintf(strData,"%s%c%s%c%s",endPoint.c_str(),(char)1,data.c_str(),(char)1,timeStamp.c_str());
     std::string strSHASign = hmac_sha512(unit.secret_key.c_str(),unit.secret_key.length(),strData,nLen);
-    std::string strSign = base64_encode((const unsigned char*)strSHASign.c_str(),(unsigned long)strSHASign.length());
+    std::string strSign = base64_encode((const unsigned char*)strSHASign.c_str(),(unsigned long)strSHASign.length(),false);
     delete[] strData;
     return strSign;
 }

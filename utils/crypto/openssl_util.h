@@ -65,7 +65,7 @@ inline bool is_base64_url(unsigned char c) {
 	return (isalnum(c) || (c == '-') || (c == '_'));
 }
 
-std::string base64_encode(const unsigned char* bytes_to_encode, unsigned long in_len) {
+std::string base64_encode(const unsigned char* bytes_to_encode, unsigned long in_len,bool isComplete=true) {
     std::string ret;
     int i = 0;
     int j = 0;
@@ -98,7 +98,7 @@ std::string base64_encode(const unsigned char* bytes_to_encode, unsigned long in
         for (j = 0; (j < i + 1); j++)
             ret += base64_chars[char_array_4[j]];
 
-        while((i++ < 3))
+        while((i++ < 3) && isComplete)
             ret += '=';
 
     }
