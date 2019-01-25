@@ -796,7 +796,7 @@ std::string TDEngineBithumb::construct_request_body(const AccountUnitBithumb& un
     //char* strData = new char[nLen]();
     //sprintf(strData,"%s%c%s%c%s",endPoint.c_str(),(char)1,data.c_str(),(char)1,timeStamp.c_str());
     std::string strData=endPoint+(char)1+data+(char)1+timeStamp;
-    std::string strSHASign = hmac_sha512(unit.secret_key.c_str(),unit.secret_key.length(),strData,strData.length());
+    std::string strSHASign = hmac_sha512(unit.secret_key.c_str(),unit.secret_key.length(),strData.c_str(),strData.length());
     std::string strSign = base64_encode((const unsigned char*)strSHASign.c_str(),(unsigned long)strSHASign.length(),false);
     //delete[] strData;
     KF_LOG_INFO(logger, "[construct_request_body] data" << strData << " len:" << strData.length() << "sha512" << strSHASign);
@@ -809,7 +809,7 @@ void TDEngineBithumb::get_account(AccountUnitBithumb& unit, Document& json)
     KF_LOG_INFO(logger, "[get_account]");
 
     std::string requestPath = "/info/account";
-    std::string params = "apiKey="+unit.api_key+"&secretKey"+unit.secret_key+"&currency=BTC";
+    std::string params = "currency=BTC";
     const auto response = Post(requestPath,params,unit); 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -832,7 +832,7 @@ void TDEngineBithumb::send_order(AccountUnitBithumb& unit, const char *code,
 
         auto coinPair = SplitCoinPair(code);
         std::string requestPath = "/trade/place";
-        std::string params="apiKey="+unit.api_key+"&secretKey="+unit.secret_key+"&order_currency="+coinPair.first+"&payment_currency="+coinPair.second+"&units="+fToa(size)+"&price="+fToa(price)+
+        std::string params="order_currency="+coinPair.first+"&payment_currency="+coinPair.second+"&units="+fToa(size)+"&price="+fToa(price)+
                         "&type="+std::string(side);
         response = Post(requestPath,params,unit);
 
@@ -899,7 +899,7 @@ void TDEngineBithumb::cancel_order(AccountUnitBithumb& unit, std::string code, s
         should_retry = false;
 
         std::string requestPath = "/trade/cancel";
-        std::string params= "apiKey="+unit.api_key+"&secretKey="+unit.secret_key+"&order_id="+orderId+"&type="+(isBuy?std::string("bid"):std::string("ask"))+"&currency="+coinPair.first;
+        std::string params= "order_id="+orderId+"&type="+(isBuy?std::string("bid"):std::string("ask"))+"&currency="+coinPair.first;
         response = Post(requestPath,params,unit);
 
         getResponse(response.status_code, response.text, response.error.message, json);
@@ -921,7 +921,7 @@ void TDEngineBithumb::query_order(AccountUnitBithumb& unit, std::string code, st
 {
     KF_LOG_INFO(logger, "[query_order]");
     std::string requestPath = "/info/orders";
-    std::string params= "apiKey="+unit.api_key+"&secretKey="+unit.secret_key+"&order_id="+orderId;
+    std::string params= "order_id="+orderId;
     auto response = Post(requestPath,params,unit);
 
     getResponse(response.status_code, response.text, response.error.message, json);
@@ -931,7 +931,7 @@ void TDEngineBithumb::query_trade(AccountUnitBithumb& unit, std::string code, st
     KF_LOG_INFO(logger, "[query_trade]");
     auto coinPair = SplitCoinPair(code);
     std::string requestPath = "/info/order_detail";
-    std::string params= "apiKey="+unit.api_key+"&secretKey="+unit.secret_key+"&order_id="+orderId+"&type="+(isBuy?std::string("bid"):std::string("ask"))+"&currency="+coinPair.first;
+    std::string params= "order_id="+orderId+"&type="+(isBuy?std::string("bid"):std::string("ask"))+"&currency="+coinPair.first;
     auto response = Post(requestPath,params,unit);
 
     getResponse(response.status_code, response.text, response.error.message, json);
