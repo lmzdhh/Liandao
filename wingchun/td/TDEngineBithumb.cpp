@@ -805,8 +805,8 @@ void TDEngineBithumb::get_account(AccountUnitBithumb& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
 
-    std::string requestPath = "/Info/Account";
-    std::string params = "apiKey="+unit.api_key+"&secretKey"+unit.secret_key;
+    std::string requestPath = "/info/account";
+    std::string params = "apiKey="+unit.api_key+"&secretKey"+unit.secret_key+"&currency=BTC";
     const auto response = Post(requestPath,params,unit); 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
