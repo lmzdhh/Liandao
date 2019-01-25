@@ -203,12 +203,12 @@ void TDEngineBithumb::connect(long timeout_nsec)
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         Document doc;
         //
-        std::string requestPath = "/Info/Account";
-        std::string params = "apiKey="+unit.api_key+"&secretKey"+unit.secret_key;
-        const auto response = Post(requestPath,params,unit);
+        //std::string requestPath = "/info/account";
+        //std::string params = "apiKey="+unit.api_key+"&secretKey"+unit.secret_key+"&currency=BTC";
+        //const auto response = Post(requestPath,params,unit);
 
-        getResponse(response.status_code, response.text, response.error.message, doc);
-
+        //getResponse(response.status_code, response.text, response.error.message, doc);
+        get_account(unit,doc);
         if ( !unit.logged_in && doc.HasMember("status"))
         {
             std::string status = doc["status"].GetString();
