@@ -897,20 +897,12 @@ void TDEngineUpbit::GetAndHandleOrderTradeResponse()
             continue;
         }
 
-        for(auto it = unit.mapCancelOrders.begin(); it != unit.mapCancelOrders.end();)
+        for(auto it = unit.mapCancelOrders.begin(); it != unit.mapCancelOrders.end();  ++it;)
         {
             Document d;
-           auto nCode = cancel_order(unit,nullptr,it->second.strRemoteUUID.c_str(),d);
-           if(nCode == 200)
-           {
-               it = unit.mapCancelOrders.erase(it);
-                KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (req_order_action) (nRequestID)" << it->second.nRequestID
-                    <<"(OrderRef)"<<it->second.nRequestID);
-           }
-           else
-           {
-               ++it;
-           }      
+            cancel_order(unit,nullptr,it->second.strRemoteUUID.c_str(),d);
+            KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (req_order_action) (nRequestID)" << it->second.nRequestID
+                <<"(OrderRef)"<<it->second.nRequestID);
         }
 
         moveNewtoPending(unit);
@@ -937,6 +929,7 @@ void TDEngineUpbit::moveNewtoPending(AccountUnitUpbit& unit)
     {
          unit.mapCancelOrders.insert(*it);
     }
+    unit.mapNewCancelOrders.clear();
 
     std::vector<PendingUpbitOrderStatus>::iterator newOrderStatusIterator;
     for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
