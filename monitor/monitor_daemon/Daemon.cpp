@@ -136,7 +136,7 @@ void Daemon::onPong(WebSocket<SERVER> *ws, char *data, size_t len)
         if(cur_iter != m_clients.end())
         {
             cur_iter->second.pongValue = pongValue;
-            KF_LOG_DEBUG(m_logger, "user pong,name:" << cur_iter->second.clientInfo.name << ",ws:" << ws << ",pong value:" << pongValue);
+            KF_LOG_DEBUG(m_logger, "user pong,type:" << cur_iter->second.clientInfo.type<< ",name:" << cur_iter->second.clientInfo.name << ",ws:" << ws << ",pong value:" << pongValue);
         }
     }
 }
@@ -181,7 +181,7 @@ void Daemon::checkClient()
         }
         //send ping msg
         clientIter->first->ping(std::to_string(++clientInfo.pingValue).c_str());
-        KF_LOG_DEBUG(m_logger, "user ping,name:" << clientInfo.clientInfo.name << ",ws:" << clientIter->first << ",ping value:" << clientInfo.pingValue);
+        KF_LOG_DEBUG(m_logger, "user ping,type:" << clientInfo.clientInfo.type << ",name:" << clientInfo.clientInfo.name << ",ws:" << clientIter->first << ",ping value:" << clientInfo.pingValue);
         ++clientIter;
     }
 }
