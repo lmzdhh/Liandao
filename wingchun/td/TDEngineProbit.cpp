@@ -781,10 +781,13 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
     auto retryCounts = m_retryCounts;
     do
     {
-        if (PostRequest(url ,authToken , body, json))
+	Document rspDoc;  
+        if (PostRequest(url ,authToken , body, rspDoc))
         {
+	    json = std::move(rspDoc);
             break;
         }
+	json = std::move(rspDoc);
         KF_LOG_DEBUG(logger, "[send_order] try "<<retryCounts << " times,client_order_id:" << client_id);
         std::this_thread::sleep_for(std::chrono::milliseconds(m_retryIntervalMs));
     }while(retryCounts--);
@@ -802,10 +805,13 @@ void TDEngineProbit::cancel_order(const AccountUnitProbit& unit, const std::stri
     auto retryCounts = m_retryCounts;
     do
     {
-        if (PostRequest(url , authToken , body, json))
+	Document rspDoc;  
+        if (PostRequest(url , authToken , body, rspDoc))
         {
+	    json = std::move(rspDoc);
             break;
         }
+	json = std::move(rspDoc);
         KF_LOG_DEBUG(logger, "[cancel_order] try "<<retryCounts << " times,remote_order_id:" << orderId);
         std::this_thread::sleep_for(std::chrono::milliseconds(m_retryIntervalMs));
     }while(retryCounts--);

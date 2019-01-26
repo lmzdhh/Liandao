@@ -53,12 +53,15 @@ ADD_LIBRARY(bitmaxtd SHARED ${BITMAX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(bitmaxtd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
 INSTALL(TARGETS bitmaxtd DESTINATION "lib/wingchun")
 
-
 SET(BITFINEX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBitfinex.cpp TDEngineBitfinex.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
 ADD_LIBRARY(bitfinextd SHARED ${BITFINEX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(bitfinextd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS bitfinextd DESTINATION "lib/wingchun")
 
+SET(BITMEX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBitmex.cpp TDEngineBitmex.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
+ADD_LIBRARY(bitmextd SHARED ${BITMEX_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(bitmextd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS bitmextd DESTINATION "lib/wingchun")
 
 
 SET(HITBTC_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineHitBTC.cpp TDEngineHitBTC.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
@@ -72,13 +75,18 @@ ADD_LIBRARY(oceanextd SHARED ${OCEANEX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(oceanextd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS oceanextd DESTINATION "lib/wingchun")
 
-SET(OCEANEX2_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineOceanEx2.cpp TDEngineOceanEx2.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
-ADD_LIBRARY(oceanex2td SHARED ${OCEANEX2_SOURCE_FILES})
-TARGET_LINK_LIBRARIES(oceanex2td ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
-INSTALL(TARGETS oceanex2td DESTINATION "lib/wingchun")
+SET(OCEANEXB_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineOceanEx2.cpp TDEngineOceanEx2.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
+ADD_LIBRARY(oceanexbtd SHARED ${OCEANEXB_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(oceanexbtd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS oceanexbtd DESTINATION "lib/wingchun")
 
 SET(PROBIT_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineProbit.cpp TDEngineProbit.h  ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
 ADD_LIBRARY(probittd SHARED ${PROBIT_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(probittd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS probittd DESTINATION "lib/wingchun")
 INSTALL(TARGETS oceanextd DESTINATION "lib/wingchun")
+
+SET(DAYBIT_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineDaybit.cpp TDEngineDaybit.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
+ADD_LIBRARY(daybittd SHARED ${DAYBIT_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(daybittd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS daybittd DESTINATION "lib/wingchun")

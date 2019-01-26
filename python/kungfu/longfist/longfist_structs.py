@@ -831,13 +831,13 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_OCEANEX: LFRtnTradeField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_OCEANEX: LFOrderActionField,
 
-    #lf.MsgTypes.MSG_TYPE_LF_MD_OCEANEX2: LFMarketDataField,
-    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_OCEANEX2: LFQryPositionField,
-    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_OCEANEX2: LFRspPositionField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_OCEANEX2: LFInputOrderField,
-    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_OCEANEX2: LFRtnOrderField,
-    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_OCEANEX2: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_OCEANEX2: LFOrderActionField,
+    #lf.MsgTypes.MSG_TYPE_LF_MD_OCEANEXB: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_OCEANEXB: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_OCEANEXB: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_OCEANEXB: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_OCEANEXB: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_OCEANEXB: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_OCEANEXB: LFOrderActionField,
     # probit
     lf.MsgTypes.MSG_TYPE_LF_MD_PROBIT: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_PROBIT: LFQryPositionField,
@@ -845,7 +845,23 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_ORDER_PROBIT: LFInputOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_PROBIT: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_PROBIT: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_PROBIT: LFOrderActionField
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_PROBIT: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_BITHUMB: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITHUMB: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITHUMB: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BITHUMB: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITHUMB: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITHUMB: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITHUMB: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_DAYBIT: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_DAYBIT: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_DAYBIT: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_DAYBIT: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_DAYBIT: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_DAYBIT: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_DAYBIT: LFOrderActionField
 }
 
 MsgType2LFStruct.update(SnifferMsgType2Struct)

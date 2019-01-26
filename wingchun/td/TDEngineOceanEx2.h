@@ -1,6 +1,6 @@
 
-#ifndef PROJECT_TDENGINEOCEANEX2_H
-#define PROJECT_TDENGINEOCEANEX2_H
+#ifndef PROJECT_TDENGINEOCEANEXB_H
+#define PROJECT_TDENGINEOCEANEXB_H
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
 #include "CoinPairWhiteList.h"
@@ -16,7 +16,7 @@
 using rapidjson::Document;
 
 WC_NAMESPACE_START
- namespace oceanex2{
+ namespace oceanexb{
         struct PendingOrderStatus
         {
             char_31 InstrumentID;   //合约代码
@@ -95,7 +95,7 @@ WC_NAMESPACE_START
             virtual void release_api();
             virtual bool is_connected() const;
             virtual bool is_logged_in() const;
-            virtual string name() const { return "TDEngineOceanEx2"; };
+            virtual string name() const { return "TDEngineOceanExB"; };
 
             // req functions
             virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
@@ -111,7 +111,7 @@ WC_NAMESPACE_START
         private:
             // journal writers
             yijinjing::JournalWriterPtr raw_writer;
-            vector<oceanex2::AccountUnitOceanEx> account_units;
+            vector<oceanexb::AccountUnitOceanEx> account_units;
 
             std::string GetSide(const LfDirectionType& input);
             LfDirectionType GetDirection(std::string input);
@@ -125,44 +125,45 @@ WC_NAMESPACE_START
             void loop();
             std::vector<std::string> split(std::string str, std::string token);
             void GetAndHandleOrderTradeResponse();
-            void addNewQueryOrdersAndTrades(oceanex2::AccountUnitOceanEx& unit, const char_31 InstrumentID,
+            void addNewQueryOrdersAndTrades(oceanexb::AccountUnitOceanEx& unit, const char_31 InstrumentID,
                                             const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                             const uint64_t VolumeTraded, int64_t remoteOrderId);
-            void retrieveOrderStatus(oceanex2::AccountUnitOceanEx& unit);
-            void moveNewOrderStatusToPending(oceanex2::AccountUnitOceanEx& unit);
+            void retrieveOrderStatus(oceanexb::AccountUnitOceanEx& unit);
+            void moveNewOrderStatusToPending(oceanexb::AccountUnitOceanEx& unit);
 
-            void handlerResponseOrderStatus(oceanex2::AccountUnitOceanEx& unit, std::vector<oceanex2::PendingOrderStatus>::iterator orderStatusIterator, oceanex2::ResponsedOrderStatus& responsedOrderStatus);
-            void addResponsedOrderStatusNoOrderRef(oceanex2::ResponsedOrderStatus &responsedOrderStatus, Document& json);
+            void handlerResponseOrderStatus(oceanexb::AccountUnitOceanEx& unit, std::vector<oceanexb::PendingOrderStatus>::iterator orderStatusIterator, oceanexb::ResponsedOrderStatus& responsedOrderStatus);
+            void addResponsedOrderStatusNoOrderRef(oceanexb::ResponsedOrderStatus &responsedOrderStatus, Document& json);
 
 
 
             std::string parseJsonToString(Document &d);
 
-            void handlerResponsedOrderStatus(oceanex2::AccountUnitOceanEx& unit);
+            void handlerResponsedOrderStatus(oceanexb::AccountUnitOceanEx& unit);
 
             void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, int64_t remoteOrderId);
 
             void loopOrderActionNoResponseTimeOut();
             void orderActionNoResponseTimeOut();
         private:
-            void get_account(oceanex2::AccountUnitOceanEx& unit, Document& json);
-            void send_order(oceanex2::AccountUnitOceanEx& unit, const char *code,
+            void get_account(oceanexb::AccountUnitOceanEx& unit, Document& json);
+            void send_order(oceanexb::AccountUnitOceanEx& unit, const char *code,
                             const char *side, const char *type, double size, double price, double funds, Document& json);
 
-            void cancel_all_orders(oceanex2::AccountUnitOceanEx& unit, std::string code, Document& json);
-            void cancel_order(oceanex2::AccountUnitOceanEx& unit, std::string code, std::string orderId, Document& json);
-            void query_order(oceanex2::AccountUnitOceanEx& unit, std::string code, std::string orderId, Document& json);
+            void cancel_all_orders(oceanexb::AccountUnitOceanEx& unit, std::string code, Document& json);
+            void cancel_order(oceanexb::AccountUnitOceanEx& unit, std::string code, std::string orderId, Document& json);
+            void query_order(oceanexb::AccountUnitOceanEx& unit, std::string code, std::string orderId, Document& json);
             void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
             void printResponse(const Document& d);
 
             bool shouldRetry(Document& d);
 
-            std::string construct_request_body(const oceanex2::AccountUnitOceanEx& unit,const  std::string& data,bool isget = true);
+            std::string construct_request_body(const oceanexb::AccountUnitOceanEx& unit,const  std::string& data,bool isget = true);
             std::string createInsertOrdertring(const char *code,
                                                const char *side, const char *type, double size, double price);
 
-            cpr::Response Get(const std::string& url,const std::string& body, oceanex2::AccountUnitOceanEx& unit);
-            cpr::Response Post(const std::string& url,const std::string& body, oceanex2::AccountUnitOceanEx& unit);
+            cpr::Response Get(const std::string& url,const std::string& body, oceanexb::AccountUnitOceanEx& unit);
+            cpr::Response Post(const std::string& url,const std::string& body, oceanexb::AccountUnitOceanEx& unit);
+            int64_t checkPrice(int64_t price,std::string coinPair);
         private:
 
             struct lws_context *context = nullptr;
@@ -183,19 +184,21 @@ WC_NAMESPACE_START
             std::map<std::string, int64_t> localOrderRefRemoteOrderId;
 
             //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
-            std::map<int64_t, oceanex2::OrderActionSentTime> remoteOrderIdOrderActionSentTime;
+            std::map<int64_t, oceanexb::OrderActionSentTime> remoteOrderIdOrderActionSentTime;
 
 
-            std::vector<oceanex2::ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
+            std::vector<oceanexb::ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
 
             int max_rest_retry_times = 3;
             int retry_interval_milliseconds = 1000;
             int orderaction_max_waiting_seconds = 30;
+            
+            std::map<std::string,int> mapPricePrecision;
         };
 
 WC_NAMESPACE_END
 
-#endif //PROJECT_TDENGINEOCEANEX2_H
+#endif //PROJECT_TDENGINEOCEANEXB_H
 
 
 
