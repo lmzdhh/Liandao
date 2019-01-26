@@ -993,7 +993,7 @@ bool TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderRe
         if(pendingOrderStatus.OrderStatus == LF_CHAR_Canceled)
         {
             unit.mapCancelOrders.erase(strOrderRef);
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] erse cancel order (OrderRef)" << pendingOrderStatus.OrderRef
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] erase cancel order (OrderRef)" << pendingOrderStatus.OrderRef
                              << "(status)" << pendingOrderStatus.OrderStatus);
         }
         //remove order when finish
