@@ -45,7 +45,7 @@ inline unsigned char* hmac_sha384_byte( const char *key, const char *data) {
 
 inline std::string hmac_sha512( const char *key,size_t key_len, const char *data,size_t data_len) {
     unsigned char* digest;
-    digest = HMAC(EVP_sha256(), key, key_len, (unsigned char*)(data), data_len, NULL, NULL);
+    digest = HMAC(EVP_sha512(), key, key_len, (unsigned char*)(data), data_len, NULL, NULL);
     return b2a_hex((char *)digest, 64);
 }
 
@@ -65,7 +65,7 @@ inline bool is_base64_url(unsigned char c) {
 	return (isalnum(c) || (c == '-') || (c == '_'));
 }
 
-std::string base64_encode(const unsigned char* bytes_to_encode, unsigned long in_len,bool isComplete=true) {
+std::string base64_encode(const unsigned char* bytes_to_encode, unsigned long in_len) {
     std::string ret;
     int i = 0;
     int j = 0;
@@ -98,7 +98,7 @@ std::string base64_encode(const unsigned char* bytes_to_encode, unsigned long in
         for (j = 0; (j < i + 1); j++)
             ret += base64_chars[char_array_4[j]];
 
-        while((i++ < 3) && isComplete)
+        while(i++ < 3)
             ret += '=';
 
     }
