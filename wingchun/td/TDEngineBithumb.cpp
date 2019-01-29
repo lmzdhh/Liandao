@@ -32,6 +32,14 @@ using utils::crypto::hmac_sha512;
 using utils::crypto::base64_encode;
 USING_WC_NAMESPACE
 std::mutex g_unit_mutex;
+std::string fToa(double src,int n = 8)
+{
+    double end = std::pow(10,-1*(n+1));
+    std::string format ="%."+std::to_string(n)+"f";
+    char strTmp[20]{0};
+    sprintf(strTmp,format.c_str(),src+end);
+    return strTmp;
+} 
 TDEngineBithumb::TDEngineBithumb(): ITDEngine(SOURCE_BITHUMB)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.Bithumb");
@@ -834,14 +842,7 @@ void TDEngineBithumb::get_account(AccountUnitBithumb& unit, Document& json)
     const auto response = Post(requestPath,params,unit); 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
-std::string fToa(double src,int n = 8)
-{
-    double end = std::pow(10,-1*(n+1));
-    std::string format ="%."+std::to_string(n)+"f";
-    char strTmp[20]{0};
-    sprintf(strTmp,format.c_str(),src+end);
-    return strTmp;
-} 
+
 void TDEngineBithumb::send_order(AccountUnitBithumb& unit, const char *code,
                                  const char *side, const std::string& size, const std::string& price,bool isLimit, Document& json)
 {
