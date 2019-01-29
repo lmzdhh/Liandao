@@ -141,7 +141,7 @@ WC_NAMESPACE_START
         private:
             void get_account(AccountUnitBithumb& unit, Document& json);
             void send_order(AccountUnitBithumb& unit, const char *code,
-                            const char *side, double size, double price,bool isLimit, Document& json);
+                            const char *side, const std::string& size, const std::string& price,bool isLimit, Document& json);
 
             void cancel_all_orders(AccountUnitBithumb& unit, std::string code, Document& json);
             void cancel_order(AccountUnitBithumb& unit, std::string code, std::string orderId,bool isBuy, Document& json);

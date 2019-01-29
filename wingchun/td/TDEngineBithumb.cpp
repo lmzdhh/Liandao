@@ -52,9 +52,9 @@ bool isStatusOK(const std::string& status)
 {
     return status == "0000";
 }
-std::pair<std::string,std::string> SplitCoinPair(const std::string& coinpair)
+std::pair<std::string,std::string> SplitCoinPair(const std::string& coinpair,char split='-')
 {
-    auto pos = coinpair.find('-');
+    auto pos = coinpair.find(split);
     if(pos == std::string::npos)
     {
         return std::make_pair("","");
@@ -418,9 +418,16 @@ void TDEngineBithumb::req_order_insert(const LFInputOrderField* data, int accoun
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
-
+    int nPrecision= 8;
+    auto itPrecision = mapPricePrecision.find(data->InstrumentID);
+    if(itPrecision != mapPricePrecision.end())
+    {
+        nPrecision = itPrecision->second;
+    }
+    auto coinPair = SplitCoinPair(data->InstrumentID,'_');
     Document d;
-    send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset,data->OrderPriceType == LF_CHAR_LimitPrice , d);
+    //fToa(size,nPrecision)+"&price="+fToa(price,(coinPair.second == "KRW" ? 0 :nPrecision)
+    send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(), fToa(data->Volume*1.0/scale_offset,nPrecision), fToa(data->LimitPrice*1.0/scale_offset,(coinPair.second == "krw" ? 0 :nPrecision),data->OrderPriceType == LF_CHAR_LimitPrice , d);
     //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
     //not expected response
     if(d.HasParseError() || !d.IsObject())
@@ -473,7 +480,7 @@ void TDEngineBithumb::req_order_insert(const LFInputOrderField* data, int accoun
                 rtn_order.VolumeTraded = 0;
                 strcpy(rtn_order.ExchangeID, "bithumb");
                 strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_order.InstrumentID, ticker.c_str(), 31);
+                strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
                 rtn_order.Direction = data->Direction;
                 rtn_order.TimeCondition = LF_CHAR_GTC;
                 rtn_order.OrderPriceType = data->OrderPriceType;
@@ -613,7 +620,7 @@ void TDEngineBithumb::retrieveOrderStatus(AccountUnitBithumb& unit)
     std::lock_guard<std::mutex> lck(g_unit_mutex);
     for(auto it = unit.mapOrders.begin();it != unit.mapOrders.end(); ++it)
     {
-        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(it->second.InstrumentID));
+        std::string ticker = it->second.InstrumentID;
         if(ticker.length() == 0) {
             KF_LOG_INFO(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << it->second.InstrumentID);
             continue;
@@ -682,7 +689,7 @@ void TDEngineBithumb::retrieveOrderStatus(AccountUnitBithumb& unit)
     }
      for(auto iter = unit.mapOrders.begin();iter != unit.mapOrders.end();)
     {
-        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(iter->second.InstrumentID));
+        std::string ticker = std::string(iter->second.InstrumentID);
         if(ticker.length() == 0) {
             KF_LOG_INFO(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << iter->second.InstrumentID);
             continue;
@@ -836,7 +843,7 @@ std::string fToa(double src,int n = 8)
     return strTmp;
 } 
 void TDEngineBithumb::send_order(AccountUnitBithumb& unit, const char *code,
-                                 const char *side, double size, double price,bool isLimit, Document& json)
+                                 const char *side, const std::string& size, const std::string& price,bool isLimit, Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
 
@@ -845,16 +852,10 @@ void TDEngineBithumb::send_order(AccountUnitBithumb& unit, const char *code,
     bool should_retry = false;
     do {
         should_retry = false;
-        int nPrecision= 8;
-        auto itPrecision = mapPricePrecision.find(code);
-        if(itPrecision != mapPricePrecision.end())
-        {
-            nPrecision = itPrecision->second;
-        }
+        
         auto coinPair = SplitCoinPair(code);
         std::string requestPath = "/trade/place";
-        std::string params="order_currency="+coinPair.first+"&payment_currency="+coinPair.second+"&units="+fToa(size,nPrecision)+"&price="+fToa(price,(coinPair.second == "KRW" ? 0 :nPrecision))+
-                        "&type="+std::string(side);
+        std::string params="order_currency="+coinPair.first+"&payment_currency="+coinPair.second+"&units="+size+"&price="+price+"&type="+std::string(side);
         response = Post(requestPath,params,unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
