@@ -435,7 +435,7 @@ void TDEngineBithumb::req_order_insert(const LFInputOrderField* data, int accoun
     auto coinPair = SplitCoinPair(data->InstrumentID,'_');
     Document d;
     //fToa(size,nPrecision)+"&price="+fToa(price,(coinPair.second == "KRW" ? 0 :nPrecision)
-    send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(), fToa(data->Volume*1.0/scale_offset,nPrecision), fToa(data->LimitPrice*1.0/scale_offset,(coinPair.second == "krw" ? 0 :nPrecision),data->OrderPriceType == LF_CHAR_LimitPrice , d);
+    send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(), fToa(data->Volume*1.0/scale_offset,nPrecision), fToa(data->LimitPrice*1.0/scale_offset,(coinPair.second == "krw" ? 0 :nPrecision)),data->OrderPriceType == LF_CHAR_LimitPrice , d);
     //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
     //not expected response
     if(d.HasParseError() || !d.IsObject())
@@ -704,7 +704,7 @@ void TDEngineBithumb::retrieveOrderStatus(AccountUnitBithumb& unit)
         }
         //
         Document docOrder;
-        query_order(unit, ticker, iter->first, docOrder);
+        query_order(unit, ticker, iter->first,it->second.Direction == LF_CHAR_Buy, docOrder);
         /*
         {
             "status"    : "0000",
@@ -940,11 +940,11 @@ void TDEngineBithumb::cancel_order(AccountUnitBithumb& unit, std::string code, s
                                                                            " (response.text) " << response.text.c_str() );
 }
 
-void TDEngineBithumb::query_order(AccountUnitBithumb& unit, std::string code, std::string orderId, Document& json)
+void TDEngineBithumb::query_order(AccountUnitBithumb& unit, std::string code, std::string orderId,bool isBuy, Document& json)
 {
     KF_LOG_INFO(logger, "[query_order]");
     std::string requestPath = "/info/orders";
-    std::string params= "order_id="+orderId;
+    std::string params= "order_id="+orderId+"&type="+(isBuy?std::string("bid"):std::string("ask"));
     auto response = Post(requestPath,params,unit);
 
     getResponse(response.status_code, response.text, response.error.message, json);
