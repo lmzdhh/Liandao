@@ -704,7 +704,7 @@ void TDEngineBithumb::retrieveOrderStatus(AccountUnitBithumb& unit)
         }
         //
         Document docOrder;
-        query_order(unit, ticker, iter->first,it->second.Direction == LF_CHAR_Buy, docOrder);
+        query_order(unit, ticker, iter->first,iter->second.Direction == LF_CHAR_Buy, docOrder);
         /*
         {
             "status"    : "0000",
