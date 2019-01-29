@@ -853,7 +853,7 @@ void TDEngineBithumb::send_order(AccountUnitBithumb& unit, const char *code,
         }
         auto coinPair = SplitCoinPair(code);
         std::string requestPath = "/trade/place";
-        std::string params="order_currency="+coinPair.first+"&payment_currency="+coinPair.second+"&units="+fToa(size,nPrecision)+"&price="+fToa(price,(coinPair.second == "KRW" ? 0 :nPrecision)+
+        std::string params="order_currency="+coinPair.first+"&payment_currency="+coinPair.second+"&units="+fToa(size,nPrecision)+"&price="+fToa(price,(coinPair.second == "KRW" ? 0 :nPrecision))+
                         "&type="+std::string(side);
         response = Post(requestPath,params,unit);
 
