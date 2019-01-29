@@ -184,7 +184,21 @@ TradeAccount TDEngineBithumb::load_account(int idx, const json& j_config)
         KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
         KF_LOG_ERROR(logger, "},");
     }
-
+    //precision
+    if(j_config.find("pricePrecision") != j_config.end()) {
+                //has whiteLists
+        json precision = j_config["pricePrecision"].get<json>();
+        if(precision.is_object())
+        {
+            for (json::iterator it = precision.begin(); it != precision.end(); ++it)
+            {
+                std::string strategy_coinpair = it.key();
+                int pair_precision = it.value();
+                std::cout <<  "[pricePrecision] (strategy_coinpair) " << strategy_coinpair << " (precision) " << pair_precision<< std::endl;
+                mapPricePrecision.insert(std::make_pair(strategy_coinpair, pair_precision));
+            }
+        }
+    }
     //cancel_all_orders(unit, "etc_eth", json);
 
     // set up
@@ -813,10 +827,12 @@ void TDEngineBithumb::get_account(AccountUnitBithumb& unit, Document& json)
     const auto response = Post(requestPath,params,unit); 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
-std::string fToa(double src)
+std::string fToa(double src,int n = 8)
 {
+    double end = std::pow(10,-1*(n+1));
+    std::string format ="%."+std::to_string(n)+"f";
     char strTmp[20]{0};
-    sprintf(strTmp,"%.8f",src+0.000000001);
+    sprintf(strTmp,format.c_str(),src+end);
     return strTmp;
 } 
 void TDEngineBithumb::send_order(AccountUnitBithumb& unit, const char *code,
@@ -829,10 +845,15 @@ void TDEngineBithumb::send_order(AccountUnitBithumb& unit, const char *code,
     bool should_retry = false;
     do {
         should_retry = false;
-
+        int nPrecision= 8;
+        auto itPrecision = mapPricePrecision.find(code);
+        if(itPrecision != mapPricePrecision.end())
+        {
+            nPrecision = itPrecision->second;
+        }
         auto coinPair = SplitCoinPair(code);
         std::string requestPath = "/trade/place";
-        std::string params="order_currency="+coinPair.first+"&payment_currency="+coinPair.second+"&units="+fToa(size)+"&price="+fToa(price)+
+        std::string params="order_currency="+coinPair.first+"&payment_currency="+coinPair.second+"&units="+fToa(size,nPrecision)+"&price="+fToa(price,(coinPair.second == "KRW" ? 0 :nPrecision)+
                         "&type="+std::string(side);
         response = Post(requestPath,params,unit);
 

@@ -163,6 +163,7 @@ WC_NAMESPACE_START
 
             cpr::Response Get(const std::string& url,const std::string& body, oceanexb::AccountUnitOceanEx& unit);
             cpr::Response Post(const std::string& url,const std::string& body, oceanexb::AccountUnitOceanEx& unit);
+            int64_t checkPrice(int64_t price,std::string coinPair);
         private:
 
             struct lws_context *context = nullptr;
@@ -191,6 +192,8 @@ WC_NAMESPACE_START
             int max_rest_retry_times = 3;
             int retry_interval_milliseconds = 1000;
             int orderaction_max_waiting_seconds = 30;
+            
+            std::map<std::string,int> mapPricePrecision;
         };
 
 WC_NAMESPACE_END

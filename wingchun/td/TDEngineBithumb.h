@@ -183,6 +183,7 @@ WC_NAMESPACE_START
             int max_rest_retry_times = 3;
             int retry_interval_milliseconds = 1000;
             int orderaction_max_waiting_seconds = 30;
+            std::map<std::string,int> mapPricePrecision;
         };
 
 WC_NAMESPACE_END
