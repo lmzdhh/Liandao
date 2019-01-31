@@ -327,18 +327,18 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 	} 
 }
 
-void MDEngineBinance::on_lws_kline(const char* data, size_t len)
+void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 {
-	KF_LOG_INFO(logger, "processing 1-min trade bins data" << data);
+	KF_LOG_INFO(logger, "processing 1-min trade bins data" << src);
  	Document json;
-    d.Parse(data);
+    json.Parse(src);
     if(!json.HasMember("s") || !json.HasMember("k"))
     {
         KF_LOG_INFO(logger, "received 1-min trade bin does not have valid data");
         return;
     }  
     std::string symbol = json["s"].GetString();
-    std::string ticker = whiteList.GetKeyByValue(symbol);
+    std::string ticker = coinPairWhiteList.GetKeyByValue(symbol);
     if(ticker.empty())
     {
         KF_LOG_INFO(logger, "received 1-min trade bin symbol not in white list");
@@ -346,7 +346,7 @@ void MDEngineBinance::on_lws_kline(const char* data, size_t len)
     }
     KF_LOG_INFO(logger, "received 1-min trade bin symbol is " << symbol << " and ticker is " << ticker);
  	auto& data = json["k"];
-	if(data["x"].getBool())
+	if(data["x"].GetBool())
 	{
 		LFBarMarketDataField market;
 		memset(&market, 0, sizeof(market));
