@@ -18,7 +18,8 @@ public:
 	{
 		trade,
 		depth5,
-		depth20
+		depth20,
+        kline1m
 	};
 
 public:
@@ -51,6 +52,7 @@ private:
 
 	void on_lws_book_update(const char* data, size_t len, const std::string& ticker);
 
+    void on_lws_kline(const char* data, size_t len);
     void loop();
 
     virtual void set_reader_thread() override;

@@ -144,7 +144,7 @@ void MDEngineBinance::login(long timeout_nsec)
         connect_lws(map_itr->second, lws_event::trade);
         //connect_lws(map_itr->second, lws_event::depth5);
         connect_lws(map_itr->second, lws_event::depth20);
-
+		connect_lws(map_itr->second, lws_event::kline1m);
         map_itr++;
     }
 
@@ -169,6 +169,8 @@ void MDEngineBinance::connect_lws(std::string symbol, lws_event e)
 				case depth20:
 						path += t + "@depth20";
 						break;
+				case kline1m:
+						path += t + "@kline_1m";
 				default:
 						KF_LOG_ERROR(logger, "invalid lws event");
 						return;
@@ -208,6 +210,10 @@ void MDEngineBinance::on_lws_data(struct lws* conn, const char* data, size_t len
 	else if(iter->second.second == lws_event::depth5 || iter->second.second == lws_event::depth20)
 	{
 		on_lws_book_update(data, len, iter->second.first);
+	}
+	else if(iter->second.second == lws_event::kline1m)
+	{
+		on_lws_kline(data,len);
 	}
 }
 
@@ -321,6 +327,58 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 	} 
 }
 
+void MDEngineBinance::on_lws_kline(const char* data, size_t len)
+{
+	KF_LOG_INFO(logger, "processing 1-min trade bins data" << data);
+ 	Document json;
+    d.Parse(data);
+    if(!json.HasMember("s") || !json.HasMember("k"))
+    {
+        KF_LOG_INFO(logger, "received 1-min trade bin does not have valid data");
+        return;
+    }  
+    std::string symbol = json["s"].GetString();
+    std::string ticker = whiteList.GetKeyByValue(symbol);
+    if(ticker.empty())
+    {
+        KF_LOG_INFO(logger, "received 1-min trade bin symbol not in white list");
+        return;
+    }
+    KF_LOG_INFO(logger, "received 1-min trade bin symbol is " << symbol << " and ticker is " << ticker);
+ 	auto& data = json["k"];
+	if(data["x"].getBool())
+	{
+		LFBarMarketDataField market;
+		memset(&market, 0, sizeof(market));
+		strcpy(market.InstrumentID, ticker.c_str());
+		strcpy(market.ExchangeID, "binance");
+
+		struct tm cur_tm, start_tm, end_tm;
+		time_t now = time(0);
+		cur_tm = *localtime(&now);
+		strftime(market.TradingDay, 9, "%Y%m%d", &cur_tm);
+		
+		int nStartTime = data["t"].GetInt();
+		int nEndTime = data["T"].GetInt();
+		market.StartUpdateMillisec = nStartTime%1000;
+		nStartTime/= 1000;
+		sprintf(market.StartUpdateTime,"%2d%2d%2d",nStartTime/10000,(nStartTime%10000)/100,nStartTime%100);
+
+		market.EndUpdateMillisec = nEndTime%1000;
+		nEndTime/= 1000;
+		sprintf(market.EndUpdateTime,"%2d%2d%2d",nEndTime/10000,(nEndTime%10000)/100,nEndTime%100);
+
+		market.PeriodMillisec = 60000;
+		market.Open = std::round(data["o"].GetFloat() * scale_offset);;
+		market.Close = std::round(data["c"].GetFloat() * scale_offset);;
+		market.Low = std::round(data["l"].GetFloat() * scale_offset);;
+		market.High = std::round(data["h"].GetFloat() * scale_offset);;
+		//market.BestBidPrice = priceBook.GetBestBidPrice(ticker);
+		//market.BestAskPrice = priceBook.GetBestAskPrice(ticker);
+		//market.Volume = std::round(update["volume"].GetUint64() * scale_offset);;
+		on_market_bar_data(&market);
+	}
+}
 void MDEngineBinance::set_reader_thread()
 {
 	IMDEngine::set_reader_thread();
