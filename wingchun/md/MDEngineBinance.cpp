@@ -171,6 +171,7 @@ void MDEngineBinance::connect_lws(std::string symbol, lws_event e)
 						break;
 				case kline1m:
 						path += t + "@kline_1m";
+						break;
 				default:
 						KF_LOG_ERROR(logger, "invalid lws event");
 						return;
@@ -322,7 +323,7 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 
         strcpy(md.InstrumentID, strategy_ticker.c_str());
 	    strcpy(md.ExchangeID, "binance");
-
+		priceBook=md;
 	    on_price_book_update(&md);
 	} 
 }
@@ -358,24 +359,26 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 		cur_tm = *localtime(&now);
 		strftime(market.TradingDay, 9, "%Y%m%d", &cur_tm);
 		
-		int nStartTime = data["t"].GetInt();
-		int nEndTime = data["T"].GetInt();
-		market.StartUpdateMillisec = nStartTime%1000;
+		int64_t nStartTime = data["t"].GetInt64();
+		int64_t nEndTime = data["T"].GetInt64();
+		market.StartUpdateMillisec = (int)(nStartTime%1000);
 		nStartTime/= 1000;
-		sprintf(market.StartUpdateTime,"%2d%2d%2d",nStartTime/10000,(nStartTime%10000)/100,nStartTime%100);
+		start_tm = *localtime((time_t*)(&nStartTime);
+		strftime(market.StartUpdateTime,13, "%H:%M:%S", &start_tm);
 
-		market.EndUpdateMillisec = nEndTime%1000;
+		market.EndUpdateMillisec = (int)(nEndTime%1000);
 		nEndTime/= 1000;
-		sprintf(market.EndUpdateTime,"%2d%2d%2d",nEndTime/10000,(nEndTime%10000)/100,nEndTime%100);
+		end_tm =  *localtime((time_t*)(&nEndTime);
+		strftime(market.EndUpdateTime,13, "%H:%M:%S", &end_tm);
 
 		market.PeriodMillisec = 60000;
 		market.Open = std::round(data["o"].GetFloat() * scale_offset);;
 		market.Close = std::round(data["c"].GetFloat() * scale_offset);;
 		market.Low = std::round(data["l"].GetFloat() * scale_offset);;
 		market.High = std::round(data["h"].GetFloat() * scale_offset);;
-		//market.BestBidPrice = priceBook.GetBestBidPrice(ticker);
-		//market.BestAskPrice = priceBook.GetBestAskPrice(ticker);
-		//market.Volume = std::round(update["volume"].GetUint64() * scale_offset);;
+		market.BestBidPrice = priceBook.BidLevels[0];
+		market.BestAskPrice = priceBook.AskLevels[0];
+		market.Volume = std::round(std::stod(data["v"].GetString()) * scale_offset);;
 		on_market_bar_data(&market);
 	}
 }
