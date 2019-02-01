@@ -240,19 +240,22 @@ class LFBarMarketDataField(Structure):
     _fields_ = [
         ("TradingDay", c_char * 9),	# 交易日 
         ("InstrumentID", c_char * 31),	# 合约代码 
+        ("ExchangeID",c_char * 9),      #交易所代码
         ("UpperLimitPrice", c_int64),	# 涨停板价 
         ("LowerLimitPrice", c_int64),	# 跌停板价 
         ("StartUpdateTime", c_char * 13),	# 首tick修改时间 
         ("StartUpdateMillisec", c_int),	# 首tick最后修改毫秒 
         ("EndUpdateTime", c_char * 13),	# 尾tick最后修改时间 
         ("EndUpdateMillisec", c_int),	# 尾tick最后修改毫秒 
-        ("PeriodMillisec", c_int),	
+        ("PeriodMillisec", c_int),	    #周期（毫秒）
         ("Open", c_int64),	# 开 
         ("Close", c_int64),	# 收 
         ("Low", c_int64),	# 低 
         ("High", c_int64),	# 高 
         ("Volume", c_uint64),	# 区间交易量 
         ("StartVolume", c_uint64),	# 初始总交易量 
+        ("BestBidPrice", c_int64),	 
+        ("BestAskPrice", c_int64)	
         ]
 
 class LFQryPositionField(Structure):

@@ -243,22 +243,22 @@ struct LFBarMarketDataField
 {
 	char_9   	TradingDay;            //交易日
 	char_31  	InstrumentID;          //合约代码
-        char_9   	ExchangeID;
+    char_9   	ExchangeID;			   //交易所代码
 	int64_t   	UpperLimitPrice;       //涨停板价
 	int64_t   	LowerLimitPrice;       //跌停板价
 	char_13  	StartUpdateTime;       //首tick修改时间
 	int      	StartUpdateMillisec;   //首tick最后修改毫秒
 	char_13  	EndUpdateTime;         //尾tick最后修改时间
 	int      	EndUpdateMillisec;     //尾tick最后修改毫秒
-	int		PeriodMillisec;
+	int			PeriodMillisec;        //周期（毫秒）
 	int64_t   	Open;                  //开
 	int64_t   	Close;                 //收
 	int64_t   	Low;                   //低
 	int64_t   	High;                  //高
 	uint64_t   	Volume;                //区间交易量
 	uint64_t   	StartVolume;           //初始总交易量
-        int64_t         BestBidPrice;
-        int64_t         BestAskPrice;
+    int64_t         BestBidPrice;      
+    int64_t         BestAskPrice;
 };
 
 struct LFQryPositionField
