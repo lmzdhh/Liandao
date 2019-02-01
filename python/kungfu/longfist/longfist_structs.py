@@ -739,8 +739,8 @@ DataFieldMap = {
         'Close':'i64',	# 收 
         'Low':'i64',	# 低 
         'High':'i64',	# 高 
-        'Volume', 'i64',	# 区间交易量 
-        'StartVolume', 'i64',	# 初始总交易量 
+        'Volume': 'i64',	# 区间交易量 
+        'StartVolume': 'i64',	# 初始总交易量 
         'BestBidPrice':'i64',	 
         'BestAskPrice':'i64'	
 	},
