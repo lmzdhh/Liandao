@@ -725,21 +725,24 @@ DataFieldMap = {
 		'Position': 'i',
 	},
 	'LFBarMarketDataField': {
-		'InstrumentID': 'c31',
-		'Volume': 'd',
-		'StartVolume': 'd',
-		'EndUpdateMillisec': 'i',
-		'PeriodMillisec': 'i',
-		'High': 'd',
-		'TradingDay': 'c9',
-		'LowerLimitPrice': 'd',
-		'Low': 'd',
-		'UpperLimitPrice': 'd',
-		'Close': 'd',
-		'EndUpdateTime': 'c13',
-		'StartUpdateTime': 'c13',
-		'Open': 'd',
-		'StartUpdateMillisec': 'i',
+        'TradingDay': 'c9',	# 交易日 
+        'InstrumentID': 'c31',	# 合约代码 
+        'ExchangeID':'c9',      #交易所代码
+        'UpperLimitPrice': 'i64',	# 涨停板价 
+        'LowerLimitPrice': 'i64',	# 跌停板价 
+        'StartUpdateTime': 'c13',	# 首tick修改时间 
+        'StartUpdateMillisec': 'i',	# 首tick最后修改毫秒 
+        'EndUpdateTime': 'c13',	# 尾tick最后修改时间 
+        'EndUpdateMillisec': 'i',	# 尾tick最后修改毫秒 
+        'PeriodMillisec': 'i',	    #周期（毫秒）
+        'Open':'i64',	
+        'Close':'i64',	# 收 
+        'Low':'i64',	# 低 
+        'High':'i64',	# 高 
+        'Volume', 'i64',	# 区间交易量 
+        'StartVolume', 'i64',	# 初始总交易量 
+        'BestBidPrice':'i64',	 
+        'BestAskPrice':'i64'	
 	},
 	'LFL2TradeField': {
 		'InstrumentID': 'c31',
