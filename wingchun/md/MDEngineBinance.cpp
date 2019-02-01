@@ -372,10 +372,10 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 		strftime(market.EndUpdateTime,13, "%H:%M:%S", &end_tm);
 
 		market.PeriodMillisec = 60000;
-		market.Open = std::round(data["o"].GetFloat() * scale_offset);;
-		market.Close = std::round(data["c"].GetFloat() * scale_offset);;
-		market.Low = std::round(data["l"].GetFloat() * scale_offset);;
-		market.High = std::round(data["h"].GetFloat() * scale_offset);;
+		market.Open = std::round(std::stod(data["o"].GetString()) * scale_offset);;
+		market.Close = std::round(std::stod(data["c"].GetString()) * scale_offset);;
+		market.Low = std::round(std::stod(data["l"].GetString()) * scale_offset);;
+		market.High = std::round(std::stod(data["h"].GetString()) * scale_offset);;
 		market.BestBidPrice = priceBook.BidLevels[0].price;
 		market.BestAskPrice = priceBook.AskLevels[0].price;
 		market.Volume = std::round(std::stod(data["v"].GetString()) * scale_offset);;
