@@ -73,7 +73,7 @@ private:
     static constexpr int scale_offset = 1e8;
 
     struct lws_context *context = nullptr;
-	LFPriceBook20Field priceBook;
+	std::map<std::string,LFPriceBook20Field> priceBook;
 	
 	std::unordered_map<struct lws *,std::pair<std::string, lws_event> > lws_handle_map;
 };

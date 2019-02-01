@@ -323,7 +323,7 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 
         strcpy(md.InstrumentID, strategy_ticker.c_str());
 	    strcpy(md.ExchangeID, "binance");
-		priceBook=md;
+		priceBook[ticker]=md;
 	    on_price_book_update(&md);
 	} 
 }
@@ -372,13 +372,17 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 		strftime(market.EndUpdateTime,13, "%H:%M:%S", &end_tm);
 
 		market.PeriodMillisec = 60000;
-		market.Open = std::round(std::stod(data["o"].GetString()) * scale_offset);;
-		market.Close = std::round(std::stod(data["c"].GetString()) * scale_offset);;
-		market.Low = std::round(std::stod(data["l"].GetString()) * scale_offset);;
-		market.High = std::round(std::stod(data["h"].GetString()) * scale_offset);;
-		market.BestBidPrice = priceBook.BidLevels[0].price;
-		market.BestAskPrice = priceBook.AskLevels[0].price;
-		market.Volume = std::round(std::stod(data["v"].GetString()) * scale_offset);;
+		market.Open = std::round(std::stod(data["o"].GetString()) * scale_offset);
+		market.Close = std::round(std::stod(data["c"].GetString()) * scale_offset);
+		market.Low = std::round(std::stod(data["l"].GetString()) * scale_offset);
+		market.High = std::round(std::stod(data["h"].GetString()) * scale_offset);		
+		market.Volume = std::round(std::stod(data["v"].GetString()) * scale_offset);
+		auto itPrice = priceBook.find(symbol);
+		if(itPrice != priceBook.end())
+		{
+			market.BestBidPrice = itPrice->second.BidLevels[0].price;
+			market.BestAskPrice = itPrice->second.AskLevels[0].price;
+		}
 		on_market_bar_data(&market);
 	}
 }
