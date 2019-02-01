@@ -363,12 +363,12 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 		int64_t nEndTime = data["T"].GetInt64();
 		market.StartUpdateMillisec = (int)(nStartTime%1000);
 		nStartTime/= 1000;
-		start_tm = *localtime((time_t*)(&nStartTime);
+		start_tm = *localtime((time_t*)(&nStartTime));
 		strftime(market.StartUpdateTime,13, "%H:%M:%S", &start_tm);
 
 		market.EndUpdateMillisec = (int)(nEndTime%1000);
 		nEndTime/= 1000;
-		end_tm =  *localtime((time_t*)(&nEndTime);
+		end_tm =  *localtime((time_t*)(&nEndTime));
 		strftime(market.EndUpdateTime,13, "%H:%M:%S", &end_tm);
 
 		market.PeriodMillisec = 60000;
@@ -376,8 +376,8 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 		market.Close = std::round(data["c"].GetFloat() * scale_offset);;
 		market.Low = std::round(data["l"].GetFloat() * scale_offset);;
 		market.High = std::round(data["h"].GetFloat() * scale_offset);;
-		market.BestBidPrice = priceBook.BidLevels[0];
-		market.BestAskPrice = priceBook.AskLevels[0];
+		market.BestBidPrice = priceBook.BidLevels[0].price;
+		market.BestAskPrice = priceBook.AskLevels[0].price;
 		market.Volume = std::round(std::stod(data["v"].GetString()) * scale_offset);;
 		on_market_bar_data(&market);
 	}
