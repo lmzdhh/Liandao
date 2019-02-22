@@ -1023,7 +1023,7 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
     AccountUnitBitfinex& unit = findAccountUnitBitfinexByWebsocketConn(conn);
 
     int64_t remoteOrderId = order_i.GetArray()[0].IsInt64();
-    int gid = order_i.GetArray()[1].GetInt();
+    //int gid = order_i.GetArray()[1].GetInt();
     int cid = order_i.GetArray()[2].GetInt();
     std::string symbol = order_i.GetArray()[3].GetString();
     double remaining_amount = order_i.GetArray()[6].GetDouble();
@@ -1053,18 +1053,18 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
 
     if(remaining_amount >= 0) {
         //剩余数量
-        rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset);
-        rtn_order.Direction = LF_CHAR_Buy;
+        rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset);     
     } else {
         rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset * -1);
-        rtn_order.Direction = LF_CHAR_Sell;
     }
 
     if(amount_orig > 0) {
         //数量
         rtn_order.VolumeTotalOriginal = std::round(amount_orig * scale_offset);
+        rtn_order.Direction = LF_CHAR_Buy;
     } else {
         rtn_order.VolumeTotalOriginal = std::round(amount_orig * scale_offset * -1);
+         rtn_order.Direction = LF_CHAR_Sell;
     }
 
     //今成交数量
@@ -1139,13 +1139,15 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
 
                         OrderInsertData& cache = itr->second;
                         cache.remoteOrderId = remoteOrderId;
-
+                        on_rsp_order_insert(&cache.data, cache.requestId, 0, stateValue.c_str());
                         raw_writer->write_error_frame(&cache.data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITFINEX, 1, cache.requestId, 0, stateValue.c_str());
                         KF_LOG_INFO(logger, "TDEngineBitfinex::onNotification: (cid) " << cid
                                                                                        << " (orderId)" << cache.remoteOrderId <<
                                                                                        " (orderType)" << orderType <<
                                                                                        " (state)" << state <<
                                                                                        " (stateValue)" << stateValue);
+                        
+                        onOrder(conn,notify_data);
                     }
                     //the pendingOrderActionData wait and got remoteOrderId, then send OrderAction
                     std::unordered_map<int, OrderActionData>::iterator orderActionItr;
