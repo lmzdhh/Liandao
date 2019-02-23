@@ -1151,6 +1151,7 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                         if(cache.OrderStatus != OrderStatus ||  OrderStatus == LF_CHAR_PartTradedQueueing )
                         {
                             onOrder(conn,notify_data);
+                            cache.OrderStatus == OrderStatus
                         }
                     }
                     //the pendingOrderActionData wait and got remoteOrderId, then send OrderAction
