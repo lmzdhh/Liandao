@@ -1146,8 +1146,12 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                                                                                        " (orderType)" << orderType <<
                                                                                        " (state)" << state <<
                                                                                        " (stateValue)" << stateValue);
-                        
-                        onOrder(conn,notify_data);
+                        std::string order_status = notify_data.GetArray()[13].GetString();
+                        LfOrderStatusType OrderStatus = GetOrderStatus(order_status);     
+                        if(cache.OrderStatus != OrderStatus ||  OrderStatus == LF_CHAR_PartTradedQueueing )
+                        {
+                            onOrder(conn,notify_data);
+                        }
                     }
                     //the pendingOrderActionData wait and got remoteOrderId, then send OrderAction
                     std::unordered_map<int, OrderActionData>::iterator orderActionItr;
