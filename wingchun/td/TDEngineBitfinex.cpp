@@ -1044,13 +1044,13 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
     } else {
         rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset * -1);
     }
-     if(LF_CHAR_AllTraded == rtn_order.OrderStatus && abs(rtn_order.VolumeTotal) > 0))
+    if(LF_CHAR_AllTraded == rtn_order.OrderStatus && abs(rtn_order.VolumeTotal) > 0)
     {
         rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
     }
     //今成交数量
     rtn_order.VolumeTraded = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTotal;
-    if(iter->second.OrderStatus == rtn_order.OrderStatus && iter->second.VolumeTraded == rtn_order.VolumeTraded)
+    if(iter->second.rtnOrder.OrderStatus == rtn_order.OrderStatus && iter->second.rtnOrder.VolumeTraded == rtn_order.VolumeTraded)
         return;
     on_rtn_order(&rtn_order);
     iter->second.rtnOrder = rtn_order;
@@ -1404,7 +1404,7 @@ void TDEngineBitfinex::req_order_insert(const LFInputOrderField* data, int accou
     rtn_order.TimeCondition = data->TimeCondition;
     rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, data->OrderRef, 13);
-    rtn_order.VolumeTotalOriginal = data->olume;
+    rtn_order.VolumeTotalOriginal = data->Volume;
     rtn_order.LimitPrice = data->LimitPrice;
     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal;
 
@@ -1412,7 +1412,7 @@ void TDEngineBitfinex::req_order_insert(const LFInputOrderField* data, int accou
     cache.requestId = requestId;
     cache.remoteOrderId = 0;
     cache.dateStr = dateStr;
-    memcpy(&cache.rtnOrder, rtn_order, sizeof(LFRtnOrderField));
+    memcpy(&cache.rtnOrder, &rtn_order, sizeof(LFRtnOrderField));
     memcpy(&cache.data, data, sizeof(LFInputOrderField));
     CIDorderInsertData.insert(std::pair<int, OrderInsertData>(cid, cache));
 }
