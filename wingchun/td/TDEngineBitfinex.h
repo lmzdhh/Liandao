@@ -58,7 +58,7 @@ struct OrderInsertData
     //            这种情况可能发生在 我们发单以后， on-req还没有来得及返回orderid，我们就发送撤单指令了
     std::string dateStr;
 
-    LfOrderStatusType OrderStatus = LF_CHAR_Unknown;  //报单状态
+    LFRtnOrderField rtnOrder;
 };
 
 struct OrderActionData
