@@ -1022,14 +1022,19 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
 {
     KF_LOG_INFO(logger, "TDEngineBitfinex::onOrder.");
     AccountUnitBitfinex& unit = findAccountUnitBitfinexByWebsocketConn(conn);
+    if(!order_i.GetArray()[2].IsInt())
+    {
+        KF_LOG_ERROR(logger, "[onOrder]: invalid value in order");
+        return;
+    }
     int cid = order_i.GetArray()[2].GetInt();
     auto iter = CIDorderInsertData.find(cid);
     if(iter == CIDorderInsertData.end())
     {
-        KF_LOG_INFO(logger, "[onOrder]: not find in local orders , ignore it:" << cid);
+        KF_LOG_ERROR(logger, "[onOrder]: not find in local orders , ignore it:" << cid);
         return;
     }
-    int64_t remoteOrderId = order_i.GetArray()[0].IsInt64();
+    int64_t remoteOrderId = order_i.GetArray()[0].GetInt64();
     double remaining_amount = order_i.GetArray()[6].GetDouble();
 
     std::string order_status = order_i.GetArray()[13].GetString();
