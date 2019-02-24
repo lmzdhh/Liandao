@@ -1053,6 +1053,7 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
     if(iter->second.OrderStatus == rtn_order.OrderStatus && iter->second.VolumeTraded == rtn_order.VolumeTraded)
         return;
     on_rtn_order(&rtn_order);
+    iter->second.rtnOrder = rtn_order;
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                             source_id, MSG_TYPE_LF_RTN_ORDER_BITFINEX,
                             1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
