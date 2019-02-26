@@ -1511,7 +1511,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
         if (order_count_over_limit())
         {
             //send err msg to strategy
-            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 10000 limit.\"}";
+            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 100000 limit.\"}";
             json.Parse(strErr.c_str());
             return;
         }
@@ -1595,9 +1595,9 @@ bool TDEngineBinance::shouldRetry(int http_status_code, std::string errorMsg, st
 
 bool TDEngineBinance::order_count_over_limit()
 {
-    if (order_total_count >= 10000)
+    if (order_total_count >= 100000)
     {
-        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " over 10000/day limit!");
+        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " over 100000/day limit!");
         return true;
     }
     
@@ -1892,7 +1892,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 
         if (order_count_over_limit())
         {
-            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 10000 limit.\"}";
+            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 100000 limit.\"}";
             json.Parse(strErr.c_str());
             return;
         }
