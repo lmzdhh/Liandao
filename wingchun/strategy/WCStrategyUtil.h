@@ -70,12 +70,12 @@ public:
     bool subscribe_market_data(boost::python::list tickers, short source);
 
     /** take actions */
-    int insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
-    int insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
-    int insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
-    int insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
+    int insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,char* misc_info = "");
+    int insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,char* misc_info = "");
+    int insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,char* misc_info = "");
+    int insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,char* misc_info = "");
     int req_position(short source);
-    int cancel_order(short source, int order_id);
+    int cancel_order(short source, int order_id,char* misc_info = nullptr);
 
     /** callback */
     /** process callback functions that match time, return number of functions that executed */
