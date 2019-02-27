@@ -48,7 +48,7 @@ using utils::crypto::base64_encode;
 
 USING_WC_NAMESPACE
 
-
+std::mutex http_mutex;
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.Binance");
@@ -1511,7 +1511,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
         if (order_count_over_limit())
         {
             //send err msg to strategy
-            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 10000 limit.\"}";
+            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 100000 limit.\"}";
             json.Parse(strErr.c_str());
             return;
         }
@@ -1538,7 +1538,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 	            return;
 	        }
 		}
-
+        std::unique_lock<std::mutex> lck(http_mutex);
         response = Post(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                                   Body{body}, Timeout{100000}, Interface{interface});
@@ -1546,7 +1546,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
         KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                          " (response.error.message) " << response.error.message <<
                                                          " (response.text) " << response.text.c_str());
-
+        lck.unlock();
 
         if (response.status_code == HTTP_CONNECT_REFUSED)
         {
@@ -1595,9 +1595,9 @@ bool TDEngineBinance::shouldRetry(int http_status_code, std::string errorMsg, st
 
 bool TDEngineBinance::order_count_over_limit()
 {
-    if (order_total_count >= 10000)
+    if (order_total_count >= 100000)
     {
-        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " over 10000/day limit!");
+        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " over 100000/day limit!");
         return true;
     }
     
@@ -1815,7 +1815,7 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
 		    return;
 		}
 	}
-
+    std::unique_lock<std::mutex> lck(http_mutex);
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                               Body{body}, Timeout{100000}, Interface{interface});
@@ -1824,7 +1824,7 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
 											  " interface [" << interface <<
                                               "] (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
-
+    lck.unlock();
     if (response.status_code == HTTP_CONNECT_REFUSED)
     {
         meet_429();
@@ -1892,7 +1892,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 
         if (order_count_over_limit())
         {
-            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 10000 limit.\"}";
+            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 100000 limit.\"}";
             json.Parse(strErr.c_str());
             return;
         }
@@ -1919,7 +1919,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 	            return;
 	        }
 		}
-
+        std::unique_lock<std::mutex> lck(http_mutex);
         response = Delete(Url{url},
                                   Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                                   Body{body}, Timeout{100000}, Interface{interface});
@@ -1927,7 +1927,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
         KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                  " (response.error.message) " << response.error.message <<
                                                  " (response.text) " << response.text.c_str());
-
+        lck.unlock();
         if (response.status_code == HTTP_CONNECT_REFUSED)
         {
             meet_429();
@@ -2007,7 +2007,7 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 			return;
 		}
 	}
-	
+	std::unique_lock<std::mutex> lck(http_mutex);
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                               Body{body}, Timeout{100000}, Interface{interface});
@@ -2016,6 +2016,7 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 												" interface [" << interface <<
                                                 "] (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
+    lck.unlock();
     if (response.status_code == HTTP_CONNECT_REFUSED)
     {
         meet_429();
@@ -2077,7 +2078,7 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
     string url = requestPath + queryString;
 
     handle_request_weight(GetOpenOrder_Type);
-
+    std::unique_lock<std::mutex> lck(http_mutex);
     const auto response = Get(Url{url},
                                  Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                                  Body{body}, Timeout{100000});
@@ -2085,6 +2086,7 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
     KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response.status_code) " << response.status_code <<
                                                  " (response.error.message) " << response.error.message <<
                                                  " (response.text) " << response.text.c_str());
+    lck.unlock();
     /*If the symbol is not sent, orders for all symbols will be returned in an array.
     [
       {
@@ -2121,7 +2123,7 @@ void TDEngineBinance::get_exchange_time(AccountUnitBinance& unit, Document &json
     std::string body = "";
 
     string url = requestPath + queryString;
-
+    std::unique_lock<std::mutex> lck(http_mutex);
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
                               Body{body}, Timeout{100000});
@@ -2144,7 +2146,7 @@ void TDEngineBinance::get_exchange_infos(AccountUnitBinance& unit, Document &jso
     std::string body = "";
 
     string url = requestPath + queryString;
-
+    std::unique_lock<std::mutex> lck(http_mutex);
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
                               Body{body}, Timeout{100000});
@@ -2178,7 +2180,7 @@ void TDEngineBinance::get_account(AccountUnitBinance& unit, Document &json)
     queryString.append( signature );
 
     string url = requestPath + queryString;
-
+    std::unique_lock<std::mutex> lck(http_mutex);
     const auto response = Get(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
                               Body{body}, Timeout{100000});

@@ -44,8 +44,9 @@ void PyWCStrategy::start()
         PyEval_InitThreads();
     std::signal(SIGTERM, IWCDataProcessor::signal_handler);
     std::signal(SIGINT, IWCDataProcessor::signal_handler);
-    data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
-    KF_LOG_INFO(logger, "[start] data started");
+    //data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
+    //KF_LOG_INFO(logger, "[start] data started");
+    IWCStrategy::start();
 }
 
 void PyWCStrategy::on_market_data(const LFMarketDataField* data, short source, long rcv_time)

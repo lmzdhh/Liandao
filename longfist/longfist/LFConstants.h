@@ -11,6 +11,7 @@
 // Index for Sources...
 enum exchange_source_index : short
 {
+    SOURCE_UNKNOWN =-1,
     SOURCE_CTP = 1,
     SOURCE_XTP = 15,
     SOURCE_BINANCE = 16,
@@ -27,8 +28,7 @@ enum exchange_source_index : short
 	SOURCE_OCEANEXB = 27,
     SOURCE_PROBIT = 28,
     SOURCE_BITHUMB = 29,
-    SOURCE_DAYBIT = 31,
-    SOURCE_UNKNOWN
+    SOURCE_DAYBIT = 31  
 };
 
 inline const char* get_str_from_source_index(exchange_source_index source)
