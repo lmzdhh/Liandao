@@ -74,7 +74,8 @@ yjj journal -n TD_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 20
 yjj journal -n TD_RAW_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 22206
  * */
 static TDEngineBitfinex* global_md = nullptr;
-
+std::recursive_mutex insertMapMutex;
+std::recursive_mutex actionMapMutex;
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
 
@@ -809,13 +810,27 @@ void TDEngineBitfinex::onTradeExecutionUpdate(struct lws* conn, Document& json)
                                                                                    << " (maker)" << maker);
 
 
-
-        OrderInsertData InsertData = findOrderInsertDataByOrderId(remoteOrderId);
-        if(InsertData.requestId == 0) {
+        std::lock_guard<std::recursive_mutex> lck(insertMapMutex);
+        std::unordered_map<int, OrderInsertData>::iterator itr;
+        for(itr = CIDorderInsertData.begin(); itr != CIDorderInsertData.end(); ++itr)
+        {
+            KF_LOG_DEBUG(logger, "[findOrderInsertDataByOrderId] (requestId)" << itr->second.requestId <<
+                                                                          " (remoteOrderId)" << itr->second.remoteOrderId <<
+                                                                          " (dateStr)" << itr->second.dateStr << " (OrderRef) " <<
+                                                                          itr->second.data.OrderRef << " (LimitPrice)" <<
+                                                                          itr->second.data.LimitPrice << " (Volume)" << itr->second.data.Volume);
+            if(itr->second.remoteOrderId == orderId)
+            {
+                break;
+            }
+        }
+        if(itr == CIDorderInsertData.end())
+        {
             //not found
             KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecutionUpdate: cannot find orderId, ignore (orderId)" << remoteOrderId);
             return;
         }
+        //OrderInsertData InsertData = itr->second;
 
         //send OnRtnTrade
         LFRtnTradeField rtn_trade;
@@ -825,9 +840,9 @@ void TDEngineBitfinex::onTradeExecutionUpdate(struct lws* conn, Document& json)
         std::string strTradeID = std::to_string(trade_id);
         strncpy(rtn_trade.TradeID, strTradeID.c_str(), 21);
         strncpy(rtn_trade.InstrumentID, ticker.c_str(), 31);
-        strncpy(rtn_trade.OrderRef, InsertData.data.OrderRef, 13);
-        rtn_trade.OffsetFlag = InsertData.data.OffsetFlag;
-        rtn_trade.HedgeFlag = InsertData.data.HedgeFlag;
+        strncpy(rtn_trade.OrderRef, itr->second.data.OrderRef, 13);
+        rtn_trade.OffsetFlag = itr->second.data.OffsetFlag;
+        rtn_trade.HedgeFlag = itr->second.data.HedgeFlag;
 
         if(exec_amount >= 0) {
             rtn_trade.Volume = std::round(exec_amount * scale_offset);
@@ -843,6 +858,10 @@ void TDEngineBitfinex::onTradeExecutionUpdate(struct lws* conn, Document& json)
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BITFINEX, 1, -1);
+        if(itr->second.rtnOrder.OrderStatus == LF_CHAR_Canceled || itr->second.rtnOrder.OrderStatus == LF_CHAR_AllTraded)
+        {
+            CIDorderInsertData.erase(itr);
+        }
     }
 }
 
@@ -1027,6 +1046,7 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
         KF_LOG_ERROR(logger, "[onOrder]: invalid value in order");
         return;
     }
+    std::lock_guard<std::recursive_mutex> lck(insertMapMutex);
     int cid = order_i.GetArray()[2].GetInt();
     auto iter = CIDorderInsertData.find(cid);
     if(iter == CIDorderInsertData.end())
@@ -1108,7 +1128,7 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
 //                        return;
 //                    }
                     int64_t remoteOrderId = notify_data.GetArray()[0].GetInt64();
-
+                    std::unique_lock<std::recursive_mutex> lck(insertMapMutex);
                     std::unordered_map<int, OrderInsertData>::iterator itr;
                     itr = CIDorderInsertData.find(cid);
                     if (itr != CIDorderInsertData.end()) {
@@ -1124,12 +1144,14 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                                                                                        " (stateValue)" << stateValue);                   
                         onOrder(conn,notify_data);                          
                     }
+                    lck.unlock()
                     //the pendingOrderActionData wait and got remoteOrderId, then send OrderAction
+                    std::lock_guard<std::recursive_mutex> lck(actionMapMutex);
                     std::unordered_map<int, OrderActionData>::iterator orderActionItr;
                     orderActionItr = pendingOrderActionData.find(cid);
                     if (orderActionItr != pendingOrderActionData.end()) {
                         OrderActionData& cache = orderActionItr->second;
-
+                        std::lock_guard<std::recursive_mutex> lck(actionMapMutex);
                         std::string cancelOrderJsonString = createCancelOrderIdJsonString(remoteOrderId);
                         addPendingSendMsg(unit, cancelOrderJsonString);
                         KF_LOG_DEBUG(logger, "TDEngineBitfinex::onNotification: pending_and_send  [req_order_action] createCancelOrderIdJsonString (remoteOrderId) " << remoteOrderId);
@@ -1144,17 +1166,18 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                     //send order action with remoteOrderId, will get this
                     if(notify_data.GetArray()[0].IsInt64()) {
                         int64_t remoteOrderId = notify_data.GetArray()[0].GetInt64();
-
+                        std::lock_guard<std::recursive_mutex> lck(actionMapMutex);
                         std::unordered_map<int64_t, OrderActionData>::iterator itr;
                         itr = RemoteOrderIDorderActionData.find(remoteOrderId);
                         if (itr != RemoteOrderIDorderActionData.end()) {
                             OrderActionData cache = itr->second;
                             raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFINEX, 1, cache.requestId, 0, stateValue.c_str());
+                            RemoteOrderIDorderActionData.erase(itr);
                         }
                     } else if(notify_data.GetArray()[2].IsInt()) {
                         //send order action with cid+dateStr, will get this
                         int cid = notify_data.GetArray()[2].GetInt();
-
+                        std::lock_guard<std::recursive_mutex> lck(actionMapMutex);
                         std::unordered_map<int, OrderActionData>::iterator itr;
                         itr = CIDorderActionData.find(cid);
                         if (itr != CIDorderActionData.end()) {
@@ -1178,7 +1201,7 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
 //                        KF_LOG_ERROR(logger, "[onNotification]: not in WhiteList , ignore it: (symbol)" << symbol << " (cid)" << cid);
 //                        return;
 //                    }
-
+                    std::lock_guard<std::recursive_mutex> lck(insertMapMutex);
                     std::unordered_map<int, OrderInsertData>::iterator itr;
                     itr = CIDorderInsertData.find(cid);
                     if (itr != CIDorderInsertData.end()) {
@@ -1199,7 +1222,7 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                     //send order action with remoteOrderId, will get this
                     if(notify_data.GetArray()[0].IsInt64()) {
                         int64_t remoteOrderId = notify_data.GetArray()[0].GetInt64();
-
+                        std::lock_guard<std::recursive_mutex> lck(actionMapMutex);
                         std::unordered_map<int64_t, OrderActionData>::iterator itr;
                         itr = RemoteOrderIDorderActionData.find(remoteOrderId);
                         if (itr != RemoteOrderIDorderActionData.end()) {
@@ -1210,9 +1233,11 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                                                                                                                            " (KfOrderID)" << cache.data.KfOrderID);
                             on_rsp_order_action(&cache.data, cache.requestId, 100, stateValue.c_str());
                             raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFINEX, 1, cache.requestId, 100, stateValue.c_str());
+                            RemoteOrderIDorderActionData.erase(itr);
                         }
                     } else if(notify_data.GetArray()[2].IsInt()) {
                         //send order action with cid+dateStr, will get this
+                        std::lock_guard<std::recursive_mutex> lck(actionMapMutex);
                         int cid = notify_data.GetArray()[2].GetInt();
                         std::unordered_map<int, OrderActionData>::iterator itr;
                         itr = CIDorderActionData.find(cid);
@@ -1224,6 +1249,7 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                                                                                                                            " (KfOrderID)" << cache.data.KfOrderID);
                             on_rsp_order_action(&cache.data, cache.requestId, 100, stateValue.c_str());
                             raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFINEX, 1, cache.requestId, 100, stateValue.c_str());
+                            CIDorderActionData.erase(itr);
                         }
                     }
                 }
@@ -1419,6 +1445,7 @@ void TDEngineBitfinex::req_order_insert(const LFInputOrderField* data, int accou
     cache.dateStr = dateStr;
     memcpy(&cache.rtnOrder, &rtn_order, sizeof(LFRtnOrderField));
     memcpy(&cache.data, data, sizeof(LFInputOrderField));
+    std::lock_guard<std::recursive_mutex> lck(insertMapMutex);
     CIDorderInsertData.insert(std::pair<int, OrderInsertData>(cid, cache));
 }
 
@@ -1467,6 +1494,7 @@ void TDEngineBitfinex::req_order_action(const LFOrderActionField* data, int acco
     }
 
     int cid = atoi(data->OrderRef);
+    std::lock_guard<std::recursive_mutex> lck(actionMapMutex);
     if(insertData.remoteOrderId > 0) {
         //use remote order id first
         std::string cancelOrderJsonString = createCancelOrderIdJsonString(insertData.remoteOrderId);
@@ -1498,6 +1526,7 @@ void TDEngineBitfinex::req_order_action(const LFOrderActionField* data, int acco
 
 OrderInsertData TDEngineBitfinex::findOrderInsertDataByOrderId(int64_t orderId)
 {
+    std::lock_guard<std::recursive_mutex> lck(insertMapMutex);
     std::unordered_map<int, OrderInsertData>::iterator itr;
     for(itr = CIDorderInsertData.begin(); itr != CIDorderInsertData.end(); ++itr)
     {
@@ -1517,6 +1546,7 @@ OrderInsertData TDEngineBitfinex::findOrderInsertDataByOrderId(int64_t orderId)
 
 OrderInsertData TDEngineBitfinex::findOrderInsertDataByOrderRef(const char_21 orderRef)
 {
+    std::lock_guard<std::recursive_mutex> lck(insertMapMutex);
     std::unordered_map<int, OrderInsertData>::iterator itr;
     for(itr = CIDorderInsertData.begin(); itr != CIDorderInsertData.end(); ++itr)
     {
