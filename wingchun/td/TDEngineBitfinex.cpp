@@ -819,7 +819,7 @@ void TDEngineBitfinex::onTradeExecutionUpdate(struct lws* conn, Document& json)
                                                                           " (dateStr)" << itr->second.dateStr << " (OrderRef) " <<
                                                                           itr->second.data.OrderRef << " (LimitPrice)" <<
                                                                           itr->second.data.LimitPrice << " (Volume)" << itr->second.data.Volume);
-            if(itr->second.remoteOrderId == orderId)
+            if(itr->second.remoteOrderId == remoteOrderId)
             {
                 break;
             }
@@ -1144,14 +1144,12 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                                                                                        " (stateValue)" << stateValue);                   
                         onOrder(conn,notify_data);                          
                     }
-                    lck.unlock()
                     //the pendingOrderActionData wait and got remoteOrderId, then send OrderAction
-                    std::lock_guard<std::recursive_mutex> lck(actionMapMutex);
+                    std::lock_guard<std::recursive_mutex> lck2(actionMapMutex);
                     std::unordered_map<int, OrderActionData>::iterator orderActionItr;
                     orderActionItr = pendingOrderActionData.find(cid);
                     if (orderActionItr != pendingOrderActionData.end()) {
                         OrderActionData& cache = orderActionItr->second;
-                        std::lock_guard<std::recursive_mutex> lck(actionMapMutex);
                         std::string cancelOrderJsonString = createCancelOrderIdJsonString(remoteOrderId);
                         addPendingSendMsg(unit, cancelOrderJsonString);
                         KF_LOG_DEBUG(logger, "TDEngineBitfinex::onNotification: pending_and_send  [req_order_action] createCancelOrderIdJsonString (remoteOrderId) " << remoteOrderId);
