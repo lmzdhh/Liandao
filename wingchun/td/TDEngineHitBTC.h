@@ -4,6 +4,7 @@
 
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
+#include "CoinPairWhiteList.h"
 #include <vector>
 #include <sstream>
 #include <map>
@@ -11,7 +12,8 @@
 #include <mutex>
 #include "Timer.h"
 #include <document.h>
-#include "CoinPairWhiteList.h"
+#include <libwebsockets.h>
+
 using rapidjson::Document;
 
 WC_NAMESPACE_START
@@ -20,48 +22,76 @@ WC_NAMESPACE_START
  * account information unit extra is here.
  */
 
-struct PendingCoinmexOrderStatus
+//struct PendingHitBTCOrderStatus
+//{
+//    char_31 InstrumentID;   //合约代码
+//    char_21 OrderRef;       //报单引用
+//    LfOrderStatusType OrderStatus;  //报单状态
+//    uint64_t VolumeTraded;  //今成交数量
+//    uint64_t averagePrice;//HitBTC given averagePrice on response of query_order
+//};
+//
+//struct PendingHitBTCTradeStatus
+//{
+//    char_31 InstrumentID;   //合约代码
+//    uint64_t last_trade_id; //for myTrade
+//};
+//
+//struct SendOrderFilter
+//{
+//    char_31 InstrumentID;   //合约代码
+//    int ticksize; //for price round.
+//    //...other
+//};
+//
+//struct SubscribeHitBTCBaseQuote
+//{
+//    std::string base;
+//    std::string quote;
+//};
+
+struct PositionSetting
 {
-    char_31 InstrumentID;   //合约代码
-    char_21 OrderRef;       //报单引用
-    LfOrderStatusType OrderStatus;  //报单状态
-    uint64_t VolumeTraded;  //今成交数量
-    uint64_t averagePrice;//coinmex given averagePrice on response of query_order
+
+            string ticker;
+            bool isLong;
+            uint64_t amount;
+
 };
 
-struct PendingCoinmexTradeStatus
-{
-    char_31 InstrumentID;   //合约代码
-    uint64_t last_trade_id; //for myTrade
-};
-
-struct SendOrderFilter
-{
-    char_31 InstrumentID;   //合约代码
-    int ticksize; //for price round.
-    //...other
-};
-
-struct SubscribeCoinmexBaseQuote
-{
-    std::string base;
-    std::string quote;
-};
-
-struct AccountUnitCoinmex
+struct AccountUnitHitBTC
 {
     string api_key;
     string secret_key;
-    string passphrase;
-    //coinmex and bitmore use the same api, use this parameter for them
     string baseUrl;
     // internal flags
     bool    logged_in;
 
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
+    std::vector<std::string> newPendingSendMsg;
+    std::vector<std::string> pendingSendMsg;
+    struct lws * websocketConn;
 };
 
+        struct OrderInsertData
+        {
+            LFInputOrderField data;
+            int requestId;
+            //交易所反馈的orderId,在通知消息on_req能得到这个数据, findOrderRefByOrderid() will use this, for the trade info only has orderId
+            int64_t remoteOrderId;
+
+            //    撤单有两种，一种是用orderid 另一种是用clientid + date ,所以在发单时候记录一下当前日期，留待撤单时使用
+            //            如果撤单时发现有orderid  会优先使用orderid ，没有orderid 的时候，才会使用clientid + date
+            //            这种情况可能发生在 我们发单以后， on-req还没有来得及返回orderid，我们就发送撤单指令了
+            std::string dateStr;
+        };
+
+        struct OrderActionData
+        {
+            LFOrderActionField data;
+            int requestId;
+        };
 
 /**
  * CTP trade engine
@@ -93,24 +123,67 @@ public:
 public:
     TDEngineHitBTC();
     ~TDEngineHitBTC();
+
+
+    void on_lws_data(struct lws* conn, const char* data, size_t len);
+    void on_lws_connection_error(struct lws* conn);
+    int lws_write_subscribe(struct lws* conn);
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
-    vector<AccountUnitCoinmex> account_units;
+    vector<AccountUnitHitBTC> account_units;
 
-    std::string GetSide(const LfDirectionType& input);
-    LfDirectionType GetDirection(std::string input);
+    //std::string GetSide(const LfDirectionType& input);
+    //LfDirectionType GetDirection(std::string input);
     std::string GetType(const LfOrderPriceTypeType& input);
     LfOrderPriceTypeType GetPriceType(std::string input);
     LfOrderStatusType GetOrderStatus(std::string input);
 
-    void loop();
+    //void loop();
+
+    inline int64_t getTimestamp();
+
+    inline std::string getTimestampString();
+
+    std::string createAuthJsonString(AccountUnitHitBTC& unit );
+    std::string parseJsonToString(Document &d);
+    std::string createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr);
+    std::string createCancelOrderIdJsonString(int64_t orderId);
+    std::string createCancelOrderCIdJsonString(int cid, std::string dateStr);
+    std::string getDateStr();
+
+
+    void lws_login(AccountUnitHitBTC& unit, long timeout_nsec);
+    void onInfo(Document& json);
+    void onAuth(struct lws * websocketConn, Document& json);
+    void onPing(Document& json);
+    void onPosition(struct lws * websocketConn, Document& json);
+    void onTradeExecuted(struct lws * websocketConn, Document& json);
+    void onTradeExecutionUpdate(struct lws * websocketConn, Document& json);
+    void onOrderSnapshot(struct lws * websocketConn, Document& json);
+    void onOrderNewUpdateCancel(struct lws * websocketConn, Document& json);
+    void onNotification(struct lws * websocketConn, Document& json);
+
+
+    void onOrder(struct lws * websocketConn, rapidjson::Value& json);
+
+
+    AccountUnitHitBTC& findAccountUnitHitBTCByWebsocketConn(struct lws * websocketConn);
+
+    void addPendingSendMsg(AccountUnitHitBTC& unit, std::string msg);
+    void moveNewtoPending(AccountUnitHitBTC& unit);
+
+    OrderInsertData findOrderInsertDataByOrderId(int64_t orderId);
+    OrderInsertData findOrderInsertDataByOrderRef(const char_21 orderRef);
 
     static constexpr int scale_offset = 1e8;
+    struct lws_context *context = nullptr;
 
     ThreadPtr rest_thread;
     uint64_t last_rest_get_ts = 0;
     int rest_get_interval_ms = 500;
+    std::vector<PositionSetting> positionHolder;
+
 
     std::mutex* mutex_order_and_trade = nullptr;
 
@@ -121,10 +194,12 @@ private:
     int64_t timeDiffOfExchange = 0;
 
 private:
-    int HTTP_RESPONSE_OK = 200;
-    void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
-    void printResponse(const Document& d);
-    inline std::string getTimestampString();
+
+
+    std::unordered_map<int, OrderInsertData> CIDorderInsertData;
+    std::unordered_map<int, OrderActionData> CIDorderActionData;
+    std::unordered_map<int, OrderActionData> pendingOrderActionData;
+    std::unordered_map<int64_t, OrderActionData> RemoteOrderIDorderActionData;
 
 };
 
