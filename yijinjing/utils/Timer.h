@@ -136,6 +136,12 @@ inline struct tm parseNano(long nano)
     return *localtime(&sec_num);
 }
 
+inline struct tm getCurLocalTime()
+{
+    time_t now;
+    time(&now);
+    return *localtime(&now);
+}
 YJJ_NAMESPACE_END
 
 #endif //YIJINJING_TIMER_H

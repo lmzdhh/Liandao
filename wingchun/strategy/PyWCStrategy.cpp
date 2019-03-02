@@ -44,8 +44,9 @@ void PyWCStrategy::start()
         PyEval_InitThreads();
     std::signal(SIGTERM, IWCDataProcessor::signal_handler);
     std::signal(SIGINT, IWCDataProcessor::signal_handler);
-    data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
-    KF_LOG_INFO(logger, "[start] data started");
+    //data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
+    //KF_LOG_INFO(logger, "[start] data started");
+    IWCStrategy::start();
 }
 
 void PyWCStrategy::on_market_data(const LFMarketDataField* data, short source, long rcv_time)
@@ -65,7 +66,18 @@ void PyWCStrategy::on_price_book_update(const LFPriceBook20Field* data, short so
     if (obj != bp::object() && IWCDataProcessor::signal_received <= 0)
     {
         START_PYTHON_FUNC_CALLING
-            obj((uintptr_t)data, source, rcv_time);
+        obj((uintptr_t)data, source, rcv_time);
+        END_PYTHON_FUNC_CALLING
+    }
+}
+
+void PyWCStrategy::on_market_bar_data(const LFBarMarketDataField* data, short source, long rcv_time)
+{
+    bp::object& obj = py_on_data[MSG_TYPE_LF_BAR_MD];
+    if (obj != bp::object() && IWCDataProcessor::signal_received <= 0)
+    {
+        START_PYTHON_FUNC_CALLING
+        obj((uintptr_t)data, source, rcv_time);
         END_PYTHON_FUNC_CALLING
     }
 }

@@ -34,7 +34,7 @@ void setup_signal_callback()
     std::signal(SIGKILL, IWCDataProcessor::signal_handler);
 }
 
-IWCStrategy::IWCStrategy(const string &name): name(name)
+IWCStrategy::IWCStrategy(const string &name): name(name), m_monitorClient(MonitorClient::create())
 {
     logger = yijinjing::KfLog::getStrategyLogger(name, name);
     util = WCStrategyUtilPtr(new WCStrategyUtil(name));
@@ -46,7 +46,11 @@ IWCStrategy::IWCStrategy(const string &name): name(name)
 void IWCStrategy::start()
 {
     data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
-    KF_LOG_INFO(logger, "[start] data started");
+    KF_LOG_INFO(logger, "[start] data started,name:" << name);
+    if (!connectMonitor("ws://127.0.0.1:45678", name, "st"))
+    {
+        KF_LOG_INFO(logger, "connect to monitor error,name@" << name << ",url@" << "ws://127.0.0.1:45678");
+    }
 }
 
 IWCStrategy::~IWCStrategy()
@@ -77,6 +81,11 @@ void IWCStrategy::stop()
     {
         data->stop();
     }
+    if (m_monitorClient)
+    {
+        m_monitorClient->setCallback(nullptr);
+        m_monitorClient.reset();
+    }
 }
 
 void IWCStrategy::run()
@@ -96,6 +105,11 @@ void IWCStrategy::block()
 void IWCStrategy::on_market_data(const LFMarketDataField* data, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[market_data] (source)" << source << " (ticker)" << data->InstrumentID << " (bid1_price)" << data->BidPrice1 << " (ask1_price)" << data->AskPrice1);
+}
+
+void IWCStrategy::on_market_bar_data(const LFBarMarketDataField* data, short source, long rcv_time)
+{
+    KF_LOG_DEBUG(logger, "[market_bar_data] (source)" << source << " (ticker)" << data->InstrumentID << " (bid_price)" << data->BestBidPrice << " (ask_price)" << data->BestAskPrice);
 }
 
 void IWCStrategy::on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time)
@@ -280,4 +294,15 @@ int IWCStrategy::cancel_order(short source, int order_id)
 {
     CHECK_TD_READY(source);
     return util->cancel_order(source, order_id);
+}
+
+bool IWCStrategy::connectMonitor(const std::string &url, const std::string &name, const std::string &type)
+{
+    m_monitorClient->init(logger);
+    m_monitorClient->setCallback(this);
+    if(!m_monitorClient->connect(url))
+    {
+        return false;
+    }
+    return m_monitorClient->login(name, type);
 }

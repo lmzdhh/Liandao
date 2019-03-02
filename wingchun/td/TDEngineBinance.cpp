@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <cpr/cpr.h>
 #include <chrono>
+#include <queue>
 #include "../../utils/crypto/openssl_util.h"
 
 using cpr::Delete;
@@ -25,6 +26,7 @@ using cpr::Parameters;
 using cpr::Payload;
 using cpr::Post;
 using cpr::Timeout;
+using cpr::Interface;
 
 using rapidjson::StringRef;
 using rapidjson::Writer;
@@ -40,7 +42,12 @@ using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
+
+#define HTTP_CONNECT_REFUSED 429
+#define HTTP_CONNECT_BANS	418
+
 USING_WC_NAMESPACE
+
 
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
 {
@@ -48,11 +55,15 @@ TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
     KF_LOG_INFO(logger, "[ATTENTION] default to confirm settlement and no authentication!");
 
     mutex_order_and_trade = new std::mutex();
+    mutex_weight = new std::mutex();
+    mutex_handle_429 = new std::mutex();
 }
 
 TDEngineBinance::~TDEngineBinance()
 {
     if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
+    if(mutex_weight != nullptr) delete mutex_weight;
+    if(mutex_handle_429 != nullptr) delete mutex_handle_429;
 }
 
 void TDEngineBinance::init()
@@ -76,6 +87,27 @@ void TDEngineBinance::resize_accounts(int account_num)
 TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
+
+	string interfaces;
+	int interface_timeout = 300000;
+	if(j_config.find("interfaces") != j_config.end()) {
+		interfaces = j_config["interfaces"].get<string>();
+	}
+
+	if(j_config.find("interface_timeout_ms") != j_config.end()) {
+		interface_timeout = j_config["interface_timeout_ms"].get<int>();
+	}
+
+	if(j_config.find("interface_switch") != j_config.end()) {
+		m_interface_switch = j_config["interface_switch"].get<int>();
+	}
+
+	KF_LOG_INFO(logger, "[load_account] interface switch: " << m_interface_switch);
+	if (m_interface_switch > 0) {
+		m_interfaceMgr.init(interfaces, interface_timeout);
+		m_interfaceMgr.print();
+	}
+	
     // internal load
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
@@ -101,6 +133,25 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (order_action_recvwindow_ms)" << order_action_recvwindow_ms);
 
+    if(j_config.find("order_count_per_second") != j_config.end()) {
+        order_count_per_second = j_config["order_count_per_second"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (order_count_per_second)" << order_count_per_second);
+
+    if(j_config.find("request_weight_per_minute") != j_config.end()) {
+        request_weight_per_minute = j_config["request_weight_per_minute"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (request_weight_per_minute)" << request_weight_per_minute);
+
+    if(j_config.find("prohibit_order_ms") != j_config.end()) {
+        prohibit_order_ms = j_config["prohibit_order_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (prohibit_order_ms)" << prohibit_order_ms);
+
+    if(j_config.find("default_429_rest_interval_ms") != j_config.end()) {
+        default_429_rest_interval_ms = j_config["default_429_rest_interval_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (default_429_rest_interval_ms)" << default_429_rest_interval_ms);
 
     if(j_config.find("max_rest_retry_times") != j_config.end()) {
         max_rest_retry_times = j_config["max_rest_retry_times"].get<int>();
@@ -593,6 +644,8 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     //paser the order/trade info in the response result
     if(!d.HasParseError() && d.IsObject() && !d.HasMember("code"))
     {
+        //order insert success,on_rtn_order with NotTouched status first
+        onRtnNewOrder(data, unit, requestId);
         if(!d.HasMember("status"))
         {//no status, it is ACK
             onRspNewOrderACK(data, unit, d, requestId);
@@ -609,7 +662,28 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     }
 }
 
-
+void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBinance& unit, int requestId)
+{
+    LFRtnOrderField rtn_order;
+    memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+    strcpy(rtn_order.ExchangeID, "binance");
+    strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+    strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
+    rtn_order.Direction = data->Direction;
+    rtn_order.TimeCondition = data->TimeCondition;
+    rtn_order.OrderPriceType = data->OrderPriceType;
+    strncpy(rtn_order.OrderRef, data->OrderRef, 13);
+    rtn_order.VolumeTraded = 0;
+    rtn_order.VolumeTotalOriginal = data->Volume;
+    rtn_order.VolumeTotal = data->Volume;
+    rtn_order.LimitPrice = data->LimitPrice;
+    rtn_order.RequestID = requestId;
+    rtn_order.OrderStatus = LF_CHAR_NotTouched;
+    on_rtn_order(&rtn_order);
+    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                            source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
+                            1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+}
 void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId)
 {
     /*Response ACK:
@@ -622,9 +696,9 @@ void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUni
     */
 
     //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
-    char noneStatus = '\0';
+    char noneStatus = LF_CHAR_NotTouched;
     int64_t binanceOrderId =  result["orderId"].GetInt64();
-    addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, data->Direction, binanceOrderId);
+    addNewQueryOrdersAndTrades(unit, data->InstrumentID,data->LimitPrice, data->OrderRef, noneStatus, 0, data->Direction, binanceOrderId);
 }
 
 
@@ -662,13 +736,16 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     rtn_order.VolumeTraded = std::round(stod(result["executedQty"].GetString()) * scale_offset);
     rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
     rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-    rtn_order.LimitPrice = std::round(stod(result["price"].GetString()) * scale_offset);
+    rtn_order.LimitPrice = data->LimitPrice;//std::round(stod(result["price"].GetString()) * scale_offset);
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus = GetOrderStatus(result["status"].GetString());
-    on_rtn_order(&rtn_order);
-    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                            source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
-                            1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+    if(rtn_order.OrderStatus != LF_CHAR_NotTouched)
+    {
+        on_rtn_order(&rtn_order);
+        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
+                                1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+    }
 
     //if All Traded, emit OnRtnTrade
     if(rtn_order.OrderStatus == LF_CHAR_AllTraded)
@@ -694,7 +771,7 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
         int64_t binanceOrderId =  result["orderId"].GetInt64();
-        addNewQueryOrdersAndTrades(unit, data->InstrumentID,
+        addNewQueryOrdersAndTrades(unit, data->InstrumentID,data->LimitPrice,
                                        rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
@@ -761,7 +838,7 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     strncpy(rtn_trade.InstrumentID, data->InstrumentID, 31);
     strncpy(rtn_trade.OrderRef, result["clientOrderId"].GetString(), 13);
     rtn_trade.Direction = data->Direction;
-
+    rtn_order.LimitPrice = data->LimitPrice;
     //we have strike price, emit OnRtnTrade
     int fills_size = result["fills"].Size();
 
@@ -770,11 +847,10 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
         uint64_t volume = std::round(stod(result["fills"].GetArray()[i]["qty"].GetString()) * scale_offset);
         int64_t price = std::round(stod(result["fills"].GetArray()[i]["price"].GetString()) * scale_offset);
         //今成交数量
-        rtn_order.VolumeTraded = volume;
-        rtn_order.LimitPrice = price;
+        rtn_order.VolumeTraded += volume;
         //剩余数量
-        volumeTotalOriginal = volumeTotalOriginal - volume;
-        rtn_order.VolumeTotal = volumeTotalOriginal;
+        //volumeTotalOriginal = volumeTotalOriginal - volume;
+        rtn_order.VolumeTotal = volumeTotalOriginal - rtn_order.VolumeTraded;
 
         if(isAllTraded)
         {
@@ -805,8 +881,11 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
     if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
     {
         int64_t binanceOrderId =  result["orderId"].GetInt64();
-        addNewQueryOrdersAndTrades(unit, data->InstrumentID,
-                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
+        LfOrderStatusType status =  rtn_order.OrderStatus;
+        if( fills_size <= 0)
+            status = LF_CHAR_NotTouched;
+        addNewQueryOrdersAndTrades(unit, data->InstrumentID,data->LimitPrice,
+                                       rtn_order.OrderRef,status, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
 
@@ -993,7 +1072,7 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
                 rtn_order.OrderPriceType = GetPriceType(orderResult["type"].GetString());
                 strncpy(rtn_order.OrderRef, orderResult["clientOrderId"].GetString(), 13);
                 rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["origQty"].GetString()) * scale_offset);
-                rtn_order.LimitPrice = std::round(stod(orderResult["price"].GetString()) * scale_offset);
+                rtn_order.LimitPrice =orderStatusIterator->LimitPrice;// std::round(stod(orderResult["price"].GetString()) * scale_offset);
                 rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
                 on_rtn_order(&rtn_order);
                 raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
@@ -1127,6 +1206,10 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
         strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
         strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
         //must be Array
+        if (!resultTrade.IsArray()) {
+			KF_LOG_INFO(logger, "[retrieveTradeStatus] Binance interface bans or refused!");
+			continue;
+		}
         int len = resultTrade.Size();
         for(int i = 0 ; i < len; i++)
         {
@@ -1224,7 +1307,7 @@ void TDEngineBinance::addNewSentTradeIds(AccountUnitBinance& unit, int64_t newSe
     KF_LOG_DEBUG(logger, "[addNewSentTradeIds]" << " (newSentTradeIds)" << newSentTradeIds);
 }
 
-void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
+void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,int64_t limitPrice,
                                                      const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                                  const uint64_t VolumeTraded, LfDirectionType Direction, int64_t binanceOrderId)
 {
@@ -1237,6 +1320,7 @@ void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const
     strncpy(status.OrderRef, OrderRef, 21);
     status.OrderStatus = OrderStatus;
     status.VolumeTraded = VolumeTraded;
+    status.LimitPrice = limitPrice;
     unit.newOrderStatus.push_back(status);
 
     OnRtnOrderDoneAndWaitingOnRtnTrade waitingTrade;
@@ -1298,7 +1382,17 @@ void TDEngineBinance::loop()
     {
         using namespace std::chrono;
         auto current_ms = duration_cast< milliseconds>(system_clock::now().time_since_epoch()).count();
-        if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < rest_get_interval_ms)
+        uint64_t tmp_rest_get_interval_ms = rest_get_interval_ms;
+        if (bHandle_429)
+        {
+            //double rest_get_interval_ms
+            tmp_rest_get_interval_ms = default_429_rest_interval_ms;
+            //KF_LOG_INFO(logger, "[loop] bHandle_429:" << bHandle_429 
+            //    << " tmp_rest_get_interval_ms:" << tmp_rest_get_interval_ms
+            //    << " default_429_rest_interval_ms:" << default_429_rest_interval_ms
+            //    << " rest_get_interval_ms:" << rest_get_interval_ms);
+        }
+        if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < tmp_rest_get_interval_ms)
         {
             continue;
         }
@@ -1340,6 +1434,7 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 {
     KF_LOG_INFO(logger, "[send_order]");
 
+	string interface;
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
@@ -1404,10 +1499,8 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
             queryString.append( to_string( recvWindow) );
         }
 
-
         queryString.append("&timestamp=");
         queryString.append(Timestamp);
-
 
         std::string signature =  hmac_sha256( unit.secret_key.c_str(), queryString.c_str() );
         queryString.append( "&signature=");
@@ -1415,13 +1508,51 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
 
         string url = requestPath + queryString;
 
+        if (order_count_over_limit())
+        {
+            //send err msg to strategy
+            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 10000 limit.\"}";
+            json.Parse(strErr.c_str());
+            return;
+        }
+
+        if (bHandle_429)
+        {
+            if (isHandling())
+            {
+                std::string strErr = "{\"code\":-1429,\"msg\":\"handle 429, prohibit send order.\"}";
+                json.Parse(strErr.c_str());
+                return;
+            }
+        }
+
+        handle_request_weight(SendOrder_Type);
+
+		if (m_interface_switch > 0) {
+	        interface = m_interfaceMgr.getActiveInterface();
+	        KF_LOG_INFO(logger, "[send_order] interface: [" << interface << "].");
+	        if (interface.empty()) {
+	            KF_LOG_INFO(logger, "[send_order] interface is empty, decline message sending!");
+	            std::string strRefused = "{\"code\":-1430,\"msg\":\"interface is empty.\"}";
+	            json.Parse(strRefused.c_str());
+	            return;
+	        }
+		}
+
         response = Post(Url{url},
-                                  Header{{"X-MBX-APIKEY", unit.api_key}},
-                                  Body{body}, Timeout{100000});
+                                  Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
+                                  Body{body}, Timeout{100000}, Interface{interface});
 
         KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                          " (response.error.message) " << response.error.message <<
                                                          " (response.text) " << response.text.c_str());
+
+
+        if (response.status_code == HTTP_CONNECT_REFUSED)
+        {
+            meet_429();
+            break;
+        }
 
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
@@ -1431,9 +1562,16 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
     } while(should_retry && retry_times < max_rest_retry_times);
 
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
-                                                                         " (response.error.message) " << response.error.message <<
+																		 " interface [" << interface <<
+                                                                         "] (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
-
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
+		if (m_interface_switch > 0) {
+			m_interfaceMgr.disable(interface);
+			KF_LOG_INFO(logger, "[send_order] interface [" << interface << "] is disabled!");
+		}
+	}
+	
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1455,6 +1593,174 @@ bool TDEngineBinance::shouldRetry(int http_status_code, std::string errorMsg, st
     return false;
 }
 
+bool TDEngineBinance::order_count_over_limit()
+{
+    if (order_total_count >= 10000)
+    {
+        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " over 10000/day limit!");
+        return true;
+    }
+    
+    static std::queue<long long> time_queue;
+    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    if (time_queue.size() <= 0)
+    {
+        time_queue.push(timestamp);
+        order_total_count++;
+        return false;
+    }
+
+    uint64_t startTime = time_queue.front();
+    int order_time_diff_ms = timestamp - startTime;
+    KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_time_diff_ms)" << order_time_diff_ms 
+        << " (time_queue.size)" << time_queue.size()
+        << " (order_total_count)" << order_total_count
+        << " (order_count_per_second)" << order_count_per_second);
+    
+    const int order_ms = 1000;      //1s
+    if (order_time_diff_ms < order_ms)
+    {
+        //in second        
+        if(time_queue.size() < order_count_per_second)
+        {
+            //do not reach limit in second
+            time_queue.push(timestamp);
+            order_total_count++;
+            return false;
+        }
+
+        //reach limit in second/over limit count, sleep
+        usleep((order_ms - order_time_diff_ms) * 1000);
+        timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    //move receive window to next step
+    time_queue.pop();
+    time_queue.push(timestamp);
+    order_total_count++;
+
+    //清理超过1秒的记录
+    while(time_queue.size() > 0)
+    {
+        uint64_t tmpTime = time_queue.front();
+        int tmp_time_diff_ms = timestamp - tmpTime;
+        if (tmp_time_diff_ms <= order_ms)
+        {
+            break;
+        }
+
+        time_queue.pop();
+    }
+    return false;
+}
+
+void TDEngineBinance::handle_request_weight(RequestWeightType type)
+{
+    if (request_weight_per_minute <= 0)
+    {
+        //do nothing even meet 429
+        return;
+    }
+
+    std::lock_guard<std::mutex> guard_mutex(*mutex_weight);
+    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    static std::queue<weight_data> weight_data_queue;
+    if (weight_data_queue.size() <= 0 || weight_count <= 0)
+    {
+        weight_data wd;
+        wd.time = timestamp;
+        wd.addWeight(type);
+        weight_count += wd.weight;
+        weight_data_queue.push(wd);
+        return;
+    }
+
+    weight_data front_data = weight_data_queue.front();
+    int time_diff_ms = timestamp - front_data.time;
+    KF_LOG_DEBUG(logger, "[handle_request_weight] (time_diff_ms)" << time_diff_ms 
+        << " (weight_data_queue.size)" << weight_data_queue.size()
+        << " (weight_count)" << weight_count
+        << " (request_weight_per_minute)" << request_weight_per_minute);
+
+    const int weight_ms = 60000;     //60s,1minute
+    if (time_diff_ms < weight_ms)
+    {
+        //in minute
+        if(weight_count < request_weight_per_minute)
+        {
+            //do not reach limit in second
+            weight_data wd;
+            wd.time = timestamp;
+            wd.addWeight(type);
+            weight_count += wd.weight;
+            weight_data_queue.push(wd);
+            return;
+        }
+
+        //reach limit in minute/over weight limit count, sleep
+        usleep((weight_ms - time_diff_ms) * 1000);
+        timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+    
+    weight_count -= front_data.weight;
+    weight_data_queue.pop();
+
+    weight_data wd;
+    wd.time = timestamp;
+    wd.addWeight(type);
+    weight_count += wd.weight;
+    weight_data_queue.push(wd);
+
+    //清理时间超过60000ms(1分钟)的记录
+    while(weight_data_queue.size() > 0)
+    {
+        weight_data tmp_data = weight_data_queue.front();
+        int tmp_time_diff_ms = timestamp - tmp_data.time;
+        if (tmp_time_diff_ms <= weight_ms)
+        {
+            break;
+        }
+
+        weight_count -= tmp_data.weight;
+        weight_data_queue.pop();
+    }
+}
+
+void TDEngineBinance::meet_429()
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_handle_429);
+    if (request_weight_per_minute <= 0)
+    {
+        KF_LOG_INFO(logger, "[meet_429] request_weight_per_minute <= 0, return");
+        return;
+    }
+
+    if (bHandle_429)
+    {
+        KF_LOG_INFO(logger, "[meet_429] 418 prevention mechanism already activated, return");
+        return;
+    }
+
+    startTime_429 = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    bHandle_429 = true;
+    KF_LOG_INFO(logger, "[meet_429] 429 warning received, current request_weight_per_minute: " << request_weight_per_minute);
+}
+
+bool TDEngineBinance::isHandling()
+{
+    std::lock_guard<std::mutex> guard_mutex(*mutex_handle_429);
+    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    int handle_429_time_diff_ms = timestamp - startTime_429;
+    if (handle_429_time_diff_ms > prohibit_order_ms)
+    {
+        //stop handle 429
+        startTime_429 = 0;
+        bHandle_429 = false;
+        KF_LOG_INFO(logger, "[isHandling] handle_429_time_diff_ms > prohibit_order_ms, stop handle 429");
+    }
+    KF_LOG_INFO(logger, "[isHandling] " << " bHandle_429 " << bHandle_429 << " request_weight_per_minute " << request_weight_per_minute);
+    return bHandle_429;
+}
 
 void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json)
 {
@@ -1493,14 +1799,44 @@ void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, lo
 
     string url = requestPath + queryString;
 
+    if (bHandle_429)
+    {
+        isHandling();
+    }
+
+    handle_request_weight(GetOrder_Type);
+
+	string interface;
+	if (m_interface_switch > 0) {
+		interface = m_interfaceMgr.getActiveInterface();
+		KF_LOG_INFO(logger, "[get_order] interface: [" << interface << "].");
+		if (interface.empty()) {
+		    KF_LOG_INFO(logger, "[get_order] interface is empty, decline message sending!");
+		    return;
+		}
+	}
+
     const auto response = Get(Url{url},
-                              Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
+                              Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
+                              Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
-                                              " (response.error.message) " << response.error.message <<
+											  " interface [" << interface <<
+                                              "] (response.error.message) " << response.error.message <<
                                               " (response.text) " << response.text.c_str());
 
+    if (response.status_code == HTTP_CONNECT_REFUSED)
+    {
+        meet_429();
+    }
+
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
+		if (m_interface_switch > 0) {
+			m_interfaceMgr.disable(interface);
+			KF_LOG_INFO(logger, "[get_order] interface [" << interface << "] is disabled!");
+		}
+	}
+	
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1511,6 +1847,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
+	string interface;
     do {
         should_retry = false;
 
@@ -1553,14 +1890,49 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 
         string url = requestPath + queryString;
 
+        if (order_count_over_limit())
+        {
+            std::string strErr = "{\"code\":-1429,\"msg\":\"order count over 10000 limit.\"}";
+            json.Parse(strErr.c_str());
+            return;
+        }
+
+        if (bHandle_429)
+        {
+            if (isHandling())
+            {
+                std::string strErr = "{\"code\":-1429,\"msg\":\"handle 429, prohibit cancel order.\"}";
+                json.Parse(strErr.c_str());
+                return;
+            }
+        }
+
+        handle_request_weight(CancelOrder_Type);
+
+		if (m_interface_switch > 0) {
+	        interface = m_interfaceMgr.getActiveInterface();
+	        KF_LOG_INFO(logger, "[cancel_order] interface: [" << interface << "].");
+	        if (interface.empty()) {
+	            KF_LOG_INFO(logger, "[cancel_order] interface is empty, decline message sending!");
+	            std::string strRefused = "{\"code\":-1430,\"msg\":\"interface is empty.\"}";
+	            json.Parse(strRefused.c_str());
+	            return;
+	        }
+		}
+
         response = Delete(Url{url},
-                                  Header{{"X-MBX-APIKEY", unit.api_key}},
-                                  Body{body}, Timeout{100000});
+                                  Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
+                                  Body{body}, Timeout{100000}, Interface{interface});
 
         KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                  " (response.error.message) " << response.error.message <<
                                                  " (response.text) " << response.text.c_str());
 
+        if (response.status_code == HTTP_CONNECT_REFUSED)
+        {
+            meet_429();
+            break;
+        }
 
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;
@@ -1569,9 +1941,16 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
         }
     } while(should_retry && retry_times < max_rest_retry_times);
 
-    KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
-                                                                         " (response.error.message) " << response.error.message <<
+    KF_LOG_INFO(logger, "[cancel_order] out_retry (response.status_code) " << response.status_code <<
+                                                                         " interface [" << interface <<
+                                                                         "] (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
+		if (m_interface_switch > 0) {
+			m_interfaceMgr.disable(interface);
+			KF_LOG_INFO(logger, "[cancel_order] interface [" << interface << "] is disabled!");
+		}
+	}
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1612,13 +1991,42 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 
     string url = requestPath + queryString;
 
+    if (bHandle_429)
+    {
+        isHandling();
+    }
+
+    handle_request_weight(TradeList_Type);
+
+	string interface;
+	if (m_interface_switch > 0) {
+		interface = m_interfaceMgr.getActiveInterface();
+		KF_LOG_INFO(logger, "[get_my_trades] interface: [" << interface << "].");
+		if (interface.empty()) {
+			KF_LOG_INFO(logger, "[get_my_trades] interface is empty, decline message sending!");
+			return;
+		}
+	}
+	
     const auto response = Get(Url{url},
-                              Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
+                              Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
+                              Body{body}, Timeout{100000}, Interface{interface});
 
     KF_LOG_INFO(logger, "[get_my_trades] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                " (response.error.message) " << response.error.message <<
+												" interface [" << interface <<
+                                                "] (response.error.message) " << response.error.message <<
                                                 " (response.text) " << response.text.c_str());
+    if (response.status_code == HTTP_CONNECT_REFUSED)
+    {
+        meet_429();
+    }
+
+	if (response.status_code == HTTP_CONNECT_REFUSED || response.status_code == HTTP_CONNECT_BANS) {
+		if (m_interface_switch > 0) {
+			m_interfaceMgr.disable(interface);
+			KF_LOG_INFO(logger, "[get_my_trades] interface [" << interface << "] is disabled!");
+		}
+	}
 
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
@@ -1668,8 +2076,10 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
 
     string url = requestPath + queryString;
 
+    handle_request_weight(GetOpenOrder_Type);
+
     const auto response = Get(Url{url},
-                                 Header{{"X-MBX-APIKEY", unit.api_key}},
+                                 Header{{"X-MBX-APIKEY", unit.api_key}}, cpr::VerifySsl{false},
                                  Body{body}, Timeout{100000});
 
     KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response.status_code) " << response.status_code <<
@@ -1695,6 +2105,7 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
       }
     ]
      * */
+     
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 

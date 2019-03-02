@@ -16,7 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-import os, sys, argparse
+import os, sys, argparse, re
 
 def setup_environment_variables():
     fin = open('/opt/kungfu/master/etc/sysconfig/kungfu')
@@ -36,6 +36,7 @@ The most commonly used wingchun commands are:
    td       start trade engine
    md       start market data engine
    strategy start a strategy
+   monitor  start monitor
    pos      handle position block for td
    report   report order/trade for strategy
    help     help on writing strategy
@@ -62,7 +63,14 @@ The most commonly used wingchun commands are:
             usage='''wingchun td/md name''')
         engine_parser.add_argument('name', help='name of engine')
         args = engine_parser.parse_args(sys.argv[2:])
-        kungfu.wingchun.run_engine(args.name, tp)
+        name = args.name
+        index = re.findall('\d{1}', name)
+        if len(index) == 0:
+            index = ['0']
+        else:
+            name = name[:-1]
+
+        kungfu.wingchun.run_engine([name, tp, index[0]])
 
     def td(self):
         self.run_engine('td')
@@ -78,6 +86,14 @@ The most commonly used wingchun commands are:
         parser.add_argument('-p', '--path', type=str, help='path of the strategy py file')
         args = parser.parse_args(sys.argv[2:])
         kungfu.wingchun.run_strategy(args.name, args.path)
+
+    def monitor(self):
+        parser = argparse.ArgumentParser(
+            description='Monitor Parsing Tool',
+            usage='''wingchun monitor name''')
+        parser.add_argument('name', help='name of monitor')
+        args = parser.parse_args(sys.argv[2:])
+        kungfu.wingchun.run_monitor(args.name, 'monitor')
 
     def pos(self):
         os.system(os.environ["WINGCHUN_HOME"] + "/bin/td_pos_tool " + ' '.join(sys.argv[2:]))

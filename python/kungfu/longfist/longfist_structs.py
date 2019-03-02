@@ -240,19 +240,22 @@ class LFBarMarketDataField(Structure):
     _fields_ = [
         ("TradingDay", c_char * 9),	# 交易日 
         ("InstrumentID", c_char * 31),	# 合约代码 
+        ("ExchangeID",c_char * 9),      #交易所代码
         ("UpperLimitPrice", c_int64),	# 涨停板价 
         ("LowerLimitPrice", c_int64),	# 跌停板价 
         ("StartUpdateTime", c_char * 13),	# 首tick修改时间 
         ("StartUpdateMillisec", c_int),	# 首tick最后修改毫秒 
         ("EndUpdateTime", c_char * 13),	# 尾tick最后修改时间 
         ("EndUpdateMillisec", c_int),	# 尾tick最后修改毫秒 
-        ("PeriodMillisec", c_int),	
+        ("PeriodMillisec", c_int),	    #周期（毫秒）
         ("Open", c_int64),	# 开 
         ("Close", c_int64),	# 收 
         ("Low", c_int64),	# 低 
         ("High", c_int64),	# 高 
         ("Volume", c_uint64),	# 区间交易量 
         ("StartVolume", c_uint64),	# 初始总交易量 
+        ("BestBidPrice", c_int64),	 
+        ("BestAskPrice", c_int64)	
         ]
 
 class LFQryPositionField(Structure):
@@ -628,6 +631,9 @@ DataFieldMap = {
 		'BrokerID': 'c11',
 		'MiscInfo': 'c30',
 		'StopPrice': 'd',
+        'MassOrderSeqId':'i64',
+	    'MassOrderIndex':'i',
+	    'MassOrderTotalNum':'i',
 	},
 	'LFRtnOrderField': {
 		'InstrumentID': 'c31',
@@ -719,21 +725,24 @@ DataFieldMap = {
 		'Position': 'i',
 	},
 	'LFBarMarketDataField': {
-		'InstrumentID': 'c31',
-		'Volume': 'd',
-		'StartVolume': 'd',
-		'EndUpdateMillisec': 'i',
-		'PeriodMillisec': 'i',
-		'High': 'd',
-		'TradingDay': 'c9',
-		'LowerLimitPrice': 'd',
-		'Low': 'd',
-		'UpperLimitPrice': 'd',
-		'Close': 'd',
-		'EndUpdateTime': 'c13',
-		'StartUpdateTime': 'c13',
-		'Open': 'd',
-		'StartUpdateMillisec': 'i',
+        'TradingDay': 'c9',	# 交易日 
+        'InstrumentID': 'c31',	# 合约代码 
+        'ExchangeID':'c9',      #交易所代码
+        'UpperLimitPrice': 'i64',	# 涨停板价 
+        'LowerLimitPrice': 'i64',	# 跌停板价 
+        'StartUpdateTime': 'c13',	# 首tick修改时间 
+        'StartUpdateMillisec': 'i',	# 首tick最后修改毫秒 
+        'EndUpdateTime': 'c13',	# 尾tick最后修改时间 
+        'EndUpdateMillisec': 'i',	# 尾tick最后修改毫秒 
+        'PeriodMillisec': 'i',	    #周期（毫秒）
+        'Open':'i64',	
+        'Close':'i64',	# 收 
+        'Low':'i64',	# 低 
+        'High':'i64',	# 高 
+        'Volume': 'i64',	# 区间交易量 
+        'StartVolume': 'i64',	# 初始总交易量 
+        'BestBidPrice':'i64',	 
+        'BestAskPrice':'i64'	
 	},
 	'LFL2TradeField': {
 		'InstrumentID': 'c31',
@@ -757,6 +766,9 @@ DataFieldMap = {
 		'BrokerID': 'c11',
 		'RequestID': 'i',
 		'OrderSysID': 'c31',
+        'MassOrderSeqId':'i64',
+	    'MassOrderIndex':'i',
+	    'MassOrderTotalNum':'i',
 	},
 }
 
@@ -807,7 +819,55 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_ORDER_COINMEX: LFInputOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_COINMEX: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_COINMEX: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_COINMEX: LFOrderActionField
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_COINMEX: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_HUOBI: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_HUOBI: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_HUOBI: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_HUOBI: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_HUOBI: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_HUOBI: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_HUOBI: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_OCEANEX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_OCEANEX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_OCEANEX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_OCEANEX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_OCEANEX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_OCEANEX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_OCEANEX: LFOrderActionField,
+
+    #lf.MsgTypes.MSG_TYPE_LF_MD_OCEANEXB: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_OCEANEXB: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_OCEANEXB: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_OCEANEXB: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_OCEANEXB: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_OCEANEXB: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_OCEANEXB: LFOrderActionField,
+    # probit
+    lf.MsgTypes.MSG_TYPE_LF_MD_PROBIT: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_PROBIT: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_PROBIT: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_PROBIT: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_PROBIT: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_PROBIT: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_PROBIT: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_BITHUMB: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITHUMB: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITHUMB: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BITHUMB: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITHUMB: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITHUMB: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITHUMB: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_DAYBIT: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_DAYBIT: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_DAYBIT: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_DAYBIT: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_DAYBIT: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_DAYBIT: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_DAYBIT: LFOrderActionField
 }
 
 MsgType2LFStruct.update(SnifferMsgType2Struct)
