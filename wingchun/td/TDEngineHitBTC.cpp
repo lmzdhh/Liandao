@@ -36,7 +36,7 @@ using std::string;
 using std::to_string;
 using std::stod;
 using std::stoi;
-using utils::crypto::hmac_sha384;
+using utils::crypto::hmac_sha256;
 using utils::crypto::base64_encode;
 
 
@@ -1415,7 +1415,7 @@ std::string TDEngineHitBTC::createAuthJsonString(AccountUnitHitBTC& unit )
     std::string authNonce = std::to_string(getTimestamp());
     std::string secret_key = unit.secret_key;
     std::string payload = "AUTH" + authNonce;
-    std::string signature =  hmac_sha384( secret_key.c_str(), payload.c_str());
+    std::string signature =  hmac_sha256( secret_key.c_str(), payload.c_str());
 
     StringBuffer s;
     Writer<StringBuffer> writer(s);
