@@ -823,6 +823,22 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_COINMEX: LFRtnTradeField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_COINMEX: LFOrderActionField,
 
+    lf.MsgTypes.MSG_TYPE_LF_MD_BITFINEX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITFINEX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITFINEX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BITFINEX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITFINEX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITFINEX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITFINEX: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_BITMEX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITMEX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITMEX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BITMEX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITMEX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITMEX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITMEX: LFOrderActionField,
+
     lf.MsgTypes.MSG_TYPE_LF_MD_HUOBI: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_HUOBI: LFQryPositionField,
     lf.MsgTypes.MSG_TYPE_LF_RSP_POS_HUOBI: LFRspPositionField,
