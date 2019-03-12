@@ -98,6 +98,8 @@ public:
     long   parse_time(string time_str);
     /** parse nano */
     string parse_nano(long nano);
+    /* generate a tag with info*/
+    string gen_tag(long time,short source_id,bool is_td_trigger,bool is_hedge);
 };
 
 DECLARE_PTR(WCStrategyUtil);

@@ -67,21 +67,21 @@ public:
 
 public:
     // python binding, no char allowed, use string and transfer manually.
-    inline int insert_market_order_py(short source, string instrument_id, string exchange_id, uint64_t volume, string direction, string offset)
+    inline int insert_market_order_py(short source, string instrument_id, string exchange_id, uint64_t volume, string direction, string offset,string misc_info = "")
     {
-        return insert_market_order(source, instrument_id, exchange_id, volume, direction[0], offset[0]);
+        return insert_market_order(source, instrument_id, exchange_id, volume, direction[0], offset[0],misc_info);
     }
-    inline int insert_limit_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset)
+    inline int insert_limit_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset,string misc_info = "")
     {
-        return insert_limit_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0]);
+        return insert_limit_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0],misc_info);
     }
-    inline int insert_fok_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset)
+    inline int insert_fok_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset,string misc_info = "")
     {
-        return insert_fok_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0]);
+        return insert_fok_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0],misc_info);
     }
-    inline int insert_fak_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset)
+    inline int insert_fak_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset,string misc_info = "")
     {
-        return insert_fak_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0]);
+        return insert_fak_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0],misc_info);
     }
 
 public:

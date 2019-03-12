@@ -240,3 +240,9 @@ void WCStrategyUtil::set_pos_back(short source, const char* pos_str)
 {
     write_frame(pos_str, strlen(pos_str) + 1, source, MSG_TYPE_STRATEGY_POS_SET, 1, -1);
 }
+string WCStrategyUtil::gen_tag(long time,short source_id,bool is_td_trigger,bool is_hedge)
+{
+    char strTag[30]={};
+    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),(is_td_trigger?1:0),source_id,time);
+    return strTag;
+}
