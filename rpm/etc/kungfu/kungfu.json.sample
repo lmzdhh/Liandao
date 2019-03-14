@@ -140,6 +140,20 @@
 				"ltc_btc": "BTC;LTC",
 				"btc_usdt": "USDT;BTC"
 			}
+		},
+		"kucoin":
+		{
+			"book_depth_count": 5,
+			"trade_count": 10,
+			"whiteLists": {
+				"strategy_coinpair(base_quote)": "exchange_coinpair",
+				"btc_usdt": "btcusdt",
+				"eth_usdt": "ethusdt",
+				"vet_usdt": "vetusdt",
+				"eth_btc": "ethbtc",
+				"vet_btc": "vetbtc",
+				"vet_eth": "veteth"
+			}
 		}
 	},
 	"td": {

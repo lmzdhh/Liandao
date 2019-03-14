@@ -867,7 +867,15 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_ORDER_DAYBIT: LFInputOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_DAYBIT: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_DAYBIT: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_DAYBIT: LFOrderActionField
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_DAYBIT: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_KUCOIN: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_KUCOIN: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_KUCOIN: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_KUCOIN: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_KUCOIN: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_KUCOIN: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_KUCOIN: LFOrderActionField
 }
 
 MsgType2LFStruct.update(SnifferMsgType2Struct)
