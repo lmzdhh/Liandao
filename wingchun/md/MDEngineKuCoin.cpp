@@ -232,6 +232,8 @@ bool MDEngineKuCoin::getToken(Document& d)
         return false;
     }
 
+    KF_LOG_INFO(logger, "MDEngineKuCoin::getToken: " << response.text.c_str());
+
     d.Parse(response.text.c_str());
     return true;
 }
@@ -368,7 +370,8 @@ void MDEngineKuCoin::login(long timeout_nsec)
 	clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
 	clientConnectInfo.pwsi = &wsi;
 
-    subscribe_index = 0;
+    KF_LOG_INFO(logger, "MDEngineKuCoin::login: address = " << clientConnectInfo.address << ",path=" << clientConnectInfo.path);
+
 	wsi = lws_client_connect_via_info(&clientConnectInfo);
 	if (wsi == NULL) {
 		KF_LOG_ERROR(logger, "MDEngineKuCoin::login: wsi create error.");
