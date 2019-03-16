@@ -117,7 +117,6 @@ private:
     bool connected = false;
     bool logged_in = false;
 
-    int rest_get_interval_ms = 500;
     int book_depth_count = 5;
     int rest_try_count = 1;
     static constexpr int scale_offset = 1e8;
