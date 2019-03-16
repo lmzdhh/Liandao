@@ -139,7 +139,7 @@ void MDEngineKuCoin::writeErrorLog(std::string strError)
 
 void MDEngineKuCoin::load(const json& j_config)
 {
-
+     KF_LOG_ERROR(logger, "MDEngineKuCoin::load:");
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineKuCoin:: rest_get_interval_ms: " << rest_get_interval_ms);
     book_depth_count = j_config["book_depth_count"].get<int>();
