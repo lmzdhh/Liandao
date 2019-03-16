@@ -140,6 +140,8 @@ void MDEngineKuCoin::writeErrorLog(std::string strError)
 void MDEngineKuCoin::load(const json& j_config)
 {
      KF_LOG_ERROR(logger, "MDEngineKuCoin::load:");
+    rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
+    KF_LOG_INFO(logger, "MDEngineOceanEx:: rest_get_interval_ms: " << rest_get_interval_ms);
     book_depth_count = j_config["book_depth_count"].get<int>();
     KF_LOG_INFO(logger, "MDEngineKuCoin:: book_depth_count: " << book_depth_count);
     rest_try_count = j_config["rest_try_count"].get<int>();
@@ -156,48 +158,6 @@ void MDEngineKuCoin::load(const json& j_config)
         KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
         KF_LOG_ERROR(logger, "},");
     }
-}
-
-std::string makeMarketSub(const std::string& strCode,int nDepthCount)
-{
-        StringBuffer s;
-        Writer<StringBuffer> writer(s);
-        writer.StartObject();
-        writer.Key("event");
-        writer.String("pusher:subscribe");
-        writer.Key("data");
-        writer.StartObject();
-        writer.Key("channel");
-        char buf[128] = {0};
-        int nPrecision = 0;
-        auto it = mapPrecision.find(strCode);
-        if(it != mapPrecision.end())
-        {
-            nPrecision = it->second;
-        }
-        sprintf(buf,"market-%s-%d-global",strCode.c_str(),nPrecision);
-        writer.String(buf);
-        writer.EndObject();
-        writer.EndObject();
-        return s.GetString();
-}
-
-std::string makeTradeSub(const std::string& strCode)
-{
-        StringBuffer s;
-        Writer<StringBuffer> writer(s);
-        writer.StartObject();
-        writer.Key("event");
-        writer.String("pusher:subscribe");
-        writer.Key("data");
-        writer.StartObject();
-        writer.Key("channel");
-        char buf[128] = {0};
-        sprintf(buf,"market-%s-trade-global",strCode.c_str());
-        writer.String(buf);
-        writer.EndObject();
-        writer.EndObject();
-        return s.GetString();
 }
 
 void MDEngineKuCoin::readWhiteLists(const json& j_config)
@@ -220,33 +180,6 @@ void MDEngineKuCoin::readWhiteLists(const json& j_config)
 	}
 }
 
-//example: btc_usdt
-void MDEngineKuCoin::split(std::string str, std::string token, SubscribeCoinBaseQuote& sub)
-{
-	if (str.size() > 0) {
-		size_t index = str.find(token);
-		if (index != std::string::npos) {
-			sub.base = str.substr(0, index);
-			sub.quote = str.substr(index + token.size());
-		}
-		else {
-			//not found, do nothing
-		}
-	}
-}
-
-std::string MDEngineKuCoin::getLiandaoCoin(const std::string& strExchangeCoin)
-{
-    for(size_t nPos = 0;nPos < subscribeCoinBaseQuote.size();++nPos)
-    {
-        auto& BaseQuote = subscribeCoinBaseQuote[nPos]; 
-        if(strExchangeCoin == BaseQuote.base + BaseQuote.quote)
-        {
-            return BaseQuote.base + "_" + BaseQuote.quote;
-        }
-    }
-}
-
 std::string MDEngineKuCoin::getWhiteListCoinpairFrom(std::string md_coinpair)
 {
     std::string& ticker = md_coinpair;
@@ -267,17 +200,6 @@ std::string MDEngineKuCoin::getWhiteListCoinpairFrom(std::string md_coinpair)
     return "";
 }
 
-void MDEngineKuCoin::debug_print(std::vector<SubscribeCoinBaseQuote> &sub)
-{
-    int count = sub.size();
-    KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (count) " << count);
-
-	for (int i = 0; i < count;i++)
-	{
-		KF_LOG_INFO(logger, "[debug_print] SubscribeCoinBaseQuote (base) " << sub[i].base <<  " (quote) " << sub[i].quote);
-	}
-}
-
 void MDEngineKuCoin::debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList)
 {
 	std::map<std::string, std::string>::iterator map_itr;
@@ -286,18 +208,6 @@ void MDEngineKuCoin::debug_print(std::map<std::string, std::string> &keyIsStrate
 		KF_LOG_INFO(logger, "[debug_print] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (md_coinpair) "<< map_itr->second);
 		map_itr++;
 	}
-}
-
-
-void MDEngineKuCoin::debug_print(std::vector<std::string> &subJsonString)
-{
-    int count = subJsonString.size();
-    KF_LOG_INFO(logger, "[debug_print] websocketSubscribeJsonString (count) " << count);
-
-    for (int i = 0; i < count;i++)
-    {
-        KF_LOG_INFO(logger, "[debug_print] websocketSubscribeJsonString (subJsonString) " << subJsonString[i]);
-    }
 }
 
 void MDEngineKuCoin::connect(long timeout_nsec)
@@ -468,13 +378,6 @@ void MDEngineKuCoin::login(long timeout_nsec)
 	logged_in = true;
 }
 
-void MDEngineKuCoin::set_reader_thread()
-{
-	IMDEngine::set_reader_thread();
-
-	rest_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineKuCoin::loop, this)));
-}
-
 void MDEngineKuCoin::logout()
 {
    KF_LOG_INFO(logger, "MDEngineKuCoin::logout:");
@@ -483,6 +386,13 @@ void MDEngineKuCoin::logout()
 void MDEngineKuCoin::release_api()
 {
    KF_LOG_INFO(logger, "MDEngineKuCoin::release_api:");
+}
+
+void MDEngineKuCoin::set_reader_thread()
+{
+	IMDEngine::set_reader_thread();
+
+	rest_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineKuCoin::loop, this)));
 }
 
 void MDEngineKuCoin::subscribeMarketData(const vector<string>& instruments, const vector<string>& markets)
@@ -665,33 +575,6 @@ void MDEngineKuCoin::clearPriceBook()
         map_itr->second->clear();
         map_itr++;
     }
-}
-
-void MDEngineKuCoin::onTickers(Document& d)
-{
-/*
-{
-    "type": "tickers",
-    "biz":"spot",
-    "data": [
-      [
-     "1520318917765", #创建时间
-     "0.02",#当日最高成交价
-     "0.01",#当日最低成交价
-     "0.01",#成交单价
-     "200",#基准货币成交量
-     "300",#报价货币成交量
-     "10",#变化量
-     "30",#涨幅百分比
-     "btc_usdt",#币对
-      9,   #币对ID
-     ]
-    ],
-    "zip":false
-}
- * */
-
-
 }
 
 void MDEngineKuCoin::onFills(Document& json)
@@ -879,110 +762,6 @@ std::string MDEngineKuCoin::parseJsonToString(const char* in)
 	d.Accept(writer);
 
 	return buffer.GetString();
-}
-
-/*
-Name    Type    Required    Description
-event   String    true    事件类型，订阅:subscribe
-biz     String    true    产品类型: spot
-type    String    true    业务类型: depth
-base    String    true    基准货币
-quote   String    true    交易货币
-zip     String    false    默认false,不压缩
-
- * */
-std::string MDEngineKuCoin::createDepthJsonString(std::string base, std::string quote)
-{
-    /*
-{
-    "event":"subscribe",
-    "params":{
-        "biz":"spot",
-        "type":"depth",
-        "base":"btc",
-        "quote":"usdt",
-        "zip":false
-    }
-}
-
-     * */
-	StringBuffer s;
-	Writer<StringBuffer> writer(s);
-	writer.StartObject();
-	writer.Key("event");
-	writer.String("subscribe");
-	writer.Key("params");
-	writer.StartObject();
-	writer.Key("biz");
-	writer.String("spot");
-	writer.Key("type");
-	writer.String("depth");
-	writer.Key("base");
-	writer.String(base.c_str());
-	writer.Key("quote");
-	writer.String(quote.c_str());
-	writer.Key("zip");
-	writer.Bool(false);
-	writer.EndObject();
-	writer.EndObject();
-	return s.GetString();
-}
-
-std::string MDEngineKuCoin::createFillsJsonString(std::string base, std::string quote)
-{
-    /*
- {
-"event": "subscribe",
-"params": {
-    "biz": "spot",
-    "type": "fills",
-    "base": "cel",
-    "quote": "btc",
-    "zip": false
-}
-}
-
-     * */
-    StringBuffer s;
-    Writer<StringBuffer> writer(s);
-    writer.StartObject();
-    writer.Key("event");
-    writer.String("subscribe");
-    writer.Key("params");
-    writer.StartObject();
-    writer.Key("biz");
-    writer.String("spot");
-    writer.Key("type");
-    writer.String("fills");
-    writer.Key("base");
-    writer.String(base.c_str());
-    writer.Key("quote");
-    writer.String(quote.c_str());
-    writer.Key("zip");
-    writer.Bool(false);
-    writer.EndObject();
-    writer.EndObject();
-    return s.GetString();
-}
-
-std::string MDEngineKuCoin::createTickersJsonString()
-{
-	StringBuffer s;
-	Writer<StringBuffer> writer(s);
-	writer.StartObject();
-	writer.Key("event");
-	writer.String("subscribe");
-	writer.Key("params");
-	writer.StartObject();
-	writer.Key("biz");
-	writer.String("spot");
-	writer.Key("type");
-	writer.String("tickers");
-	writer.Key("zip");
-	writer.Bool(false);
-	writer.EndObject();
-	writer.EndObject();
-	return s.GetString();
 }
 
 void MDEngineKuCoin::loop()

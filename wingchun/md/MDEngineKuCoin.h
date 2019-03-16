@@ -26,24 +26,6 @@ struct PriceAndVolume
     }
 };
 
-std::map<std::string,int> mapPrecision{
-    {"btcusdt",2},
-    {"ethusdt",2},
-    {"ethbtc",6},
-    {"shavet",4},
-    {"vetusdt",5},
-    {"vetbtc",8},
-    {"veteth",8},
-    {"vthovet",4}
-};
-
-//kucoinmex use base and quote to sub depth data
-struct SubscribeCoinBaseQuote
-{
-    std::string base;
-    std::string quote;
-};
-
 static int sort_price_asc(const PriceAndVolume &p1,const PriceAndVolume &p2)
 {
     return p1.price < p2.price;
@@ -103,10 +85,6 @@ private:
     void onTickers(Document& json);
     void onFills(Document& json);
 
-    std::string parseJsonToString(const char* in);
-    std::string createDepthJsonString(std::string base, std::string quote);
-    std::string createTickersJsonString();
-    std::string createFillsJsonString(std::string base, std::string quote);
     void clearPriceBook();
     void loop();
     std::string dealDataSprit(const char* src);
@@ -117,6 +95,7 @@ private:
     bool connected = false;
     bool logged_in = false;
 
+    int rest_get_interval_ms = 500;
     int book_depth_count = 5;
     int rest_try_count = 1;
     static constexpr int scale_offset = 1e8;
@@ -133,23 +112,18 @@ private:
     std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
 
 private:
+    std::string parseJsonToString(const char* in);
     void readWhiteLists(const json& j_config);
     std::string getWhiteListCoinpairFrom(std::string md_coinpair);
     bool shouldUpdateData(const LFPriceBook20Field& md);
-    void split(std::string str, std::string token, SubscribeCoinBaseQuote& sub);
     std::string getLiandaoCoin(const std::string& strExchangeCoin);
-    void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
     void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
-    void debug_print(std::vector<std::string> &subJsonString);
     bool getToken(Document& d);
     bool getServers(Document& d);
     void Ping(struct lws* conn,Document& d);
     void onPong(struct lws* conn,Document& d);
     std::string getId();
-    //coinmex use base and quote to sub depth data, so make this vector for it
-    std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
 
-    std::vector<std::string> websocketSubscribeJsonString;
     std::map<std::string,LFPriceBook20Field> mapLastData;
     //in MD, lookup direction is:
     // incoming exchange coinpair ---> our strategy recognized coinpair
