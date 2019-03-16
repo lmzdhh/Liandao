@@ -36,7 +36,8 @@ std::map<std::string,int> mapPrecision{
     {"veteth",8},
     {"vthovet",4}
 };
-//coinmex use base and quote to sub depth data
+
+//kucoinmex use base and quote to sub depth data
 struct SubscribeCoinBaseQuote
 {
     std::string base;
@@ -66,6 +67,16 @@ static void sortMapByKey(std::map<int64_t, uint64_t> &t_map, std::vector<PriceAn
     sort(t_vec.begin(), t_vec.end(), sort_by);
 };
 
+struct ServerInfo
+{
+   int nPingInterval = 0;
+   int nPingTimeOut = 0;
+   std::string strEndpoint ;
+   std::string strProtocol ;
+   bool bEncrypt = true;
+};
+
+
 class MDEngineKuCoin: public IMDEngine
 {
 public:
@@ -85,7 +96,7 @@ public:
 
     void on_lws_data(struct lws* conn, const char* data, size_t len);
     void on_lws_connection_error(struct lws* conn);
-    int lws_write_subscribe(struct lws* conn);
+    int lws_write_subscribe(struct lws* conn,Document& json);
     void writeErrorLog(std::string strError);
 private:
     void onDepth(Document& json);
@@ -108,7 +119,11 @@ private:
 
     int rest_get_interval_ms = 500;
     int book_depth_count = 5;
+    int rest_try_count = 1;
     static constexpr int scale_offset = 1e8;
+
+    std::vector<ServerInfo> m_vstServerInfos;
+    std::string m_strToken;
 
     struct lws_context *context = nullptr;
 
@@ -127,6 +142,11 @@ private:
     void debug_print(std::vector<SubscribeCoinBaseQuote> &sub);
     void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
     void debug_print(std::vector<std::string> &subJsonString);
+    bool getToken(Document& d);
+    bool getServers(Document& d);
+    void Ping(struct lws* conn,Document& d);
+    void onPong(struct lws* conn,Document& d);
+    std::string getId();
     //coinmex use base and quote to sub depth data, so make this vector for it
     std::vector<SubscribeCoinBaseQuote> subscribeCoinBaseQuote;
 

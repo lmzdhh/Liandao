@@ -71,11 +71,13 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		{
 		    ss << "LWS_CALLBACK_CLIENT_WRITEABLE.";
             global_md->writeErrorLog(ss.str());
-			int ret = 0;
+			/*
+            int ret = 0;
 			if(global_md)
 			{
 				ret = global_md->lws_write_subscribe(wsi);
 			}
+            */
 			break;
 		}
 		case LWS_CALLBACK_CLOSED:
@@ -142,6 +144,8 @@ void MDEngineKuCoin::load(const json& j_config)
     KF_LOG_INFO(logger, "MDEngineKuCoin:: rest_get_interval_ms: " << rest_get_interval_ms);
     book_depth_count = j_config["book_depth_count"].get<int>();
     KF_LOG_INFO(logger, "MDEngineKuCoin:: book_depth_count: " << book_depth_count);
+    rest_try_count = j_config["rest_try_count"].get<int>();
+    KF_LOG_INFO(logger, "MDEngineKuCoin:: rest_try_count: " << rest_try_count);
     readWhiteLists(j_config);
 
     debug_print(subscribeCoinBaseQuote);
@@ -211,44 +215,10 @@ void MDEngineKuCoin::readWhiteLists(const json& j_config)
 		if(whiteLists.is_object())
 		{
 			for (json::iterator it = whiteLists.begin(); it != whiteLists.end(); ++it) {
-				/*
-                std::string strategy_coinpair = it.key();
-				std::string exchange_coinpair = it.value();
-				KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
-				keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
-				//make subscribeCoinBaseQuote
-
-				//coinmex MD must has base and quote, please see this->createDepthJsonString.
-                SubscribeCoinBaseQuote baseQuote;
-				split(it.key(), "_", baseQuote);
-                KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
-
-				if(baseQuote.base.length() > 0)
-				{
-					//get correct base_quote config
-                    subscribeCoinBaseQuote.push_back(baseQuote);
-                    //get ready websocket subscrube json strings
-                    std::string jsonDepthString = createDepthJsonString(baseQuote.base, baseQuote.quote);
-                    websocketSubscribeJsonString.push_back(jsonDepthString);
-                    std::string jsonFillsString = createFillsJsonString(baseQuote.base, baseQuote.quote);
-                    websocketSubscribeJsonString.push_back(jsonFillsString);
-
-				}
-                */
                     std::string strategy_coinpair = it.key();
 				    std::string exchange_coinpair = it.value();
 				    KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
 				    keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
-                    SubscribeCoinBaseQuote baseQuote;
-				    split(it.key(), "_", baseQuote);
-                    subscribeCoinBaseQuote.push_back(baseQuote);
-                    KF_LOG_INFO(logger, "[readWhiteLists] SubscribeCoinBaseQuote (base) " << baseQuote.base << " (quote) " << baseQuote.quote);
-                    std::string strMarketSub = makeMarketSub(it.value(),book_depth_count);
-                    websocketSubscribeJsonString.push_back(std::move(strMarketSub));
-                    KF_LOG_INFO(logger, "[MDEngineKuCoin::readWhiteLists] makeMarketSub: " << strMarketSub);
-                    std::string strTradeSub = makeTradeSub(it.value());
-                    websocketSubscribeJsonString.push_back(std::move(strTradeSub));
-                     KF_LOG_INFO(logger, "[MDEngineKuCoin::readWhiteLists] makeTradeSub: " << strTradeSub);
 			}
 		}
 	}
@@ -340,15 +310,101 @@ void MDEngineKuCoin::connect(long timeout_nsec)
     connected = true;
 }
 
+bool MDEngineKuCoin::getToken(Document& d) 
+{
+    int nTryCount = 0;
+    cpr::Response response;
+    do{
+        std::string url = "https://api.kucoin.com/api/v1/bullet-public";
+       response = Post(Url{url.c_str()}, Parameters{}); 
+       
+    }while(++nTryCount < rest_try_count && response.status_code != 200);
+
+    if(response.status_code != 200)
+    {
+        KF_LOG_ERROR(logger, "MDEngineKuCoin::login::getToken Error");
+        return false;
+    }
+
+    d.Parse(response.text.c_str());
+    return true;
+}
+
+
+bool MDEngineKuCoin::getServers(Document& d)
+{
+    m_vstServerInfos.clear();
+    m_strToken = "";
+     if(d.HasMember("data"))
+     {
+         auto& data = d["data"];
+         if(data.HasMember("token"))
+         {
+             m_strToken = data["token"].GetString();
+             if(data.HasMember("instanceServers"))
+             {
+                 int nSize = data["instanceServers"].Size();
+                for(int nPos = 0;nPos<nSize;++nPos)
+                {
+                    ServerInfo stServerInfo;
+                    auto& server = data["instanceServers"].GetArray()[nPos];
+                    if(server.HasMember("pingInterval"))
+                    {
+                        stServerInfo.nPingInterval = server["pingInterval"].GetInt();
+                    }
+                    if(server.HasMember("pingTimeOut"))
+                    {
+                        stServerInfo.nPingTimeOut = server["pingTimeOut"].GetInt();
+                    }
+                    if(server.HasMember("endpoint"))
+                    {
+                        stServerInfo.strEndpoint = server["endpoint"].GetString();
+                    }
+                    if(server.HasMember("protocol"))
+                    {
+                        stServerInfo.strProtocol = server["protocol"].GetString();
+                    }
+                    if(server.HasMember("encrypt"))
+                    {
+                        stServerInfo.bEncrypt = server["encrypt"].GetBool();
+                    }
+                    m_vstServerInfos.push_back(stServerInfo);
+                }
+             }
+         }
+     }
+    if(m_strToken == "" || m_vstServerInfos.empty())
+    {
+        KF_LOG_ERROR(logger, "MDEngineKuCoin::login::getServers Error");
+        return false;
+    }
+    return true;
+}
+
+std::string MDEngineKuCoin::getId()
+{
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return  std::to_string(timestamp);
+}
+
 void MDEngineKuCoin::login(long timeout_nsec)
 {
 	KF_LOG_INFO(logger, "MDEngineKuCoin::login:");
+
+    Document d;
+    if(!getToken(d))
+    {
+        return;
+    }
+    if(!getServers(d))
+   {
+       return;
+   }
+
 	global_md = this;
 	int inputPort = 8443;
-	//const char *urlProtocol, *urlTempPath;
 	int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
-    char urlPath[256] = "wss://ws-slanger.kucoin.pro/app/29919ce7dd12341830194898ead6?protocol=7&version=4.3.1&flash=false&client=js";	
-  
+
 	struct lws_context_creation_info ctxCreationInfo;
 	struct lws_client_connect_info clientConnectInfo;
 	struct lws *wsi = NULL;
@@ -357,21 +413,6 @@ void MDEngineKuCoin::login(long timeout_nsec)
 	memset(&ctxCreationInfo, 0, sizeof(ctxCreationInfo));
 	memset(&clientConnectInfo, 0, sizeof(clientConnectInfo));
 
-	//if (lws_parse_uri(urlPath.c_str(), &urlProtocol, &clientConnectInfo.address, &clientConnectInfo.port, &urlTempPath))
-	//{
-	//	KF_LOG_ERROR(logger, "MDEngineKuCoin::connect: Couldn't parse URL. Please check the URL and retry: " << urlPath.c_str());
-	//	return;
-	//}
-
-	// Fix up the urlPath by adding a / at the beginning, copy the temp path, and add a \0     at the end
-	
-    
-/*
-	KF_LOG_INFO(logger, "MDEngineKuCoin::login:" << "urlProtocol=" << urlProtocol <<
-												  "address=" << clientConnectInfo.address <<
-												  "urlTempPath=" << urlTempPath <<
-												  "urlPath=" << urlPath);
-*/
 	ctxCreationInfo.port = CONTEXT_PORT_NO_LISTEN;
 	ctxCreationInfo.iface = NULL;
 	ctxCreationInfo.protocols = protocols;
@@ -405,9 +446,13 @@ void MDEngineKuCoin::login(long timeout_nsec)
 	}
 
 	// Set up the client creation info
-	std::string strAddress = "ws-slanger.kucoin.pro";
+    auto& stServerInfo = m_vstServerInfos.front();
+	std::string strAddress = stServerInfo.strEndpoint;
+    std::string strPath = "?token=";
+    strPath += m_strToken;
+    strPath += "&[connectId=" +  getId() +"]";
     clientConnectInfo.address = strAddress.c_str();
-    clientConnectInfo.path = "/app/a4931d3a95e48863076c739e9527?protocol=7&client=js&version=4.3.1&flash=false"; // Set the info's path to the fixed up url path
+    clientConnectInfo.path = strPath.c_str(); // Set the info's path to the fixed up url path
 	clientConnectInfo.context = context;
 	clientConnectInfo.port = 443;
 	clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
@@ -417,9 +462,6 @@ void MDEngineKuCoin::login(long timeout_nsec)
 	clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
 	clientConnectInfo.pwsi = &wsi;
 
-	//KF_LOG_INFO(logger, "MDEngineKuCoin::login:" << "Connecting to " << urlProtocol << ":" <<
-	//											  clientConnectInfo.host << ":" <<
-	//											  clientConnectInfo.port << ":" << urlPath);
     subscribe_index = 0;
 	wsi = lws_client_connect_via_info(&clientConnectInfo);
 	if (wsi == NULL) {
@@ -452,33 +494,64 @@ void MDEngineKuCoin::subscribeMarketData(const vector<string>& instruments, cons
    KF_LOG_INFO(logger, "MDEngineKuCoin::subscribeMarketData:");
 }
 
-int MDEngineKuCoin::lws_write_subscribe(struct lws* conn)
+int MDEngineKuCoin::lws_write_subscribe(struct lws* conn,Document& json)
 {
 	//KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: (subscribe_index)" << subscribe_index);
 
-    if(websocketSubscribeJsonString.size() == 0) return 0;
-    //sub depth
-    if(subscribe_index >= websocketSubscribeJsonString.size())
+    if(keyIsStrategyCoinpairWhiteList.size() == 0) return 0;
+    
+    std::string strSymbol;
+    for(auto& pair:keyIsStrategyCoinpairWhiteList)
     {
-        return 0;
-        //subscribe_index = 0;
+        strSymbol += pair.second;
+        strSymbol += ",";
     }
+    strSymbol.pop_back();
 
-    unsigned char msg[512];
-    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
-
-    std::string jsonString = websocketSubscribeJsonString[subscribe_index++];
-
-    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << jsonString.c_str());
-    int length = jsonString.length();
-
-    strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
+    StringBuffer sbL2Update;
+	Writer<StringBuffer> writer(sbL2Update);
+	writer.StartObject();
+	writer.Key("id");
+	writer.String(getId().c_str());
+	writer.Key("type");
+	writer.String("subscribe");
+	writer.Key("topic");
+    std::string strTopic = "/market/level2:";
+    strTopic += strSymbol;
+	writer.String(strTopic.c_str());
+	writer.Key("response");
+	writer.Bool(true);
+	writer.EndObject();
+    std::string strL2Update = sbL2Update.GetString();
+    unsigned char msg[2046];
+    memset(&msg[LWS_PRE], 0, 2046-LWS_PRE);
+    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strSymbol.c_str());
+    int length = strL2Update.length();
+    strncpy((char *)msg+LWS_PRE, strL2Update.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 
-    if(subscribe_index < websocketSubscribeJsonString.size())
-    {
-        lws_callback_on_writable( conn );
-    }
+    StringBuffer sbMacth;
+	Writer<StringBuffer> writer1(sbMacth);
+	writer1.StartObject();
+	writer1.Key("id");
+	writer1.String(getId().c_str());
+	writer1.Key("type");
+	writer1.String("subscribe");
+	writer1.Key("topic");
+    std::string strTopic1 = "/market/match:";
+    strTopic1 += strSymbol;
+	writer1.String(strTopic1.c_str());
+    writer1.Key("privateChannel");
+	writer1.Bool(false);
+	writer1.Key("response");
+	writer1.Bool(true);
+	writer1.EndObject();
+    std::string strLMatch = sbMacth.GetString();
+    memset(&msg[LWS_PRE], 0, 2046-LWS_PRE);
+    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strSymbol.c_str());
+    length = strL2Update.length();
+    strncpy((char *)msg+LWS_PRE, strLMatch.c_str(), length);
+    ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 
     return ret;
 }
@@ -496,6 +569,30 @@ std::string MDEngineKuCoin::dealDataSprit(const char* src)
      return strData;
 }
 
+ void MDEngineKuCoin::onPong(struct lws* conn,Document& d)
+ {
+     Ping(conn,d);
+ }
+
+ void MDEngineKuCoin::Ping(struct lws* conn,Document& d)
+ {
+    StringBuffer sbPing;
+	Writer<StringBuffer> writer(sbPing);
+	writer.StartObject();
+	writer.Key("id");
+	writer.String(getId().c_str());
+	writer.Key("type");
+	writer.String("ping");
+	writer.EndObject();
+    std::string strPing = sbPing.GetString();
+    unsigned char msg[2046];
+    memset(&msg[LWS_PRE], 0, 2046-LWS_PRE);
+    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_ping: ");
+    int length = strPing.length();
+    strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
+    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+ }
+
 void MDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
@@ -503,25 +600,36 @@ void MDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
     Document json;
 	json.Parse(data);
 
-	if(!json.HasParseError() && json.IsObject() && json.HasMember("event") && json["event"].IsString())
+	if(!json.HasParseError() && json.IsObject() && json.HasMember("type") && json["type"].IsString())
 	{
-
-		if(strcmp(json["event"].GetString(), "update") == 0)
-		{
-			KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: is depth");
-            onDepth(json);
-		}
-
-		if(strcmp(json["event"].GetString(), "trades") == 0)
-		{
-			KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: is fills");
-            onFills(json);
-		}
-        if(strcmp(json["event"].GetString(), "tickers") == 0)
+        if(strcmp(json["type"].GetString(), "welcome") == 0)
         {
-            KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: is tickers");
-            //onTickers(json);
+            KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: welcome");
+            if(global_md)
+            {
+                Ping(conn,json);
+                global_md->lws_write_subscribe(conn,json);
+            }
         }
+        if(strcmp(json["type"].GetString(), "pong") == 0)
+		{
+			KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: pong");
+            onPong(conn,json);
+		}
+		if(strcmp(json["type"].GetString(), "message") == 0)
+		{
+            if(strcmp(json["subject"].GetString(), "trade.l2update") == 0)
+		    {
+			    KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: is trade.l2update");
+                onDepth(json);
+            }
+            if(strcmp(json["subject"].GetString(), "trade.l3match") == 0)
+            {
+                KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: is trade.l3match");
+                onFills(json);
+            }
+          
+		}	
 	} else 
     {
 		KF_LOG_ERROR(logger, "MDEngineKuCoin::on_lws_data . parse json error: " << data);
