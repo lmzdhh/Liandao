@@ -356,9 +356,12 @@ void MDEngineKuCoin::login(long timeout_nsec)
 	// Set up the client creation info
     auto& stServerInfo = m_vstServerInfos.front();
 	std::string strAddress = stServerInfo.strEndpoint;
-    std::string strPath = "?token=";
+    size_t nAddressEndPos = strAddress.find_last_of('/');
+    std::string strPath = strAddress.substr(nAddressEndPos + 1);
+    strPath += "?token=";
     strPath += m_strToken;
     strPath += "&[connectId=" +  getId() +"]";
+    strAddress = strAddress.substr(0,nAddressEndPos);
     clientConnectInfo.address = strAddress.c_str();
     clientConnectInfo.path = strPath.c_str(); // Set the info's path to the fixed up url path
 	clientConnectInfo.context = context;
