@@ -357,7 +357,7 @@ void MDEngineKuCoin::login(long timeout_nsec)
     auto& stServerInfo = m_vstServerInfos.front();
 	std::string strAddress = stServerInfo.strEndpoint;
     size_t nAddressEndPos = strAddress.find_last_of('/');
-    std::string strPath = strAddress.substr(nAddressEndPos + 1);
+    std::string strPath = strAddress.substr(nAddressEndPos);
     strPath += "?token=";
     strPath += m_strToken;
     strPath += "&[connectId=" +  getId() +"]";
@@ -373,7 +373,7 @@ void MDEngineKuCoin::login(long timeout_nsec)
 	clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
 	clientConnectInfo.pwsi = &wsi;
 
-    KF_LOG_INFO(logger, "MDEngineKuCoin::login: address = " << clientConnectInfo.address << ",path=" << clientConnectInfo.path);
+    KF_LOG_INFO(logger, "MDEngineKuCoin::login: address = " << clientConnectInfo.address << ",path = " << clientConnectInfo.path);
 
 	wsi = lws_client_connect_via_info(&clientConnectInfo);
 	if (wsi == NULL) {
