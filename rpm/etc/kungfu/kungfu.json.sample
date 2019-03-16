@@ -145,6 +145,7 @@
 		{
 			"book_depth_count": 5,
 			"trade_count": 10,
+			"rest_try_count":5,
 			"whiteLists": {
 				"strategy_coinpair(base_quote)": "exchange_coinpair",
 				"btc_usdt": "btcusdt",
