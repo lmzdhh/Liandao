@@ -48,7 +48,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		{
             ss << "LWS_CALLBACK_CLIENT_ESTABLISHED.";
             global_md->writeErrorLog(ss.str());
-			lws_callback_on_writable( wsi );
+			//lws_callback_on_writable( wsi );
 			break;
 		}
 		case LWS_CALLBACK_PROTOCOL_INIT:
@@ -71,13 +71,11 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		{
 		    ss << "LWS_CALLBACK_CLIENT_WRITEABLE.";
             global_md->writeErrorLog(ss.str());
-			/*
             int ret = 0;
 			if(global_md)
 			{
 				ret = global_md->lws_write_subscribe(wsi);
 			}
-            */
 			break;
 		}
 		case LWS_CALLBACK_CLOSED:
@@ -175,6 +173,9 @@ void MDEngineKuCoin::readWhiteLists(const json& j_config)
 				    std::string exchange_coinpair = it.value();
 				    KF_LOG_INFO(logger, "[readWhiteLists] (strategy_coinpair) " << strategy_coinpair << " (exchange_coinpair) " << exchange_coinpair);
 				    keyIsStrategyCoinpairWhiteList.insert(std::pair<std::string, std::string>(strategy_coinpair, exchange_coinpair));
+
+                    m_vstrSubscribeJsonString.push_back(makeSubscribeL2Update(exchange_coinpair));
+                    m_vstrSubscribeJsonString.push_back(makeSubscribeMatch(exchange_coinpair));
 			}
 		}
 	}
@@ -314,7 +315,7 @@ void MDEngineKuCoin::login(long timeout_nsec)
    {
        return;
    }
-
+    m_nSubscribePos = 0;
 	global_md = this;
 	int inputPort = 8443;
 	int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
@@ -413,7 +414,7 @@ void MDEngineKuCoin::subscribeMarketData(const vector<string>& instruments, cons
    KF_LOG_INFO(logger, "MDEngineKuCoin::subscribeMarketData:");
 }
 
-int MDEngineKuCoin::subscribeL2Update(struct lws* conn,std::string& strSymbol)
+std::string MDEngineKuCoin::makeSubscribeL2Update(std::string& strSymbol)
 {
     StringBuffer sbL2Update;
 	Writer<StringBuffer> writer(sbL2Update);
@@ -430,18 +431,11 @@ int MDEngineKuCoin::subscribeL2Update(struct lws* conn,std::string& strSymbol)
 	writer.String("true");
 	writer.EndObject();
     std::string strL2Update = sbL2Update.GetString();
-    
-    unsigned char msg[512];
-    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
-     int length = strL2Update.length();
-    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strL2Update.c_str() << ",len = " <<length);
-    strncpy((char *)msg+LWS_PRE, strL2Update.c_str(), length);
-    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 
-    return ret;
+    return strL2Update;
 }
 
-int MDEngineKuCoin::subscribeMatch(struct lws* conn,std::string& strSymbol)
+std::string MDEngineKuCoin::makeSubscribeMatch(std::string& strSymbol)
 {
      StringBuffer sbMacth;
 	Writer<StringBuffer> writer1(sbMacth);
@@ -461,28 +455,32 @@ int MDEngineKuCoin::subscribeMatch(struct lws* conn,std::string& strSymbol)
 	writer1.EndObject();
     std::string strLMatch = sbMacth.GetString();
 
-    unsigned char msg[512];
-    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
-    int length = strLMatch.length();
-    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strLMatch.c_str() << ",len = " <<length);
-    strncpy((char *)msg+LWS_PRE, strLMatch.c_str(), length);
-    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
-
-    return ret;
+    return strLMatch;
 }
 
-int MDEngineKuCoin::lws_write_subscribe(struct lws* conn,Document& json)
+int MDEngineKuCoin::lws_write_subscribe(struct lws* conn)
 {
 	//KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: (subscribe_index)" << subscribe_index);
 
     if(keyIsStrategyCoinpairWhiteList.size() == 0) return 0;
     int ret = 0;
-    for(auto& pair:keyIsStrategyCoinpairWhiteList)
+    if(m_nSubscribePos < m_vstrSubscribeJsonString.size())
     {
-        ret = subscribeL2Update(conn,pair.second);
-         ret = subscribeMatch(conn,pair.second);
+        std::string& strSubscribe = m_vstrSubscribeJsonString[m_nSubscribePos];
+        unsigned char msg[512];
+        memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
+        int length = strSubscribe.length();
+        KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_ping: " << strSubscribe.c_str() << " ,len = " << length);
+        strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
+        int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+        m_nSubscribePos++;
+        lws_callback_on_writable(conn);
     }
- 
+    else
+    {
+        Ping(conn);
+    }
+    
     return ret;
 }
 
@@ -499,12 +497,12 @@ std::string MDEngineKuCoin::dealDataSprit(const char* src)
      return strData;
 }
 
- void MDEngineKuCoin::onPong(struct lws* conn,Document& d)
+ void MDEngineKuCoin::onPong(struct lws* conn)
  {
-     Ping(conn,d);
+     Ping(conn);
  }
 
- void MDEngineKuCoin::Ping(struct lws* conn,Document& d)
+ void MDEngineKuCoin::Ping(struct lws* conn)
  {
     StringBuffer sbPing;
 	Writer<StringBuffer> writer(sbPing);
@@ -537,14 +535,16 @@ void MDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
             KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: welcome");
             if(global_md)
             {
-                Ping(conn,json);
-                global_md->lws_write_subscribe(conn,json);
+                lws_callback_on_writable(conn);
             }
         }
         if(strcmp(json["type"].GetString(), "pong") == 0)
 		{
 			KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: pong");
-            onPong(conn,json);
+             if(global_md)
+            {
+                lws_callback_on_writable(conn);
+            }
 		}
 		if(strcmp(json["type"].GetString(), "message") == 0)
 		{

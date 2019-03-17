@@ -78,7 +78,7 @@ public:
 
     void on_lws_data(struct lws* conn, const char* data, size_t len);
     void on_lws_connection_error(struct lws* conn);
-    int lws_write_subscribe(struct lws* conn,Document& json);
+    int lws_write_subscribe(struct lws* conn);
     void writeErrorLog(std::string strError);
 private:
     void onDepth(Document& json);
@@ -120,18 +120,20 @@ private:
     void debug_print(std::map<std::string, std::string> &keyIsStrategyCoinpairWhiteList);
     bool getToken(Document& d);
     bool getServers(Document& d);
-    void Ping(struct lws* conn,Document& d);
-    void onPong(struct lws* conn,Document& d);
+    void Ping(struct lws* conn);
+    void onPong(struct lws* conn);
     std::string getId();
     int64_t getMSTime();
-    int subscribeL2Update(struct lws* conn,std::string& strSymbol);
-    int subscribeMatch(struct lws* conn,std::string& strSymbol);
+    std::string makeSubscribeL2Update(std::string& strSymbol);
+    std::string makeSubscribeMatch(std::string& strSymbol);
 
     std::map<std::string,LFPriceBook20Field> mapLastData;
     //in MD, lookup direction is:
     // incoming exchange coinpair ---> our strategy recognized coinpair
     //if coming data 's coinpair is not in this map ,ignore it
     //"strategy_coinpair(base_quote)":"exchange_coinpair",
+    size_t m_nSubscribePos = 0;
+    std::vector<std::string> m_vstrSubscribeJsonString;
     std::map<std::string, std::string> keyIsStrategyCoinpairWhiteList;
 };
 
