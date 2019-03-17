@@ -433,8 +433,8 @@ int MDEngineKuCoin::subscribeL2Update(struct lws* conn,std::string& strSymbol)
     
     unsigned char msg[512];
     memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
-    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strL2Update.c_str());
-    int length = strL2Update.length();
+     int length = strL2Update.length();
+    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strL2Update.c_str() << ",len = " <<length);
     strncpy((char *)msg+LWS_PRE, strL2Update.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 
@@ -463,8 +463,8 @@ int MDEngineKuCoin::subscribeMatch(struct lws* conn,std::string& strSymbol)
 
     unsigned char msg[512];
     memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
-    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strLMatch.c_str());
     int length = strLMatch.length();
+    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strLMatch.c_str() << ",len = " <<length);
     strncpy((char *)msg+LWS_PRE, strLMatch.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 
@@ -517,8 +517,8 @@ std::string MDEngineKuCoin::dealDataSprit(const char* src)
     std::string strPing = sbPing.GetString();
     unsigned char msg[512];
     memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
-    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_ping: ");
-    int length = strPing.length();
+     int length = strPing.length();
+    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_ping: " << strPing.c_str() << " ,len = " << length);
     strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
  }
