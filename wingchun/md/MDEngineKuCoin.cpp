@@ -413,20 +413,8 @@ void MDEngineKuCoin::subscribeMarketData(const vector<string>& instruments, cons
    KF_LOG_INFO(logger, "MDEngineKuCoin::subscribeMarketData:");
 }
 
-int MDEngineKuCoin::lws_write_subscribe(struct lws* conn,Document& json)
+int MDEngineKuCoin::subscribeL2Update(struct lws* conn,std::string& strSymbol)
 {
-	//KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: (subscribe_index)" << subscribe_index);
-
-    if(keyIsStrategyCoinpairWhiteList.size() == 0) return 0;
-    
-    std::string strSymbol;
-    for(auto& pair:keyIsStrategyCoinpairWhiteList)
-    {
-        strSymbol += pair.second;
-        strSymbol += ",";
-    }
-    strSymbol.pop_back();
-
     StringBuffer sbL2Update;
 	Writer<StringBuffer> writer(sbL2Update);
 	writer.StartObject();
@@ -442,14 +430,20 @@ int MDEngineKuCoin::lws_write_subscribe(struct lws* conn,Document& json)
 	writer.Bool(true);
 	writer.EndObject();
     std::string strL2Update = sbL2Update.GetString();
-    unsigned char msg[2046];
-    memset(&msg[LWS_PRE], 0, 2046-LWS_PRE);
+    
+    unsigned char msg[512];
+    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
     KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strL2Update.c_str());
     int length = strL2Update.length();
     strncpy((char *)msg+LWS_PRE, strL2Update.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 
-    StringBuffer sbMacth;
+    return ret;
+}
+
+int MDEngineKuCoin::subscribeMatch(struct lws* conn,std::string& strSymbol)
+{
+     StringBuffer sbMacth;
 	Writer<StringBuffer> writer1(sbMacth);
 	writer1.StartObject();
 	writer1.Key("id");
@@ -466,12 +460,29 @@ int MDEngineKuCoin::lws_write_subscribe(struct lws* conn,Document& json)
 	writer1.Bool(true);
 	writer1.EndObject();
     std::string strLMatch = sbMacth.GetString();
-    memset(&msg[LWS_PRE], 0, 2046-LWS_PRE);
-    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strLMatch.c_str());
-    length = strL2Update.length();
-    strncpy((char *)msg+LWS_PRE, strLMatch.c_str(), length);
-    ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 
+    unsigned char msg[512];
+    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
+    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strLMatch.c_str());
+    int length = strLMatch.length();
+    strncpy((char *)msg+LWS_PRE, strLMatch.c_str(), length);
+    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+
+    return ret;
+}
+
+int MDEngineKuCoin::lws_write_subscribe(struct lws* conn,Document& json)
+{
+	//KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: (subscribe_index)" << subscribe_index);
+
+    if(keyIsStrategyCoinpairWhiteList.size() == 0) return 0;
+    int ret = 0;
+    for(auto& pair:keyIsStrategyCoinpairWhiteList)
+    {
+        ret = subscribeL2Update(conn,pair.second);
+         ret = subscribeMatch(conn,pair.second);
+    }
+ 
     return ret;
 }
 

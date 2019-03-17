@@ -124,6 +124,8 @@ private:
     void onPong(struct lws* conn,Document& d);
     std::string getId();
     int64_t getMSTime();
+    int subscribeL2Update(struct lws* conn,std::string& strSymbol);
+    int subscribeMatch(struct lws* conn,std::string& strSymbol);
 
     std::map<std::string,LFPriceBook20Field> mapLastData;
     //in MD, lookup direction is:
