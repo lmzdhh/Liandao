@@ -419,7 +419,7 @@ int MDEngineKuCoin::subscribeL2Update(struct lws* conn,std::string& strSymbol)
 	Writer<StringBuffer> writer(sbL2Update);
 	writer.StartObject();
 	writer.Key("id");
-	writer.Int64(getMSTime());
+	writer.String(getId().c_str());
 	writer.Key("type");
 	writer.String("subscribe");
 	writer.Key("topic");
@@ -427,7 +427,7 @@ int MDEngineKuCoin::subscribeL2Update(struct lws* conn,std::string& strSymbol)
     strTopic += strSymbol;
 	writer.String(strTopic.c_str());
 	writer.Key("response");
-	writer.Bool(true);
+	writer.String("true");
 	writer.EndObject();
     std::string strL2Update = sbL2Update.GetString();
     
@@ -447,7 +447,7 @@ int MDEngineKuCoin::subscribeMatch(struct lws* conn,std::string& strSymbol)
 	Writer<StringBuffer> writer1(sbMacth);
 	writer1.StartObject();
 	writer1.Key("id");
-	writer1.Int64(getMSTime());
+	writer1.String(getId().c_str());
 	writer1.Key("type");
 	writer1.String("subscribe");
 	writer1.Key("topic");
@@ -455,9 +455,9 @@ int MDEngineKuCoin::subscribeMatch(struct lws* conn,std::string& strSymbol)
     strTopic1 += strSymbol;
 	writer1.String(strTopic1.c_str());
     writer1.Key("privateChannel");
-	writer1.Bool(false);
+	writer1.String("false");
 	writer1.Key("response");
-	writer1.Bool(true);
+	writer1.String("true");
 	writer1.EndObject();
     std::string strLMatch = sbMacth.GetString();
 
@@ -515,8 +515,8 @@ std::string MDEngineKuCoin::dealDataSprit(const char* src)
 	writer.String("ping");
 	writer.EndObject();
     std::string strPing = sbPing.GetString();
-    unsigned char msg[2046];
-    memset(&msg[LWS_PRE], 0, 2046-LWS_PRE);
+    unsigned char msg[512];
+    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
     KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_ping: ");
     int length = strPing.length();
     strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
