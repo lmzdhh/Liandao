@@ -147,7 +147,6 @@
 			"rest_get_interval_ms": 500,
 			"rest_try_count":5,
 			"whiteLists": {
-				"strategy_coinpair(base_quote)": "exchange_coinpair",
 				"btc_usdt": "BTC-USDT",
 				"eth_usdt": "ETH-USDT",
 				"vet_usdt": "VET-USDT",

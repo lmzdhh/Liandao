@@ -123,6 +123,7 @@ private:
     void Ping(struct lws* conn,Document& d);
     void onPong(struct lws* conn,Document& d);
     std::string getId();
+    int64_t getMSTime();
 
     std::map<std::string,LFPriceBook20Field> mapLastData;
     //in MD, lookup direction is:

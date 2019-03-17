@@ -295,6 +295,12 @@ std::string MDEngineKuCoin::getId()
     return  std::to_string(timestamp);
 }
 
+int64_t MDEngineKuCoin::getMSTime()
+{
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return  timestamp;
+}
+
 void MDEngineKuCoin::login(long timeout_nsec)
 {
 	KF_LOG_INFO(logger, "MDEngineKuCoin::login:");
@@ -425,7 +431,7 @@ int MDEngineKuCoin::lws_write_subscribe(struct lws* conn,Document& json)
 	Writer<StringBuffer> writer(sbL2Update);
 	writer.StartObject();
 	writer.Key("id");
-	writer.String(getId().c_str());
+	writer.Int64(getMSTime());
 	writer.Key("type");
 	writer.String("subscribe");
 	writer.Key("topic");
@@ -447,7 +453,7 @@ int MDEngineKuCoin::lws_write_subscribe(struct lws* conn,Document& json)
 	Writer<StringBuffer> writer1(sbMacth);
 	writer1.StartObject();
 	writer1.Key("id");
-	writer1.String(getId().c_str());
+	writer1.Int64(getMSTime());
 	writer1.Key("type");
 	writer1.String("subscribe");
 	writer1.Key("topic");
