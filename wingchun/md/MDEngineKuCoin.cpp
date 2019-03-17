@@ -362,6 +362,7 @@ void MDEngineKuCoin::login(long timeout_nsec)
     strPath += m_strToken;
     strPath += "&[connectId=" +  getId() +"]";
     strAddress = strAddress.substr(0,nAddressEndPos);
+    strAddress = strAddress.substr(strAddress.find_last_of('/') + 1);
     clientConnectInfo.address = strAddress.c_str();
     clientConnectInfo.path = strPath.c_str(); // Set the info's path to the fixed up url path
 	clientConnectInfo.context = context;
@@ -437,7 +438,7 @@ int MDEngineKuCoin::lws_write_subscribe(struct lws* conn,Document& json)
     std::string strL2Update = sbL2Update.GetString();
     unsigned char msg[2046];
     memset(&msg[LWS_PRE], 0, 2046-LWS_PRE);
-    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strSymbol.c_str());
+    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strL2Update.c_str());
     int length = strL2Update.length();
     strncpy((char *)msg+LWS_PRE, strL2Update.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
@@ -460,7 +461,7 @@ int MDEngineKuCoin::lws_write_subscribe(struct lws* conn,Document& json)
 	writer1.EndObject();
     std::string strLMatch = sbMacth.GetString();
     memset(&msg[LWS_PRE], 0, 2046-LWS_PRE);
-    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strSymbol.c_str());
+    KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strLMatch.c_str());
     length = strL2Update.length();
     strncpy((char *)msg+LWS_PRE, strLMatch.c_str(), length);
     ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
