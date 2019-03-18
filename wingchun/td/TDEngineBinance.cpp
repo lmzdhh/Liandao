@@ -164,6 +164,10 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
 
+    if(j_config.find("cancel_timeout_ms") != j_config.end()) {
+        cancel_timeout_milliseconds = j_config["cancel_timeout_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (cancel_timeout_ms)" << cancel_timeout_milliseconds);
 
     AccountUnitBinance& unit = account_units[idx];
     unit.api_key = api_key;
@@ -939,6 +943,10 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
     }
+    else
+    {
+        mapCancelOrder.insert(std::make_pair(data->OrderRef,OrderActionInfo{getTimestamp(),*data,requestId}));
+    }
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 }
 
@@ -1098,15 +1106,28 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
                                                                                     << " (orderId)" << orderStatusIterator->OrderRef);
         }
-
         //remove order when finish
         if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
            || orderStatusIterator->OrderStatus == LF_CHAR_Error)
         {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
             orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
-        } else {
+            //
+            auto it = mapCancelOrder.find(orderStatusIterator->OrderRef);
+            if(it != mapCancelOrder.end())
+            {
+                mapCancelOrder.erase(it);
+            }
+
+        }
+        else {
             ++orderStatusIterator;
+            //
+            auto it = mapCancelOrder.find(orderStatusIterator->OrderRef);
+            if(it != mapCancelOrder.end() and (getTimestamp() - it->second.rcv_time) > cancel_timeout_milliseconds)
+            {
+                on_rsp_order_action(&(it->second.data),it->second.request_id , 101, "no response after cancel order for a long time");
+            }
         }
         //KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
     }
@@ -1765,7 +1786,7 @@ bool TDEngineBinance::isHandling()
 void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json)
 {
     KF_LOG_INFO(logger, "[get_order]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;//5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/order?";
@@ -1958,7 +1979,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol, int limit, int64_t fromId, Document &json)
 {
     KF_LOG_INFO(logger, "[get_my_trades]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;//5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/myTrades?";
@@ -2035,7 +2056,7 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &json)
 {
     KF_LOG_INFO(logger, "[get_open_orders]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;//5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/openOrders?";
@@ -2115,7 +2136,7 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
 void TDEngineBinance::get_exchange_time(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_exchange_time]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;//5000;
     std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v1/time";
@@ -2160,7 +2181,7 @@ void TDEngineBinance::get_exchange_infos(AccountUnitBinance& unit, Document &jso
 void TDEngineBinance::get_account(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_account]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;//5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/account?";
