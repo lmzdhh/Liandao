@@ -83,7 +83,7 @@ struct OrderActionInfo
     int64_t rcv_time;
     LFOrderActionField data;
     int request_id;
-}
+};
 
 /**
  * CTP trade engine
