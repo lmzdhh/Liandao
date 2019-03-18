@@ -1082,6 +1082,10 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                             source_id, MSG_TYPE_LF_RTN_ORDER_BITFINEX,
                             1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+    if(rtn_order.OrderStatus == LF_CHAR_Canceled)
+    {
+        CIDorderInsertData.erase(iter);
+    }
 }
 
 //n : notification
@@ -1214,6 +1218,7 @@ void TDEngineBitfinex::onNotification(struct lws* conn, Document& json)
                                                                                                                << cache.data.Volume);
                         on_rsp_order_insert(&cache.data, cache.requestId, 100, stateValue.c_str());
                         raw_writer->write_error_frame(&cache.data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITFINEX, 1, cache.requestId, 100, stateValue.c_str());
+                        CIDorderInsertData.erase(itr);
                     }
                 }
                 if("oc-req" == orderType) {
