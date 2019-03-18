@@ -1121,13 +1121,15 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
 
         }
         else {
-            ++orderStatusIterator;
+           
             //
             auto it = mapCancelOrder.find(orderStatusIterator->OrderRef);
             if(it != mapCancelOrder.end() and (getTimestamp() - it->second.rcv_time) > cancel_timeout_milliseconds)
             {
                 on_rsp_order_action(&(it->second.data),it->second.request_id , 101, "no response after cancel order for a long time");
             }
+            //
+            ++orderStatusIterator;
         }
         //KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
     }
