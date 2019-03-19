@@ -282,7 +282,7 @@ void TDEngineBinance::connect(long timeout_nsec)
         }
     }
     //sync time of exchange
-    timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
+    getTimeDiffOfExchange(account_units[0]);
 }
 
 bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc)
@@ -971,7 +971,7 @@ void TDEngineBinance::GetAndHandleOrderTradeResponse()
     if(sync_time_interval <= 0) {
         //reset
         sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
-        timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
+        getTimeDiffOfExchange(account_units[0]);
         KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
     }
 
@@ -1609,8 +1609,9 @@ Timestamp for this request was 1000ms ahead of the server's time.
  * */
 bool TDEngineBinance::shouldRetry(int http_status_code, std::string errorMsg, std::string text)
 {
-    if( 400 == http_status_code && text.find(":-1021,") != std::string::npos )
+    if( 400 == http_status_code && text.find(":-1021") != std::string::npos )
     {
+        getTimeDiffOfExchange(account_units[0]);
         return true;
     }
     return false;
@@ -2242,7 +2243,7 @@ std::string TDEngineBinance::getTimestampString()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     KF_LOG_DEBUG(logger, "[getTimestampString] (timestamp)" << timestamp << " (timeDiffOfExchange)" << timeDiffOfExchange << " (exchange_shift_ms)" << exchange_shift_ms);
-    timestamp =  timestamp - timeDiffOfExchange + exchange_shift_ms;
+    timestamp =  timestamp + timeDiffOfExchange + exchange_shift_ms;
     KF_LOG_INFO(logger, "[getTimestampString] (new timestamp)" << timestamp);
     std::string timestampStr;
     std::stringstream convertStream;
@@ -2256,12 +2257,22 @@ int64_t TDEngineBinance::getTimeDiffOfExchange(AccountUnitBinance& unit)
 {
     KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
     //reset to 0
-    int64_t timeDiffOfExchange = 0;
-//
+    Document d;
+    int64_t start_time = getTimestamp();
+    get_exchange_time(unit, d);
+    if(!d.HasParseError() && d.HasMember("serverTime"))
+    {//binance serverTime
+        exchangeTime = d["serverTime"].GetInt64();
+        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
+        int64_t finish_time = getTimestamp();
+        timeDiffOfExchange = exchangeTime-(finish_time-start_time)/2;
+    }
+
+
 //    int calculateTimes = 3;
 //    int64_t accumulationDiffTime = 0;
 //    bool hasResponse = false;
-//    for(int i = 0 ; i < calculateTimes; i++)
+//   for(int i = 0 ; i < calculateTimes; i++)
 //    {
 //        Document d;
 //        int64_t start_time = getTimestamp();
