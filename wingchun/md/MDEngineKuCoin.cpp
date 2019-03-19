@@ -711,10 +711,10 @@ bool MDEngineKuCoin::getInitPriceBook(const std::string& strSymbol,std::map<std:
 
     if(response.status_code != 200)
     {
-        KF_LOG_ERROR(logger, "MDEngineKuCoin::login::getToken Error, response = " <<response.text.c_str());
+        KF_LOG_ERROR(logger, "MDEngineKuCoin::login::getInitPriceBook Error, response = " <<response.text.c_str());
         return false;
     }
-    KF_LOG_INFO(logger, "MDEngineKuCoin::getToken: " << response.text.c_str());
+    KF_LOG_INFO(logger, "MDEngineKuCoin::getInitPriceBook: " << response.text.c_str());
 
     Document d;
     d.Parse(response.text.c_str());
@@ -819,7 +819,7 @@ void MDEngineKuCoin::onDepth(Document& dJson)
     {
         if(jsonData["changes"].HasMember("asks")) 
         {      
-            auto& asks = jsonData["asks"];
+            auto& asks = jsonData["changes"]["asks"];
             if(asks .IsArray()) {
                 int len = asks.Size();
                 for(int i = 0 ; i < len; i++)
@@ -838,7 +838,7 @@ void MDEngineKuCoin::onDepth(Document& dJson)
         else { KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  asks not found");}
         if(jsonData["changes"].HasMember("bids")) 
         {      
-            auto& bids = jsonData["bids"];
+            auto& bids = jsonData["changes"]["bids"];
             if(bids .IsArray()) 
             {
                 int len = bids.Size();
