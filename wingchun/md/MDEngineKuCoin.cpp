@@ -594,7 +594,9 @@ void MDEngineKuCoin::on_lws_connection_error(struct lws* conn)
 
 void MDEngineKuCoin::clearPriceBook()
 {
+     std::lock_guard<std::mutex> lck(*m_mutexPriceBookData);
     m_mapPriceBookData.clear();
+    mapLastData.clear();
 }
 
 void MDEngineKuCoin::onFills(Document& json)
@@ -719,13 +721,18 @@ bool MDEngineKuCoin::getInitPriceBook(const std::string& strSymbol,std::map<std:
     Document d;
     d.Parse(response.text.c_str());
     itPriceBookData = m_mapPriceBookData.insert(std::make_pair(strSymbol,PriceBookData())).first;
-    if(d.HasMember("sequence"))
+    if(!d.HasMember("data"))
     {
-        itPriceBookData->second.nSequence = std::round(stod(d["sequence"].GetString()));
+        return  true;
     }
-    if(d.HasMember("bids"))
+    auto& jsonData = d["data"];
+    if(jsonData.HasMember("sequence"))
     {
-        auto& bids =d["bids"];
+        itPriceBookData->second.nSequence = std::round(stod(jsonData["sequence"].GetString()));
+    }
+    if(jsonData.HasMember("bids"))
+    {
+        auto& bids =jsonData["bids"];
          if(bids .IsArray()) 
          {
                 int len = bids.Size();
@@ -737,9 +744,9 @@ bool MDEngineKuCoin::getInitPriceBook(const std::string& strSymbol,std::map<std:
                 }
          }
     }
-    if(d.HasMember("asks"))
+    if(jsonData.HasMember("asks"))
     {
-        auto& asks =d["asks"];
+        auto& asks =jsonData["asks"];
          if(asks .IsArray()) 
          {
                 int len = asks.Size();
@@ -904,7 +911,7 @@ void MDEngineKuCoin::onDepth(Document& dJson)
     {
         KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: on_price_book_update," << strInstrumentID << ",kucoin");
         on_price_book_update(&md);
-    }else { KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: same data not update:" << dJson["data"].GetString());}
+    }else { KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: same data not update" );}
 }
 
 std::string MDEngineKuCoin::parseJsonToString(const char* in)
