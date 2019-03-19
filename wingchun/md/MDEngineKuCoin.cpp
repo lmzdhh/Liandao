@@ -610,21 +610,14 @@ void MDEngineKuCoin::onFills(Document& json)
     auto& jsonData = json["data"];
    if(jsonData.HasMember("symbol"))
     {
-        ticker = json["symbol"].GetString();
+        ticker = jsonData["symbol"].GetString();
     }
     if(ticker.length() == 0) {
 		KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: invaild data");
 		return;
     }
     
-    std::string strInstrumentID;
-    for(auto& pair:keyIsStrategyCoinpairWhiteList)
-    {
-        if(pair.second == ticker)
-        {
-            strInstrumentID = pair.first;
-        }
-    }
+    std::string strInstrumentID = getWhiteListCoinpairFrom(ticker);
     if(strInstrumentID == "")
     {
         KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: invaild data " << ticker.c_str());
