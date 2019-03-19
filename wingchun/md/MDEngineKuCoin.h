@@ -7,6 +7,7 @@
 #include <document.h>
 #include <map>
 #include <vector>
+#include <mutex>
 
 WC_NAMESPACE_START
 
@@ -58,6 +59,12 @@ struct ServerInfo
    bool bEncrypt = true;
 };
 
+struct PriceBookData
+{
+    std::map<int64_t, uint64_t> mapAskPrice;
+    std::map<int64_t, uint64_t> mapBidPrice;
+    int64_t nSequence = -1;
+};
 
 class MDEngineKuCoin: public IMDEngine
 {
@@ -75,6 +82,7 @@ public:
 
 public:
     MDEngineKuCoin();
+    ~MDEngineKuCoin();
 
     void on_lws_data(struct lws* conn, const char* data, size_t len);
     void on_lws_connection_error(struct lws* conn);
@@ -108,8 +116,8 @@ private:
     int subscribe_index = 0;
 
     //<ticker, <price, volume>>
-    std::map<std::string, std::map<int64_t, uint64_t>*> tickerAskPriceMap;
-    std::map<std::string, std::map<int64_t, uint64_t>*> tickerBidPriceMap;
+    std::mutex* m_mutexPriceBookData;
+    std::map<std::string,PriceBookData> m_mapPriceBookData;
 
 private:
     std::string parseJsonToString(const char* in);
@@ -126,7 +134,8 @@ private:
     int64_t getMSTime();
     std::string makeSubscribeL2Update(std::string& strSymbol);
     std::string makeSubscribeMatch(std::string& strSymbol);
-
+    bool getInitPriceBook(const std::string& strSymbol,std::map<std::string,PriceBookData>::iterator& it) ;
+    void clearVaildData(PriceBookData& stPriceBookData);
     std::map<std::string,LFPriceBook20Field> mapLastData;
     //in MD, lookup direction is:
     // incoming exchange coinpair ---> our strategy recognized coinpair

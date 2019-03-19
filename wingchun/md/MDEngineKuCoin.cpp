@@ -128,6 +128,15 @@ struct session_data {
 MDEngineKuCoin::MDEngineKuCoin(): IMDEngine(SOURCE_KUCOIN)
 {
     logger = yijinjing::KfLog::getLogger("MdEngine.KuCoin");
+    m_mutexPriceBookData = new std::mutex;
+}
+
+MDEngineKuCoin::~MDEngineKuCoin()
+{
+   if(m_mutexPriceBookData)
+   {
+       delete m_mutexPriceBookData;
+   }
 }
 
 void MDEngineKuCoin::writeErrorLog(std::string strError)
@@ -585,20 +594,7 @@ void MDEngineKuCoin::on_lws_connection_error(struct lws* conn)
 
 void MDEngineKuCoin::clearPriceBook()
 {
-    //clear price and volumes of tickers
-    std::map<std::string, std::map<int64_t, uint64_t>*> ::iterator map_itr;
-
-    map_itr = tickerAskPriceMap.begin();
-    while(map_itr != tickerAskPriceMap.end()){
-        map_itr->second->clear();
-        map_itr++;
-    }
-
-    map_itr = tickerBidPriceMap.begin();
-    while(map_itr != tickerBidPriceMap.end()){
-        map_itr->second->clear();
-        map_itr++;
-    }
+    m_mapPriceBookData.clear();
 }
 
 void MDEngineKuCoin::onFills(Document& json)
@@ -608,45 +604,46 @@ void MDEngineKuCoin::onFills(Document& json)
         KF_LOG_ERROR(logger, "MDEngineKuCoin::[onFills] invalid market trade message");
         return;
     }
-     std::string ticker;
-   if(json.HasMember("channel"))
+    std::string ticker;
+    auto& jsonData = json["data"];
+   if(jsonData.HasMember("symbol"))
     {
-        ticker = json["channel"].GetString();
+        ticker = json["symbol"].GetString();
     }
     if(ticker.length() == 0) {
 		KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: invaild data");
 		return;
     }
     
-     auto strData =  json["data"].GetString();
-     Document jsonData;
-	jsonData.Parse(strData);
-    if(jsonData.HasMember("trades"))
+    std::string strInstrumentID;
+    for(auto& pair:keyIsStrategyCoinpairWhiteList)
     {
-        int len = jsonData["trades"].Size();
-        auto& arrayTrades = jsonData["trades"];
-        std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
-        strInstrumentID = strInstrumentID.substr(0,strInstrumentID.find_first_of('-'));
-        strInstrumentID = getWhiteListCoinpairFrom(strInstrumentID);
-        for(int i = 0 ; i < len; i++) {
-            LFL2TradeField trade;
-            memset(&trade, 0, sizeof(trade));
-            strcpy(trade.InstrumentID, strInstrumentID.c_str());
-            strcpy(trade.ExchangeID, "kucoin");
-
-            trade.Price = std::round(std::stod(arrayTrades.GetArray()[i]["price"].GetString()) * scale_offset);
-            trade.Volume = std::round(std::stod(arrayTrades.GetArray()[i]["amount"].GetString()) * scale_offset);
-            static const string strBuy = "buy" ;
-            trade.OrderBSFlag[0] = (strBuy == arrayTrades[i]["type"].GetString()) ? 'B' : 'S';
-
-            KF_LOG_INFO(logger, "MDEngineKuCoin::[onFills] (ticker)" << ticker <<
-                                                                        " (Price)" << trade.Price <<
-                                                                        " (Volume)" << trade.Volume << 
-                                                                        "(OrderBSFlag)" << trade.OrderBSFlag);
-            on_trade(&trade);
+        if(pair.second == ticker)
+        {
+            strInstrumentID = pair.first;
         }
     }
-    else {   KF_LOG_INFO(logger, "iMDEngineKuCoin::[onFills] : nvaild data"); }
+    if(strInstrumentID == "")
+    {
+        KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: invaild data " << ticker.c_str());
+		return;
+    }
+
+    LFL2TradeField trade;
+    memset(&trade, 0, sizeof(trade));
+    strcpy(trade.InstrumentID, strInstrumentID.c_str());
+    strcpy(trade.ExchangeID, "kucoin");
+
+    trade.Price = std::round(std::stod(jsonData["price"].GetString()) * scale_offset);
+    trade.Volume = std::round(std::stod(jsonData["size"].GetString()) * scale_offset);
+    static const string strBuy = "buy" ;
+    trade.OrderBSFlag[0] = (strBuy == jsonData["side"].GetString()) ? 'B' : 'S';
+
+    KF_LOG_INFO(logger, "MDEngineKuCoin::[onFills] (ticker)" << ticker <<
+                                                                " (Price)" << trade.Price <<
+                                                                " (Volume)" << trade.Volume << 
+                                                                "(OrderBSFlag)" << trade.OrderBSFlag);
+    on_trade(&trade);
 }
 
 bool MDEngineKuCoin::shouldUpdateData(const LFPriceBook20Field& md)
@@ -700,80 +697,214 @@ bool MDEngineKuCoin::shouldUpdateData(const LFPriceBook20Field& md)
     return has_update;
 }
 
-void MDEngineKuCoin::onDepth(Document& json)
+bool MDEngineKuCoin::getInitPriceBook(const std::string& strSymbol,std::map<std::string,PriceBookData>::iterator& itPriceBookData)
 {
-    bool asks_update = false;
-    bool bids_update = false;
+    int nTryCount = 0;
+    cpr::Response response;
+    std::string url = "https://api.kucoin.com/api/v1/market/orderbook/level2_20?symbol=";
+    url += strSymbol;
+
+    do{  
+       response = Get(Url{url.c_str()}, Parameters{}); 
+       
+    }while(++nTryCount < rest_try_count && response.status_code != 200);
+
+    if(response.status_code != 200)
+    {
+        KF_LOG_ERROR(logger, "MDEngineKuCoin::login::getToken Error, response = " <<response.text.c_str());
+        return false;
+    }
+    KF_LOG_INFO(logger, "MDEngineKuCoin::getToken: " << response.text.c_str());
+
+    Document d;
+    d.Parse(response.text.c_str());
+    itPriceBookData = m_mapPriceBookData.insert(std::make_pair(strSymbol,PriceBookData())).first;
+    if(d.HasMember("sequence"))
+    {
+        itPriceBookData->second.nSequence = std::round(stod(d["sequence"].GetString()));
+    }
+    if(d.HasMember("bids"))
+    {
+        auto& bids =d["bids"];
+         if(bids .IsArray()) 
+         {
+                int len = bids.Size();
+                for(int i = 0 ; i < len; i++)
+                {
+                    int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
+                    uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
+                   itPriceBookData->second.mapBidPrice[price] = volume;
+                }
+         }
+    }
+    if(d.HasMember("asks"))
+    {
+        auto& asks =d["asks"];
+         if(asks .IsArray()) 
+         {
+                int len = asks.Size();
+                for(int i = 0 ; i < len; i++)
+                {
+                    int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
+                    uint64_t volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
+                   itPriceBookData->second.mapAskPrice[price] = volume;
+                }
+         }
+    }
+
+    return true;
+}
+
+void MDEngineKuCoin::clearVaildData(PriceBookData& stPriceBookData)
+{
+    for(auto it = stPriceBookData.mapAskPrice.begin();it !=stPriceBookData.mapAskPrice.end();)
+    {
+        if(it->first == 0 || it->second == 0)
+        {
+            it = stPriceBookData.mapAskPrice.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+        
+    }
+
+     for(auto it = stPriceBookData.mapBidPrice.begin();it !=stPriceBookData.mapBidPrice.end();)
+    {
+        if(it->first == 0 || it->second == 0)
+        {
+            it = stPriceBookData.mapBidPrice.erase(it);
+        }
+        else
+        {
+            ++it;
+        }   
+    }
+
+}
+
+void MDEngineKuCoin::onDepth(Document& dJson)
+{
+    bool update = false;
 
     std::string ticker;
-    if(json.HasMember("channel"))
+    if(!dJson.HasMember("data"))
     {
-        ticker = json["channel"].GetString();
+        return;
+    }
+    auto& jsonData = dJson["data"];
+    if(jsonData.HasMember("symbol"))
+    {
+        ticker = jsonData["symbol"].GetString();
     }
     if(ticker.length() == 0) {
 		KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: invaild data");
 		return;
     }
- 
+    
     KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:" << "(ticker) " << ticker);
-    LFPriceBook20Field md;
-    memset(&md, 0, sizeof(md));
-    if(json.HasMember("data"))
+
+    std::lock_guard<std::mutex> lck(*m_mutexPriceBookData);
+    auto itPriceBook = m_mapPriceBookData.find(ticker);
+    if(itPriceBook == m_mapPriceBookData.end())
     {
-        auto strData =  json["data"].GetString();
-        Document jsonData;
-        //KF_LOG_INFO(logger, "strData:" << strData);
-	    jsonData.Parse(strData);
-        if(jsonData.IsObject() && jsonData.HasMember("asks")) 
+        if(!getInitPriceBook(ticker,itPriceBook))
+        {
+            return;
+        }
+    }
+
+    if(jsonData.HasMember("changes"))
+    {
+        if(jsonData["changes"].HasMember("asks")) 
         {      
             auto& asks = jsonData["asks"];
             if(asks .IsArray()) {
                 int len = asks.Size();
-                len = len <= book_depth_count ? len : book_depth_count;
                 for(int i = 0 ; i < len; i++)
                 {
+                    int64_t nSequence = std::round(stod(asks.GetArray()[i][2].GetString()) * scale_offset);
+                    if(nSequence <= itPriceBook->second.nSequence)
+                    {
+                        continue;
+                    }
                     int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
                     uint64_t volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
-                    md.AskLevels[i].price = price;
-                    md.AskLevels[i].volume = volume;
+                   itPriceBook->second.mapAskPrice[price] = volume;
                 }
-                 md.AskLevelCount = len;  
             }
         }
         else { KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  asks not found");}
-        if(jsonData.IsObject() && jsonData.HasMember("bids"))
-       {
+        if(jsonData["changes"].HasMember("bids")) 
+        {      
             auto& bids = jsonData["bids"];
-            if(bids.IsArray()) {
+            if(bids .IsArray()) 
+            {
                 int len = bids.Size();
-                len = len <= book_depth_count ? len : book_depth_count;
                 for(int i = 0 ; i < len; i++)
                 {
+                    int64_t nSequence = std::round(stod(bids.GetArray()[i][2].GetString()) * scale_offset);
+                    if(nSequence <= itPriceBook->second.nSequence)
+                    {
+                        continue;
+                    }
                     int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
                     uint64_t volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
-                    md.BidLevels[i].price = price;
-                    md.BidLevels[i].volume = volume;
+                   itPriceBook->second.mapBidPrice[price] = volume;
                 }
-                md.BidLevelCount = len;
             }
-       } else { KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  asks not found");}
+       } else { KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  bids not found");}
     }
     else
     {
           KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  data not found");
     }
     
-    std::string strInstrumentID = ticker.substr(ticker.find_first_of('-')+1);
-    strInstrumentID = strInstrumentID.substr(0,strInstrumentID.find_first_of('-'));
-    strInstrumentID = getWhiteListCoinpairFrom(strInstrumentID);
+    clearVaildData(itPriceBook->second);
+
+     LFPriceBook20Field md;
+    memset(&md, 0, sizeof(md));
+    std::string strInstrumentID = getWhiteListCoinpairFrom(ticker);
     strcpy(md.InstrumentID, strInstrumentID.c_str());
     strcpy(md.ExchangeID, "kucoin");
+
+    std::vector<PriceAndVolume> vstAskPriceAndVolume;
+    std::vector<PriceAndVolume> vstBidPriceAndVolume;
+    sortMapByKey(itPriceBook->second.mapAskPrice,vstAskPriceAndVolume,sort_price_asc);
+    sortMapByKey(itPriceBook->second.mapBidPrice,vstBidPriceAndVolume,sort_price_desc);
+    
+    size_t nAskLen = 0;
+    for(size_t nPos=0;nPos < vstAskPriceAndVolume.size();++nPos)
+    {
+        if(nAskLen > book_depth_count)
+        {
+            break;
+        }
+        md.AskLevels[nPos].price = vstAskPriceAndVolume[nPos].price;
+        md.AskLevels[nPos].volume = vstAskPriceAndVolume[nPos].volume;
+        ++nAskLen ;
+    }
+    md.AskLevelCount = nAskLen;  
+
+    size_t nBidLen = 0;
+    for(size_t nPos=0;nPos < vstBidPriceAndVolume.size();++nPos)
+    {
+        if(nBidLen > book_depth_count)
+        {
+            break;
+        }
+        md.BidLevels[nPos].price = vstBidPriceAndVolume[nPos].price;
+        md.BidLevels[nPos].volume = vstBidPriceAndVolume[nPos].volume;
+        ++nBidLen ;
+    }
+    md.BidLevelCount = nBidLen;  
 
     if(shouldUpdateData(md))
     {
         KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: on_price_book_update," << strInstrumentID << ",kucoin");
         on_price_book_update(&md);
-    }else { KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: same data not update:" << json["data"].GetString());}
+    }else { KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth: same data not update:" << dJson["data"].GetString());}
 }
 
 std::string MDEngineKuCoin::parseJsonToString(const char* in)
