@@ -479,14 +479,16 @@ int MDEngineKuCoin::lws_write_subscribe(struct lws* conn)
         unsigned char msg[512];
         memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
         int length = strSubscribe.length();
-        KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_ping: " << strSubscribe.c_str() << " ,len = " << length);
+        KF_LOG_INFO(logger, "MDEngineKuCoin::lws_write_subscribe: " << strSubscribe.c_str() << " ,len = " << length);
         strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
         int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
         m_nSubscribePos++;
+        sleep(100);
         lws_callback_on_writable(conn);
     }
     else
     {
+        sleep(50000);
         Ping(conn);
     }
     
@@ -757,6 +759,7 @@ bool MDEngineKuCoin::getInitPriceBook(const std::string& strSymbol,std::map<std:
 
 void MDEngineKuCoin::clearVaildData(PriceBookData& stPriceBookData)
 {
+    std::stringstream ss;
     for(auto it = stPriceBookData.mapAskPrice.begin();it !=stPriceBookData.mapAskPrice.end();)
     {
         if(it->first == 0 || it->second == 0)
@@ -861,6 +864,11 @@ void MDEngineKuCoin::onDepth(Document& dJson)
           KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  data not found");
     }
     
+    if(jsonData.HasMember("sequenceEnd"))
+    {
+        itPriceBook->second.nSequence = std::round(stod(jsonData["sequenceEnd"].GetString()));
+         KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  sequenceEnd = " << itPriceBook->second.nSequence);
+    }
     clearVaildData(itPriceBook->second);
 
      LFPriceBook20Field md;
@@ -877,7 +885,7 @@ void MDEngineKuCoin::onDepth(Document& dJson)
     size_t nAskLen = 0;
     for(size_t nPos=0;nPos < vstAskPriceAndVolume.size();++nPos)
     {
-        if(nAskLen > book_depth_count)
+        if(nAskLen >= book_depth_count)
         {
             break;
         }
@@ -890,7 +898,7 @@ void MDEngineKuCoin::onDepth(Document& dJson)
     size_t nBidLen = 0;
     for(size_t nPos=0;nPos < vstBidPriceAndVolume.size();++nPos)
     {
-        if(nBidLen > book_depth_count)
+        if(nBidLen >= book_depth_count)
         {
             break;
         }
@@ -923,7 +931,7 @@ void MDEngineKuCoin::loop()
 {
 		while(isRunning)
 		{
-            KF_LOG_INFO(logger, "MDEngineKuCoin::loop:lws_service");
+            //KF_LOG_INFO(logger, "MDEngineKuCoin::loop:lws_service");
 			lws_service( context, rest_get_interval_ms );
 		}
 }
