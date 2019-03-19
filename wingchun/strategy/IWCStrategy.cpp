@@ -118,6 +118,12 @@ void IWCStrategy::on_price_book_update(const LFPriceBook20Field* data, short sou
 					<< " (bidcount)" << data->BidLevelCount << " (askcount)" << data->AskLevelCount);
 }
 
+void IWCStrategy::on_funding_update(const LFFundingField* data, short source, long rcv_time)
+{
+    KF_LOG_DEBUG(logger, "[funding_update] (source)" << source << " (ticker)" << data->InstrumentID 
+				<< " (rate)" << data->Rate << " (rate_daily)" << data->RateDaily);
+}
+
 void IWCStrategy::on_market_data_level2(const LFL2MarketDataField* data, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[market_data_level2] (source)" << source << " (ticker)" << data->InstrumentID << " (lp)" << data->LastPrice);

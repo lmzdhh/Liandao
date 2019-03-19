@@ -78,7 +78,15 @@ class LFPriceBook20Field(Structure):
         ("BidLevels", LFPriceLevel20Field),	
         ("AskLevels", LFPriceLevel20Field),	
         ]
- 
+class LFFundingField(Structure):
+    _field_=[
+        ("InstrumentID", c_char * 31),	 
+        ("ExchangeID", c_char * 9),	 
+        ("TimeStamp",c_uint64),
+        ("Interval",c_uint64),
+        ("Rate",c_double),
+        ("RateDaily",c_double),
+    ]
 
 class LFL2MarketDataField(Structure):
     _fields_ = [
@@ -715,6 +723,14 @@ DataFieldMap = {
         'BidLevels' : [],	
         'AskLevels' : [],	
 	},
+    'LFFundingField': {
+		'InstrumentID' : 'c31',	 
+        'ExchangeID' : 'c9',	 
+        'TimeStamp' : 'i64',
+        'Interval' : 'i64',
+        'Rate' : 'd',
+        'RateDaily' : 'd',	        
+	},
 	'LFRspPositionField': {
 		'InstrumentID': 'c31',
 		'PosiDirection': lf.LfPosiDirectionTypeMap,
@@ -778,6 +794,7 @@ MsgType2LFStruct = {
     lf.MsgTypes.MD: LFMarketDataField,
     lf.MsgTypes.L2_MD: LFL2MarketDataField,
     lf.MsgTypes.PRICE_BOOK_20: LFPriceBook20Field,
+    lf.MsgTypes.FUNDING: LFFundingField,
     lf.MsgTypes.L2_INDEX: LFL2IndexField,
     lf.MsgTypes.L2_ORDER: LFL2OrderField,
     lf.MsgTypes.L2_TRADE: LFL2TradeField,
@@ -893,6 +910,7 @@ MsgType2LFStruct.update(SnifferMsgType2Struct)
 LFStruct2MsgType = {
     LFMarketDataField: lf.MsgTypes.MD,
     LFPriceBook20Field: lf.MsgTypes.PRICE_BOOK_20,
+    LFFundingField:lf.MsgTypes.FUNDING,
     LFL2MarketDataField: lf.MsgTypes.L2_MD,
     LFL2IndexField: lf.MsgTypes.L2_INDEX,
     LFL2OrderField: lf.MsgTypes.L2_ORDER,
