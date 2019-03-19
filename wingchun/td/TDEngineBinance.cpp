@@ -2262,10 +2262,10 @@ int64_t TDEngineBinance::getTimeDiffOfExchange(AccountUnitBinance& unit)
     get_exchange_time(unit, d);
     if(!d.HasParseError() && d.HasMember("serverTime"))
     {//binance serverTime
-        exchangeTime = d["serverTime"].GetInt64();
-        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
+        int64_t exchangeTime = d["serverTime"].GetInt64();
+        //KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
         int64_t finish_time = getTimestamp();
-        timeDiffOfExchange = exchangeTime-(finish_time-start_time)/2;
+        timeDiffOfExchange = exchangeTime-(finish_time+start_time)/2;
     }
 
 
