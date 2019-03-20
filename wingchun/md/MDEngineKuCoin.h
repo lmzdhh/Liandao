@@ -99,6 +99,9 @@ private:
 
     virtual void set_reader_thread() override;
 private:
+    bool isPong = false;
+    struct lws* m_conn;
+
     ThreadPtr rest_thread;
     bool connected = false;
     bool logged_in = false;

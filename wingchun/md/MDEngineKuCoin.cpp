@@ -483,12 +483,11 @@ int MDEngineKuCoin::lws_write_subscribe(struct lws* conn)
         strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
         int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
         m_nSubscribePos++;
-        sleep(100);
         lws_callback_on_writable(conn);
     }
     else
     {
-        sleep(50000);
+        isPong = false;
         Ping(conn);
     }
     
@@ -544,18 +543,13 @@ void MDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
         if(strcmp(json["type"].GetString(), "welcome") == 0)
         {
             KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: welcome");
-            if(global_md)
-            {
-                lws_callback_on_writable(conn);
-            }
+            lws_callback_on_writable(conn);
         }
         if(strcmp(json["type"].GetString(), "pong") == 0)
 		{
 			KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: pong");
-             if(global_md)
-            {
-                lws_callback_on_writable(conn);
-            }
+           isPong = true;
+           m_conn = conn;
 		}
 		if(strcmp(json["type"].GetString(), "message") == 0)
 		{
@@ -568,8 +562,7 @@ void MDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
             {
                 KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: is trade.l3match");
                 onFills(json);
-            }
-          
+            }      
 		}	
 	} else 
     {
@@ -586,6 +579,7 @@ void MDEngineKuCoin::on_lws_connection_error(struct lws* conn)
     KF_LOG_ERROR(logger, "MDEngineKuCoin::on_lws_connection_error. login again.");
     //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
 	clearPriceBook();
+    isPong = false;
 	//no use it
     long timeout_nsec = 0;
     //reset sub
@@ -887,7 +881,7 @@ void MDEngineKuCoin::onDepth(Document& dJson)
 
     if(jsonData.HasMember("sequenceEnd"))
     {
-        itPriceBook->second.nSequence = std::round(stod(jsonData["sequenceEnd"].GetString()));
+        itPriceBook->second.nSequence = std::round(jsonData["sequenceEnd"].GetInt64());
          KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  sequenceEnd = " << itPriceBook->second.nSequence);
     }
     clearVaildData(itPriceBook->second);
@@ -950,8 +944,17 @@ std::string MDEngineKuCoin::parseJsonToString(const char* in)
 
 void MDEngineKuCoin::loop()
 {
+        time_t nLastTime = time(0);
+
 		while(isRunning)
 		{
+             time_t nNowTime = time(0);
+            if(isPong && nNowTime - nLastTime>= 30)
+            {
+                isPong = false;
+                lws_callback_on_writable(m_conn);
+               nLastTime = nNowTime;
+            }
             //KF_LOG_INFO(logger, "MDEngineKuCoin::loop:lws_service");
 			lws_service( context, rest_get_interval_ms );
 		}
