@@ -584,6 +584,7 @@ void MDEngineKuCoin::on_lws_connection_error(struct lws* conn)
     //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
 	clearPriceBook();
     isPong = false;
+    shouldPing = true;
 	//no use it
     long timeout_nsec = 0;
     //reset sub
