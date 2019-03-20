@@ -89,7 +89,7 @@ class Strategy:
         funding_func = getattr(self.module, func_name, None)
         if funding_func is not None:
             def func_parse(func, raw_data, source, nano):
-                data = ctypes.cast(raw_data, ctypes.POINTER(structs.MsgType2LFStruct[lf.MsgTypes.PRICE_BOOK_20])).contents
+                data = ctypes.cast(raw_data, ctypes.POINTER(structs.MsgType2LFStruct[lf.MsgTypes.FUNDING])).contents
                 return func(context, data, source, nano)
             self.strategy.set_on_data(lf.MsgTypes.FUNDING, partial(func_parse, funding_func))
     def set_bar_data(self, func_name):
