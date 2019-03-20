@@ -136,6 +136,9 @@ private:
     std::string makeSubscribeMatch(std::string& strSymbol);
     bool getInitPriceBook(const std::string& strSymbol,std::map<std::string,PriceBookData>::iterator& it) ;
     void clearVaildData(PriceBookData& stPriceBookData);
+    void printPriceBook(const PriceBookData& stPriceBookData);
+
+
     std::map<std::string,LFPriceBook20Field> mapLastData;
     //in MD, lookup direction is:
     // incoming exchange coinpair ---> our strategy recognized coinpair

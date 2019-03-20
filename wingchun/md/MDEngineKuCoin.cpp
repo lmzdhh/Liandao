@@ -754,12 +754,32 @@ bool MDEngineKuCoin::getInitPriceBook(const std::string& strSymbol,std::map<std:
          }
     }
 
+     printPriceBook(itPriceBookData->second);
+
     return true;
+}
+
+void MDEngineKuCoin::printPriceBook(const PriceBookData& stPriceBookData)
+{
+    std::stringstream ss;
+    ss << "Bids[";
+    for(auto it = stPriceBookData.mapBidPrice.rbegin(); it != stPriceBookData.mapBidPrice.rend();++it)
+    {
+        ss <<  "[" << it->first << "," << it->second << "],";
+    }
+    ss << "],Ask[";
+     for(auto& pair : stPriceBookData.mapAskPrice)
+    {
+        ss <<  "[" << pair.first << "," << pair.second << "],";
+    }
+    ss << "].";
+
+    KF_LOG_INFO(logger, "MDEngineKuCoin::printPriceBook: " << ss.str());
 }
 
 void MDEngineKuCoin::clearVaildData(PriceBookData& stPriceBookData)
 {
-    std::stringstream ss;
+     KF_LOG_INFO(logger, "MDEngineKuCoin::clearVaildData: ");
     for(auto it = stPriceBookData.mapAskPrice.begin();it !=stPriceBookData.mapAskPrice.end();)
     {
         if(it->first == 0 || it->second == 0)
@@ -769,8 +789,7 @@ void MDEngineKuCoin::clearVaildData(PriceBookData& stPriceBookData)
         else
         {
             ++it;
-        }
-        
+        }        
     }
 
      for(auto it = stPriceBookData.mapBidPrice.begin();it !=stPriceBookData.mapBidPrice.end();)
@@ -784,7 +803,7 @@ void MDEngineKuCoin::clearVaildData(PriceBookData& stPriceBookData)
             ++it;
         }   
     }
-
+    printPriceBook(stPriceBookData);
 }
 
 void MDEngineKuCoin::onDepth(Document& dJson)
@@ -864,6 +883,8 @@ void MDEngineKuCoin::onDepth(Document& dJson)
           KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  data not found");
     }
     
+     printPriceBook(itPriceBook->second);
+
     if(jsonData.HasMember("sequenceEnd"))
     {
         itPriceBook->second.nSequence = std::round(stod(jsonData["sequenceEnd"].GetString()));
