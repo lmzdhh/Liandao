@@ -542,6 +542,10 @@ void MDEngineBitmex::processOrderbookData(Document& json)
         strcpy(update.ExchangeID, "bitmex");
         KF_LOG_INFO(logger, "sending out orderbook");
         on_price_book_update(&update);
+        //
+        LFFundingField fundingdata;
+        strcpy(fundingdata.InstrumentID, "test");
+        on_funding_update(&fundingdata);
     }
 }
 
@@ -662,7 +666,7 @@ int64_t getTimestampFromStr(std::string timestamp)
     localTM.tm_min = std::stoi(min);
     localTM.tm_sec = std::stoi(sec);
     time_t time = mktime(&localTM);
-    return time*1000+ms;
+    return time*1000+std::stoi(ms);
 }
 
 void MDEngineBitmex::processFundingData(Document& json)
@@ -676,18 +680,19 @@ void MDEngineBitmex::processFundingData(Document& json)
     }
 
     auto& data = json["data"];
-    std::string symbol = data.GetArray()[0]["symbol"].GetString();
-    std::string ticker = whiteList.GetKeyByValue(symbol);
-    if(ticker.empty())
-    {
-        KF_LOG_INFO(logger, "received funding symbol not in white list");
-        return;
-    }
-    KF_LOG_INFO(logger, "received funding symbol is " << symbol << " and ticker is " << ticker);
+    
 
     for(int count = 0; count < data.Size(); count++)
     {
         auto& update = data.GetArray()[count];
+        std::string symbol = update["symbol"].GetString();
+        std::string ticker = whiteList.GetKeyByValue(symbol);
+        if(ticker.empty())
+        {
+            KF_LOG_INFO(logger, "received funding symbol not in white list");
+            continue;
+        }
+        KF_LOG_INFO(logger, "received funding symbol is " << symbol << " and ticker is " << ticker);
         std::string timestamp = update["timestamp"].GetString();//"2019-03-19T07:52:44.318Z"
         
 
