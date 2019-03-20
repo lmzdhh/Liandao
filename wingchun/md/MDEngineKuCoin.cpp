@@ -840,9 +840,10 @@ void MDEngineKuCoin::onDepth(Document& dJson)
                 int len = asks.Size();
                 for(int i = 0 ; i < len; i++)
                 {
-                    int64_t nSequence = std::round(stod(asks.GetArray()[i][2].GetString()) * scale_offset);
+                    int64_t nSequence = std::round(stod(asks.GetArray()[i][2].GetString()));
                     if(nSequence <= itPriceBook->second.nSequence)
                     {
+                         KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  old ask data,nSequence=" << nSequence);
                         continue;
                     }
                     int64_t price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
@@ -850,8 +851,10 @@ void MDEngineKuCoin::onDepth(Document& dJson)
                    itPriceBook->second.mapAskPrice[price] = volume;
                 }
             }
+            else {KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  asks not Array");}
         }
         else { KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  asks not found");}
+
         if(jsonData["changes"].HasMember("bids")) 
         {      
             auto& bids = jsonData["changes"]["bids"];
@@ -860,9 +863,10 @@ void MDEngineKuCoin::onDepth(Document& dJson)
                 int len = bids.Size();
                 for(int i = 0 ; i < len; i++)
                 {
-                    int64_t nSequence = std::round(stod(bids.GetArray()[i][2].GetString()) * scale_offset);
+                    int64_t nSequence = std::round(stod(bids.GetArray()[i][2].GetString()));
                     if(nSequence <= itPriceBook->second.nSequence)
                     {
+                        KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  old bid data,nSequence=" << nSequence);
                         continue;
                     }
                     int64_t price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
@@ -870,6 +874,7 @@ void MDEngineKuCoin::onDepth(Document& dJson)
                    itPriceBook->second.mapBidPrice[price] = volume;
                 }
             }
+            else {KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  bids not Array");}
        } else { KF_LOG_INFO(logger, "MDEngineKuCoin::onDepth:  bids not found");}
     }
     else
@@ -949,11 +954,12 @@ void MDEngineKuCoin::loop()
 		while(isRunning)
 		{
              time_t nNowTime = time(0);
-            if(isPong && nNowTime - nLastTime>= 30)
+            if(isPong && (nNowTime - nLastTime>= 30))
             {
                 isPong = false;
-                lws_callback_on_writable(m_conn);
-               nLastTime = nNowTime;
+                 nLastTime = nNowTime;
+                 KF_LOG_INFO(logger, "MDEngineKuCoin::loop: last time = " <<  nLastTime << ",now time = " << nNowTime << ",isPong = " << isPong);
+                lws_callback_on_writable(m_conn);  
             }
             //KF_LOG_INFO(logger, "MDEngineKuCoin::loop:lws_service");
 			lws_service( context, rest_get_interval_ms );
