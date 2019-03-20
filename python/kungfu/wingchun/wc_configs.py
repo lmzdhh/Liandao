@@ -169,6 +169,7 @@ override_methods = [
                         ('price_book_data', 'LFPriceBook20Field', 'price book 20'),
                         ('source', 'int', SOURCE_COMMENT),
                         ('rcv_time', 'long', 'time of tick received.')]),
+     'callback when funding data received', False),
     ('on_funding', (None, [('context', 'context object', CONTEXT_COMMENT),
                         ('funding_data', 'LFFundingField', 'funding data'),
                         ('source', 'int', SOURCE_COMMENT),
