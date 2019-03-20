@@ -388,7 +388,7 @@ void MDEngineBitmex::processData(struct lws* conn, const char* data, size_t len)
             KF_LOG_INFO(logger, "received data is 1-minute trade bins");
             processTradeBinsData(json);
         }
-        else if(strcmp(json["table"].GetString(), "fungding") == 0)
+        else if(strcmp(json["table"].GetString(), "funding") == 0)
         {
             KF_LOG_INFO(logger, "received data is funding data:" << data);
             processFundingData(json);
@@ -654,7 +654,15 @@ int64_t getTimestampFromStr(std::string timestamp)
     std::string min = timestamp.substr(14,2);
     std::string sec = timestamp.substr(17,2);
     std::string ms = timestamp.substr(20,3);
-
+    struct tm localTM;
+    localTM.tm_year = std::stoi(year)-1900;
+    localTM.tm_mon = std::stoi(month)-1;
+    localTM.tm_mday = std::stoi(day);
+    localTM.tm_hour = std::stoi(hour);
+    localTM.tm_min = std::stoi(min);
+    localTM.tm_sec = std::stoi(sec);
+    time_t time = mktime(&localTM);
+    return time*1000+ms;
 }
 
 void MDEngineBitmex::processFundingData(Document& json)
@@ -688,10 +696,10 @@ void MDEngineBitmex::processFundingData(Document& json)
         strcpy(fundingdata.InstrumentID, ticker.c_str());
         strcpy(fundingdata.ExchangeID, "bitmex");
 
-        struct tm cur_tm;
-        time_t now = time(0);
-        cur_tm = *localtime(&now);
-        fundingdata.TimeStamp = kungfu::yijinjing::parseTm(cur_tm) / 1000000;
+        //struct tm cur_tm;
+        //time_t now = time(0);
+        //cur_tm = *localtime(&now);
+        fundingdata.TimeStamp = getTimestampFromStr(timestamp)//kungfu::yijinjing::parseTm(cur_tm) / 1000000;
         fundingdata.Rate = update["fundingRate"].GetDouble();
         fundingdata.RateDaily = update["fundingRateDaily"].GetDouble();
         on_funding_update(&fundingdata);
