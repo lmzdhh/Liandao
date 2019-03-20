@@ -100,6 +100,7 @@ private:
     virtual void set_reader_thread() override;
 private:
     bool isPong = false;
+    bool shouldPing = false;
     struct lws* m_conn;
 
     ThreadPtr rest_thread;

@@ -487,8 +487,11 @@ int MDEngineKuCoin::lws_write_subscribe(struct lws* conn)
     }
     else
     {
-        isPong = false;
-        Ping(conn);
+        if(shouldPing)
+        {
+            isPong = false;
+            Ping(conn);
+        }
     }
     
     return ret;
@@ -514,6 +517,7 @@ std::string MDEngineKuCoin::dealDataSprit(const char* src)
 
  void MDEngineKuCoin::Ping(struct lws* conn)
  {
+     shouldPing = false;
     StringBuffer sbPing;
 	Writer<StringBuffer> writer(sbPing);
 	writer.StartObject();
@@ -959,6 +963,7 @@ void MDEngineKuCoin::loop()
                 isPong = false;
                  nLastTime = nNowTime;
                  KF_LOG_INFO(logger, "MDEngineKuCoin::loop: last time = " <<  nLastTime << ",now time = " << nNowTime << ",isPong = " << isPong);
+                shouldPing = true;
                 lws_callback_on_writable(m_conn);  
             }
             //KF_LOG_INFO(logger, "MDEngineKuCoin::loop:lws_service");
