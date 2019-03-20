@@ -699,7 +699,7 @@ void MDEngineBitmex::processFundingData(Document& json)
         //struct tm cur_tm;
         //time_t now = time(0);
         //cur_tm = *localtime(&now);
-        fundingdata.TimeStamp = getTimestampFromStr(timestamp)//kungfu::yijinjing::parseTm(cur_tm) / 1000000;
+        fundingdata.TimeStamp = getTimestampFromStr(timestamp);//kungfu::yijinjing::parseTm(cur_tm) / 1000000;
         fundingdata.Rate = update["fundingRate"].GetDouble();
         fundingdata.RateDaily = update["fundingRateDaily"].GetDouble();
         on_funding_update(&fundingdata);
