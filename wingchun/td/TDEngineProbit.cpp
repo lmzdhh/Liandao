@@ -513,6 +513,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     {
         std::unique_lock<std::mutex> l(g_orderMutex);
         unit.ordersMap[clientId] = order;
+        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
     }
     int64_t fixedPrice = fixPriceTickSize(ticker, data->LimitPrice, LF_CHAR_Buy == data->Direction);
     KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<" (LimitPrice)" << data->LimitPrice <<" (FixedPrice)" << fixedPrice);
@@ -539,9 +540,10 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         }
         KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
-    on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+    
     if(errorId != 0)
     {     
+        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         std::unique_lock<std::mutex> l(g_orderMutex);
         unit.ordersMap.erase(clientId);
     }
