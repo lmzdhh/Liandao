@@ -539,9 +539,9 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         }
         KF_LOG_ERROR(logger, "[req_order_insert] failed!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
+    on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
     if(errorId != 0)
-    {
-        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+    {     
         std::unique_lock<std::mutex> l(g_orderMutex);
         unit.ordersMap.erase(clientId);
     }
