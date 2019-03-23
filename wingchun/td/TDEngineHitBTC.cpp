@@ -397,6 +397,35 @@ void TDEngineHitBTC::lws_login(AccountUnitHitBTC& unit, long timeout_nsec) {
     KF_LOG_INFO(logger, "TDEngineHitBTC::login: wsi create success.");
 }
 
+
+int TDEngineHitBTC::lws_write_subscribe(struct lws* conn)
+{
+    KF_LOG_INFO(logger, "TDEngineBitfinex::lws_write_subscribe");
+    AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
+    moveNewtoPending(unit);
+
+    if(unit.pendingSendMsg.size() > 0) {
+        unsigned char msg[512];
+        memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
+
+        std::string jsonString = unit.pendingSendMsg[unit.pendingSendMsg.size() - 1];
+        unit.pendingSendMsg.pop_back();
+        KF_LOG_INFO(logger, "TDEngineHitBTC::lws_write_subscribe: websocketPendingSendMsg: " << jsonString.c_str());
+        int length = jsonString.length();
+
+        strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
+        int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+
+        if(unit.pendingSendMsg.size() > 0)
+        {    //still has pending send data, emit a lws_callback_on_writable()
+            lws_callback_on_writable( conn );
+            KF_LOG_INFO(logger, "TDEngineHitBTC::lws_write_subscribe: (websocketPendingSendMsg,size)" << unit.pendingSendMsg.size());
+        }
+        return ret;
+    }
+    return 0;
+}
+
 void TDEngineHitBTC::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     KF_LOG_INFO(logger, "TDEngineBitfinex::on_lws_data: " << data);
