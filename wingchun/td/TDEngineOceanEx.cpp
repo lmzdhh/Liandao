@@ -1240,12 +1240,13 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
             strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
             strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
             rtn_trade.Direction = rtn_order.Direction;
-            uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
-            uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
+            double oldAmount = orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
+            double newAmount = rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
 
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            rtn_trade.Price = checkPrice((newAmount - oldAmount)*1.0/(rtn_trade.Volume),orderStatusIterator->InstrumentID);//(newAmount - oldAmount)/(rtn_trade.Volume);
+            double price = (newAmount - oldAmount)/(rtn_trade.Volume/scale_offset);
+            rtn_trade.Price = checkPrice(std::round(price*scale_offset),orderStatusIterator->InstrumentID);//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
@@ -1338,12 +1339,13 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
             strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
             strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
             rtn_trade.Direction = rtn_order.Direction;
-            uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
-            uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
+            double oldAmount = orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
+            double newAmount = rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
 
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            rtn_trade.Price = checkPrice((newAmount - oldAmount)*1.0/(rtn_trade.Volume),orderStatusIterator->InstrumentID);//(newAmount - oldAmount)/(rtn_trade.Volume);
+            double price = (newAmount - oldAmount)/(rtn_trade.Volume/scale_offset);
+            rtn_trade.Price = checkPrice(std::round(price*scale_offset),orderStatusIterator->InstrumentID);//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
