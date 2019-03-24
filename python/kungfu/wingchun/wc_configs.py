@@ -123,7 +123,7 @@ context_usage = \
         # insert order
         ('insert_market_order', lambda strategy: strategy.insert_market_order,
          'insert market order, return order_id (-1 if failed)',
-         ('int', [('int', 'source'), ('str', 'ticker'), ('str', 'exchange_id'), ('int', 'volume'), ('DIRECTION', 'direction'), ('OFFSET ', 'offset')])),
+         ('int', [('int', 'source'), ('str', 'ticker'), ('str', 'exchange_id'), ('int', 'volume'), ('DIRECTION', 'direction'), ('OFFSET', 'offset'), ('str', 'misc_info')])),
         ('insert_limit_order', lambda strategy: strategy.insert_limit_order,
          'insert limit order, return order_id (-1 if failed)',
          ('int', [('int', 'source'), ('str', 'ticker'), ('str', 'exchange_id'), ('float', 'price'), ('int', 'volume'), ('DIRECTION', 'direction'), ('OFFSET', 'offset')])),
