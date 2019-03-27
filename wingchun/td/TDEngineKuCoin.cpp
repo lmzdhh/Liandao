@@ -123,7 +123,7 @@ cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::strin
 {
     string url = unit.baseUrl + method_url;
     std::string strTimestamp = std::to_string(getTimestamp());
-    std::string strSign = strTimestamp + "Get" + method_url;
+    std::string strSign = strTimestamp + "GET" + method_url;
     KF_LOG_INFO(logger, "strSign = " << strSign );
     std::string strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
     KF_LOG_INFO(logger, "strHmac = " << strHmac );
@@ -151,7 +151,7 @@ cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::strin
 cpr::Response TDEngineKuCoin::Delete(const std::string& method_url,const std::string& body, AccountUnitKuCoin& unit)
 {
     std::string url = unit.baseUrl + method_url;
-    std::string strSign = std::to_string(getTimestamp()) + "Delete" + method_url;
+    std::string strSign = std::to_string(getTimestamp()) + "DELETE" + method_url;
     auto mapHeader = construct_request_header(unit,strSign,"");
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Delete(Url{url},Header{mapHeader}, Timeout{10000} );
@@ -164,7 +164,7 @@ cpr::Response TDEngineKuCoin::Delete(const std::string& method_url,const std::st
 
 cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::string& body, AccountUnitKuCoin& unit)
 {
-    std::string strSign = std::to_string(getTimestamp()) + "Post" + method_url + body;
+    std::string strSign = std::to_string(getTimestamp()) + "POST" + method_url + body;
      std::string strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
     std::string strSignatrue = base64_encode((const unsigned char *)strHmac.c_str(),strHmac.size());
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
