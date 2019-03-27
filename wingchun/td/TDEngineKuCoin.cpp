@@ -125,9 +125,9 @@ cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::strin
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strSign = strTimestamp + "GET" + method_url;
     KF_LOG_INFO(logger, "strSign = " << strSign );
-    std::string strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
+    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     KF_LOG_INFO(logger, "strHmac = " << strHmac );
-    std::string strSignatrue = base64_encode((const unsigned char *)strHmac.c_str(),strHmac.size());
+    std::string strSignatrue = base64_encode(strHmac,32);
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
                                         {"KC-API-TIMESTAMP",strTimestamp},
                                         {"KC-API-KEY",unit.api_key},
