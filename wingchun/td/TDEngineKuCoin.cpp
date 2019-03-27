@@ -104,14 +104,14 @@ cpr::Header TDEngineKuCoin::construct_request_header(AccountUnitKuCoin& unit,con
     {
            return cpr::Header{{"KC-API-SIGN",strSignatrue},
                                         {"KC-API-TIMESTAMP",std::to_string(getTimestamp())},
-                                        {"KC=API-KEY",unit.api_key},
+                                        {"KC-API-KEY",unit.api_key},
                                         {"KC-API-PASSPHRASE",unit.passphrase}};
     }
     else
     {
         return cpr::Header{{"KC-API-SIGN",strSignatrue},
                                     {"KC-API-TIMESTAMP",std::to_string(getTimestamp())},
-                                    {"KC=API-KEY",unit.api_key},
+                                    {"KC-API-KEY",unit.api_key},
                                     {"KC-API-PASSPHRASE",unit.passphrase},
                                     {"Contenr-Type",strContentType}};
     }
@@ -127,9 +127,9 @@ cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::strin
     std::string strSignatrue = base64_encode((const unsigned char *)strHmac.c_str(),strHmac.size());
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
                                         {"KC-API-TIMESTAMP",std::to_string(getTimestamp())},
-                                        {"KC=API-KEY",unit.api_key},
+                                        {"KC-API-KEY",unit.api_key},
                                         {"KC-API-PASSPHRASE",unit.passphrase}};
-
+                                        
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Get(Url{url}, 
                              mapHeader, Timeout{10000} );
@@ -161,7 +161,7 @@ cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::stri
     std::string strSignatrue = base64_encode((const unsigned char *)strHmac.c_str(),strHmac.size());
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
                                         {"KC-API-TIMESTAMP",std::to_string(getTimestamp())},
-                                        {"KC=API-KEY",unit.api_key},
+                                        {"KC-API-KEY",unit.api_key},
                                         {"KC-API-PASSPHRASE",unit.passphrase},
                                         {"Content-Type", "application/json"}};
 
