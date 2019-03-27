@@ -131,7 +131,7 @@ int WCStrategyUtil::insert_market_order(short source,
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
     strncpy(order.BusinessUnit, strategy_name.c_str(),21);
-    strncpy(order.MiscInfo, misc_info.c_str(),30);
+    strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
@@ -156,7 +156,7 @@ int WCStrategyUtil::insert_limit_order(short source, string instrument_id, strin
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
     strncpy(order.BusinessUnit, strategy_name.c_str(),21);
-    strncpy(order.MiscInfo, misc_info.c_str(),30);
+    strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
@@ -181,7 +181,7 @@ int WCStrategyUtil::insert_fok_order(short source, string instrument_id, string 
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
     strncpy(order.BusinessUnit, strategy_name.c_str(),21);
-    strncpy(order.MiscInfo, misc_info.c_str(),30);
+    strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
@@ -206,7 +206,7 @@ int WCStrategyUtil::insert_fak_order(short source, string instrument_id, string 
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
     strncpy(order.BusinessUnit, strategy_name.c_str(),21);
-    strncpy(order.MiscInfo, misc_info.c_str(),30);
+    strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
@@ -231,7 +231,7 @@ int WCStrategyUtil::cancel_order(short source, int order_id,string misc_info)
     req.VolumeChange = 0;
     req.RequestID = rid;
     strncpy(req.InvestorID, strategy_name.c_str(),19);
-    strncpy(req.MiscInfo, misc_info.c_str(),30);
+    strncpy(req.MiscInfo, misc_info.c_str(),64);
     write_frame(&req, sizeof(LFOrderActionField), source, MSG_TYPE_LF_ORDER_ACTION, 1/*lastflag*/, rid);
     return rid;
 }
@@ -240,9 +240,17 @@ void WCStrategyUtil::set_pos_back(short source, const char* pos_str)
 {
     write_frame(pos_str, strlen(pos_str) + 1, source, MSG_TYPE_STRATEGY_POS_SET, 1, -1);
 }
-string WCStrategyUtil::gen_tag(long time,short source_id,bool is_td_trigger,bool is_hedge)
+string WCStrategyUtil::gen_tag(long time,short source_id,bool is_td_trigger,bool is_hedge,int order_ref,int request_id)
 {
-    char strTag[30]={};
-    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),(is_td_trigger?1:0),source_id,time);
+    char strTag[64]={};
+    if(order_ref == 0 || request_id == 0)
+    {
+        sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),(is_td_trigger?1:0),source_id,time);
+    }
+    else
+    {
+        sprintf(strTag,"%d%d%02hd%ld%%08d%08d",(is_hedge?1:0),(is_td_trigger?1:0),source_id,time,request_id,order_ref);
+    }
+    
     return strTag;
 }

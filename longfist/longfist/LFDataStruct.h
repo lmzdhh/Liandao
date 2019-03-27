@@ -303,7 +303,7 @@ struct LFInputOrderField
 	double                     	StopPrice;             //止损价
 	int                        	IsAutoSuspend;         //自动挂起标志
 	LfContingentConditionType  	ContingentCondition;   //触发条件
-	char_30                    	MiscInfo;              //委托自定义标签
+	char_64                    	MiscInfo;              //委托自定义标签
 	uint64_t			MassOrderSeqId;
 	int				MassOrderIndex;
 	int				MassOrderTotalNum;
@@ -369,7 +369,7 @@ struct LFOrderActionField
 	int64_t   	LimitPrice;            //价格
 	uint64_t    VolumeChange;          //数量变化
 	int      	KfOrderID;             //Kf系统内订单ID	
-	char_30     MiscInfo;              //委托自定义标签
+	char_64     MiscInfo;              //委托自定义标签
 	uint64_t	MassOrderSeqId;
 	int			MassOrderIndex;
 	int			MassOrderTotalNum;

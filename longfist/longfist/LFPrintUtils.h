@@ -268,7 +268,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "StopPrice:" << std::setw(6) << "(d)" << " " << ptr->StopPrice << std::endl \
 	 << std::setw(20) << "IsAutoSuspend:" << std::setw(6) << "(i)" << " " << (int)ptr->IsAutoSuspend << std::endl \
 	 << std::setw(20) << "ContingentCondition:" << std::setw(6) << "(t)" << " " << getLfContingentConditionType(ptr->ContingentCondition) << std::endl \
-	 << std::setw(20) << "MiscInfo:" << std::setw(6) << "(c30)" << " " << ptr->MiscInfo << std::endl \
+	 << std::setw(20) << "MiscInfo:" << std::setw(6) << "(c64)" << " " << ptr->MiscInfo << std::endl \
 	 << std::setw(20) << "MassOrderSeqId:" << std::setw(6) << "(i)" << " " << ptr->MassOrderSeqId << std::endl \
 	 << std::setw(20) << "MassOrderIndex:" << std::setw(6) << "(i)" << " " << ptr->MassOrderIndex << std::endl \
 	 << std::setw(20) << "MassOrderTotalNum:" << std::setw(6) << "(i)" << " " << ptr->MassOrderTotalNum << std::endl \
@@ -328,7 +328,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "LimitPrice:" << std::setw(6) << "(d)" << " " << ptr->LimitPrice << std::endl \
 	 << std::setw(20) << "VolumeChange:" << std::setw(6) << "(i)" << " " << ptr->VolumeChange << std::endl \
 	 << std::setw(20) << "KfOrderID:" << std::setw(6) << "(i)" << " " << (int)ptr->KfOrderID << std::endl \
-	 << std::setw(20) << "MiscInfo:" << std::setw(6) << "(c30)" << " " << ptr->MiscInfo << std::endl \
+	 << std::setw(20) << "MiscInfo:" << std::setw(6) << "(c64)" << " " << ptr->MiscInfo << std::endl \
 	 << std::setw(20) << "MassOrderSeqId:" << std::setw(6) << "(i)" << " " << ptr->MassOrderSeqId << std::endl \
 	 << std::setw(20) << "MassOrderIndex:" << std::setw(6) << "(i)" << " " << ptr->MassOrderIndex << std::endl \
 	 << std::setw(20) << "MassOrderTotalNum:" << std::setw(6) << "(i)" << " " << ptr->MassOrderTotalNum << std::endl \

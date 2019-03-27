@@ -300,7 +300,7 @@ class LFInputOrderField(Structure):
         ("StopPrice", c_double),	# 止损价 
         ("IsAutoSuspend", c_int),	# 自动挂起标志 
         ("ContingentCondition", c_char),	# 触发条件 LfContingentConditionType
-        ("MiscInfo", c_char * 30),	# 委托自定义标签 
+        ("MiscInfo", c_char * 64),	# 委托自定义标签 
         ("MassOrderSeqId", c_uint64),	
         ("MassOrderIndex", c_int),	
         ("MassOrderTotalNum", c_int),	
@@ -366,7 +366,7 @@ class LFOrderActionField(Structure):
         ("LimitPrice", c_int64),	# 价格 
         ("VolumeChange", c_uint64),	# 数量变化 
         ("KfOrderID", c_int),	# Kf系统内订单ID 
-        ("MiscInfo", c_char * 30),	# 委托自定义标签 
+        ("MiscInfo", c_char * 64),	# 委托自定义标签 
         ("MassOrderSeqId", c_uint64),	
         ("MassOrderIndex", c_int),	
         ("MassOrderTotalNum", c_int),	
@@ -630,7 +630,7 @@ DataFieldMap = {
 		'VolumeCondition': lf.LfVolumeConditionTypeMap,
 		'TimeCondition': lf.LfTimeConditionTypeMap,
 		'BrokerID': 'c11',
-		'MiscInfo': 'c30',
+		'MiscInfo': 'c64',
 		'StopPrice': 'd',
         'MassOrderSeqId':'i64',
 	    'MassOrderIndex':'i',
@@ -767,7 +767,7 @@ DataFieldMap = {
 		'BrokerID': 'c11',
 		'RequestID': 'i',
 		'OrderSysID': 'c31',
-        'MiscInfo': 'c30',
+        'MiscInfo': 'c64',
         'MassOrderSeqId':'i64',
 	    'MassOrderIndex':'i',
 	    'MassOrderTotalNum':'i',
