@@ -122,17 +122,25 @@ std::mutex g_httpMutex;
 cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::string& body, AccountUnitKuCoin& unit)
 {
     string url = unit.baseUrl + method_url;
-    std::string strSign = std::to_string(getTimestamp()) + "Get" + method_url;
-     std::string strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
+    std::string strTimestamp = std::to_string(getTimestamp());
+    std::string strSign = strTimestamp + "Get" + method_url;
+    KF_LOG_INFO(logger, "strSign = " << strSign );
+    std::string strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
+    KF_LOG_INFO(logger, "strHmac = " << strHmac );
     std::string strSignatrue = base64_encode((const unsigned char *)strHmac.c_str(),strHmac.size());
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
-                                        {"KC-API-TIMESTAMP",std::to_string(getTimestamp())},
+                                        {"KC-API-TIMESTAMP",strTimestamp},
                                         {"KC-API-KEY",unit.api_key},
                                         {"KC-API-PASSPHRASE",unit.passphrase}};
-                                        
+     KF_LOG_INFO(logger, "KC-API-SIGN = " << strSignatrue 
+                        << ", KC-API-TIMESTAMP = " << strTimestamp 
+                        << ", KC-API-KEY = " << unit.api_key 
+                        << ", KC-API-PASSPHRASE = " << unit.passphrase);
+
+
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Get(Url{url}, 
-                             mapHeader, Timeout{10000} );
+                             Header{mapHeader}, Timeout{10000} );
     lock.unlock();
     KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
                                                " (response.error.message) " << response.error.message <<
@@ -278,18 +286,18 @@ void TDEngineKuCoin::connect(long timeout_nsec)
         AccountUnitKuCoin& unit = account_units[idx];
         unit.logged_in = true;
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
-        Document doc;
+       // Document doc;
         //
-        std::string requestPath = "/key";
-        const auto response = Get(requestPath,"{}",unit);
+        //std::string requestPath = "/key";
+       // const auto response = Get(requestPath,"{}",unit);
 
-        getResponse(response.status_code, response.text, response.error.message, doc);
+      //  getResponse(response.status_code, response.text, response.error.message, doc);
 
-        if ( !unit.logged_in && doc.HasMember("code"))
-        {
-            int code = doc["code"].GetInt();
-            unit.logged_in = (code == 0);
-        }
+       // if ( !unit.logged_in && doc.HasMember("code"))
+        //{
+         //   int code = doc["code"].GetInt();
+         //   unit.logged_in = (code == 0);
+        //}
     }
 }
 
