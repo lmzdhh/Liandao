@@ -249,7 +249,7 @@ string WCStrategyUtil::gen_tag(long time,short source_id,bool is_td_trigger,bool
     }
     else
     {
-        sprintf(strTag,"%d%d%02hd%ld%%08d%08d",(is_hedge?1:0),(is_td_trigger?1:2),source_id,time,request_id,order_ref);
+        sprintf(strTag,"%d%d%02hd%ld%08d%08d",(is_hedge?1:0),(is_td_trigger?1:2),source_id,time,request_id,order_ref);
     }
     
     return strTag;
