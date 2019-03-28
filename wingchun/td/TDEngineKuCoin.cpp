@@ -97,8 +97,8 @@ TDEngineKuCoin::~TDEngineKuCoin()
 
 cpr::Header TDEngineKuCoin::construct_request_header(AccountUnitKuCoin& unit,const std::string& strSign,const std::string& strContentType)
 {
-    std::string strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
-    std::string strSignatrue = base64_encode((const unsigned char *)strHmac.c_str(),strHmac.size());
+    unsigned char * strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    std::string strSignatrue = base64_encode(strHmac,32);
     
     if(strContentType.empty())
     {
@@ -165,8 +165,8 @@ cpr::Response TDEngineKuCoin::Delete(const std::string& method_url,const std::st
 cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::string& body, AccountUnitKuCoin& unit)
 {
     std::string strSign = std::to_string(getTimestamp()) + "POST" + method_url + body;
-     std::string strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
-    std::string strSignatrue = base64_encode((const unsigned char *)strHmac.c_str(),strHmac.size());
+    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    std::string strSignatrue = base64_encode(strHmac,32);
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
                                         {"KC-API-TIMESTAMP",std::to_string(getTimestamp())},
                                         {"KC-API-KEY",unit.api_key},
