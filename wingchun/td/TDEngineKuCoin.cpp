@@ -521,7 +521,7 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     int64_t fixedPrice = data->LimitPrice;
 
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
-               GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, d);
+               GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, data->OrderRef,d);
     //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
     //not expected response
     if(d.HasParseError() || !d.IsObject())
@@ -1011,13 +1011,13 @@ void TDEngineKuCoin::get_account(AccountUnitKuCoin& unit, Document& json)
 }
  * */
 std::string TDEngineKuCoin::createInsertOrdertring(const char *code,
-                                                    const char *side, const char *type, double size, double price)
+                                                    const char *side, const char *type, double size, double price,const string& strOrderRef)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
-   // writer.Key("clientOid");
-    //writer.String(code);
+    writer.Key("clientOid");
+    writer.String(genClinetid(strOrderRef).c_str());
 
     writer.Key("side");
     writer.String(side);
@@ -1039,7 +1039,7 @@ std::string TDEngineKuCoin::createInsertOrdertring(const char *code,
 }
 
 void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,
-                                 const char *side, const char *type, double size, double price, double funds, Document& json)
+                                 const char *side, const char *type, double size, double price, double funds, const std::string& strOrderRef,Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
 
@@ -1050,7 +1050,7 @@ void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,
         should_retry = false;
 
         std::string requestPath = "/api/v1/orders";
-        response = Post(requestPath,createInsertOrdertring(code, side, type, size, price),unit);
+        response = Post(requestPath,createInsertOrdertring(code, side, type, size, price,strOrderRef),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
                                                   " (response.error.message) " << response.error.message <<
@@ -1336,6 +1336,22 @@ inline int64_t TDEngineKuCoin::getTimestamp()
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return timestamp;
 }
+
+void TDEngineKuCoin::genUniqueKey()
+{
+    struct tm cur_time = getCurLocalTime();
+    //SSMMHHDDN
+    char key[11]{0};
+    snprintf((char*)key, 11, "%02d%02d%02d%02d%1s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
+    m_uniqueKey = key;
+}
+
+//clientid =  m_uniqueKey+orderRef
+std::string TDEngineKuCoin::genClinetid(const std::string &orderRef)
+{
+    return m_uniqueKey + orderRef;
+}
+
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
 

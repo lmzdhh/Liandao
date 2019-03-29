@@ -156,7 +156,7 @@ WC_NAMESPACE_START
         private:
             void get_account(AccountUnitKuCoin& unit, Document& json);
             void send_order(AccountUnitKuCoin& unit, const char *code,
-                            const char *side, const char *type, double size, double price, double funds, Document& json);
+                            const char *side, const char *type, double size, double price, double funds, const string& strOrderRef,Document& json);
 
             void cancel_all_orders(AccountUnitKuCoin& unit, std::string code, Document& json);
             void cancel_order(AccountUnitKuCoin& unit, std::string code, std::string orderId, Document& json);
@@ -169,14 +169,16 @@ WC_NAMESPACE_START
             std::string construct_request_body(const AccountUnitKuCoin& unit,const  std::string& data,bool isget = true);
             cpr::Header construct_request_header(AccountUnitKuCoin& unit,const std::string& strSign,const std::string& strContentType);
             std::string createInsertOrdertring(const char *code,
-                                               const char *side, const char *type, double size, double price);
+                                               const char *side, const char *type, double size, double price,const string& strOrderRef);
 
             cpr::Response Get(const std::string& url,const std::string& body, AccountUnitKuCoin& unit);
             cpr::Response Post(const std::string& url,const std::string& body, AccountUnitKuCoin& unit);
             cpr::Response Delete(const std::string& url,const std::string& body, AccountUnitKuCoin& unit);
- 
-        private:
 
+            void genUniqueKey();
+            std::string genClinetid(const std::string& orderRef);
+        private:
+             std::string m_uniqueKey;
             struct lws_context *context = nullptr;
 
             int HTTP_RESPONSE_OK = 200;
