@@ -436,10 +436,10 @@ void TDEngineKuCoin::req_investor_position(const LFQryPositionField* data, int a
         KF_LOG_INFO(logger, "[req_investor_position] (accounts.length)" << len);
         for(size_t i = 0; i < len; i++)
         {
-            std::string symbol = jisonData[i]["currency"].GetString();
+            std::string symbol = jisonData.GetArray()[i]["currency"].GetString();
             std::string ticker = unit.positionWhiteList.GetKeyByValue(symbol);
             if(ticker.length() > 0) {            
-                uint64_t nPosition = std::round(std::stod(jisonData[i]["balance"].GetString()) * scale_offset);   
+                uint64_t nPosition = std::round(std::stod(jisonData.GetArray()[i]["balance"].GetString()) * scale_offset);   
                 auto it = tmp_map.find(ticker);
                 if(it == tmp_map.end())
                 {
@@ -448,8 +448,7 @@ void TDEngineKuCoin::req_investor_position(const LFQryPositionField* data, int a
                 }
                 it->second.Position += nPosition;
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
-                                                                          << " balance:" << jisonData[i]["balance"].GetString()
-                                                                          << " locked: " << jisonData[i]["locked"].GetString());
+                                                                          << " balance:" << jisonData.GetArray()[i]["balance"].GetString());
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << it->second.Position);
             }
         }
