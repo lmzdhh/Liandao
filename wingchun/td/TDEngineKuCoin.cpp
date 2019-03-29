@@ -150,9 +150,22 @@ cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::strin
 
 cpr::Response TDEngineKuCoin::Delete(const std::string& method_url,const std::string& body, AccountUnitKuCoin& unit)
 {
-    std::string url = unit.baseUrl + method_url;
-    std::string strSign = std::to_string(getTimestamp()) + "DELETE" + method_url;
-    auto mapHeader = construct_request_header(unit,strSign,"");
+    string url = unit.baseUrl + method_url + body;
+    std::string strTimestamp = std::to_string(getTimestamp());
+    std::string strSign =  strTimestamp + "DELETE" + method_url + body;
+    KF_LOG_INFO(logger, "strSign = " << strSign );
+    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    KF_LOG_INFO(logger, "strHmac = " << strHmac );
+    std::string strSignatrue = base64_encode(strHmac,32);
+    cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
+                                        {"KC-API-TIMESTAMP",strTimestamp},
+                                        {"KC-API-KEY",unit.api_key},
+                                        {"KC-API-PASSPHRASE",unit.passphrase}};
+     KF_LOG_INFO(logger, "KC-API-SIGN = " << strSignatrue 
+                        << ", KC-API-TIMESTAMP = " << strTimestamp 
+                        << ", KC-API-KEY = " << unit.api_key 
+                        << ", KC-API-PASSPHRASE = " << unit.passphrase);
+
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Delete(Url{url},Header{mapHeader}, Timeout{10000} );
     lock.unlock();
@@ -164,11 +177,12 @@ cpr::Response TDEngineKuCoin::Delete(const std::string& method_url,const std::st
 
 cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::string& body, AccountUnitKuCoin& unit)
 {
-    std::string strSign = std::to_string(getTimestamp()) + "POST" + method_url + body;
+    std::string strTimestamp = std::to_string(getTimestamp());
+    std::string strSign =  strTimestamp + "POST" + method_url + body;
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     std::string strSignatrue = base64_encode(strHmac,32);
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
-                                        {"KC-API-TIMESTAMP",std::to_string(getTimestamp())},
+                                        {"KC-API-TIMESTAMP",strTimestamp},
                                         {"KC-API-KEY",unit.api_key},
                                         {"KC-API-PASSPHRASE",unit.passphrase},
                                         {"Content-Type", "application/json"}};
@@ -1035,7 +1049,7 @@ void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,
     do {
         should_retry = false;
 
-        std::string requestPath = "api/v1/orders";
+        std::string requestPath = "/api/v1/orders";
         response = Post(requestPath,createInsertOrdertring(code, side, type, size, price),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
@@ -1084,7 +1098,7 @@ void TDEngineKuCoin::cancel_all_orders(AccountUnitKuCoin& unit, std::string code
     std::string requestPath = "/api/v1/orders";
     //std::string queryString= "?user_jwt=RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA";//construct_request_body(unit, "{}");
 
-    auto response = Delete(requestPath,"{}",unit);
+    auto response = Delete(requestPath,"",unit);
 
     getResponse(response.status_code, response.text, response.error.message, json);
 }
