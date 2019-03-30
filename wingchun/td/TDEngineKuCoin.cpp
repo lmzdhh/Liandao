@@ -526,7 +526,7 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
                GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, data->OrderRef,d);
     //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
     //not expected response
-    if(d.HasParseError() || !d.IsObject())
+    if(!d.IsObject())
     {
         errorId = 100;
         errorMsg = "send_order http response has parse error or is not json. please check the log";
@@ -535,7 +535,7 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     } else  if(d.HasMember("code"))
     {
         int code =std::round(std::stod(d["code"].GetString()));
-        if(code == 0) {
+        if(code == 200000) {
             //if send successful and the exchange has received ok, then add to  pending query order list
             int64_t remoteOrderId = std::round(std::stod(d["orderId"].GetString()));
             //fix defect of use the old value
@@ -543,29 +543,24 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data->OrderRef << " (remoteOrderId) "
                                                                        << remoteOrderId);
-            //on_rtn_oder
-            rapidjson::Value &dataRsp = d["data"];
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
             rtn_order.OrderStatus = LF_CHAR_NotTouched;
-            rtn_order.VolumeTraded = std::round(
-                    std::stod(dataRsp["executed_volume"].GetString()) * scale_offset);
+            rtn_order.VolumeTraded = 0;
 
             //first send onRtnOrder about the status change or VolumeTraded change
             strcpy(rtn_order.ExchangeID, "kucoin");
             strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
-            rtn_order.Direction = GetDirection(dataRsp["side"].GetString());
+            rtn_order.Direction = data->Direction;
             //No this setting on KuCoin
             rtn_order.TimeCondition = LF_CHAR_GTC;
-            rtn_order.OrderPriceType = GetPriceType(dataRsp["ord_type"].GetString());
+            rtn_order.OrderPriceType = data->OrderPriceType;
             strncpy(rtn_order.OrderRef, data->OrderRef, 13);
-            rtn_order.VolumeTotalOriginal = std::round(std::stod(dataRsp["volume"].GetString()) * scale_offset);
-            if(dataRsp.HasMember("price") && dataRsp["price"].IsString())
-                rtn_order.LimitPrice = std::round(std::stod(dataRsp["price"].GetString()) * scale_offset);
-            rtn_order.VolumeTotal = std::round(
-                    std::stod(dataRsp["remaining_volume"].GetString()) * scale_offset);
+            rtn_order.VolumeTotalOriginal = data->Volume;
+            rtn_order.LimitPrice = data->LimitPrice;
+            rtn_order.VolumeTotal = data->Volume;
 
             std::string strOrderID = std::to_string(remoteOrderId);
             strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
