@@ -1078,7 +1078,7 @@ void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,
 bool TDEngineKuCoin::shouldRetry(Document& doc)
 {
     bool ret = false;
-    if(!doc.IsObject() || !doc.HasMember("code") || doc["code"].GetInt() != 0)
+    if(!doc.IsObject() || !doc.HasMember("code") || doc["code"].GetString() != "200000")
     {
         ret = true;
     }
