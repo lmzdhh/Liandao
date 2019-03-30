@@ -22,10 +22,10 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 
 def initialize(context):
     #context.add_md(source=SOURCE.KUCOIN)
-    context.ticker = 'eth_usdt'
+    context.ticker = 'eth_btc'
     context.exchange_id = EXCHANGE.SHFE
-    context.buy_price = -1
-    context.sell_price = -1
+    context.buy_price = 10000
+    context.sell_price = 9999999999
     context.order_rid = -1
     context.cancel_id = -1
     context.add_td(source=SOURCE.KUCOIN)
@@ -44,7 +44,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.print_pos(pos_handler)
             #context.stop()
             print '----will test buy cancel----'
-            context.buy_price = 1966 #market_data.LowerLimitPrice
+            context.buy_price = 10000 #market_data.LowerLimitPrice
             context.sell_price = 999999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
@@ -52,7 +52,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                                ticker=context.ticker,
                                                                price=context.buy_price,
                                                                exchange_id=context.exchange_id,
-                                                               volume=1234567,
+                                                               volume= 1000000,
                                                                direction=DIRECTION.Buy,
                                                                offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
