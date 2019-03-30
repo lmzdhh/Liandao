@@ -179,6 +179,7 @@ cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::stri
 {
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strSign =  strTimestamp + "POST" + method_url + body;
+     KF_LOG_INFO(logger, "strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     std::string strSignatrue = base64_encode(strHmac,32);
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
@@ -201,6 +202,7 @@ cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::stri
 
 void TDEngineKuCoin::init()
 {
+    genUniqueKey();
     ITDEngine::init();
     JournalPair tdRawPair = getTdRawJournalPair(source_id);
     raw_writer = yijinjing::JournalSafeWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
@@ -1352,7 +1354,8 @@ void TDEngineKuCoin::genUniqueKey()
 //clientid =  m_uniqueKey+orderRef
 std::string TDEngineKuCoin::genClinetid(const std::string &orderRef)
 {
-    return m_uniqueKey + orderRef;
+    static int nIndex = 0;
+    return m_uniqueKey + orderRef + std::to_string(nIndex++);
 }
 
 
