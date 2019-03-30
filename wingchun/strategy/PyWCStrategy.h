@@ -67,7 +67,7 @@ public:
     boost::python::list get_effective_orders() const;
 
 public:
-    // python binding, no char allowed, use string and transfer manually.
+    // python bcancel_orderd, use string and transfer manually.
     inline int insert_market_order_py(short source, string instrument_id, string exchange_id, uint64_t volume, string direction, string offset,string misc_info = "")
     {
         return insert_market_order(source, instrument_id, exchange_id, volume, direction[0], offset[0],misc_info);
@@ -84,7 +84,10 @@ public:
     {
         return insert_fak_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0],misc_info);
     }
-
+    inline int cancel_order_py(short source, int order_id,string misc_info = "")
+    {
+        return cancel_order(source, order_id,misc_info);
+    }
 public:
     PyWCStrategy(const string& name): IWCStrategy(name) {}
     PyWCStrategy(): IWCStrategy("Default") {}
