@@ -537,7 +537,7 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
         int code =std::round(std::stod(d["code"].GetString()));
         if(code == 200000) {
             //if send successful and the exchange has received ok, then add to  pending query order list
-            int64_t remoteOrderId = std::round(std::stod(d["orderId"].GetString()));
+            int64_t remoteOrderId = std::round(std::stod(d["data"]["orderId"].GetString()));
             //fix defect of use the old value
             localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
