@@ -434,10 +434,12 @@ void TDEngineKuCoin::req_investor_position(const LFQryPositionField* data, int a
     std::string errorMsg = "";
     Document d;
     get_account(unit, d);
-
+     KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
     if(d.IsObject() && d.HasMember("code"))
     {
+         KF_LOG_INFO(logger, "[req_investor_position] (getcode)" );
         errorId =  std::round(std::stod(d["code"].GetString()));
+         KF_LOG_INFO(logger, "[req_investor_position] (errorId)" << errorId);
         if(errorId != 200000) {
             if (d.HasMember("msg") && d["msg"].IsString()) {
                 errorMsg = d["msg"].GetString();
@@ -917,22 +919,22 @@ void TDEngineKuCoin::getResponse(int http_status_code, std::string responseText,
         Document::AllocatorType& allocator = json.GetAllocator();
         int errorId = 1;
         json.AddMember("code", errorId, allocator);
-        //KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
+        KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
         rapidjson::Value val;
         val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
-        json.AddMember("message", val, allocator);
+        json.AddMember("msg", val, allocator);
     } else
     {
         Document d;
         d.Parse(responseText.c_str());
-        //KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
+        KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
         json.SetObject();
         Document::AllocatorType& allocator = json.GetAllocator();
         json.AddMember("code", http_status_code, allocator);
 
         rapidjson::Value val;
         val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
-        json.AddMember("message", val, allocator);
+        json.AddMember("msg", val, allocator);
     }
 }
 
