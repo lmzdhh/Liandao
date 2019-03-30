@@ -537,7 +537,7 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
         int code =std::round(std::stod(d["code"].GetString()));
         if(code == 200000) {
             //if send successful and the exchange has received ok, then add to  pending query order list
-            int64_t remoteOrderId = std::round(std::stod(d["data"]["orderId"].GetString()));
+            std::string remoteOrderId = d["data"]["orderId"].GetString();
             //fix defect of use the old value
             localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
@@ -562,7 +562,7 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
             rtn_order.LimitPrice = data->LimitPrice;
             rtn_order.VolumeTotal = data->Volume;
 
-            std::string strOrderID = std::to_string(remoteOrderId);
+            std::string strOrderID = remoteOrderId;
             strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
             on_rtn_order(&rtn_order);
             raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
@@ -596,49 +596,6 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     }
 }
 
-//websocket的消息通常回来的比restful快，这时候因为消息里面有OrderId却找不到OrderRef，会先放入responsedOrderStatusNoOrderRef，
-//当sendOrder返回OrderId信息之后,再处理这个信息
-void TDEngineKuCoin::handlerResponsedOrderStatus(AccountUnitKuCoin& unit)
-{
-    std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
-
-    std::vector<ResponsedOrderStatus>::iterator noOrderRefOrserStatusItr;
-    for(noOrderRefOrserStatusItr = responsedOrderStatusNoOrderRef.begin(); noOrderRefOrserStatusItr != responsedOrderStatusNoOrderRef.end(); ) {
-
-        //has no orderRed Order status, should link this OrderRef and handler it.
-        ResponsedOrderStatus responsedOrderStatus = (*noOrderRefOrserStatusItr);
-
-        std::vector<PendingOrderStatus>::iterator orderStatusIterator;
-        for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); ++orderStatusIterator)
-        {
-//            KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] (orderStatusIterator->remoteOrderId)"<< orderStatusIterator->remoteOrderId << " (orderId)" << responsedOrderStatus.orderId);
-            if(orderStatusIterator->remoteOrderId == responsedOrderStatus.orderId)
-            {
-                break;
-            }
-        }
-
-        if(orderStatusIterator == unit.pendingOrderStatus.end()) {
-            KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] not find this pendingOrderStatus of order id, ignore it.(orderId)"<< responsedOrderStatus.orderId);
-            ++noOrderRefOrserStatusItr;
-        } else {
-            KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] handlerResponseOrderStatus (responsedOrderStatus.orderId)"<< responsedOrderStatus.orderId);
-            handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
-
-            //remove order when finish
-            if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
-               || orderStatusIterator->OrderStatus == LF_CHAR_Error)
-            {
-                KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] remove a pendingOrderStatus. (orderStatusIterator->remoteOrderId)" << orderStatusIterator->remoteOrderId);
-                orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
-            }
-
-            KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] responsedOrderStatusNoOrderRef erase(noOrderRefOrserStatusItr)"<< noOrderRefOrserStatusItr->orderId);
-            noOrderRefOrserStatusItr = responsedOrderStatusNoOrderRef.erase(noOrderRefOrserStatusItr);
-        }
-    }
-}
-
 void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
 {
     AccountUnitKuCoin& unit = account_units[account_index];
@@ -665,8 +622,8 @@ void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int accoun
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
-    std::map<std::string, int64_t>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
-    int64_t remoteOrderId = 0;
+    std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
+    std::string remoteOrderId = 0;
     if(itr == localOrderRefRemoteOrderId.end()) {
         errorId = 1;
         std::stringstream ss;
@@ -684,7 +641,7 @@ void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int accoun
     }
 
     Document d;
-    cancel_order(unit, ticker, std::to_string(remoteOrderId), d);
+    cancel_order(unit, ticker, remoteOrderId, d);
 
     if(!d.HasParseError() && d.HasMember("code") && d["code"].GetInt() != 0) {
         errorId = d["code"].GetInt();
@@ -712,7 +669,7 @@ void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int accoun
     }
 
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
-void TDEngineKuCoin::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, int64_t remoteOrderId)
+void TDEngineKuCoin::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId)
 {
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
@@ -764,7 +721,7 @@ void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
         );
 
         Document d;
-        query_order(unit, ticker, std::to_string(orderStatusIterator->remoteOrderId), d);
+        query_order(unit, ticker,orderStatusIterator->remoteOrderId, d);
 
         //parse order status
         //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
@@ -834,7 +791,7 @@ void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
 
 void TDEngineKuCoin::addNewQueryOrdersAndTrades(AccountUnitKuCoin& unit, const char_31 InstrumentID,
                                                  const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                 const uint64_t VolumeTraded, int64_t remoteOrderId)
+                                                 const uint64_t VolumeTraded, const std::string& remoteOrderId)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
@@ -921,7 +878,7 @@ void TDEngineKuCoin::orderActionNoResponseTimeOut()
     int64_t currentNano = getTimestamp();
     int64_t timeBeforeNano = currentNano - orderaction_max_waiting_seconds * 1000;
 //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (currentNano)" << currentNano << " (timeBeforeNano)" << timeBeforeNano);
-    std::map<int64_t, OrderActionSentTime>::iterator itr;
+    std::map<std::string, OrderActionSentTime>::iterator itr;
     for(itr = remoteOrderIdOrderActionSentTime.begin(); itr != remoteOrderIdOrderActionSentTime.end();)
     {
         if(itr->second.sentNameTime < timeBeforeNano)
@@ -1169,7 +1126,7 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
-            std::string strOrderID = std::to_string(orderStatusIterator->remoteOrderId);
+            std::string strOrderID = orderStatusIterator->remoteOrderId;
             strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
 
             rtn_order.OrderStatus = LF_CHAR_PartTradedNotQueueing;
@@ -1221,7 +1178,7 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
         LFRtnOrderField rtn_order;
         memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
-        std::string strOrderID = std::to_string(orderStatusIterator->remoteOrderId);
+        std::string strOrderID = orderStatusIterator->remoteOrderId;
         strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
 
         rtn_order.OrderStatus = LF_CHAR_Canceled;
@@ -1259,7 +1216,7 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
         LFRtnOrderField rtn_order;
         memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
-        std::string strOrderID = std::to_string(orderStatusIterator->remoteOrderId);
+        std::string strOrderID = orderStatusIterator->remoteOrderId;
         strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
 
         KF_LOG_INFO(logger, "[handlerResponseOrderStatus] VolumeTraded Change  LastOrderPsp:" << orderStatusIterator->VolumeTraded << ", NewOrderRsp: " << responsedOrderStatus.VolumeTraded  <<
