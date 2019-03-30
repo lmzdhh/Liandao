@@ -576,14 +576,14 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
                                     source_id, MSG_TYPE_LF_RTN_ORDER_KUCOIN,
                                     1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
 
-
+            KF_LOG_DEBUG(logger, "[req_order_insert] (addNewQueryOrdersAndTrades)" );
             char noneStatus = LF_CHAR_NotTouched;
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
 
             //success, only record raw data
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1,
                                           requestId, errorId, errorMsg.c_str());
-
+            KF_LOG_DEBUG(logger, "[req_order_insert] success" );
             return;
 
         }else {
@@ -800,6 +800,7 @@ void TDEngineKuCoin::addNewQueryOrdersAndTrades(AccountUnitKuCoin& unit, const c
                                                  const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                                  const uint64_t VolumeTraded, const std::string& remoteOrderId)
 {
+      KF_LOG_DEBUG(logger, "[addNewQueryOrdersAndTrades]" );
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
