@@ -1078,16 +1078,19 @@ void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,
 bool TDEngineKuCoin::shouldRetry(Document& doc)
 {
     bool ret = false;
-    if(!doc.IsObject() || !doc.HasMember("code") || doc["code"].GetString() != "200000")
+    std::string strCode ;
+    if(doc.HasMember("code"))
+    {
+       strCode = doc["code"].GetString();
+    }
+    bool isObJect = doc.IsObject();
+    if(!isObJect || strCode != "200000")
     {
         ret = true;
     }
-//    if( 502 == http_status_code
-//        || (errorMsg.size() > 0 && errorMsg.find("error setting certificate verify locations") >= 0)
-//        || (401 == http_status_code && errorMsg.size() > 0 && errorMsg.find("Auth error") >= 0) )
-//    {
-//        return true;
-//    }
+
+     KF_LOG_INFO(logger, "[shouldRetry] isObJect = " << isObJect << ",strCode = " << strCode);
+
     return ret;
 }
 
