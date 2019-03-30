@@ -805,7 +805,6 @@ void TDEngineKuCoin::addNewQueryOrdersAndTrades(AccountUnitKuCoin& unit, const c
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
     PendingOrderStatus status;
-    memset(&status, 0, sizeof(PendingOrderStatus));
     strncpy(status.InstrumentID, InstrumentID, 31);
     strncpy(status.OrderRef, OrderRef, 21);
     status.OrderStatus = OrderStatus;

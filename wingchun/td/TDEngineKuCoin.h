@@ -24,11 +24,11 @@ WC_NAMESPACE_START
 
         struct PendingOrderStatus
         {
-            char_31 InstrumentID;   //合约代码
-            char_21 OrderRef;       //报单引用
-            LfOrderStatusType OrderStatus;  //报单状态
-            uint64_t VolumeTraded;  //今成交数量
-            int64_t averagePrice;// given averagePrice on response of query_order
+            char_31 InstrumentID = {0};   //合约代码
+            char_21 OrderRef = {0};       //报单引用
+            LfOrderStatusType OrderStatus = LF_CHAR_NotTouched;  //报单状态
+            uint64_t VolumeTraded = 0;  //今成交数量
+            int64_t averagePrice = 0;// given averagePrice on response of query_order
             std::string remoteOrderId;// sender_order response order id://{"orderId":19319936159776,"result":true}
         };
 
