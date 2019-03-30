@@ -959,7 +959,9 @@ void TDEngineKuCoin::get_account(AccountUnitKuCoin& unit, Document& json)
     //string url = unit.baseUrl + requestPath + queryString;
 
     const auto response = Get(requestPath,"{}",unit);
-    return getResponse(response.status_code, response.text, response.error.message, json);
+    
+    json.Parse(response.text.c_str());
+    return ;
 }
 
 /*
