@@ -630,7 +630,7 @@ void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int accoun
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
     std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
-    std::string remoteOrderId = 0;
+    std::string remoteOrderId;
     if(itr == localOrderRefRemoteOrderId.end()) {
         errorId = 1;
         std::stringstream ss;
