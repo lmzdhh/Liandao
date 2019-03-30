@@ -732,35 +732,32 @@ void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
                                                                                            << " (remoteOrderId) " << orderStatusIterator->remoteOrderId);
             continue;
         }
-        if(d.HasMember("code") && d["code"].GetInt() == 0)
+        if(d.HasMember("code") && d["code"].GetString() == "200000")
         {
-            rapidjson::Value &dataArray = d["data"];
-            if(dataArray.IsArray() && dataArray.Size() > 0) {
-                rapidjson::Value &data = dataArray[0];
-                ResponsedOrderStatus responsedOrderStatus;
-                responsedOrderStatus.ticker = ticker;
-                responsedOrderStatus.averagePrice = std::round(std::stod(data["avg_price"].GetString()) * scale_offset);
-                responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
-                //报单价格条件
-                responsedOrderStatus.OrderPriceType = GetPriceType(data["ord_type"].GetString());
-                //买卖方向
-                responsedOrderStatus.Direction = GetDirection(data["side"].GetString());
-                //报单状态
-                responsedOrderStatus.OrderStatus = GetOrderStatus(data["state"].GetString());
-                if(data.HasMember("price") && data["price"].IsString())
-                    responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
-                responsedOrderStatus.volume = std::round(std::stod(data["volume"].GetString()) * scale_offset);
-                //今成交数量
-                responsedOrderStatus.VolumeTraded = std::round(
-                        std::stod(data["executed_volume"].GetString()) * scale_offset);
-                responsedOrderStatus.openVolume = std::round(
-                        std::stod(data["remaining_volume"].GetString()) * scale_offset);
+            rapidjson::Value &data = d["data"];
+            ResponsedOrderStatus responsedOrderStatus;
+            responsedOrderStatus.ticker = ticker;
+            double dDealFunds = std::stod(data["dealFunds"].GetString());
+            double dDealSize = std::stod(data["dealSize"].GetString());
+            responsedOrderStatus.averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize) * scale_offset : 0;
+            responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
+            //报单价格条件
+            responsedOrderStatus.OrderPriceType = GetPriceType(data["type"].GetString());
+            //买卖方向
+            responsedOrderStatus.Direction = GetDirection(data["side"].GetString());
+            //报单状态
+            responsedOrderStatus.OrderStatus = GetOrderStatus(data["opType"].GetString());
+            if(data.HasMember("price") && data["price"].IsString())
+                responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
+            responsedOrderStatus.volume = std::round(std::stod(data["volume"].GetString()) * scale_offset);
+            //今成交数量
+            responsedOrderStatus.VolumeTraded = std::round(dDealSize * scale_offset);
+            responsedOrderStatus.openVolume = responsedOrderStatus.volume - std::round(dDealSize * scale_offset);
 
-                handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
+            handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
 
-                //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
-                remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
-            }
+            //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
+            remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
         } else {
             std::string errorMsg = "";
 
