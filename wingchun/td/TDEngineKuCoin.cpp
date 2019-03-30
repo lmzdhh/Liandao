@@ -650,8 +650,8 @@ void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int accoun
     Document d;
     cancel_order(unit, ticker, remoteOrderId, d);
 
-    if(!d.HasParseError() && d.HasMember("code") && d["code"].GetInt() != 0) {
-        errorId = d["code"].GetInt();
+    if(!d.HasParseError() && d.HasMember("code") && d["code"].GetString() != "200000") {
+        errorId = std::stoi(d["code"].GetString());
         if(d.HasMember("msg") && d["msg"].IsString())
         {
             errorMsg = d["msg"].GetString();
