@@ -126,7 +126,7 @@ WC_NAMESPACE_START
             LfDirectionType GetDirection(std::string input);
             std::string GetType(const LfOrderPriceTypeType& input);
             LfOrderPriceTypeType GetPriceType(std::string input);
-            LfOrderStatusType GetOrderStatus(std::string input);
+            LfOrderStatusType GetOrderStatus(bool isCancel,int64_t nSize,int64_t nDealSize);
             inline int64_t getTimestamp();
 
 

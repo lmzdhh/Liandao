@@ -392,16 +392,21 @@ LfOrderPriceTypeType TDEngineKuCoin::GetPriceType(std::string input) {
     }
 }
 //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-LfOrderStatusType TDEngineKuCoin::GetOrderStatus(std::string input) {
-    if ("wait" == input) {
-        return LF_CHAR_NotTouched;
-    } else if ("done" == input) {
-        return LF_CHAR_AllTraded;
-    } else if ("cancel" == input) {
-        return LF_CHAR_Canceled;
-    } else {
+LfOrderStatusType TDEngineKuCoin::GetOrderStatus(bool isCancel,int64_t nSize,int64_t nDealSize) {
+    
+    if(isCancel)
+    {
+          return LF_CHAR_Canceled; 
+    }
+    if(nDealSize == 0)
+    {
         return LF_CHAR_NotTouched;
     }
+    if(nSize > nDealSize)
+   {
+        return  LF_CHAR_PartTradedNotQueueing;
+   }
+    return LF_CHAR_AllTraded;
 }
 
 /**
@@ -430,7 +435,7 @@ void TDEngineKuCoin::req_investor_position(const LFQryPositionField* data, int a
     Document d;
     get_account(unit, d);
 
-    if(!d.HasParseError() && d.IsObject() && d.HasMember("code"))
+    if(d.IsObject() && d.HasMember("code"))
     {
         errorId =  std::round(std::stod(d["code"].GetString()));
         if(errorId != 200000) {
@@ -682,6 +687,7 @@ void TDEngineKuCoin::addRemoteOrderIdOrderActionSentTime(const LFOrderActionFiel
 
 void TDEngineKuCoin::GetAndHandleOrderTradeResponse()
 {
+      KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse]" );
     //every account
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
@@ -698,7 +704,7 @@ void TDEngineKuCoin::GetAndHandleOrderTradeResponse()
 
 void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
 {
-    //KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
+    KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
@@ -739,20 +745,22 @@ void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
             responsedOrderStatus.ticker = ticker;
             double dDealFunds = std::stod(data["dealFunds"].GetString());
             double dDealSize = std::stod(data["dealSize"].GetString());
-            responsedOrderStatus.averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize) * scale_offset : 0;
+            responsedOrderStatus.averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
             responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
             //报单价格条件
             responsedOrderStatus.OrderPriceType = GetPriceType(data["type"].GetString());
             //买卖方向
             responsedOrderStatus.Direction = GetDirection(data["side"].GetString());
             //报单状态
-            responsedOrderStatus.OrderStatus = GetOrderStatus(data["opType"].GetString());
+            int64_t nDealSize = std::round(dDealSize * scale_offset);
+            int64_t nSize = std::round(std::stod(data["size"].GetString()) * scale_offset);
+            responsedOrderStatus.OrderStatus = GetOrderStatus(data["cancelExist"].GetBool(),nSize,nDealSize);
             if(data.HasMember("price") && data["price"].IsString())
                 responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
-            responsedOrderStatus.volume = std::round(std::stod(data["volume"].GetString()) * scale_offset);
+            responsedOrderStatus.volume = nSize;
             //今成交数量
-            responsedOrderStatus.VolumeTraded = std::round(dDealSize * scale_offset);
-            responsedOrderStatus.openVolume = responsedOrderStatus.volume - std::round(dDealSize * scale_offset);
+            responsedOrderStatus.VolumeTraded = nDealSize;
+            responsedOrderStatus.openVolume =  nSize - nDealSize;
 
             handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
 
