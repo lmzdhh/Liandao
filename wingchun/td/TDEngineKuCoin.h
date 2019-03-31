@@ -50,7 +50,7 @@ WC_NAMESPACE_START
             uint64_t VolumeTraded;
             int id = 0;
             uint64_t openVolume = 0;
-            std::string orderId = 0;
+            std::string orderId;
             std::string orderType;
             //报单价格条件
             LfOrderPriceTypeType OrderPriceType;
