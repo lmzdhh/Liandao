@@ -742,8 +742,10 @@ void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
             continue;
         }
         const std::string strSuccessCode = "200000";
+         KF_LOG_INFO(logger, "[retrieveOrderStatus] query_order:");
         if(d.HasMember("code") && strSuccessCode ==  d["code"].GetString())
         {
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
             rapidjson::Value &data = d["data"];
             ResponsedOrderStatus responsedOrderStatus;
             responsedOrderStatus.ticker = ticker;
@@ -771,12 +773,12 @@ void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
             //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
             remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
         } else {
-            std::string errorMsg = "";
-
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
+            std::string errorMsg;
             std::string errorId = d["code"].GetString();
-            if(d.HasMember("message") && d["message"].IsString())
+            if(d.HasMember("msg") && d["msg"].IsString())
             {
-                errorMsg = d["message"].GetString();
+                errorMsg = d["msg"].GetString();
             }
 
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
@@ -1109,13 +1111,16 @@ void TDEngineKuCoin::query_order(AccountUnitKuCoin& unit, std::string code, std:
     std::string requestPath = "/api/v1/orders/" + orderId;
     auto response = Get(requestPath,"",unit);
 
-    getResponse(response.status_code, response.text, response.error.message, json);
+    json.Parse(response.text.c_str());
+    //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
 
 
 void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
 {
+     KF_LOG_INFO(logger, "[handlerResponseOrderStatus]");
+
     if( (responsedOrderStatus.OrderStatus == 'b' && '1' == orderStatusIterator-> OrderStatus || responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus) && responsedOrderStatus.VolumeTraded == orderStatusIterator->VolumeTraded)
     {//no change
         return;
