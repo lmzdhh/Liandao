@@ -259,3 +259,18 @@ void IMDEngine::on_trade(const LFL2TradeField* trade)
                          trade->Volume);
     }
 }
+
+void IMDEngine::on_funding_update(const LFFundingField* data)
+{
+    if (isRunning)
+    {
+        writer->write_frame(data, sizeof(LFFundingField), source_id, MSG_TYPE_LF_FUNDING, 1/*islast*/, -1/*invalidRid*/);
+        KF_LOG_DEBUG_FMT(logger, "funding data update: %-10s %s | %lld, %lld, %lf, %lf]",
+                         data->InstrumentID,
+                         data->ExchangeID,
+                         data->TimeStamp,
+                         data->Interval,
+                         data->Rate,
+                         data->RateDaily);
+    }
+}

@@ -202,6 +202,15 @@ struct LFL2MarketDataField
 	double   	NumOfferOrders;        //卖方委托价位数
 };
 
+struct LFFundingField
+{
+	char_31  	InstrumentID;
+	char_9   	ExchangeID;
+	int64_t     TimeStamp;
+	int64_t		Interval;
+	double		Rate;
+	double 		RateDaily;
+};
 struct LFL2IndexField
 {
 	char_9   	TradingDay;            //交易日

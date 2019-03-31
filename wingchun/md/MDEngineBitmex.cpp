@@ -267,8 +267,23 @@ std::string MDEngineBitmex::createTradeBinsJsonString(std::string symbol)
     return buffer.GetString();
 }
 
+std::string MDEngineBitmex::createFundingJsonString()
+{
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("op");
+    writer.String("subscribe");
+    writer.Key("args");
+    std::string str = "funding";
+    writer.String(str.c_str());
+    writer.EndObject();
+    return buffer.GetString();
+}
+
 void MDEngineBitmex::createSubscribeJsonStrings()
 {
+    subscribeJsonStrings.push_back(createFundingJsonString());
     std::unordered_map<std::string, std::string>::iterator iter = whiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
     for( ; iter != whiteList.GetKeyIsStrategyCoinpairWhiteList().end(); iter++)
     {
@@ -276,6 +291,7 @@ void MDEngineBitmex::createSubscribeJsonStrings()
         subscribeJsonStrings.push_back(createOrderbookJsonString(iter->second));
         subscribeJsonStrings.push_back(createTradeJsonString(iter->second));
         subscribeJsonStrings.push_back(createTradeBinsJsonString(iter->second));
+        
     }
 }
 
@@ -371,6 +387,11 @@ void MDEngineBitmex::processData(struct lws* conn, const char* data, size_t len)
         {
             KF_LOG_INFO(logger, "received data is 1-minute trade bins");
             processTradeBinsData(json);
+        }
+        else if(strcmp(json["table"].GetString(), "funding") == 0)
+        {
+            KF_LOG_INFO(logger, "received data is funding data:" << data);
+            processFundingData(json);
         }
         else
         {
@@ -521,6 +542,10 @@ void MDEngineBitmex::processOrderbookData(Document& json)
         strcpy(update.ExchangeID, "bitmex");
         KF_LOG_INFO(logger, "sending out orderbook");
         on_price_book_update(&update);
+        //
+        LFFundingField fundingdata;
+        strcpy(fundingdata.InstrumentID, "test");
+        on_funding_update(&fundingdata);
     }
 }
 
@@ -624,6 +649,67 @@ void MDEngineBitmex::processTradeBinsData(Document& json)
     }
 }
 
+int64_t getTimestampFromStr(std::string timestamp)
+{
+    std::string year = timestamp.substr(0,4);
+    std::string month = timestamp.substr(5,2);
+    std::string day = timestamp.substr(8,2);
+    std::string hour = timestamp.substr(11,2);
+    std::string min = timestamp.substr(14,2);
+    std::string sec = timestamp.substr(17,2);
+    std::string ms = timestamp.substr(20,3);
+    struct tm localTM;
+    localTM.tm_year = std::stoi(year)-1900;
+    localTM.tm_mon = std::stoi(month)-1;
+    localTM.tm_mday = std::stoi(day);
+    localTM.tm_hour = std::stoi(hour);
+    localTM.tm_min = std::stoi(min);
+    localTM.tm_sec = std::stoi(sec);
+    time_t time = mktime(&localTM);
+    return time*1000+std::stoi(ms);
+}
+
+void MDEngineBitmex::processFundingData(Document& json)
+{
+    KF_LOG_INFO(logger, "processing funding data");
+
+    if(!json.HasMember("data") || !json["data"].IsArray() || json["data"].Size() == 0)
+    {
+        KF_LOG_INFO(logger, "received funding does not have valid data");
+        return;
+    }
+
+    auto& data = json["data"];
+    
+
+    for(int count = 0; count < data.Size(); count++)
+    {
+        auto& update = data.GetArray()[count];
+        std::string symbol = update["symbol"].GetString();
+        std::string ticker = whiteList.GetKeyByValue(symbol);
+        if(ticker.empty())
+        {
+            KF_LOG_INFO(logger, "received funding symbol not in white list");
+            continue;
+        }
+        KF_LOG_INFO(logger, "received funding symbol is " << symbol << " and ticker is " << ticker);
+        std::string timestamp = update["timestamp"].GetString();//"2019-03-19T07:52:44.318Z"
+        
+
+        LFFundingField fundingdata;
+        memset(&fundingdata, 0, sizeof(fundingdata));
+        strcpy(fundingdata.InstrumentID, ticker.c_str());
+        strcpy(fundingdata.ExchangeID, "bitmex");
+
+        //struct tm cur_tm;
+        //time_t now = time(0);
+        //cur_tm = *localtime(&now);
+        fundingdata.TimeStamp = getTimestampFromStr(timestamp);//kungfu::yijinjing::parseTm(cur_tm) / 1000000;
+        fundingdata.Rate = update["fundingRate"].GetDouble();
+        fundingdata.RateDaily = update["fundingRateDaily"].GetDouble();
+        on_funding_update(&fundingdata);
+    }
+}
 BOOST_PYTHON_MODULE(libbitmexmd)
 {
     using namespace boost::python;
