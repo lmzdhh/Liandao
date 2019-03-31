@@ -1104,7 +1104,7 @@ void TDEngineKuCoin::cancel_order(AccountUnitKuCoin& unit, std::string code, std
 void TDEngineKuCoin::query_order(AccountUnitKuCoin& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[query_order]");
-    std::string requestPath = "api/v1/orders/" + orderId;
+    std::string requestPath = "/api/v1/orders/" + orderId;
     auto response = Get(requestPath,"",unit);
 
     getResponse(response.status_code, response.text, response.error.message, json);
