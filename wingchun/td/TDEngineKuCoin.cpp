@@ -1176,19 +1176,19 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
             strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
             strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
             rtn_trade.Direction = rtn_order.Direction;
-            double oldAmount = orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
-            double newAmount = rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
+            double oldAmount = (double)orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
+            double newAmount = (double)rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
 
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            double price = (newAmount - oldAmount)/(rtn_trade.Volume/scale_offset);
+            double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
             rtn_trade.Price =price*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                     source_id, MSG_TYPE_LF_RTN_TRADE_KUCOIN, 1, -1);
 
-             KF_LOG_INFO(logger, "[on_rtn_trade] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction 
+             KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction 
                         << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
 
 
@@ -1285,12 +1285,12 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
             strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
             strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
             rtn_trade.Direction = rtn_order.Direction;
-            double oldAmount = orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
-            double newAmount = rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
+            double oldAmount = (double)orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
+            double newAmount = (double)rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
 
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            double price = (newAmount - oldAmount)/(rtn_trade.Volume/scale_offset);
+            double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
             rtn_trade.Price = price*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
