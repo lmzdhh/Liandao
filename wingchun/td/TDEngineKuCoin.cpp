@@ -482,7 +482,7 @@ void TDEngineKuCoin::req_investor_position(const LFQryPositionField* data, int a
     if(position_count > 0) {
         for (auto it =  tmp_map.begin() ; it != tmp_map.end() ;  ++it) {
             --position_count;
-            on_rsp_position(&it->second, position_count == 0, requestId, errorId, errorMsg.c_str());
+            on_rsp_position(&it->second, position_count == 0, requestId, 0, errorMsg.c_str());
         }
     }
     else
