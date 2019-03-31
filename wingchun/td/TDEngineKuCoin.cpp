@@ -650,7 +650,8 @@ void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int accoun
     Document d;
     cancel_order(unit, ticker, remoteOrderId, d);
 
-    if(!d.HasParseError() && d.HasMember("code") && d["code"].GetString() != "200000") {
+    std::string strSuccessCode =  "200000";
+    if(!d.HasParseError() && d.HasMember("code") && strSuccessCode != d["code"].GetString()) {
         errorId = std::stoi(d["code"].GetString());
         if(d.HasMember("msg") && d["msg"].IsString())
         {
@@ -740,7 +741,8 @@ void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
                                                                                            << " (remoteOrderId) " << orderStatusIterator->remoteOrderId);
             continue;
         }
-        if(d.HasMember("code") && d["code"].GetString() == "200000")
+        const std::string strSuccessCode = "200000";
+        if(d.HasMember("code") && strSuccessCode ==  d["code"].GetString())
         {
             rapidjson::Value &data = d["data"];
             ResponsedOrderStatus responsedOrderStatus;
@@ -771,7 +773,7 @@ void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
         } else {
             std::string errorMsg = "";
 
-            int errorId = d["code"].GetInt();
+            std::string errorId = d["code"].GetString();
             if(d.HasMember("message") && d["message"].IsString())
             {
                 errorMsg = d["message"].GetString();
