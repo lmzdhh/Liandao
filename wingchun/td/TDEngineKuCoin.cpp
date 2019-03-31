@@ -690,7 +690,7 @@ void TDEngineKuCoin::addRemoteOrderIdOrderActionSentTime(const LFOrderActionFiel
 
 void TDEngineKuCoin::GetAndHandleOrderTradeResponse()
 {
-      KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse]" );
+    // KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse]" );
     //every account
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
@@ -707,7 +707,7 @@ void TDEngineKuCoin::GetAndHandleOrderTradeResponse()
 
 void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
 {
-    KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
+    //KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
@@ -1188,6 +1188,10 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                     source_id, MSG_TYPE_LF_RTN_TRADE_KUCOIN, 1, -1);
 
+             KF_LOG_INFO(logger, "[on_rtn_trade] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction 
+                        << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+
+
         }
 
         //emit the LF_CHAR_Canceled status
@@ -1218,6 +1222,9 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                                 source_id, MSG_TYPE_LF_RTN_ORDER_KUCOIN,
                                 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+        
+         KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
+                        << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
 
 
         //third, update last status for next query_order
@@ -1262,6 +1269,9 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
                                 source_id, MSG_TYPE_LF_RTN_ORDER_KUCOIN,
                                 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
+         KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
+                        << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
+
         int64_t newAveragePrice = responsedOrderStatus.averagePrice;
         //second, if the status is PartTraded/AllTraded, send OnRtnTrade
         if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
@@ -1286,6 +1296,10 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                     source_id, MSG_TYPE_LF_RTN_TRADE_KUCOIN, 1, -1);
+
+             KF_LOG_INFO(logger, "[on_rtn_trade] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction 
+                        << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+
         }
         //third, update last status for next query_order
         orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
