@@ -404,7 +404,7 @@ LfOrderStatusType TDEngineKuCoin::GetOrderStatus(bool isCancel,int64_t nSize,int
     }
     if(nSize > nDealSize)
    {
-        return  LF_CHAR_PartTradedNotQueueing;
+        return  LF_CHAR_PartTradedQueueing;
    }
     return LF_CHAR_AllTraded;
 }
