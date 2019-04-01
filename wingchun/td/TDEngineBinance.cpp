@@ -1396,6 +1396,27 @@ void TDEngineBinance::set_reader_thread()
 
     KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on AccountUnitBinance::loop");
     rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::loop, this)));
+
+    //仿照上面在这里创建新线程，loop是创建的线程里的主函数
+    KF_LOG_INFO(logger,"[set_reader_thread] rest_thread start on AccountUnitBinance::testUTC");
+    test_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::testUTC,this)));
+}
+
+//测试UTC零点reset功能是否可用
+void TDEngineBinance::testUTC(){
+    KF_LOG_INFO(logger, "[testUTC] (isRunning) " << isRunning);
+    while(isRunning)
+    {
+        //UTC 00：00：00 reset order_total_limit
+        uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
+
+        if (UTC_timestamp % 86400000 == 0)
+        {
+            KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset");
+            order_total_count = 0;
+        }
+    }
 }
 
 void TDEngineBinance::loop()
@@ -1619,6 +1640,18 @@ bool TDEngineBinance::shouldRetry(int http_status_code, std::string errorMsg, st
 
 bool TDEngineBinance::order_count_over_limit()
 {
+
+    //UTC 00：00：00 reset order_total_limit
+    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
+
+    if (UTC_timestamp % 86400000 == 0)
+    {
+        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset");
+        order_total_count = 0;
+    }
+
+
     if (order_total_count >= 100000)
     {
         KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " over 100000/day limit!");
@@ -1626,7 +1659,7 @@ bool TDEngineBinance::order_count_over_limit()
     }
     
     static std::queue<long long> time_queue;
-    uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     if (time_queue.size() <= 0)
     {
         time_queue.push(timestamp);
