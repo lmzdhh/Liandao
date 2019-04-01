@@ -1410,7 +1410,7 @@ void TDEngineBinance::testUTC(){
         //UTC 00：00：00 reset order_total_limit
         uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         //uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
-        uint64_t UTC_timestamp = timestamp + 46800000;
+        uint64_t UTC_timestamp = timestamp + 36000000;
 
         if (UTC_timestamp % 86400000 == 0)
         {
