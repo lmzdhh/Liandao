@@ -648,6 +648,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     //paser the order/trade info in the response result
     if(!d.HasParseError() && d.IsObject() && !d.HasMember("code"))
     {
+
         //order insert success,on_rtn_order with NotTouched status first
         onRtnNewOrder(data, unit, requestId);
         if(!d.HasMember("status"))
@@ -1410,7 +1411,12 @@ void TDEngineBinance::testUTC(){
         //UTC 00：00：00 reset order_total_limit
         uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         //uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
-        uint64_t UTC_timestamp = timestamp + 36000000;
+        uint64_t UTC_timestamp = timestamp + 28800000;
+
+        if(UTC_timestamp % 10000 == 0)
+        {
+            KF_LOG_DEBUG(logger, "[order_count_over_limit] (UTC_time)" << UTC_timestamp << " current UTC time");
+        }
 
         if (UTC_timestamp % 86400000 == 0)
         {
@@ -1561,6 +1567,8 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
             json.Parse(strErr.c_str());
             return;
         }
+
+        //在这里计算未成交率
 
         if (bHandle_429)
         {
