@@ -131,6 +131,7 @@ private:
 
     virtual void set_reader_thread() override;
     void loop();
+    void testUTC();
     std::vector<std::string> split(std::string str, std::string token);
     bool loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc);
     void GetAndHandleOrderTradeResponse();
@@ -237,6 +238,7 @@ private:
 private:
     static constexpr int scale_offset = 1e8;
     ThreadPtr rest_thread;
+    ThreadPtr test_thread;
     uint64_t last_rest_get_ts = 0;
     uint64_t rest_get_interval_ms = 500;
 
