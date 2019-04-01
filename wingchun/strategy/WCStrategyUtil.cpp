@@ -240,17 +240,29 @@ void WCStrategyUtil::set_pos_back(short source, const char* pos_str)
 {
     write_frame(pos_str, strlen(pos_str) + 1, source, MSG_TYPE_STRATEGY_POS_SET, 1, -1);
 }
-string WCStrategyUtil::gen_tag(long time,short source_id,bool is_td_trigger,bool is_hedge,int order_ref,int request_id)
+
+#define TAG_LEN 64
+string WCStrategyUtil::gen_md_trigger_tag(long time,short source_id,bool is_hedge)
 {
-    char strTag[64]={};
-    if(order_ref == 0 || request_id == 0)
-    {
-        sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),(is_td_trigger?1:0),source_id,time);
-    }
-    else
-    {
-        sprintf(strTag,"%d%d%02hd%ld%08d%08d",(is_hedge?1:0),(is_td_trigger?1:2),source_id,time,request_id,order_ref);
-    }
-    
+    char strTag[TAG_LEN]={};
+    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),0,source_id,time);
+    return strTag;
+}
+string WCStrategyUtil::gen_trade_trigger_tag(long time,short source_id,bool is_hedge)
+{
+    char strTag[TAG_LEN]={};
+    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),1,source_id,time);
+    return strTag;
+}
+string WCStrategyUtil::gen_cancel_trigger_tag(long time,short source_id,int trigger_order_ref,int trigger_request_id,bool is_hedge)
+{
+    char strTag[TAG_LEN]={};
+    sprintf(strTag,"%d%d%02hd%ld%08d%08d",(is_hedge?1:0),2,source_id,time,trigger_request_id,trigger_order_ref);
+    return strTag;
+}
+string WCStrategyUtil::gen_timeout_trigger_tag(long time,short source_id,bool is_hedge)
+{
+    char strTag[TAG_LEN]={};
+    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),3,source_id,time);
     return strTag;
 }
