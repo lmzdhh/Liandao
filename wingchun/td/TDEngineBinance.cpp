@@ -1386,7 +1386,7 @@ bool TDEngineBinance::isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinanc
         if (strcmp(orderStatusIterator->InstrumentID, InstrumentID) == 0 && strcmp(orderStatusIterator->OrderRef, OrderRef) == 0) {
             return true;
         }
-
+    }
     return false;
 }
 
