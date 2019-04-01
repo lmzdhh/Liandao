@@ -1386,7 +1386,7 @@ bool TDEngineBinance::isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinanc
         if (strcmp(orderStatusIterator->InstrumentID, InstrumentID) == 0 && strcmp(orderStatusIterator->OrderRef, OrderRef) == 0) {
             return true;
         }
-    }
+
     return false;
 }
 
@@ -1402,7 +1402,7 @@ void TDEngineBinance::set_reader_thread()
     test_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::testUTC,this)));
 }
 
-//测试UTC零点reset功能是否可用
+//测试UTC零点reset功能是否可用---------
 void TDEngineBinance::testUTC(){
     KF_LOG_INFO(logger, "[testUTC] (isRunning) " << isRunning);
     while(isRunning)
@@ -1416,6 +1416,7 @@ void TDEngineBinance::testUTC(){
             KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset");
             order_total_count = 0;
         }
+        
     }
 }
 
