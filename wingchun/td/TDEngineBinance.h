@@ -250,6 +250,10 @@ private:
     int order_count_per_second = 5;
     uint64_t order_total_count = 0;
 
+    ////////////// last UTC time  /////////////////////
+    uint64_t last_UTC_timestamp = 0;
+    uint64_t last_test_timestamp = 0;
+
     /////////////// request weight ////////////////
     //<=0，do nothing even meet 429
     //>0，limit weight per minute；
