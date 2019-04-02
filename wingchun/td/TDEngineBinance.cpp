@@ -1411,12 +1411,13 @@ void TDEngineBinance::testUTC(){
         //UTC 00：00：00 reset order_total_limit
         uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         //uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
-        uint64_t UTC_timestamp = timestamp + 23400000;
+        uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
 
-        if((UTC_timestamp / 10000) != (last_test_timestamp / 10000))
+        if((UTC_timestamp / 10000) != (last_UTC_timestamp / 10000))
         {
-            KF_LOG_DEBUG(logger, "[order_count_over_limit] (UTC_time)" << UTC_timestamp << " current UTC time");
-            last_test_timestamp = UTC_timestamp;
+            KF_LOG_DEBUG(logger, "[order_count_over_limit] (UTC_time)" << UTC_timestamp << " current UTC timestamp ; last_UTCtimestamp  "<<last_UTC_timestamp
+                                    <<" ; local_timestamp: "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
+            last_UTC_timestamp = UTC_timestamp;
         }
 
         // if (UTC_timestamp % 86400000 == 0)
@@ -1427,10 +1428,11 @@ void TDEngineBinance::testUTC(){
 
         if ((UTC_timestamp / 86400000) != (last_UTC_timestamp / 86400000))
         {
-            last_UTC_timestamp = UTC_timestamp;
             order_total_count = 0;
-            KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset");
-            
+            KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset ; [last_UTCtimestamp : current_UTCtimestamp : local_timestamp] "
+                                    <<last_UTC_timestamp<<" : "<<UTC_timestamp<<" : "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
+            last_UTC_timestamp = UTC_timestamp;
+                        
         }
 
     }
