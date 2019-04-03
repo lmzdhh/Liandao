@@ -1418,11 +1418,11 @@ void TDEngineBinance::testUTC(){
             KF_LOG_DEBUG(logger, "###[order_count_over_limit] (UTC_time)" << UTC_timestamp << " current UTC timestamp ; last_UTCtimestamp  "<<last_UTC_timestamp
                                     <<" ; local_timestamp: "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
             
-            if (((UTC_timestamp+29100000) / 86400000) != ((last_UTC_timestamp+29100000) / 86400000))
+            if (((UTC_timestamp) / 86400000) != ((last_UTC_timestamp) / 86400000))
             {
                 order_total_count = 0;
-                KF_LOG_DEBUG(logger, "###[order_count_over_limit] (UTC_time)###reset" << UTC_timestamp << " current UTC timestamp ; last_UTCtimestamp  "<<last_UTC_timestamp
-                                    <<" ; local_timestamp: "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
+                // KF_LOG_DEBUG(logger, "###[order_count_over_limit] (UTC_time)###reset" << UTC_timestamp << " current UTC timestamp ; last_UTCtimestamp  "<<last_UTC_timestamp
+                //                     <<" ; local_timestamp: "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
                 KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset ; [last_UTCtimestamp : current_UTCtimestamp : local_timestamp] "
                                         <<last_UTC_timestamp<<" : "<<UTC_timestamp<<" : "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
             //    last_UTC_timestamp = UTC_timestamp;
@@ -1432,11 +1432,7 @@ void TDEngineBinance::testUTC(){
             last_UTC_timestamp = UTC_timestamp;
         }
 
-        // if (UTC_timestamp % 86400000 == 0)
-        // {
-        //     KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset");
-        //     order_total_count = 0;
-        // }
+       
 
         // if ((UTC_timestamp / 86400000) != (last_UTC_timestamp / 86400000))
         // {
