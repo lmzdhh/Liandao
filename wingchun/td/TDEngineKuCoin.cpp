@@ -491,6 +491,7 @@ void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& 
         {
             if(it->second.nBaseMinSize > nVolume)
             {
+                KF_LOG_INFO(logger, "[dealPriceVolume] (Volume) "  << nVolume  << " <  (BaseMinSize)  "  << it->second.nBaseMinSize << " (symbol)" << symbol);
                 nDealVolume = 0;
                 return ;
             }
@@ -536,6 +537,7 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     
       if(fixedVolume == 0)
     {
+         KF_LOG_DEBUG(logger, "[req_order_insert] fixedVolume error" << ticker);
         errorId = 200;
         errorMsg = std::string(data->InstrumentID) + "quote less than baseMinSize";
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
