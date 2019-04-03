@@ -293,8 +293,11 @@ void TDEngineKuCoin::connect(long timeout_nsec)
                 PriceIncrement stPriceIncrement;
                 stPriceIncrement.nBaseMinSize = std::round(std::stod(data["baseMinSize"].GetString())* scale_offset);
                 stPriceIncrement.nPriceIncrement = std::round(std::stod(data["priceIncrement"].GetString()) * scale_offset);
-                stPriceIncrement.nBaseMinSize = std::round(std::stod(data["quoteIncrement"].GetString()) * scale_offset);
+                stPriceIncrement.nQuoteIncrement = std::round(std::stod(data["quoteIncrement"].GetString()) * scale_offset);
                 unit.mapPriceIncrement.insert(std::make_pair(pair.first,stPriceIncrement));
+
+                 KF_LOG_INFO(logger, "[getPriceIncrement] (BaseMinSize )" << stPriceIncrement.nBaseMinSize << "(PriceIncrement)" << stPriceIncrement.nPriceIncrement
+                                    << "(QuoteIncrement)" << stPriceIncrement.nQuoteIncrement);
             }
         }
    }
