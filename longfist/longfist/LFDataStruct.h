@@ -256,9 +256,9 @@ struct LFBarMarketDataField
 	int64_t   	UpperLimitPrice;       //涨停板价
 	int64_t   	LowerLimitPrice;       //跌停板价
 	char_13  	StartUpdateTime;       //首tick修改时间
-	int      	StartUpdateMillisec;   //首tick最后修改毫秒
+	int64_t     StartUpdateMillisec;   //首tick最后修改毫秒
 	char_13  	EndUpdateTime;         //尾tick最后修改时间
-	int      	EndUpdateMillisec;     //尾tick最后修改毫秒
+	int64_t     EndUpdateMillisec;     //尾tick最后修改毫秒
 	int			PeriodMillisec;        //周期（毫秒）
 	int64_t   	Open;                  //开
 	int64_t   	Close;                 //收
