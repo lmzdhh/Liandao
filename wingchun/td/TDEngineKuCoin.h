@@ -64,6 +64,12 @@ WC_NAMESPACE_START
             uint64_t volume = 0;
         };
 
+          struct PriceIncrement
+        {
+            int64_t nBaseMinSize = 0;
+            int64_t nPriceIncrement = 0;
+            int64_t nQuoteIncrement = 0;
+        };
 
         struct AccountUnitKuCoin
         {
@@ -76,15 +82,13 @@ WC_NAMESPACE_START
             bool    logged_in;
             std::vector<PendingOrderStatus> newOrderStatus;
             std::vector<PendingOrderStatus> pendingOrderStatus;
-
+            std::map<std::string,PriceIncrement> mapPriceIncrement;
             CoinPairWhiteList coinPairWhiteList;
             CoinPairWhiteList positionWhiteList;
 
-            std::vector<std::string> newPendingSendMsg;
-            std::vector<std::string> pendingSendMsg;
         };
 
-
+      
 /**
  * CTP trade engine
  */
@@ -142,8 +146,8 @@ WC_NAMESPACE_START
 
             void handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
             void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
-
-
+            void getPriceIncrement(AccountUnitKuCoin& unit);
+            void dealPriceVolume(AccountUnitKuCoin& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVome);
 
             std::string parseJsonToString(Document &d);
 
@@ -199,7 +203,6 @@ WC_NAMESPACE_START
 
 
             std::vector<ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
-
             int max_rest_retry_times = 3;
             int retry_interval_milliseconds = 1000;
             int orderaction_max_waiting_seconds = 30;

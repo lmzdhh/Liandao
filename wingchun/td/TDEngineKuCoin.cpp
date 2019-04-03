@@ -39,45 +39,6 @@ using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 USING_WC_NAMESPACE
 
-std::string g_private_key=R"(-----BEGIN RSA PRIVATE KEY-----
-MIIEowIBAAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8h
-Q1r6M6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmss
-U8zcLSzm72WTbC7HM8St2Ky5V4eCLHJsqCB/Je1Q/F6/K+pMMzPumornUpDgr6El
-UjjOgroRNnl5mgqB466Op1Xfnl/nLsHXetDPZ2Ekp4iQmCl5zR7sYMY0tUviVbjE
-GEQ6VobnkkZDH/pnjrdjWKW+Un6cO/WLDKKdsgloCBnFRH8jyAiifwTItTP+ejmK
-uqsjLUWcNJ/MtGvhTyxPd4z18SsgQ3g6Goc+swIBAwKCAQEAiP0oCPESE+d4C0Wr
-1rEQCvK8hlazSmCwzpThNaGE/ibqBuoWLOdRd8qIeP+H9t1BYfGnCYnh4JOzmfS6
-WnFDUMdi8w3erEloqotOUzRbG6Y6tEdy4oiSyMiZ9O5iSB8vd9hz5ch7j6+sHaGd
-xWr/bp41/ZR/cpwyzM1JvFyaNwoOJgA81SDUZjmZpfZYH7tc52JhlBJroJ3rQJFx
-O1yvLvMnM5akWhdVDtsRy2WUo5ToVbTFYOxqevstxwKNTpECxvl4+Rn8bIuzjo1b
-vQLWIepb6v9CFb0QNgP6IodxUg4vaNni/NCaD9Mc2mJiriFgpBKKwcdNgFIpveHP
-F9n6awKBgQDy4annCKGYJa+tD3IoQDDrugzxTZQ8eEXMRct1HUS9nhz4aI1Q8rF6
-BLbbrtNG6tVWfw45GdOMCQIVXTEkuoZkLHBx/Yr1mNyfNtE/3ej11pk8Lfr7K5Ie
-QaOX4ckpD6cI2t+4yI1DH2DNwYe17W5bcRSMpXIhRwUSJL9DQqZ50QKBgQDYlPbj
-CeX3w7P9rhXNKkCKzo4K+6YBtS06CBw4hIELAtdxcZlJHlUAMh92ANqO1RcvVhti
-7Q4OlQwNipFKb5p/N9C75XPOFtBvr1BBkzVmqJCh+Z/m+FFtNV8TaXB1qneughL9
-duT49igjK4SCwct05/vyr2/gaarPgeZANBnNQwKBgQCh68aaBcEQGR/ItPbFgCCd
-JrNLiQ19pYPdg9z4vi3Tvr368F419yD8AySSdIzZ8eOO/17Qu+JdW1a46Mtt0a7t
-cvWhU7H5EJMUzzYqk/Cj5GYoHqdSHQwUK8JlQTDGCm9bPJUl2wjXakCJK6/OnkmS
-S2MIbkwWL1i2wyos1xmmiwKBgQCQY09CBplP181TyWPeHCsHNF6x/RlWeMjRWr17
-AwCyAeT2S7uGFDiqzBT5VecJ42TKOWeXSLQJuLKzsbYxn7xUz+B9Q6KJZIr1H4rW
-YiOZxbXBURVEpYueI5S3m6BOcaUfAWH+T0NQpBrCHQMB1oejRVKhykqVm8c1AUQq
-zWaI1wKBgB6TWnnVGhx2jTei8YnD//IYplv8/kErxwHaC2yz7qvdBQB+ljuimGzm
-xefSDq993EWmKGYJ/IiiRoue2x6IX4EcrnG2hZ2sBfgjvjxGSm1s0w81XLMcMnL2
-+ItII2MKryk0lMyRyfVyaMr52wbXSo7Lali5wweXvxUCU1CGGUJD
------END RSA PRIVATE KEY-----
-)";
-
-std::string g_public_key=R"(
------BEGIN RSA PUBLIC KEY-----
-MIIBCAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8hQ1r6
-M6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmssU8zc
-LSzm72WTbC7HM8St2Ky5V4eCLHJsqCB/Je1Q/F6/K+pMMzPumornUpDgr6ElUjjO
-groRNnl5mgqB466Op1Xfnl/nLsHXetDPZ2Ekp4iQmCl5zR7sYMY0tUviVbjEGEQ6
-VobnkkZDH/pnjrdjWKW+Un6cO/WLDKKdsgloCBnFRH8jyAiifwTItTP+ejmKuqsj
-LUWcNJ/MtGvhTyxPd4z18SsgQ3g6Goc+swIBAw==
------END RSA PUBLIC KEY-----
-)";
 TDEngineKuCoin::TDEngineKuCoin(): ITDEngine(SOURCE_KUCOIN)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.KuCoin");
@@ -285,7 +246,7 @@ TradeAccount TDEngineKuCoin::load_account(int idx, const json& j_config)
     printResponse(json);
     cancel_all_orders(unit, "etc_eth", json);
     printResponse(json);
-
+    getPriceIncrement(unit);
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -317,6 +278,26 @@ void TDEngineKuCoin::connect(long timeout_nsec)
     }
 }
 
+   void TDEngineKuCoin::getPriceIncrement(AccountUnitKuCoin& unit)
+   {
+        auto& coinPairWhiteList = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList();
+        for(auto& pair : coinPairWhiteList)
+        {
+            Document json;
+             const auto response = Get("/api/v1/symbols/" + pair.second,"",unit);
+            json.Parse(response.text.c_str());
+            const static std::string strSuccesse = "200000";
+            if(json.HasMember("code") && json["code"].GetString() == strSuccesse)
+            {
+                auto& data = json["data"];
+                PriceIncrement stPriceIncrement;
+                stPriceIncrement.nBaseMinSize = std::round(std::stod(data["baseMinSize"].GetString())* scale_offset);
+                stPriceIncrement.nPriceIncrement = std::round(std::stod(data["priceIncrement"].GetString()) * scale_offset);
+                stPriceIncrement.nBaseMinSize = std::round(std::stod(data["quoteIncrement"].GetString()) * scale_offset);
+                unit.mapPriceIncrement.insert(std::make_pair(pair.first,stPriceIncrement));
+            }
+        }
+   }
 
 void TDEngineKuCoin::login(long timeout_nsec)
 {
@@ -497,6 +478,28 @@ void TDEngineKuCoin::req_qry_account(const LFQryAccountField *data, int account_
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
+void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVolume)
+{
+        auto it = unit.mapPriceIncrement.find(symbol);
+        if(it == unit.mapPriceIncrement.end())
+        {
+                  KF_LOG_INFO(logger, "[dealPriceVolume] symbol not find :" << symbol);
+                  nDealVolume = 0;
+                  return ;
+        }
+        else
+        {
+            if(it->second.nBaseMinSize > nVolume)
+            {
+                nDealVolume = 0;
+                return ;
+            }
+            nDealVolume = nVolume / it->second.nQuoteIncrement * it->second.nQuoteIncrement;
+            nDealPrice = nPrice / it->second.nPriceIncrement * it->second.nPriceIncrement;
+        }
+         KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << symbol << " (Volume)" << nVolume << " (Price)" << nPrice 
+                << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
+}
 
 void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
@@ -527,10 +530,21 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     double funds = 0;
     Document d;
 
-    int64_t fixedPrice = data->LimitPrice;
-
+    int64_t fixedPrice = 0;
+    int64_t fixedVolume = 0;
+    dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
+    
+      if(fixedVolume == 0)
+    {
+        errorId = 200;
+        errorMsg = std::string(data->InstrumentID) + "quote less than baseMinSize";
+        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    }
+    
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
-               GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, data->OrderRef,d);
+               GetType(data->OrderPriceType).c_str(), fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, data->OrderRef,d);
     //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
     //not expected response
     if(!d.IsObject())
@@ -761,8 +775,7 @@ void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
             int64_t nDealSize = std::round(dDealSize * scale_offset);
             int64_t nSize = std::round(std::stod(data["size"].GetString()) * scale_offset);
             responsedOrderStatus.OrderStatus = GetOrderStatus(data["cancelExist"].GetBool(),nSize,nDealSize);
-            if(data.HasMember("price") && data["price"].IsString())
-                responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
+            responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
             responsedOrderStatus.volume = nSize;
             //今成交数量
             responsedOrderStatus.VolumeTraded = nDealSize;
