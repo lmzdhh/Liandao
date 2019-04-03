@@ -541,10 +541,10 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     
       if(fixedVolume == 0)
     {
-        KF_LOG_DEBUG(logger, "[req_order_insert] fixedVolume error" << ticker);
+        KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error" << ticker);
         errorId = 200;
         errorMsg = data->InstrumentID;
-        errorMsg += "quote less than baseMinSize";
+        errorMsg += " : quote less than baseMinSize";
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
         return;
