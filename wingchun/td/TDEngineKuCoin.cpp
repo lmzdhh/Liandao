@@ -480,6 +480,7 @@ void TDEngineKuCoin::req_qry_account(const LFQryAccountField *data, int account_
 
 void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVolume)
 {
+        KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
         auto it = unit.mapPriceIncrement.find(symbol);
         if(it == unit.mapPriceIncrement.end())
         {
@@ -495,8 +496,8 @@ void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& 
                 nDealVolume = 0;
                 return ;
             }
-            nDealVolume = nVolume / it->second.nQuoteIncrement * it->second.nQuoteIncrement;
-            nDealPrice = nPrice / it->second.nPriceIncrement * it->second.nPriceIncrement;
+            nDealVolume =  it->second.nQuoteIncrement  > 0 ? nVolume / it->second.nQuoteIncrement * it->second.nQuoteIncrement : nVolume;
+            nDealPrice = it->second.nPriceIncrement > 0 ? nPrice / it->second.nPriceIncrement * it->second.nPriceIncrement : nPrice;
         }
          KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << symbol << " (Volume)" << nVolume << " (Price)" << nPrice 
                 << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
@@ -537,9 +538,10 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     
       if(fixedVolume == 0)
     {
-         KF_LOG_DEBUG(logger, "[req_order_insert] fixedVolume error" << ticker);
+        KF_LOG_DEBUG(logger, "[req_order_insert] fixedVolume error" << ticker);
         errorId = 200;
-        errorMsg = std::string(data->InstrumentID) + "quote less than baseMinSize";
+        errorMsg = data->InstrumentID;
+        errorMsg += "quote less than baseMinSize";
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
         return;
