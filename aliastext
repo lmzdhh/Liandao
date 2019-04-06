@@ -1,0 +1,9 @@
+cd ~/liandao;
+yum erase kungfu -y;
+rm -rf build;
+mkdir build;
+cd build;
+cmake .. ;
+make;
+make package;
+yum install kungfu-0.0.5-Linux.rpm -y ;

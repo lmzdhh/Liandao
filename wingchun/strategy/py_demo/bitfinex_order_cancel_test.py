@@ -21,15 +21,15 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 '''
 
 def initialize(context):
-    context.add_md(source=SOURCE.BITFINEX)
-    context.ticker = 'ltc_btc'
+   #context.add_md(source=SOURCE.BITFINEX)
+    context.ticker = 'eos_eth'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
     context.order_rid = -1
     context.cancel_id = -1
     context.add_td(source=SOURCE.BITFINEX)
-    context.subscribe(tickers=[context.ticker], source=SOURCE.BITFINEX)
+    #context.subscribe(tickers=[context.ticker], source=SOURCE.BITFINEX)
 
 def on_pos(context, pos_handler, request_id, source, rcv_time):
     print("on_pos,", pos_handler, request_id, source, rcv_time)
@@ -37,14 +37,15 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
         if pos_handler is None:
             print '-- got no pos in initial, so req pos --'
             context.req_pos(source=SOURCE.BITFINEX)
+            print 'req pos ,,,,,'
             context.pos_set = False
-            return
+            #context.stop()
         else:
             print '-- got pos in initial --'
             context.print_pos(pos_handler)
             #context.stop()
             print '----will test buy cancel----'
-            context.buy_price = 861470 #market_data.LowerLimitPrice
+            context.buy_price = 3221000 #market_data.LowerLimitPrice
             context.sell_price = 999999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
@@ -52,15 +53,15 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                                ticker=context.ticker,
                                                                price=context.buy_price,
                                                                exchange_id=context.exchange_id,
-                                                               volume=20010000,
-                                                               direction=DIRECTION.Buy,
+                                                               volume=1200000000,
+                                                               direction=DIRECTION.Sell,
                                                                offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
-                print('will cancel it in 2 seconds')
-                import time
-                time.sleep(2)
-                context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
-                print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
+                print('will cancel it')
+               # import time
+               # time.sleep(2)
+               # context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
+               # print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
     else:
         print '-- got pos requested --'
         context.print_pos(pos_handler)

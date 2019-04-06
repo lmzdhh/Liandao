@@ -14,6 +14,8 @@
 #include <document.h>
 #include <libwebsockets.h>
 
+#include<cpr/cpr.h>
+
 
 using rapidjson::Document;
 
@@ -171,6 +173,11 @@ private:
     std::unordered_map<int, OrderActionData> CIDorderActionData;
     std::unordered_map<int, OrderActionData> pendingOrderActionData;
     std::unordered_map<int64_t, OrderActionData> RemoteOrderIDorderActionData;
+public:
+    cpr::Response cancelOrder(AccountUnitBitfinex& unit, OrderInsertData& insertData);
+    cpr::Response orderStatus(AccountUnitBitfinex& unit, OrderInsertData& insertData);
+    cpr::Response retriveTradeStatus(AccountUnitBitfinex& unit, OrderInsertData& insertData);
+    bool deal_connect_error(AccountUnitBitfinex& unit);
 };
 
 WC_NAMESPACE_END
