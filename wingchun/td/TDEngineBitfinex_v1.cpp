@@ -53,7 +53,7 @@ USING_WC_NAMESPACE
 [0,"oc",[16662905539,0,4,"tLTCBTC",1536659719189,1536659721181,0.2001,0.2001,"EXCHANGE LIMIT",null,null,null,0,"CANCELED",null,null,0.0085489,0,null,null,null,null,null,0,0,0,null,null,"API>BFX",null,null,null]]
 
 
- check journal:
+check journal:
 
 
 order insert
@@ -73,305 +73,128 @@ trade
 yjj journal -n TD_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 206
 yjj journal -n TD_RAW_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 22206
  * */
-	static TDEngineBitfinex* global_md = nullptr;
-
+static TDEngineBitfinex* global_md = nullptr;
 /*FXW's fix starts here*/
 cpr::Response TDEngineBitfinex::cancelOrder(AccountUnitBitfinex& unit, int64_t& remoteOrderId)//v1
 {
-	std::string Timestamp = std::to_string(getTimestamp());
-	std::string orderId = std::to_string(remoteOrderId);
-	//std::string orderId = std::to_string(insertData.remoteOrderId);
-	std::string requestPath = "/v1/order/cancel";
-	std::string queryString = "";
-	std::string body = "{\"request\":\"" + requestPath + "\",\"nonce\":\"" + Timestamp + "\"" + "}";
-	string Message = "{\"request\":\"" + requestPath + "\",\"nonce\":\"" + Timestamp + "\",\"order_id\":" + orderId + "}";
-	string payload = base64_encode((const unsigned char*)Message.c_str(), Message.length());
-	std::string sig = hmac_sha384(unit.secret_key.c_str(), payload.c_str());
-	string url = unit.baseUrl + requestPath + queryString;//complete url
-	KF_LOG_DEBUG(logger, "[cancelOrder-Rest]the url we ask" << url);
-	const auto response = Post(
-		Url{ url }, cpr::VerifySsl{ false },
-		Header{ {"X-BFX-APIKEY", unit.api_key},
-		{"Content-Type", "application/json"},
-		{"X-BFX-PAYLOAD", payload},
-		{"X-BFX-SIGNATURE",  sig} },
-		Body{ body },
-		Timeout{ 10000 }
-	);
+    std::string Timestamp = std::to_string(getTimestamp());
+    std::string orderId = std::to_string(remoteOrderId);
+    //std::string orderId = std::to_string(insertData.remoteOrderId);
+    std::string requestPath = "/v1/order/cancel";
+    std::string queryString = "";
+    std::string body = "{\"request\":\"" + requestPath + "\",\"nonce\":\""+Timestamp+"\""+"}";
+    string Message =   "{\"request\":\"" + requestPath + "\",\"nonce\":\""+Timestamp+ "\",\"order_id\":" + orderId + "}";
+    string payload = base64_encode((const unsigned char*)Message.c_str(), Message.length());
+    std::string sig = hmac_sha384(unit.secret_key.c_str(), payload.c_str());
+    string url = unit.baseUrl + requestPath + queryString;//complete url
+    KF_LOG_DEBUG(logger, "[cancelOrder-Rest]the url we ask" <<url);
+    const auto response = Post(
+            Url{ url }, cpr::VerifySsl{ false },
+            Header{ {"X-BFX-APIKEY", unit.api_key},
+            {"Content-Type", "application/json"},
+            {"X-BFX-PAYLOAD", payload},
+            {"X-BFX-SIGNATURE",  sig} },
+            Body{ body },
+            Timeout{ 10000 }
+            );
 
-	/*KF_LOG_DEBUG(logger, "[cancelOrder-Rest]rest interface ordercancel test,start from here" << " (rid)" << insertData.requestId
-			<< " (Iid)" << insertData.data.InvestorID
-			<< " (OrderRef)" << insertData.data.OrderRef
-			<<"(body)"<<body);*/
-	return response;
+    /*KF_LOG_DEBUG(logger, "[cancelOrder-Rest]rest interface ordercancel test,start from here" << " (rid)" << insertData.requestId
+            << " (Iid)" << insertData.data.InvestorID
+            << " (OrderRef)" << insertData.data.OrderRef
+            <<"(body)"<<body);*/
+    return response;
 }
 
 cpr::Response TDEngineBitfinex::orderStatus(AccountUnitBitfinex& unit, int64_t& remoteOrderId)//v1
 {
-	/* {
-		 "id":23794542055,
-			 "cid":1,
-			 "cid_date":"2019-04-05",
-			 "gid":0,
-			 "symbol":"ltcbtc",
-			 "exchange":"bitfinex",
-			 "price":"0.014",
-			 "avg_execution_price":"0.0",
-			 "side":"buy",
-			 "type":"exchange limit",
-			 "timestamp":"1554430044.0",
-			 "is_live":false,
-			 "is_cancelled":true,
-			 "is_hidden":false,
-			 "oco_order":null,
-			 "was_forced":false,
-			 "original_amount":"1.0",
-			 "remaining_amount":"1.0",
-			 "executed_amount":"0.0",
-			 "src":"api"
-	 }*/
-	std::string Timestamp = std::to_string(getTimestamp());
-	std::string orderId = std::to_string(remoteOrderId);
-	//std::string orderId = std::to_string(insertData.remoteOrderId);
-	std::string requestPath = "/v1/order/status";
-	std::string queryString = "";
-	std::string body = "{\"request\":\"" + requestPath + "\",\"nonce\":\"" + Timestamp + "\"" + "}";
-	string Message = "{\"request\":\"" + requestPath + "\",\"nonce\":\"" + Timestamp + "\",\"order_id\":" + orderId + "}";
-	string payload = base64_encode((const unsigned char*)Message.c_str(), Message.length());
-	std::string sig = hmac_sha384(unit.secret_key.c_str(), payload.c_str());
-	string url = unit.baseUrl + requestPath + queryString;//complete url
-	KF_LOG_DEBUG(logger, "[orderStatus-Rest]the url we ask" << url);
-	const auto response = Post(
-		Url{ url }, cpr::VerifySsl{ false },
-		Header{ {"X-BFX-APIKEY", unit.api_key},
-		{"Content-Type", "application/json"},
-		{"X-BFX-PAYLOAD", payload},
-		{"X-BFX-SIGNATURE",  sig} },
-		Body{ body },
-		Timeout{ 10000 }
-	);
-	/*KF_LOG_DEBUG(logger, "[orderStatus-Rest]rest interface order status test,start from here" << " (rid)" << insertData.requestId
-			<< " (Iid)" << insertData.data.InvestorID
-			<< " (OrderRef)" << insertData.data.OrderRef
-			<<"(body)"<<body);*/
-	return response;
+   /* {
+        "id":23794542055,
+            "cid":1,
+            "cid_date":"2019-04-05",
+            "gid":0,
+            "symbol":"ltcbtc",
+            "exchange":"bitfinex",
+            "price":"0.014",
+            "avg_execution_price":"0.0",
+            "side":"buy",
+            "type":"exchange limit",
+            "timestamp":"1554430044.0",
+            "is_live":false,
+            "is_cancelled":true,
+            "is_hidden":false,
+            "oco_order":null,
+            "was_forced":false,
+            "original_amount":"1.0",
+            "remaining_amount":"1.0",
+            "executed_amount":"0.0",
+            "src":"api"
+    }*/
+    std::string Timestamp = std::to_string(getTimestamp());
+    std::string orderId = std::to_string(remoteOrderId);
+    //std::string orderId = std::to_string(insertData.remoteOrderId);
+    std::string requestPath = "/v1/order/status";
+    std::string queryString = "";
+    std::string body = "{\"request\":\"" + requestPath + "\",\"nonce\":\""+Timestamp+"\""+"}";
+    string Message =   "{\"request\":\"" + requestPath + "\",\"nonce\":\""+Timestamp+ "\",\"order_id\":" + orderId + "}";
+    string payload = base64_encode((const unsigned char*)Message.c_str(), Message.length());
+    std::string sig = hmac_sha384(unit.secret_key.c_str(), payload.c_str());
+    string url = unit.baseUrl + requestPath + queryString;//complete url
+    KF_LOG_DEBUG(logger, "[orderStatus-Rest]the url we ask" <<url);
+    const auto response = Post(
+            Url{ url }, cpr::VerifySsl{ false },
+            Header{ {"X-BFX-APIKEY", unit.api_key},
+            {"Content-Type", "application/json"},
+            {"X-BFX-PAYLOAD", payload},
+            {"X-BFX-SIGNATURE",  sig} },
+            Body{ body },
+            Timeout{ 10000 }
+            );
+    /*KF_LOG_DEBUG(logger, "[orderStatus-Rest]rest interface order status test,start from here" << " (rid)" << insertData.requestId
+            << " (Iid)" << insertData.data.InvestorID
+            << " (OrderRef)" << insertData.data.OrderRef
+            <<"(body)"<<body);*/
+    return response;
 }
 
 cpr::Response TDEngineBitfinex::retriveTradeStatus(AccountUnitBitfinex& unit, OrderInsertData& insertData)//v2
 {
-	std::string Timestamp = std::to_string(getTimestamp());
-	std::string nonce = Timestamp;
-	std::string orderId = std::to_string(insertData.remoteOrderId);
-	std::string symbol = "/" + unit.coinPairWhiteList.GetValueByKey(std::string(insertData.data.InstrumentID)) + ":";
-	std::string apiPath = "v2/auth/r/order";
-	std::string queryParams = "";
+    std::string Timestamp = std::to_string(getTimestamp());
+    std::string nonce=Timestamp;
+    std::string orderId = std::to_string(insertData.remoteOrderId);
+    std::string symbol ="/"+unit.coinPairWhiteList.GetValueByKey(std::string(insertData.data.InstrumentID))+":";
+    std::string apiPath = "v2/auth/r/order";
+    std::string queryParams="";
 
-	std::string body = "{}";
-	std::string signature = "/api/" + apiPath + symbol + orderId + "/trades" + nonce + body;
-	std::string sig = hmac_sha384(unit.secret_key.c_str(), signature.c_str());//already is hex!!!
-	std::string url = unit.baseUrl + "/" + apiPath + symbol + orderId + "/trades";
+    std::string body = "{}" ;
+    std::string signature="/api/"+apiPath+symbol+orderId+"/trades"+nonce+body;
+    std::string sig = hmac_sha384(unit.secret_key.c_str(),signature.c_str());//already is hex!!!
+    std::string url=unit.baseUrl+"/"+apiPath+symbol+orderId+"/trades";
 
-	const auto response = Post(
-		Url{ url }, cpr::VerifySsl{ false },
-		Header{ {"bfx-apikey", unit.api_key},
-		{"Content-Type", "application/json"},
-		{"bfx-nonce", nonce},
-		{"bfx-signature",sig} },
-		Body{ body },
-		Timeout{ 10000 }
-	);
-	/*KF_LOG_DEBUG(logger, "[retriveTradeStatus-Rest]" << " (rid)" << insertData.requestId
-			<< " (Iid)" << insertData.data.InvestorID
-			<< " (OrderRef)" << insertData.data.OrderRef
-			<<"(url)"<<url
+    const auto response = Post(
+            Url{ url }, cpr::VerifySsl{ false },
+            Header{ {"bfx-apikey", unit.api_key},
+            {"Content-Type", "application/json"},
+            {"bfx-nonce", nonce},
+            {"bfx-signature",sig} },
+            Body{ body },
+            Timeout{ 10000 }
+            );
+    /*KF_LOG_DEBUG(logger, "[retriveTradeStatus-Rest]" << " (rid)" << insertData.requestId
+            << " (Iid)" << insertData.data.InvestorID
+            << " (OrderRef)" << insertData.data.OrderRef
+            <<"(url)"<<url
             <<"(signature)"<<signature
             <<"(sig.hex)"<<sig);*/
     return response;
 }
 
-bool TDEngineBitfinex::deal_connect_error(struct lws* conn)//true for success false for failed
+bool TDEngineBitfinex::deal_connect_error(AccountUnitBitfinex& unit)//true for success false for failed
 {
-    AccountUnitBitfinex& unit = findAccountUnitBitfinexByWebsocketConn(conn);
-    Document json;
-    cpr::Response r;
-    std::unordered_map<int, OrderInsertData>::iterator itr;
-    for (itr = CIDorderInsertData.begin(); itr != CIDorderInsertData.end(); ++itr)
-    {
-        OrderInsertData &insertData = itr->second;
-        std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
-        r = retriveTradeStatus(unit, insertData);
-        if (r.status_code >= 200 && r.status_code <= 299)
-        {
-            KF_LOG_DEBUG(logger, "[retriveTradeStatus] rest interface retriveTradeStatus test successed");
-            KF_LOG_INFO(logger, "[retriveTradeStatus] " << " (response.status_code) " << r.status_code <<
-                    " (response.text) " << r.text.c_str());
-            json.Parse(r.text.c_str());
-            if (json.IsArray())
-            {
-                /*json={[[...],[...],[...]]}*/
-                //auto A = json.GetArray();//A=[[...],[...],[...]];
-                if (json[2].IsArray())
-                {
-                    //KF_LOG_INFO(logger,"yes , A[0] is an array");
-                    int len = json.Size();
-                    KF_LOG_DEBUG(logger, "[json.Size]" << len);
-                    for (int i = 2; i < len; i++)
-                    {
-                        KF_LOG_INFO(logger, "bug allocate0");
-                        int trade_id = json[i].GetArray()[0].GetInt();
-                        KF_LOG_INFO(logger, "bug allocate1"
-                                << "(trae_id)" << trade_id);
-                        std::string symbol = json[i].GetArray()[1].GetString();
-                        KF_LOG_INFO(logger, "(symbol)" << symbol);
-                        /*/std::string ticker = unit.coinPairWhiteList.GetKeyByValue(symbol);*/
-                        int64_t remoteOrderId = json[i].GetArray()[3].GetInt64();
-                        KF_LOG_INFO(logger, "(remoteOrderId)" << remoteOrderId);
-
-                        double exec_amount = json[i].GetArray()[4].GetDouble();
-                        KF_LOG_INFO(logger, "(exec_amount)" << exec_amount);
-                        double exec_price = json[i].GetArray()[5].GetDouble();
-                        KF_LOG_INFO(logger, "(exec_price)" << exec_price);
-                        int maker = json[i].GetArray()[8].GetInt();
-                        KF_LOG_DEBUG(logger, "[retriveTradeStatus](trade_id)" << trade_id
-                                << "(symbol)" << symbol
-                                << "(remoteOrderId)" << remoteOrderId
-                                << "(exec_amount)" << exec_amount
-                                << "(exec_price)" << exec_price
-                                << "(maker)" << maker);
-                        LFRtnTradeField rtn_trade;//send OnRtnTrade
-                        memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-                        strcpy(rtn_trade.ExchangeID, "bitfinex");
-                        strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-
-                        strncpy(rtn_trade.TradeID, std::to_string(trade_id).c_str(), 21);
-                        /*/strncpy(rtn_trade.InstrumentID, ticker.c_str(), 31);*/
-                        strncpy(rtn_trade.InstrumentID, insertData.data.InstrumentID, 31);
-                        strncpy(rtn_trade.OrderRef, insertData.data.OrderRef, 13);
-                        rtn_trade.OffsetFlag = insertData.data.OffsetFlag;
-                        rtn_trade.HedgeFlag = insertData.data.HedgeFlag;
-
-                        if (exec_amount >= 0) {
-                            rtn_trade.Volume = std::round(exec_amount * scale_offset);
-                            rtn_trade.Direction = LF_CHAR_Buy;
-                        }
-                        else {
-                            rtn_trade.Volume = std::round(exec_amount * scale_offset * -1);
-                            rtn_trade.Direction = LF_CHAR_Sell;
-                        }
-
-                        rtn_trade.Price = std::round(exec_price * scale_offset);
-
-                        on_rtn_trade(&rtn_trade);
-                        raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                source_id, MSG_TYPE_LF_RTN_TRADE_BITFINEX, 1, -1);
-                    }
-                }
-            }
-            KF_LOG_INFO(logger, "[retriveTradeStatus] " << " on_rtn_trade done ");
-        }
-
-        else
-        {
-            KF_LOG_INFO(logger, "[retriveTradeStatus] failed ");
-            return false;
-        }
-        r = cancelOrder(unit, insertData.remoteOrderId);
-        if (r.status_code >= 200 && r.status_code <= 299)
-        {
-			KF_LOG_DEBUG(logger, "[cancelOrder-Rest] rest interface order cancel successed");
-			KF_LOG_INFO(logger, "[cancelOrder-Rest] " << " (response.status_code) " << r.status_code <<
-				"\n (response.text) " << r.text.c_str());
-		}
-		else
-		{
-			KF_LOG_DEBUG(logger, "[cancelOrder-Rest] rest interface order cancel failed");
-			KF_LOG_INFO(logger, "[cancelOrder-Rest] " << " (response.status_code) " << r.status_code <<
-				" (response.text) " << r.text.c_str());
-			return false;
-		}
-		KF_LOG_DEBUG(logger, "[orderStatus]start");
-		r = orderStatus(unit, insertData.remoteOrderId);
-		if (r.status_code >= 200 && r.status_code <= 299)
-		{
-			KF_LOG_INFO(logger, "[orderStatus] " << " (response.status_code) " << r.status_code <<
-				"\n (response.text) " << r.text.c_str());
-			KF_LOG_DEBUG(logger, "[orderStatus] rest interface orderStatus successed");
-			json.Parse(r.text.c_str());
-			if (json.IsObject())
-			{
-				std::string symbol = json["symbol"].GetString();
-				double price = stod(json["price"].GetString());
-				bool order_status = json["is_cancelled"].GetBool();
-				double original_amount = stod(json["original_amount"].GetString());
-				double remaining_amount = stod(json["remaining_amount"].GetString());
-				double executed_amount = stod(json["executed_amount"].GetString());
-				LFRtnOrderField rtn_order;
-				memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-				strcpy(rtn_order.ExchangeID, "bitfinex");
-				strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-
-				KF_LOG_DEBUG(logger, "[orderStatus] (exchange_ticker)" << symbol);
-				strncpy(rtn_order.InstrumentID, insertData.data.InstrumentID, 31);
-				if (remaining_amount == 0)
-				{
-					rtn_order.OrderStatus = GetOrderStatus("EXECUTED");
-				}
-				else if (order_status == true)
-				{
-					rtn_order.OrderStatus = GetOrderStatus("CANCELED");
-				}
-				if (insertData.data.Direction == LF_CHAR_Buy) {
-
-					rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset);
-					rtn_order.Direction = LF_CHAR_Buy;
-				}
-				else {
-					rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset * -1);
-					rtn_order.Direction = LF_CHAR_Sell;
-				}
-				if (original_amount > 0) {
-
-					rtn_order.VolumeTotalOriginal = std::round(original_amount * scale_offset);
-				}
-				else {
-					rtn_order.VolumeTotalOriginal = std::round(original_amount * scale_offset * -1);
-				}
-				rtn_order.VolumeTraded = executed_amount;
-				rtn_order.TimeCondition = insertData.data.TimeCondition;
-
-				rtn_order.OrderPriceType = insertData.data.OrderPriceType;
-				strncpy(rtn_order.OrderRef, insertData.data.OrderRef, 13);
-
-				rtn_order.LimitPrice = std::round(price * scale_offset);
-				KF_LOG_DEBUG(logger, "[OrderStatus] (test point3"
-					<< "(symbol)" << symbol
-					<< "(price)" << price
-					<< "(order_status)" << order_status
-					<< "(original_amount)" << original_amount
-					<< "(remaining_amount)" << remaining_amount
-					<< "(executed_amount)" << executed_amount);
-				on_rtn_order(&rtn_order);
-				raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-					source_id, MSG_TYPE_LF_RTN_ORDER_BITFINEX,
-					1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
-			}
-
-			KF_LOG_INFO(logger, "[orderStatus] " << " on_rtn_order done ");
-
-		}
-		else
-		{
-			KF_LOG_DEBUG(logger, "[cancelStatus-Rest] rest interface order status failed");
-			KF_LOG_INFO(logger, "[cancelStatus-Rest] " << " (response.status_code) " << r.status_code <<
-				" (response.text) " << r.text.c_str());
-			return false;
-		}
-
-
-	}
-
-	return true;
+    return false;
 }
+
+
+
 /*FXW's fix ends here*/
 
 
@@ -404,14 +227,6 @@ static int ws_service_cb(struct lws *wsi, enum lws_callback_reasons reason, void
 		if (global_md) {
 			std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
 			global_md->on_lws_connection_error(wsi);
-			if (global_md->deal_connect_error(wsi))
-			{
-				std::cout << "data loss caused byconnect error fixed " << std::endl;
-			}
-			else
-			{
-				std::cout << "data loss caused byconnect error fixing failed " << std::endl;
-			}
 		}
 		break;
 	}
@@ -1109,66 +924,173 @@ void TDEngineBitfinex::onTradeExecutionUpdate(struct lws* conn, Document& json)
 	KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecutionUpdate.");
 	AccountUnitBitfinex& unit = findAccountUnitBitfinexByWebsocketConn(conn);
 
-	if (json.GetArray()[2].IsArray()) {
-		auto& orderStatus = json.GetArray()[2];
-		int len = orderStatus.Size();
-		int64_t trade_id = orderStatus.GetArray()[0].GetInt64();
-		std::string symbol = orderStatus.GetArray()[1].GetString();
-		std::string ticker = unit.coinPairWhiteList.GetKeyByValue(symbol);
-		if (ticker.length() == 0) {
-			KF_LOG_INFO(logger, "[onTradeExecutionUpdate]: not in WhiteList , ignore it:" << symbol);
-			return;
-		}
-		KF_LOG_DEBUG(logger, "[onTradeExecutionUpdate] (exchange_ticker)" << ticker);
+    if (json.GetArray()[2].IsArray()) 
+    {
+        auto& orderStatus = json.GetArray()[2];
+        int len = orderStatus.Size();
+        int64_t trade_id = orderStatus.GetArray()[0].GetInt64();
+        std::string symbol = orderStatus.GetArray()[1].GetString();
+        std::string ticker = unit.coinPairWhiteList.GetKeyByValue(symbol);
+        if (ticker.length() == 0) {
+            KF_LOG_INFO(logger, "[onTradeExecutionUpdate]: not in WhiteList , ignore it:" << symbol);
+            return;
+        }
+        KF_LOG_DEBUG(logger, "[onTradeExecutionUpdate] (exchange_ticker)" << ticker);
 
-		int64_t remoteOrderId = orderStatus.GetArray()[3].GetInt64();
-		double exec_amount = orderStatus.GetArray()[4].GetDouble();
-		double exec_price = orderStatus.GetArray()[5].GetDouble();
-		//std::string orderType = orderStatus.GetArray()[6].GetString();// null
-		//double order_price = orderStatus.GetArray()[7].GetDouble();// null
-		int maker = orderStatus.GetArray()[8].GetInt();
-		KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecutionUpdate: (trade_id)" << trade_id << " (symbol)" << symbol
-			<< " (orderId)" << remoteOrderId
-			<< " (exec_amount)" << exec_amount
-			<< " (exec_price)" << exec_price
-			<< " (maker)" << maker);
+        int64_t remoteOrderId = orderStatus.GetArray()[3].GetInt64();
+        double exec_amount = orderStatus.GetArray()[4].GetDouble();
+        double exec_price = orderStatus.GetArray()[5].GetDouble();
+        //std::string orderType = orderStatus.GetArray()[6].GetString();// null
+        //double order_price = orderStatus.GetArray()[7].GetDouble();// null
+        int maker = orderStatus.GetArray()[8].GetInt();
+        KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecutionUpdate: (trade_id)" << trade_id << " (symbol)" << symbol
+                << " (orderId)" << remoteOrderId
+                << " (exec_amount)" << exec_amount
+                << " (exec_price)" << exec_price
+                << " (maker)" << maker);
 
 
 
-		OrderInsertData InsertData = findOrderInsertDataByOrderId(remoteOrderId);
-		if (InsertData.requestId == 0) {
-			//not found
-			KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecutionUpdate: cannot find orderId, ignore (orderId)" << remoteOrderId);
-			return;
-		}
+        OrderInsertData InsertData = findOrderInsertDataByOrderId(remoteOrderId);
+        /*fxw's edits start here*/
+        KF_LOG_DEBUG(logger, "/*/fxw's edits start here*/");
+        KF_LOG_DEBUG(logger, "/*find out is the retriveTradeStatus right and what will happen if I cancel the order when the order has executed*/");
+        OrderInsertData& insertData=InsertData;
+        cpr::Response r;
+        Document jsons;
+        KF_LOG_DEBUG(logger, "[retriveTradeStatus]test start");
+        r=retriveTradeStatus(unit,insertData);
+        if(r.status_code>=200&&r.status_code<=299)
+        {
+            KF_LOG_DEBUG(logger, "[retriveTradeStatus](inside the if box) rest interface retriveTradeStatus test successed");
+            KF_LOG_INFO(logger, "[retriveTradeStatus] " << " (response.status_code) " << r.status_code <<
+                    " (response.text) " << r.text.c_str());
+            jsons.Parse(r.text.c_str());
+            if (json.IsArray())
+            {
+                KF_LOG_INFO(logger,"yes , it's an array");
+                KF_LOG_INFO(logger,"yes , is it an array inside the array?");
+                /*json={[[...],[...],[...]]}*/
+                //auto A = json.GetArray();//A=[[...],[...],[...]];
+                if(json[2].IsArray())
+                {
+                    //KF_LOG_INFO(logger,"yes , A[0] is an array");
+                    int len = json.Size();
+                    KF_LOG_DEBUG(logger, "[json.Size]"<<len);
+                    for (int i = 2; i < len; i++)
+                    {   
+                        KF_LOG_INFO(logger,"bug allocate0");
+                        int trade_id = json[i].GetArray()[0].GetInt();
+                        KF_LOG_INFO(logger,"bug allocate1"
+                                <<"(trae_id)"<<trade_id);
+                        std::string symbol= json[i].GetArray()[1].GetString();
+                        KF_LOG_INFO(logger,"(symbol)"<<symbol);
+                        /*/std::string ticker = unit.coinPairWhiteList.GetKeyByValue(symbol);*/
+                        int64_t remoteOrderId = json[i].GetArray()[3].GetInt64();
+                        KF_LOG_INFO(logger,"(remoteOrderId)"<<remoteOrderId);
+                        
+                        double exec_amount = json[i].GetArray()[4].GetDouble();
+                        KF_LOG_INFO(logger,"(exec_amount)"<<exec_amount);
+                        double exec_price = json[i].GetArray()[5].GetDouble();
+                        KF_LOG_INFO(logger,"(exec_price)"<<exec_price);
+                        int maker =json[i].GetArray()[8].GetInt();
+                        KF_LOG_DEBUG(logger, "[retriveTradeStatus](trade_id)"<<trade_id
+                                <<"(symbol)"<<symbol
+                                <<"(remoteOrderId)"<<remoteOrderId
+                                <<"(exec_amount)"<<exec_amount
+                                <<"(exec_price)"<<exec_price
+                                <<"(maker)"<<maker);
 
-		//send OnRtnTrade
-		LFRtnTradeField rtn_trade;
-		memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-		strcpy(rtn_trade.ExchangeID, "bitfinex");
-		strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+                        LFRtnTradeField rtn_trade;//send OnRtnTrade
+                        memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+                        strcpy(rtn_trade.ExchangeID, "bitfinex");
+                        strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
 
-		strncpy(rtn_trade.TradeID, std::to_string(trade_id).c_str(), 21);
-		strncpy(rtn_trade.InstrumentID, ticker.c_str(), 31);
-		strncpy(rtn_trade.OrderRef, InsertData.data.OrderRef, 13);
-		rtn_trade.OffsetFlag = InsertData.data.OffsetFlag;
-		rtn_trade.HedgeFlag = InsertData.data.HedgeFlag;
+                        strncpy(rtn_trade.TradeID, std::to_string(trade_id).c_str(), 21);
+                        /*/strncpy(rtn_trade.InstrumentID, ticker.c_str(), 31);*/
+                        strncpy(rtn_trade.InstrumentID, insertData.data.InstrumentID, 31);
+                        strncpy(rtn_trade.OrderRef, insertData.data.OrderRef, 13);
+                        rtn_trade.OffsetFlag = insertData.data.OffsetFlag;
+                        rtn_trade.HedgeFlag = insertData.data.HedgeFlag;
 
-		if (exec_amount >= 0) {
-			rtn_trade.Volume = std::round(exec_amount * scale_offset);
-			rtn_trade.Direction = LF_CHAR_Buy;
-		}
-		else {
-			rtn_trade.Volume = std::round(exec_amount * scale_offset * -1);
-			rtn_trade.Direction = LF_CHAR_Sell;
-		}
+                        if (exec_amount >= 0) {
+                            rtn_trade.Volume = std::round(exec_amount * scale_offset);
+                            rtn_trade.Direction = LF_CHAR_Buy;
+                        }
+                        else {
+                            rtn_trade.Volume = std::round(exec_amount * scale_offset * -1);
+                            rtn_trade.Direction = LF_CHAR_Sell;
+                        }
 
-		rtn_trade.Price = std::round(exec_price * scale_offset);
+                        rtn_trade.Price = std::round(exec_price * scale_offset);
 
-		on_rtn_trade(&rtn_trade);
-		raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-			source_id, MSG_TYPE_LF_RTN_TRADE_BITFINEX, 1, -1);
-	}
+                        on_rtn_trade(&rtn_trade);
+                        raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                source_id, MSG_TYPE_LF_RTN_TRADE_BITFINEX, 1, -1);
+                    }
+                }
+            }
+            KF_LOG_INFO(logger, "[retriveTradeStatus] " << " on_rtn_trade done ");
+        }
+        else
+        {
+            KF_LOG_DEBUG(logger, "[retriveTradeStatus] rest interface retriveTradeStatus test failed");
+
+            KF_LOG_INFO(logger, "[retriveTradeStatus] " << " (response.status_code) " << r.status_code <<
+                    " (response.error.message) " << r.error.message <<
+                    " (response.text) " << r.text.c_str());
+        }
+        KF_LOG_DEBUG(logger, "[cancelOrder]what if the order has excuted? test start");
+        /*r=cancelOrder(unit,insertData);
+        if(r.status_code>=200&&r.status_code<=299)
+        {
+            KF_LOG_DEBUG(logger, "[cancelOrder-Rest] rest interface order cancel test successed");
+            KF_LOG_INFO(logger, "[cancelOrder-Rest] " << " (response.status_code) " << r.status_code <<
+                    "\n (response.text) " << r.text.c_str());
+        }
+        else
+        {
+            KF_LOG_DEBUG(logger, "[cancelOrder-Rest] rest interface order cancel test failed");
+            KF_LOG_INFO(logger, "[cancelOrder-Rest] " << " (response.status_code) " << r.status_code <<
+                    "\n (response.text) " << r.text.c_str());
+        }
+         */
+
+        KF_LOG_DEBUG(logger, "/*fxw's edits end here*/");
+
+        if (InsertData.requestId == 0) {
+            //not found
+            KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecutionUpdate: cannot find orderId, ignore (orderId)" << remoteOrderId);
+            return;
+        }
+
+        //send OnRtnTrade
+        LFRtnTradeField rtn_trade;
+        memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+        strcpy(rtn_trade.ExchangeID, "bitfinex");
+        strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+
+        strncpy(rtn_trade.TradeID, std::to_string(trade_id).c_str(), 21);
+        strncpy(rtn_trade.InstrumentID, ticker.c_str(), 31);
+        strncpy(rtn_trade.OrderRef, InsertData.data.OrderRef, 13);
+        rtn_trade.OffsetFlag = InsertData.data.OffsetFlag;
+        rtn_trade.HedgeFlag = InsertData.data.HedgeFlag;
+
+        if (exec_amount >= 0) {
+            rtn_trade.Volume = std::round(exec_amount * scale_offset);
+            rtn_trade.Direction = LF_CHAR_Buy;
+        }
+        else {
+            rtn_trade.Volume = std::round(exec_amount * scale_offset * -1);
+            rtn_trade.Direction = LF_CHAR_Sell;
+        }
+
+        rtn_trade.Price = std::round(exec_price * scale_offset);
+
+        on_rtn_trade(&rtn_trade);
+        raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                source_id, MSG_TYPE_LF_RTN_TRADE_BITFINEX, 1, -1);
+    }
 }
 
 
@@ -1807,12 +1729,88 @@ void TDEngineBitfinex::req_order_action(const LFOrderActionField* data, int acco
 			<< " (dateStr) " << insertData.dateStr << " (Volume) " << insertData.data.Volume);
 	}
 
-	int cid = atoi(data->OrderRef);
-	if (insertData.remoteOrderId > 0) {
-		//use remote order id first
-		std::string cancelOrderJsonString = createCancelOrderIdJsonString(insertData.remoteOrderId);
-		addPendingSendMsg(unit, cancelOrderJsonString);
-		KF_LOG_DEBUG(logger, "[req_order_action] createCancelOrderIdJsonString (remoteOrderId) " << insertData.remoteOrderId);
+    int cid = atoi(data->OrderRef);
+    if (insertData.remoteOrderId > 0) {
+        /*fxw's edits start here1*/
+
+        /*//use remote order id first
+          std::string cancelOrderJsonString = createCancelOrderIdJsonString(insertData.remoteOrderId);
+          addPendingSendMsg(unit, cancelOrderJsonString);
+          KF_LOG_DEBUG(logger, "[req_order_action] createCancelOrderIdJsonString (remoteOrderId) " << insertData.remoteOrderId);*/
+        cpr::Response r;
+        Document json;
+        KF_LOG_DEBUG(logger, "[orderStatus]test start");
+        r=orderStatus(unit,insertData);
+        if(r.status_code>=200&&r.status_code<=299)
+        {
+            KF_LOG_INFO(logger, "[orderStatus] " << " (response.status_code) " << r.status_code <<
+                    "\n (response.text) " << r.text.c_str());
+            KF_LOG_DEBUG(logger, "[orderStatus] rest interface orderStatus test successed");
+            json.Parse(r.text.c_str());
+            if(json.IsObject())
+            {
+                std::string symbol=json["symbol"].GetString();
+                double price=stod(json["price"].GetString());
+                bool order_status=json["is_cancelled"].GetBool();
+                double original_amount=stod(json["original_amount"].GetString());
+                double remaining_amount=stod(json["remaining_amount"].GetString());
+                double executed_amount=stod(json["executed_amount"].GetString());
+                LFRtnOrderField rtn_order;
+                memset(&rtn_order,0,sizeof(LFRtnOrderField));
+                strcpy(rtn_order.ExchangeID, "bitfinex");
+                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+
+                KF_LOG_DEBUG(logger, "[orderStatus] (exchange_ticker)" << symbol);
+                strncpy(rtn_order.InstrumentID, insertData.data.InstrumentID, 31);
+                if(remaining_amount==0)
+                {
+                    rtn_order.OrderStatus=GetOrderStatus("EXECUTED");
+                }
+                else if(order_status==true)
+                {
+                    rtn_order.OrderStatus=GetOrderStatus("CANCELED");
+                }
+                if (insertData.data.Direction== LF_CHAR_Buy) {
+
+                    rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset);
+                    rtn_order.Direction = LF_CHAR_Buy;
+                }
+                else {
+                    rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset * -1);
+                    rtn_order.Direction = LF_CHAR_Sell;
+                }
+                if (original_amount > 0) {
+
+                    rtn_order.VolumeTotalOriginal = std::round(original_amount * scale_offset);
+                }
+                else {
+                    rtn_order.VolumeTotalOriginal = std::round(original_amount * scale_offset * -1);
+                }
+                rtn_order.VolumeTraded=executed_amount;
+                rtn_order.TimeCondition = insertData.data.TimeCondition;
+
+                rtn_order.OrderPriceType = insertData.data.OrderPriceType;
+                strncpy(rtn_order.OrderRef, insertData.data.OrderRef, 13);
+
+                rtn_order.LimitPrice = std::round(price * scale_offset);
+                KF_LOG_DEBUG(logger, "[OrderStatus] (test point3"
+                        <<"(symbol)"<<symbol
+                        <<"(price)"<<price
+                        <<"(order_status)"<<order_status
+                        <<"(original_amount)"<<original_amount
+                        <<"(remaining_amount)"<<remaining_amount
+                        <<"(executed_amount)"<<executed_amount);
+                on_rtn_order(&rtn_order);
+                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                        source_id, MSG_TYPE_LF_RTN_ORDER_BITFINEX,
+                        1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
+            }
+
+            KF_LOG_INFO(logger, "[orderStatus] " << " on_rtn_order done ");
+
+        }
+
+        /*fxw's edits end here*/
 		OrderActionData cache;
 		cache.requestId = requestId;
 		memcpy(&cache.data, data, sizeof(LFOrderActionField));

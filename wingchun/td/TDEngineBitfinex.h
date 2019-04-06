@@ -174,10 +174,10 @@ private:
     std::unordered_map<int, OrderActionData> pendingOrderActionData;
     std::unordered_map<int64_t, OrderActionData> RemoteOrderIDorderActionData;
 public:
-    cpr::Response cancelOrder(AccountUnitBitfinex& unit, OrderInsertData& insertData);
-    cpr::Response orderStatus(AccountUnitBitfinex& unit, OrderInsertData& insertData);
+    cpr::Response cancelOrder(AccountUnitBitfinex& unit, int64_t& remoteOrderId);
+    cpr::Response orderStatus(AccountUnitBitfinex& unit, int64_t& remoteOrderId);
     cpr::Response retriveTradeStatus(AccountUnitBitfinex& unit, OrderInsertData& insertData);
-    bool deal_connect_error(AccountUnitBitfinex& unit);
+    bool deal_connect_error(struct lws* conn);
 };
 
 WC_NAMESPACE_END
