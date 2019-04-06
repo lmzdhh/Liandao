@@ -188,7 +188,7 @@ cpr::Response TDEngineBitfinex::retriveTradeStatus(AccountUnitBitfinex& unit, Or
     return response;
 }
 
-bool TDEngineBitfinex::deal_connect_error(AccountUnitBitfinex& unit)//true for success false for failed
+bool TDEngineBitfinex::deal_connect_error(struct lws *wsi)//true for success false for failed
 {
     return false;
 }
@@ -966,34 +966,39 @@ void TDEngineBitfinex::onTradeExecutionUpdate(struct lws* conn, Document& json)
             KF_LOG_INFO(logger, "[retriveTradeStatus] " << " (response.status_code) " << r.status_code <<
                     " (response.text) " << r.text.c_str());
             jsons.Parse(r.text.c_str());
-            if (json.IsArray())
+            if (jsons.IsArray())
             {
                 KF_LOG_INFO(logger,"yes , it's an array");
                 KF_LOG_INFO(logger,"yes , is it an array inside the array?");
-                /*json={[[...],[...],[...]]}*/
-                //auto A = json.GetArray();//A=[[...],[...],[...]];
-                if(json[2].IsArray())
+                /*jsons={[[...],[...],[...]]}
+                //auto A = jsons.GetArray();//A=[[...],[...],[...]];
+                if(jsons[0].IsArray()) 
+                    KF_LOG_DEBUG(logger, "[jsons[0] is array ]");
+                if(jsons[1].IsArray())
+                    KF_LOG_DEBUG(logger, "[jsons[1] is array ]");*/
+
+                if(jsons[0].IsArray())
                 {
                     //KF_LOG_INFO(logger,"yes , A[0] is an array");
-                    int len = json.Size();
-                    KF_LOG_DEBUG(logger, "[json.Size]"<<len);
-                    for (int i = 2; i < len; i++)
+                    int len = jsons.Size();
+                    KF_LOG_DEBUG(logger, "[jsons.Size]"<<len);
+                    for (int i = 0; i < len; i++)
                     {   
                         KF_LOG_INFO(logger,"bug allocate0");
-                        int trade_id = json[i].GetArray()[0].GetInt();
+                        int trade_id = jsons[i].GetArray()[0].GetInt();
                         KF_LOG_INFO(logger,"bug allocate1"
                                 <<"(trae_id)"<<trade_id);
-                        std::string symbol= json[i].GetArray()[1].GetString();
+                        std::string symbol= jsons[i].GetArray()[1].GetString();
                         KF_LOG_INFO(logger,"(symbol)"<<symbol);
                         /*/std::string ticker = unit.coinPairWhiteList.GetKeyByValue(symbol);*/
-                        int64_t remoteOrderId = json[i].GetArray()[3].GetInt64();
+                        int64_t remoteOrderId = jsons[i].GetArray()[3].GetInt64();
                         KF_LOG_INFO(logger,"(remoteOrderId)"<<remoteOrderId);
                         
-                        double exec_amount = json[i].GetArray()[4].GetDouble();
+                        double exec_amount = jsons[i].GetArray()[4].GetDouble();
                         KF_LOG_INFO(logger,"(exec_amount)"<<exec_amount);
-                        double exec_price = json[i].GetArray()[5].GetDouble();
+                        double exec_price = jsons[i].GetArray()[5].GetDouble();
                         KF_LOG_INFO(logger,"(exec_price)"<<exec_price);
-                        int maker =json[i].GetArray()[8].GetInt();
+                        int maker =jsons[i].GetArray()[8].GetInt();
                         KF_LOG_DEBUG(logger, "[retriveTradeStatus](trade_id)"<<trade_id
                                 <<"(symbol)"<<symbol
                                 <<"(remoteOrderId)"<<remoteOrderId
@@ -1740,7 +1745,7 @@ void TDEngineBitfinex::req_order_action(const LFOrderActionField* data, int acco
         cpr::Response r;
         Document json;
         KF_LOG_DEBUG(logger, "[orderStatus]test start");
-        r=orderStatus(unit,insertData);
+        r=orderStatus(unit,insertData.remoteOrderId);
         if(r.status_code>=200&&r.status_code<=299)
         {
             KF_LOG_INFO(logger, "[orderStatus] " << " (response.status_code) " << r.status_code <<

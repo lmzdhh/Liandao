@@ -210,12 +210,12 @@ bool TDEngineBitfinex::deal_connect_error(struct lws* conn)//true for success fa
             {
                 /*json={[[...],[...],[...]]}*/
                 //auto A = json.GetArray();//A=[[...],[...],[...]];
-                if (json[2].IsArray())
+                if (true)//just for the name of my vars not to be the same in this function field
                 {
                     //KF_LOG_INFO(logger,"yes , A[0] is an array");
                     int len = json.Size();
                     KF_LOG_DEBUG(logger, "[json.Size]" << len);
-                    for (int i = 2; i < len; i++)
+                    for (int i = 0; i < len; i++)
                     {
                         KF_LOG_INFO(logger, "bug allocate0");
                         int trade_id = json[i].GetArray()[0].GetInt();
