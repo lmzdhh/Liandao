@@ -1020,7 +1020,8 @@ std::string TDEngineKuCoin::createInsertOrdertring(const char *code,
     }
     writer.Key("size");
     writer.Double(size);
-
+     writer.Key("stp");
+    writer.String("CO");
     writer.EndObject();
     return s.GetString();
 }
@@ -1202,7 +1203,7 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
             double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
-            rtn_trade.Price =price*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
+            rtn_trade.Price =(price + 0.000000001)*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
@@ -1311,7 +1312,7 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
             double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
-            rtn_trade.Price = price*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
+            rtn_trade.Price = (price + 0.000000001)*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
