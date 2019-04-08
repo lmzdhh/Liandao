@@ -77,6 +77,7 @@ class LFPriceBook20Field(Structure):
         ("AskLevelCount", c_int),
         ("BidLevels", LFPriceLevel20Field),	
         ("AskLevels", LFPriceLevel20Field),	
+        ("Status", c_int),#FXW's edits
         ]
  
 
@@ -713,6 +714,7 @@ DataFieldMap = {
         'AskLevelCount' : 'i',
         'BidLevels' : [],	
         'AskLevels' : [],	
+        'Status' : 'i',#FXW's edits
 	},
 	'LFRspPositionField': {
 		'InstrumentID': 'c31',

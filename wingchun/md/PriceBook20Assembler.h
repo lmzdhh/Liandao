@@ -50,6 +50,10 @@ public:
     void clearPriceBook();
     void SetLevel(int level);
     int GetLevel();
+    void SetLeastLevel(int level);/*FXW's edits*/
+    int GetLeastLevel();/*FXW's edits*/
+    int GetNumberOfLevels_bids(std::string ticker);/*FXW's edits*/
+    int GetNumberOfLevels_asks(std::string ticker);/*FXW's edits*/
 private:
     void testPriceBook20Assembler();
     /*Vector follows this order: (from Binance MD)
@@ -73,6 +77,7 @@ private:
 
     std::unordered_map<std::string, PriceLevelBooks*> tickerPriceMap;
     int m_level;
+    int l_level;/*FXW's edits*/
 };
 
 

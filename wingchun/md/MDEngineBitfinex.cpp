@@ -130,6 +130,9 @@ MDEngineBitfinex::MDEngineBitfinex(): IMDEngine(SOURCE_BITFINEX)
 void MDEngineBitfinex::load(const json& j_config)
 {
     book_depth_count = j_config["book_depth_count"].get<int>();
+    priceBook20Assembler.SetLevel(book_depth_count);/*FXW's edits*/
+    book_least_depth= j_config["book_least_depth"].get<int>();/*FXW's edits*/
+    priceBook20Assembler.SetLeastLevel(book_least_depth);/*FXW's edits*/
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineBitfinex:: rest_get_interval_ms: " << rest_get_interval_ms);
@@ -765,7 +768,37 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
         strcpy(md.ExchangeID, "bitfinex");
 
         KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: on_price_book_update");
-        on_price_book_update(&md);
+        //on_price_book_update(&md);
+        /*quest2 FXW's edits start here*/
+        if (priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_asks(ticker) ||
+                priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_bids(ticker) ||
+                priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker)
+           )
+        {
+            md.Status = 1;
+            /*need re-login*/
+            KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex::onDepth: on_price_book_update failed ,lose level,re-login....");
+            on_price_book_update(&md);
+            on_lws_connection_error(NULL);
+        }
+        else if((-1 == priceBook20Assembler.GetBestBidPrice(ticker)) ||(-1 == priceBook20Assembler.GetBestAskPrice(ticker))||
+                                priceBook20Assembler.GetBestBidPrice(ticker) >= priceBook20Assembler.GetBestAskPrice(ticker))
+        {
+            md.Status = 2;
+            /*need re-login*/
+            KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex::onDepth: on_price_book_update failed ,orderbook crossed,re-login....");
+            on_price_book_update(&md);
+            on_lws_connection_error(NULL);
+
+        }
+        else
+        {
+            md.Status = 0;
+            on_price_book_update(&md);
+            KF_LOG_DEBUG(logger, "[FXW successed]MDEngineBitfinex::onDepth: on_price_book_update successed");
+        }
+
+        /*quest2 FXW's edits end here*/
     }
 }
 

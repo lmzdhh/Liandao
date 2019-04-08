@@ -115,7 +115,8 @@ void IWCStrategy::on_market_bar_data(const LFBarMarketDataField* data, short sou
 void IWCStrategy::on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[price_book_update] (source)" << source << " (ticker)" << data->InstrumentID 
-					<< " (bidcount)" << data->BidLevelCount << " (askcount)" << data->AskLevelCount);
+					<< " (bidcount)" << data->BidLevelCount << " (askcount)" << data->AskLevelCount
+                    <<"(Status)"<<data->Status);//FXW's edits
 }
 
 void IWCStrategy::on_market_data_level2(const LFL2MarketDataField* data, short source, long rcv_time)

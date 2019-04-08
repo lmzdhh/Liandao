@@ -79,6 +79,7 @@ struct LFPriceBookFieldTmpl
 	int		AskLevelCount;	
 	LFPriceLevel 	BidLevels[level_count];
 	LFPriceLevel	AskLevels[level_count];
+    int Status;/*FXW's edits,0=normal 1=loss level 2=crossed*/
 };
 
 using LFPriceBook20Field = LFPriceBookFieldTmpl<20>;
