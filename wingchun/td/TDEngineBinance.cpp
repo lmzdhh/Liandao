@@ -766,6 +766,7 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
         rtn_trade.Price = std::round(stod(result["price"].GetString()) * scale_offset);
 
         on_rtn_trade(&rtn_trade);
+
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
 
@@ -874,6 +875,7 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
         rtn_trade.Volume = volume;
         rtn_trade.Price = price;
         on_rtn_trade(&rtn_trade);
+       
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                 source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
 
@@ -1270,6 +1272,7 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
             }
             if(match_one) {
                 on_rtn_trade(&rtn_trade);
+          
                 raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
                                         source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
             } else {
@@ -1398,53 +1401,40 @@ void TDEngineBinance::set_reader_thread()
     KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on AccountUnitBinance::loop");
     rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::loop, this)));
 
-    //仿照上面在这里创建新线程，loop是创建的线程里的主函数
-    KF_LOG_INFO(logger,"[set_reader_thread] rest_thread start on AccountUnitBinance::testUTC");
-    test_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::testUTC,this)));
+    // //仿照上面在这里创建新线程，loop是创建的线程里的主函数
+    // KF_LOG_INFO(logger,"[set_reader_thread] rest_thread start on AccountUnitBinance::testUTC");
+    // test_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::testUTC,this)));
 }
 
-//测试UTC零点reset功能是否可用---------
-void TDEngineBinance::testUTC(){
-    KF_LOG_INFO(logger, "[testUTC] (isRunning) " << isRunning);
-    while(isRunning)
-    {
-        //UTC 00：00：00 reset order_total_limit
-        uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        //uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
-        uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
+// //测试UTC零点reset功能是否可用---------
+// void TDEngineBinance::testUTC(){
+//     KF_LOG_INFO(logger, "[testUTC] (isRunning) " << isRunning);
+//     while(isRunning)
+//     {
+//         //UTC 00：00：00 reset order_total_limit
+//         uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+//         //uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
+//         uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
 
-        if((UTC_timestamp / 10000) != (last_UTC_timestamp / 10000))
-        {
-            KF_LOG_DEBUG(logger, "###[order_count_over_limit] (UTC_time)" << UTC_timestamp << " current UTC timestamp ; last_UTCtimestamp  "<<last_UTC_timestamp
-                                    <<" ; local_timestamp: "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
+//         if((UTC_timestamp / 10000) != (last_UTC_timestamp / 10000))
+//         {
+//             KF_LOG_DEBUG(logger, "###[order_count_over_limit] (UTC_time)" << UTC_timestamp << " current UTC timestamp ; last_UTCtimestamp  "<<last_UTC_timestamp
+//                                     <<" ; local_timestamp: "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
             
-            if (((UTC_timestamp) / 86400000) != ((last_UTC_timestamp) / 86400000))
-            {
-                order_total_count = 0;
-                // KF_LOG_DEBUG(logger, "###[order_count_over_limit] (UTC_time)###reset" << UTC_timestamp << " current UTC timestamp ; last_UTCtimestamp  "<<last_UTC_timestamp
-                //                     <<" ; local_timestamp: "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
-                KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset ; [last_UTCtimestamp : current_UTCtimestamp : local_timestamp] "
-                                        <<last_UTC_timestamp<<" : "<<UTC_timestamp<<" : "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
-            //    last_UTC_timestamp = UTC_timestamp;
+//             if (((UTC_timestamp) / 86400000) != ((last_UTC_timestamp) / 86400000))
+//             {
+//                 order_total_count = 0;
+//                 KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset ; [last_UTCtimestamp : current_UTCtimestamp : local_timestamp] "
+//                                         <<last_UTC_timestamp<<" : "<<UTC_timestamp<<" : "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
+//             //    last_UTC_timestamp = UTC_timestamp;
                             
-            }
+//             }
 
-            last_UTC_timestamp = UTC_timestamp;
-        }
+//             last_UTC_timestamp = UTC_timestamp;
+//         }
 
-       
-
-        // if ((UTC_timestamp / 86400000) != (last_UTC_timestamp / 86400000))
-        // {
-        //     order_total_count = 0;
-        //     KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset ; [last_UTCtimestamp : current_UTCtimestamp : local_timestamp] "
-        //                             <<last_UTC_timestamp<<" : "<<UTC_timestamp<<" : "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
-        //     last_UTC_timestamp = UTC_timestamp;
-                        
-        // }
-
-    }
-}
+//     }
+// }
 
 void TDEngineBinance::loop()
 {
@@ -1586,8 +1576,6 @@ void TDEngineBinance::send_order(AccountUnitBinance& unit, const char *symbol,
             json.Parse(strErr.c_str());
             return;
         }
-
-        //在这里计算未成交率
 
         if (bHandle_429)
         {

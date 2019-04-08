@@ -15,6 +15,7 @@
 #include <mutex>
 #include "Timer.h"
 #include <document.h>
+#include <atomic>
 
 using rapidjson::Document;
 
@@ -252,7 +253,12 @@ private:
 
     ////////////// last UTC time  /////////////////////
     uint64_t last_UTC_timestamp = 0;
-    uint64_t last_test_timestamp = 0;
+  //  uint64_t last_test_timestamp = 0;
+
+    ////////////// UFR /////////////////////
+    std::atomic<int> order_total_volume(0);         //成交总量
+    std::atomic<int> order_total_entrust_count(0);  //委托总量
+    int order_entrust_count_per_10min = 0;
 
     /////////////// request weight ////////////////
     //<=0，do nothing even meet 429
