@@ -16,6 +16,8 @@
 #include <chrono>
 #include "../../utils/crypto/openssl_util.h"
 
+#include<unistd.h>
+
 using cpr::Delete;
 using cpr::Get;
 using cpr::Url;
@@ -191,6 +193,7 @@ cpr::Response TDEngineBitfinex::retriveTradeStatus(AccountUnitBitfinex& unit, Or
 
 bool TDEngineBitfinex::deal_connect_error(struct lws* conn)//true for success false for failed
 {
+	
     AccountUnitBitfinex& unit = findAccountUnitBitfinexByWebsocketConn(conn);
     Document json;
     cpr::Response r;

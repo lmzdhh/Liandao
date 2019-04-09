@@ -131,8 +131,8 @@ void MDEngineBitfinex::load(const json& j_config)
 {
     book_depth_count = j_config["book_depth_count"].get<int>();
     priceBook20Assembler.SetLevel(book_depth_count);/*FXW's edits*/
-    book_least_depth= j_config["book_least_depth"].get<int>();/*FXW's edits*/
-    priceBook20Assembler.SetLeastLevel(book_least_depth);/*FXW's edits*/
+    level_threshold= j_config["level_threshold"].get<int>();/*FXW's edits*/
+    priceBook20Assembler.SetLeastLevel(level_threshold);/*FXW's edits*/
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineBitfinex:: rest_get_interval_ms: " << rest_get_interval_ms);

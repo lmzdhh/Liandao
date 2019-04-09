@@ -76,7 +76,7 @@ private:
     bool logged_in = false;
 
     int book_depth_count = 25;
-    int book_least_depth=20;/*FXW's edits*/
+    int level_threshold=20;/*FXW's edits*/
     int trade_count = 10;
     int rest_get_interval_ms = 500;
 
