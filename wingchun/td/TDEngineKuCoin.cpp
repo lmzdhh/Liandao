@@ -56,6 +56,326 @@ TDEngineKuCoin::~TDEngineKuCoin()
     if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
 }
 
+static TDEngineKuCoin* global_md = nullptr;
+
+static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
+{
+    std::stringstream ss;
+    ss << "lws_callback,reason=" << reason << ",";
+	switch( reason )
+	{
+		case LWS_CALLBACK_CLIENT_ESTABLISHED:
+		{
+            ss << "LWS_CALLBACK_CLIENT_ESTABLISHED.";
+            global_md->writeErrorLog(ss.str());
+			//lws_callback_on_writable( wsi );
+			break;
+		}
+		case LWS_CALLBACK_PROTOCOL_INIT:
+        {
+			 ss << "LWS_CALLBACK_PROTOCOL_INIT.";
+            global_md->writeErrorLog(ss.str());
+			break;
+		}
+		case LWS_CALLBACK_CLIENT_RECEIVE:
+		{
+		     ss << "LWS_CALLBACK_CLIENT_RECEIVE.";
+            global_md->writeErrorLog(ss.str());
+			if(global_md)
+			{
+				global_md->on_lws_data(wsi, (const char*)in, len);
+			}
+			break;
+		}
+		case LWS_CALLBACK_CLIENT_WRITEABLE:
+		{
+		    ss << "LWS_CALLBACK_CLIENT_WRITEABLE.";
+            global_md->writeErrorLog(ss.str());
+            int ret = 0;
+			if(global_md)
+			{
+				ret = global_md->lws_write_subscribe(wsi);
+			}
+			break;
+		}
+		case LWS_CALLBACK_CLOSED:
+        {
+           // ss << "LWS_CALLBACK_CLOSED.";
+           // global_md->writeErrorLog(ss.str());
+           // break;
+        }
+        case LWS_CALLBACK_WSI_DESTROY:
+		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+		{
+           // ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
+            global_md->writeErrorLog(ss.str());
+ 			if(global_md)
+			{
+				global_md->on_lws_connection_error(wsi);
+			}
+			break;
+		}
+		default:
+              global_md->writeErrorLog(ss.str());
+			break;
+	}
+
+	return 0;
+}
+
+std::string TDEngineKuCoin::getId()
+{
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return  std::to_string(timestamp);
+}
+
+ void TDEngineKuCoin::onPong(struct lws* conn)
+ {
+     Ping(conn);
+ }
+
+ void TDEngineKuCoin::Ping(struct lws* conn)
+ {
+     m_shouldPing = false;
+    StringBuffer sbPing;
+	Writer<StringBuffer> writer(sbPing);
+	writer.StartObject();
+	writer.Key("id");
+	writer.String(getId().c_str());
+	writer.Key("type");
+	writer.String("ping");
+	writer.EndObject();
+    std::string strPing = sbPing.GetString();
+    unsigned char msg[512];
+    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
+     int length = strPing.length();
+    KF_LOG_INFO(logger, "TDEngineKuCoin::lws_write_ping: " << strPing.c_str() << " ,len = " << length);
+    strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
+    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+ }
+
+void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
+{
+    //std::string strData = dealDataSprit(data);
+	KF_LOG_INFO(logger, "TDEngineKuCoin::on_lws_data: " << data);
+    Document json;
+	json.Parse(data);
+
+    if(!json.HasParseError() && json.IsObject() && json.HasMember("type") && json["type"].IsString())
+	{
+        if(strcmp(json["type"].GetString(), "welcome") == 0)
+        {
+            KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: welcome");
+            lws_callback_on_writable(conn);
+        }
+        if(strcmp(json["type"].GetString(), "pong") == 0)
+		{
+			KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: pong");
+           m_isPong = true;
+           m_conn = conn;
+		}
+		if(strcmp(json["type"].GetString(), "message") == 0)
+		{
+            if(strcmp(json["subject"].GetString(), "trade.l2update") == 0)
+		    {
+	        }   
+		}	
+	} else 
+    {
+		KF_LOG_ERROR(logger, "MDEngineKuCoin::on_lws_data . parse json error: " << data);
+	}
+	
+}
+
+std::string TDEngineKuCoin::makeSubscribeL3Update(const std::map<std::string,int>& mapAllSymbols)
+{
+    StringBuffer sbUpdate;
+	Writer<StringBuffer> writer(sbUpdate);
+	writer.StartObject();
+	writer.Key("id");
+	writer.String(getId().c_str());
+	writer.Key("type");
+	writer.String("subscribe");
+	writer.Key("topic");
+    std::string strTopic = "/market/level2:";
+    for(const auto&  pair : mapAllSymbols)
+    {
+        strTopic += pair.first + ",";
+    }
+    strTopic.pop_back();
+	writer.String(strTopic.c_str());
+	writer.Key("privateChannel");
+	writer.String("false");
+    writer.Key("response");
+	writer.String("true");
+	writer.EndObject();
+    std::string strUpdate = sbUpdate.GetString();
+
+    return strUpdate;
+}
+
+int TDEngineKuCoin::lws_write_subscribe(struct lws* conn)
+{
+	KF_LOG_INFO(logger, "TDEngineKuCoin::lws_write_subscribe:" );
+    
+    int ret = 0;
+
+    if(!m_isSubL3)
+    {
+         m_isSubL3 = true;
+
+        std::map<std::string,int> mapAllSymbols;
+        for(auto& unit : account_units)
+        {
+            for(auto& pair :  unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList())
+            {
+                mapAllSymbols[pair.second] = 0;
+            }
+        }
+
+        std::string strSubscribe = makeSubscribeL3Update(mapAllSymbols);
+        unsigned char msg[1024];
+        memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
+        int length = strSubscribe.length();
+        KF_LOG_INFO(logger, "TDEngineKuCoin::lws_write_subscribe: " << strSubscribe.c_str() << " ,len = " << length);
+        strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
+        ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+        lws_callback_on_writable(conn);  
+    }
+    else
+    {
+        if(m_shouldPing)
+        {
+            m_isPong = false;
+            Ping(conn);
+        }
+    }
+    
+    return ret;
+}
+
+void TDEngineKuCoin::on_lws_connection_error(struct lws* conn)
+{
+    KF_LOG_ERROR(logger, "TDEngineKuCoin::on_lws_connection_error. login again.");
+    //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
+    m_isPong = false;
+    m_shouldPing = true;
+	//no use it
+    long timeout_nsec = 0;
+    //reset sub
+    m_isSubL3 = false;
+
+    login(timeout_nsec);
+}
+
+static struct lws_protocols protocols[] =
+	{
+			{
+					"md-protocol",
+                    ws_service_cb,
+						  0,
+							 65536,
+			},
+			{ NULL, NULL, 0, 0 } /* terminator */
+	};
+int lws_write_subscribe(struct lws* conn);
+            void on_lws_connection_error(struct lws* conn);
+
+enum protocolList {
+	PROTOCOL_TEST,
+
+	PROTOCOL_LIST_COUNT
+};
+
+struct session_data {
+    int fd;
+};
+
+void TDEngineKuCoin::writeErrorLog(std::string strError)
+{
+    KF_LOG_ERROR(logger, strError);
+}
+
+bool TDEngineKuCoin::getToken(Document& d) 
+{
+    int nTryCount = 0;
+    cpr::Response response;
+    do{
+        std::string url = "https://api.kucoin.com/api/v1/bullet-public";
+       response = cpr::Post(Url{url.c_str()}, Parameters{}); 
+       
+    }while(++nTryCount < max_rest_retry_times && response.status_code != 200);
+
+    if(response.status_code != 200)
+    {
+        KF_LOG_ERROR(logger, "TDEngineKuCoin::login::getToken Error");
+        return false;
+    }
+
+    KF_LOG_INFO(logger, "TDEngineKuCoin::getToken: " << response.text.c_str());
+
+    d.Parse(response.text.c_str());
+    return true;
+}
+
+
+bool TDEngineKuCoin::getServers(Document& d)
+{
+    m_vstServerInfos.clear();
+    m_strToken = "";
+     if(d.HasMember("data"))
+     {
+         auto& data = d["data"];
+         if(data.HasMember("token"))
+         {
+             m_strToken = data["token"].GetString();
+             if(data.HasMember("instanceServers"))
+             {
+                 int nSize = data["instanceServers"].Size();
+                for(int nPos = 0;nPos<nSize;++nPos)
+                {
+                    ServerInfo stServerInfo;
+                    auto& server = data["instanceServers"].GetArray()[nPos];
+                    if(server.HasMember("pingInterval"))
+                    {
+                        stServerInfo.nPingInterval = server["pingInterval"].GetInt();
+                    }
+                    if(server.HasMember("pingTimeOut"))
+                    {
+                        stServerInfo.nPingTimeOut = server["pingTimeOut"].GetInt();
+                    }
+                    if(server.HasMember("endpoint"))
+                    {
+                        stServerInfo.strEndpoint = server["endpoint"].GetString();
+                    }
+                    if(server.HasMember("protocol"))
+                    {
+                        stServerInfo.strProtocol = server["protocol"].GetString();
+                    }
+                    if(server.HasMember("encrypt"))
+                    {
+                        stServerInfo.bEncrypt = server["encrypt"].GetBool();
+                    }
+                    m_vstServerInfos.push_back(stServerInfo);
+                }
+             }
+         }
+     }
+    if(m_strToken == "" || m_vstServerInfos.empty())
+    {
+        KF_LOG_ERROR(logger, "TDEngineKuCoin::login::getServers Error");
+        return false;
+    }
+    return true;
+}
+
+int64_t TDEngineKuCoin::getMSTime()
+{
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return  timestamp;
+}
+
+
 cpr::Header TDEngineKuCoin::construct_request_header(AccountUnitKuCoin& unit,const std::string& strSign,const std::string& strContentType)
 {
     unsigned char * strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
@@ -304,7 +624,94 @@ void TDEngineKuCoin::connect(long timeout_nsec)
 
 void TDEngineKuCoin::login(long timeout_nsec)
 {
-    KF_LOG_INFO(logger, "[login]");
+    KF_LOG_INFO(logger, "TDEngineKuCoin::login:");
+
+    global_md = this;
+
+    Document d;
+    if(!getToken(d))
+    {
+        return;
+    }
+    if(!getServers(d))
+   {
+       return;
+   }
+    m_isSubL3 = false;
+	global_md = this;
+	int inputPort = 8443;
+	int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
+
+	struct lws_context_creation_info ctxCreationInfo;
+	struct lws_client_connect_info clientConnectInfo;
+	struct lws *wsi = NULL;
+	struct lws_protocols protocol;
+
+	memset(&ctxCreationInfo, 0, sizeof(ctxCreationInfo));
+	memset(&clientConnectInfo, 0, sizeof(clientConnectInfo));
+
+	ctxCreationInfo.port = CONTEXT_PORT_NO_LISTEN;
+	ctxCreationInfo.iface = NULL;
+	ctxCreationInfo.protocols = protocols;
+	ctxCreationInfo.ssl_cert_filepath = NULL;
+	ctxCreationInfo.ssl_private_key_filepath = NULL;
+	ctxCreationInfo.extensions = NULL;
+	ctxCreationInfo.gid = -1;
+	ctxCreationInfo.uid = -1;
+	ctxCreationInfo.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+	ctxCreationInfo.fd_limit_per_thread = 1024;
+	ctxCreationInfo.max_http_header_pool = 1024;
+	ctxCreationInfo.ws_ping_pong_interval=1;
+	ctxCreationInfo.ka_time = 10;
+	ctxCreationInfo.ka_probes = 10;
+	ctxCreationInfo.ka_interval = 10;
+
+	protocol.name  = protocols[PROTOCOL_TEST].name;
+	protocol.callback = &ws_service_cb;
+	protocol.per_session_data_size = sizeof(struct session_data);
+	protocol.rx_buffer_size = 0;
+	protocol.id = 0;
+	protocol.user = NULL;
+
+	context = lws_create_context(&ctxCreationInfo);
+	KF_LOG_INFO(logger, "TDEngineKuCoin::login: context created.");
+
+
+	if (context == NULL) {
+		KF_LOG_ERROR(logger, "TDEngineKuCoin::login: context is NULL. return");
+		return;
+	}
+
+	// Set up the client creation info
+    auto& stServerInfo = m_vstServerInfos.front();
+	std::string strAddress = stServerInfo.strEndpoint;
+    size_t nAddressEndPos = strAddress.find_last_of('/');
+    std::string strPath = strAddress.substr(nAddressEndPos);
+    strPath += "?token=";
+    strPath += m_strToken;
+    strPath += "&[connectId=" +  getId() +"]";
+    strAddress = strAddress.substr(0,nAddressEndPos);
+    strAddress = strAddress.substr(strAddress.find_last_of('/') + 1);
+    clientConnectInfo.address = strAddress.c_str();
+    clientConnectInfo.path = strPath.c_str(); // Set the info's path to the fixed up url path
+	clientConnectInfo.context = context;
+	clientConnectInfo.port = 443;
+	clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+	clientConnectInfo.host =strAddress.c_str();
+	clientConnectInfo.origin = strAddress.c_str();
+	clientConnectInfo.ietf_version_or_minus_one = -1;
+	clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
+	clientConnectInfo.pwsi = &wsi;
+
+    KF_LOG_INFO(logger, "TDEngineKuCoin::login: address = " << clientConnectInfo.address << ",path = " << clientConnectInfo.path);
+
+	wsi = lws_client_connect_via_info(&clientConnectInfo);
+	if (wsi == NULL) {
+		KF_LOG_ERROR(logger, "TDEngineKuCoin::login: wsi create error.");
+		return;
+	}
+	KF_LOG_INFO(logger, "TDEngineKuCoin::login: wsi create success.");
+
     connect(timeout_nsec);
 }
 
@@ -862,13 +1269,31 @@ void TDEngineKuCoin::set_reader_thread()
     ITDEngine::set_reader_thread();
 
     KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineKuCoin::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineKuCoin::loop, this)));
-
+    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineKuCoin::loopwebsocket, this)));
 
     KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineKuCoin::loopOrderActionNoResponseTimeOut");
     orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineKuCoin::loopOrderActionNoResponseTimeOut, this)));
 }
 
+void TDEngineKuCoin::loopwebsocket()
+{
+        time_t nLastTime = time(0);
+
+		while(isRunning)
+		{
+             time_t nNowTime = time(0);
+            if(m_isPong && (nNowTime - nLastTime>= 30))
+            {
+                m_isPong = false;
+                 nLastTime = nNowTime;
+                 KF_LOG_INFO(logger, "TDEngineKuCoin::loop: last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
+                m_shouldPing = true;
+                lws_callback_on_writable(m_conn);  
+            }
+            //KF_LOG_INFO(logger, "TDEngineKuCoin::loop:lws_service");
+			lws_service( context, rest_get_interval_ms );
+		}
+}
 
 void TDEngineKuCoin::loop()
 {
