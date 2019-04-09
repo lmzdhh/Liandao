@@ -33,6 +33,11 @@ def initialize(context):
 
 def on_pos(context, pos_handler, request_id, source, rcv_time):
     print("on_pos,", pos_handler, request_id, source, rcv_time)
+    print(context.gen_md_trigger_tag(rcv_time,SOURCE.BITMEX))
+    print(context.gen_trade_trigger_tag(rcv_time,SOURCE.BITMEX,True))
+    print(context.gen_timeout_trigger_tag(rcv_time,SOURCE.BITMEX,True))
+    print(context.gen_cancel_trigger_tag(rcv_time,SOURCE.BITMEX,1000,10001,True))
+
     if request_id == -1:
         if pos_handler is None:
             print '-- got no pos in initial, so req pos --'
@@ -48,6 +53,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.sell_price = 999999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
+		print(context.gen_md_trigger_tag(rcv_time,SOURCE.BITMEX,True))
                 context.order_rid = context.insert_limit_order(source=SOURCE.BITMEX,
                                                                ticker=context.ticker,
                                                                price=context.buy_price,

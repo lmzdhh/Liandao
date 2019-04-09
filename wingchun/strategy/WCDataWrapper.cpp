@@ -254,6 +254,11 @@ void WCDataWrapper::run()
                             processor->on_l2_trade((LFL2TradeField *)data, msg_source, cur_time);
                             break;
                         }
+                        case MSG_TYPE_LF_FUNDING:
+                        {
+                            processor->on_funding_update((LFFundingField*)data,msg_source,cur_time);
+                            break;
+                        }
                     }
                     util->set_md_nano(-1);
                 }

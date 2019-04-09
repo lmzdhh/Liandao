@@ -318,11 +318,11 @@ LfOrderPriceTypeType TDEngineHitBTC::GetPriceType(std::string input) {
         return '0';
     }
 }
-//订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
+// order status: new, suspended, partiallyFilled, filled, canceled, expired
 LfOrderStatusType TDEngineHitBTC::GetOrderStatus(std::string input) {
-    if ("open" == input) {
+    if ("new" == input) {
         return LF_CHAR_NotTouched;
-    } else if ("partially-filled" == input) {
+    } else if ("partiallyFilled" == input) {
         return LF_CHAR_PartTradedQueueing;
     } else if ("filled" == input) {
         return LF_CHAR_AllTraded;
@@ -397,28 +397,57 @@ void TDEngineHitBTC::lws_login(AccountUnitHitBTC& unit, long timeout_nsec) {
     KF_LOG_INFO(logger, "TDEngineHitBTC::login: wsi create success.");
 }
 
+
+int TDEngineHitBTC::lws_write_subscribe(struct lws* conn)
+{
+    KF_LOG_INFO(logger, "TDEngineHITBTC::lws_write_subscribe");
+    AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
+    moveNewtoPending(unit);
+
+    if(unit.pendingSendMsg.size() > 0) {
+        unsigned char msg[512];
+        memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
+
+        std::string jsonString = unit.pendingSendMsg[unit.pendingSendMsg.size() - 1];
+        unit.pendingSendMsg.pop_back();
+        KF_LOG_INFO(logger, "TDEngineHitBTC::lws_write_subscribe: websocketPendingSendMsg: " << jsonString.c_str());
+        int length = jsonString.length();
+
+        strncpy((char *)msg+LWS_PRE, jsonString.c_str(), length);
+        int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+
+        if(unit.pendingSendMsg.size() > 0)
+        {    //still has pending send data, emit a lws_callback_on_writable()
+            lws_callback_on_writable( conn );
+            KF_LOG_INFO(logger, "TDEngineHitBTC::lws_write_subscribe: (websocketPendingSendMsg,size)" << unit.pendingSendMsg.size());
+        }
+        return ret;
+    }
+    return 0;
+}
+
 void TDEngineHitBTC::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
-    KF_LOG_INFO(logger, "TDEngineBitfinex::on_lws_data: " << data);
+    KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: " << data);
     AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
 
     Document json;
     json.Parse(data);
 
     if(json.HasParseError()) {
-        KF_LOG_ERROR(logger, "TDEngineBitfinex::on_lws_data. parse json error: " << data);
+        KF_LOG_ERROR(logger, "TDEngineHITBTC::on_lws_data. parse json error: " << data);
         return;
     }
 
     if(json.IsObject() && json.HasMember("event")) {
         if (strcmp(json["event"].GetString(), "info") == 0) {
-            KF_LOG_INFO(logger, "TDEngineBitfinex::on_lws_data: is info");
+            KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: is info");
             onInfo(json);
         } else if (strcmp(json["event"].GetString(), "auth") == 0) {
-            KF_LOG_INFO(logger, "TDEngineBitfinex::on_lws_data: is auth");
+            KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: is auth");
             onAuth(conn, json);
         } else {
-            KF_LOG_INFO(logger, "TDEngineBitfinex::on_lws_data: unknown event: " << data);
+            KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: unknown event: " << data);
         };
     }
     /*
@@ -442,16 +471,16 @@ void TDEngineHitBTC::on_lws_data(struct lws* conn, const char* data, size_t len)
     if(json.IsArray()) {
         int len = json.Size();
         if(len != 3) {
-            KF_LOG_DEBUG(logger, "TDEngineBitfinex::on_lws_data: (len<3, is hb?)" << data);
+            KF_LOG_DEBUG(logger, "TDEngineHITBTC::on_lws_data: (len<3, is hb?)" << data);
             return;
         };
 
         int chanId = json.GetArray()[0].GetInt();
-        KF_LOG_INFO(logger, "TDEngineBitfinex::on_lws_data: (chanId)" << chanId);
+        KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: (chanId)" << chanId);
 
         if(json.GetArray()[1].IsString()) {
             std::string dataType = json.GetArray()[1].GetString();
-            KF_LOG_INFO(logger, "TDEngineBitfinex::on_lws_data: dataType: " << dataType);
+            KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: dataType: " << dataType);
             if (dataType == "ps") {
                 onPosition(conn, json);
             }
@@ -482,7 +511,7 @@ void TDEngineHitBTC::onInfo(Document& json)
 
 void TDEngineHitBTC::onAuth(struct lws* conn, Document& json)
 {
-    KF_LOG_INFO(logger, "TDEngineBitfinex::onAuth: " << parseJsonToString(json));
+    KF_LOG_INFO(logger, "TDEngineHITBTC::onAuth: " << parseJsonToString(json));
 
     if(json.IsObject() && json.HasMember("status")) {
         std::string status = json["status"].GetString();
@@ -492,12 +521,12 @@ void TDEngineHitBTC::onAuth(struct lws* conn, Document& json)
             //login ok
             AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
             unit.logged_in = true;
-            KF_LOG_INFO(logger, "TDEngineBitfinex::onAuth success: " << parseJsonToString(json));
+            KF_LOG_INFO(logger, "TDEngineHITBTC::onAuth success: " << parseJsonToString(json));
         } else {
             //login fail.
             AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
             unit.logged_in = false;
-            KF_LOG_INFO(logger, "TDEngineBitfinex::onAuth fail:" << parseJsonToString(json));
+            KF_LOG_INFO(logger, "TDEngineHITBTC::onAuth fail:" << parseJsonToString(json));
         }
     }
 }
@@ -505,7 +534,7 @@ void TDEngineHitBTC::onAuth(struct lws* conn, Document& json)
 
 void TDEngineHitBTC::onPosition(struct lws* conn, Document& json)
 {
-    KF_LOG_INFO(logger, "TDEngineBitfinex::onPosition: " << parseJsonToString(json));
+    KF_LOG_INFO(logger, "TDEngineHITBTC::onPosition: " << parseJsonToString(json));
     AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
 
     if(json.GetArray()[2].IsArray()) {
@@ -528,7 +557,7 @@ void TDEngineHitBTC::onPosition(struct lws* conn, Document& json)
                         position.amount = std::round(amount * scale_offset);
                     }
                     positionHolder.push_back(position);
-                    KF_LOG_INFO(logger, "TDEngineBitfinex::on_lws_data: position: (ticker)"
+                    KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: position: (ticker)"
                             << ticker << " (isLong)" << position.isLong << " (amount)" << position.amount);
                 }
             }
@@ -577,7 +606,7 @@ MAKER	int	1 if true, 0 if false
  * */
 void TDEngineHitBTC::onTradeExecuted(struct lws* conn, Document& json)
 {
-    KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecuted.");
+    KF_LOG_INFO(logger, "TDEngineHITBTC::onTradeExecuted.");
 
     if(1==1) return;
 
@@ -592,7 +621,7 @@ void TDEngineHitBTC::onTradeExecuted(struct lws* conn, Document& json)
         double exec_amount = orderStatus.GetArray()[4].GetDouble();
         double exec_price = orderStatus.GetArray()[5].GetDouble();
         int maker = orderStatus.GetArray()[8].GetInt();
-        KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecuted: (trade_id)" << trade_id << " (symbol)" << symbol
+        KF_LOG_INFO(logger, "TDEngineHITBTC::onTradeExecuted: (trade_id)" << trade_id << " (symbol)" << symbol
                                                                             << " (orderId)" << remoteOrderId
                                                                             << " (exec_amount)" << exec_amount
                                                                             << " (exec_price)" << exec_price
@@ -607,14 +636,14 @@ void TDEngineHitBTC::onTradeExecuted(struct lws* conn, Document& json)
         OrderInsertData InsertData = findOrderInsertDataByOrderId(remoteOrderId);
         if(InsertData.requestId == 0) {
             //not found
-            KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecuted: cannot find orderId, ignore (orderId)" << remoteOrderId);
+            KF_LOG_INFO(logger, "TDEngineHITBTC::onTradeExecuted: cannot find orderId, ignore (orderId)" << remoteOrderId);
             return;
         }
         KF_LOG_DEBUG(logger, "[onTradeExecuted] (exchange_ticker)" << ticker);
 
         LFRtnOrderField rtn_order;
         memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-        strcpy(rtn_order.ExchangeID, "bitfinex");
+        strcpy(rtn_order.ExchangeID, "HITBTC");
         strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
 
         //这种方法无法判断全部成交， 只能一直是部分成交的状态
@@ -640,7 +669,7 @@ void TDEngineHitBTC::onTradeExecuted(struct lws* conn, Document& json)
 
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_BITFINEX,
+                                source_id, MSG_TYPE_LF_RTN_ORDER_HITBTC,
                                 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
     }
 }
@@ -691,7 +720,7 @@ FEE_CURRENCY	string	Fee currency
 //tu
 void TDEngineHitBTC::onTradeExecutionUpdate(struct lws* conn, Document& json)
 {
-    KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecutionUpdate.");
+    KF_LOG_INFO(logger, "TDEngineHITBTC::onTradeExecutionUpdate.");
     AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
 
     if(json.GetArray()[2].IsArray()) {
@@ -712,7 +741,7 @@ void TDEngineHitBTC::onTradeExecutionUpdate(struct lws* conn, Document& json)
         //std::string orderType = orderStatus.GetArray()[6].GetString();// null
         //double order_price = orderStatus.GetArray()[7].GetDouble();// null
         int maker = orderStatus.GetArray()[8].GetInt();
-        KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecutionUpdate: (trade_id)" << trade_id << " (symbol)" << symbol
+        KF_LOG_INFO(logger, "TDEngineHITBTC::onTradeExecutionUpdate: (trade_id)" << trade_id << " (symbol)" << symbol
                                                                                    << " (orderId)" << remoteOrderId
                                                                                    << " (exec_amount)" << exec_amount
                                                                                    << " (exec_price)" << exec_price
@@ -723,14 +752,14 @@ void TDEngineHitBTC::onTradeExecutionUpdate(struct lws* conn, Document& json)
         OrderInsertData InsertData = findOrderInsertDataByOrderId(remoteOrderId);
         if(InsertData.requestId == 0) {
             //not found
-            KF_LOG_INFO(logger, "TDEngineBitfinex::onTradeExecutionUpdate: cannot find orderId, ignore (orderId)" << remoteOrderId);
+            KF_LOG_INFO(logger, "TDEngineHITBTC::onTradeExecutionUpdate: cannot find orderId, ignore (orderId)" << remoteOrderId);
             return;
         }
 
         //send OnRtnTrade
         LFRtnTradeField rtn_trade;
         memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-        strcpy(rtn_trade.ExchangeID, "bitfinex");
+        strcpy(rtn_trade.ExchangeID, "HITBTC");
         strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
 
         strncpy(rtn_trade.TradeID, std::to_string(trade_id).c_str(), 21);
@@ -751,7 +780,7 @@ void TDEngineHitBTC::onTradeExecutionUpdate(struct lws* conn, Document& json)
 
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                source_id, MSG_TYPE_LF_RTN_TRADE_BITFINEX, 1, -1);
+                                source_id, MSG_TYPE_LF_RTN_TRADE_HITBTC, 1, -1);
     }
 }
 
@@ -817,7 +846,7 @@ os	order snapshot
  * */
 void TDEngineHitBTC::onOrderSnapshot(struct lws* conn, Document& json)
 {
-    KF_LOG_INFO(logger, "TDEngineBitfinex::onOrderSnapshot: " << parseJsonToString(json));
+    KF_LOG_INFO(logger, "TDEngineHITBTC::onOrderSnapshot: " << parseJsonToString(json));
     AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
 
     if(json.GetArray()[2].IsArray()) {
@@ -917,7 +946,7 @@ FLAGS	int	See flags below.
 
 void TDEngineHitBTC::onOrderNewUpdateCancel(struct lws* conn, Document& json)
 {
-    KF_LOG_INFO(logger, "TDEngineBitfinex::onOrderNewUpdateCancel: " << parseJsonToString(json));
+    KF_LOG_INFO(logger, "TDEngineHITBTC::onOrderNewUpdateCancel: " << parseJsonToString(json));
     AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
 
     if(json.GetArray()[2].IsArray()) {
@@ -929,7 +958,7 @@ void TDEngineHitBTC::onOrderNewUpdateCancel(struct lws* conn, Document& json)
 
 void TDEngineHitBTC::onOrder(struct lws* conn, rapidjson::Value& order_i)
 {
-    KF_LOG_INFO(logger, "TDEngineBitfinex::onOrder.");
+    KF_LOG_INFO(logger, "TDEngineHITBTC::onOrder.");
     AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
 
     int64_t remoteOrderId = order_i.GetArray()[0].IsInt64();
@@ -947,7 +976,7 @@ void TDEngineHitBTC::onOrder(struct lws* conn, rapidjson::Value& order_i)
 
     LFRtnOrderField rtn_order;
     memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-    strcpy(rtn_order.ExchangeID, "bitfinex");
+    strcpy(rtn_order.ExchangeID, "HITBTC");
     strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
 
     rtn_order.OrderStatus = GetOrderStatus(order_status) ;
@@ -994,7 +1023,7 @@ void TDEngineHitBTC::onOrder(struct lws* conn, rapidjson::Value& order_i)
 
     on_rtn_order(&rtn_order);
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                            source_id, MSG_TYPE_LF_RTN_ORDER_BITFINEX,
+                            source_id, MSG_TYPE_LF_RTN_ORDER_HITBTC,
                             1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 }
 
@@ -1017,7 +1046,7 @@ void TDEngineHitBTC::onOrder(struct lws* conn, rapidjson::Value& order_i)
 //[0,"n",[1536562255341,"oc-req",null,null,[],null,"SUCCESS","Submitted for cancellation; waiting for confirmation (ID: 16609272883)."]]
 void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
 {
-    KF_LOG_INFO(logger, "TDEngineBitfinex::onNotification: " << parseJsonToString(json));
+    KF_LOG_INFO(logger, "TDEngineHITBTC::onNotification: " << parseJsonToString(json));
     AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
     if(json.GetArray()[2].IsArray()) {
         auto &notify = json.GetArray()[2];
@@ -1026,7 +1055,7 @@ void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
             std::string state = notify.GetArray()[6].GetString();
             std::string stateValue = notify.GetArray()[7].GetString();
             auto &notify_data = notify.GetArray()[4];
-            KF_LOG_INFO(logger, "TDEngineBitfinex::onNotification: (orderType)" << orderType << " (state)" << state << " (stateValue)" << stateValue);
+            KF_LOG_INFO(logger, "TDEngineHITBTC::onNotification: (orderType)" << orderType << " (state)" << state << " (stateValue)" << stateValue);
             if ("SUCCESS" == state) {
                 if("on-req" == orderType) {
                     int cid = notify_data.GetArray()[2].GetInt();
@@ -1050,8 +1079,8 @@ void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
                         OrderInsertData& cache = itr->second;
                         cache.remoteOrderId = remoteOrderId;
 
-                        raw_writer->write_error_frame(&cache.data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITFINEX, 1, cache.requestId, 0, stateValue.c_str());
-                        KF_LOG_INFO(logger, "TDEngineBitfinex::onNotification: (cid) " << cid
+                        raw_writer->write_error_frame(&cache.data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HITBTC, 1, cache.requestId, 0, stateValue.c_str());
+                        KF_LOG_INFO(logger, "TDEngineHITBTC::onNotification: (cid) " << cid
                                                                                        << " (orderId)" << cache.remoteOrderId <<
                                                                                        " (orderType)" << orderType <<
                                                                                        " (state)" << state <<
@@ -1065,7 +1094,7 @@ void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
 
                         std::string cancelOrderJsonString = createCancelOrderIdJsonString(remoteOrderId);
                         addPendingSendMsg(unit, cancelOrderJsonString);
-                        KF_LOG_DEBUG(logger, "TDEngineBitfinex::onNotification: pending_and_send  [req_order_action] createCancelOrderIdJsonString (remoteOrderId) " << remoteOrderId);
+                        KF_LOG_DEBUG(logger, "TDEngineHITBTC::onNotification: pending_and_send  [req_order_action] createCancelOrderIdJsonString (remoteOrderId) " << remoteOrderId);
                         RemoteOrderIDorderActionData.insert(std::pair<int64_t, OrderActionData>(remoteOrderId, cache));
                         //emit e event for websocket callback
                         lws_callback_on_writable(unit.websocketConn);
@@ -1082,7 +1111,7 @@ void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
                         itr = RemoteOrderIDorderActionData.find(remoteOrderId);
                         if (itr != RemoteOrderIDorderActionData.end()) {
                             OrderActionData cache = itr->second;
-                            raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFINEX, 1, cache.requestId, 0, stateValue.c_str());
+                            raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_HITBTC, 1, cache.requestId, 0, stateValue.c_str());
                         }
                     } else if(notify_data.GetArray()[2].IsInt()) {
                         //send order action with cid+dateStr, will get this
@@ -1092,7 +1121,7 @@ void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
                         itr = CIDorderActionData.find(cid);
                         if (itr != CIDorderActionData.end()) {
                             OrderActionData cache = itr->second;
-                            raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFINEX, 1, cache.requestId, 0, stateValue.c_str());
+                            raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_HITBTC, 1, cache.requestId, 0, stateValue.c_str());
                         }
                     }
                 }
@@ -1117,7 +1146,7 @@ void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
                     if (itr != CIDorderInsertData.end()) {
                         OrderInsertData cache = itr->second;
                         KF_LOG_INFO(logger,
-                                    "TDEngineBitfinex::onNotification: on_rsp_order_insert  (cache.requestId)" << cache.requestId
+                                    "TDEngineHITBTC::onNotification: on_rsp_order_insert  (cache.requestId)" << cache.requestId
                                                                                                                << " (OrderRef)"
                                                                                                                << cache.data.OrderRef
                                                                                                                << " (LimitPrice)"
@@ -1125,7 +1154,7 @@ void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
                                                                                                                << " (Volume)"
                                                                                                                << cache.data.Volume);
                         on_rsp_order_insert(&cache.data, cache.requestId, 100, stateValue.c_str());
-                        raw_writer->write_error_frame(&cache.data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITFINEX, 1, cache.requestId, 100, stateValue.c_str());
+                        raw_writer->write_error_frame(&cache.data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HITBTC, 1, cache.requestId, 100, stateValue.c_str());
                     }
                 }
                 if("oc-req" == orderType) {
@@ -1137,12 +1166,12 @@ void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
                         itr = RemoteOrderIDorderActionData.find(remoteOrderId);
                         if (itr != RemoteOrderIDorderActionData.end()) {
                             OrderActionData cache = itr->second;
-                            KF_LOG_INFO(logger, "TDEngineBitfinex::onNotification: on_rsp_order_action  (cache.requestId)" << cache.requestId <<
+                            KF_LOG_INFO(logger, "TDEngineHITBTC::onNotification: on_rsp_order_action  (cache.requestId)" << cache.requestId <<
                                                                                                                            " (OrderRef)" << cache.data.OrderRef <<
                                                                                                                            " (LimitPrice)" << cache.data.LimitPrice <<
                                                                                                                            " (KfOrderID)" << cache.data.KfOrderID);
                             on_rsp_order_action(&cache.data, cache.requestId, 100, stateValue.c_str());
-                            raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFINEX, 1, cache.requestId, 100, stateValue.c_str());
+                            raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_HITBTC, 1, cache.requestId, 100, stateValue.c_str());
                         }
                     } else if(notify_data.GetArray()[2].IsInt()) {
                         //send order action with cid+dateStr, will get this
@@ -1151,12 +1180,12 @@ void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
                         itr = CIDorderActionData.find(cid);
                         if (itr != CIDorderActionData.end()) {
                             OrderActionData cache = itr->second;
-                            KF_LOG_INFO(logger, "TDEngineBitfinex::onNotification: on_rsp_order_action  (cache.requestId)" << cache.requestId <<
+                            KF_LOG_INFO(logger, "TDEngineHITBTC::onNotification: on_rsp_order_action  (cache.requestId)" << cache.requestId <<
                                                                                                                            " (OrderRef)" << cache.data.OrderRef <<
                                                                                                                            " (LimitPrice)" << cache.data.LimitPrice <<
                                                                                                                            " (KfOrderID)" << cache.data.KfOrderID);
                             on_rsp_order_action(&cache.data, cache.requestId, 100, stateValue.c_str());
-                            raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFINEX, 1, cache.requestId, 100, stateValue.c_str());
+                            raw_writer->write_error_frame(&cache.data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_HITBTC, 1, cache.requestId, 100, stateValue.c_str());
                         }
                     }
                 }
@@ -1177,11 +1206,11 @@ std::string TDEngineHitBTC::parseJsonToString(Document &d)
 
 void TDEngineHitBTC::on_lws_connection_error(struct lws* conn)
 {
-    KF_LOG_ERROR(logger, "TDEngineBitfinex::on_lws_connection_error.");
+    KF_LOG_ERROR(logger, "TDEngineHITBTC::on_lws_connection_error.");
     //market logged_in false;
     AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
     unit.logged_in = false;
-    KF_LOG_ERROR(logger, "TDEngineBitfinex::on_lws_connection_error. login again.");
+    KF_LOG_ERROR(logger, "TDEngineHITBTC::on_lws_connection_error. login again.");
 
     long timeout_nsec = 0;
     unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));

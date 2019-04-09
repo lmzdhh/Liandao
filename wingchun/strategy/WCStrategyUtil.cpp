@@ -111,7 +111,7 @@ int WCStrategyUtil::insert_market_order(short source,
                                         string exchange_id,
                                         uint64_t volume,
                                         LfDirectionType direction,
-                                        LfOffsetFlagType offset)
+                                        LfOffsetFlagType offset,string misc_info)
 {
     int rid = get_rid();
     LFInputOrderField order = {};
@@ -130,12 +130,13 @@ int WCStrategyUtil::insert_market_order(short source,
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strcpy(order.MiscInfo, strategy_name.c_str());
+    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
 
-int WCStrategyUtil::insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int WCStrategyUtil::insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     int rid = get_rid();
     LFInputOrderField order = {};
@@ -154,12 +155,13 @@ int WCStrategyUtil::insert_limit_order(short source, string instrument_id, strin
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strcpy(order.MiscInfo, strategy_name.c_str());
+    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
 
-int WCStrategyUtil::insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int WCStrategyUtil::insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     int rid = get_rid();
     LFInputOrderField order = {};
@@ -178,12 +180,13 @@ int WCStrategyUtil::insert_fok_order(short source, string instrument_id, string 
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strcpy(order.MiscInfo, strategy_name.c_str());
+    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
 
-int WCStrategyUtil::insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int WCStrategyUtil::insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     int rid = get_rid();
     LFInputOrderField order = {};
@@ -202,7 +205,8 @@ int WCStrategyUtil::insert_fak_order(short source, string instrument_id, string 
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strcpy(order.MiscInfo, strategy_name.c_str());
+    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
@@ -215,7 +219,7 @@ int WCStrategyUtil::req_position(short source)
     return rid;
 }
 
-int WCStrategyUtil::cancel_order(short source, int order_id)
+int WCStrategyUtil::cancel_order(short source, int order_id,string misc_info)
 {
     if (order_id < rid_start || order_id > rid_end)
         return -1;
@@ -226,6 +230,8 @@ int WCStrategyUtil::cancel_order(short source, int order_id)
     req.LimitPrice = 0;
     req.VolumeChange = 0;
     req.RequestID = rid;
+    strncpy(req.InvestorID, strategy_name.c_str(),19);
+    strncpy(req.MiscInfo, misc_info.c_str(),64);
     write_frame(&req, sizeof(LFOrderActionField), source, MSG_TYPE_LF_ORDER_ACTION, 1/*lastflag*/, rid);
     return rid;
 }
@@ -233,4 +239,30 @@ int WCStrategyUtil::cancel_order(short source, int order_id)
 void WCStrategyUtil::set_pos_back(short source, const char* pos_str)
 {
     write_frame(pos_str, strlen(pos_str) + 1, source, MSG_TYPE_STRATEGY_POS_SET, 1, -1);
+}
+
+#define TAG_LEN 64
+string WCStrategyUtil::gen_md_trigger_tag(long time,short source_id,bool is_hedge)
+{
+    char strTag[TAG_LEN]={};
+    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),0,source_id,time);
+    return strTag;
+}
+string WCStrategyUtil::gen_trade_trigger_tag(long time,short source_id,bool is_hedge)
+{
+    char strTag[TAG_LEN]={};
+    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),1,source_id,time);
+    return strTag;
+}
+string WCStrategyUtil::gen_cancel_trigger_tag(long time,short source_id,int trigger_order_ref,int trigger_request_id,bool is_hedge)
+{
+    char strTag[TAG_LEN]={};
+    sprintf(strTag,"%d%d%02hd%ld%08d%08d",(is_hedge?1:0),2,source_id,time,trigger_request_id,trigger_order_ref);
+    return strTag;
+}
+string WCStrategyUtil::gen_timeout_trigger_tag(long time,short source_id,bool is_hedge)
+{
+    char strTag[TAG_LEN]={};
+    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),3,source_id,time);
+    return strTag;
 }

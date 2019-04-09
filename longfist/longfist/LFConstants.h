@@ -11,6 +11,7 @@
 // Index for Sources...
 enum exchange_source_index : short
 {
+    SOURCE_UNKNOWN =-1,
     SOURCE_CTP = 1,
     SOURCE_XTP = 15,
     SOURCE_BINANCE = 16,
@@ -24,7 +25,7 @@ enum exchange_source_index : short
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
-	SOURCE_OCEANEXB = 27,
+    SOURCE_OCEANEXB = 27,
     SOURCE_PROBIT = 28,
     SOURCE_BITHUMB = 29,
     SOURCE_DAYBIT = 31,
@@ -213,6 +214,7 @@ const short MSG_TYPE_LF_L2_ORDER      = 104;
 const short MSG_TYPE_LF_L2_TRADE      = 105;
 const short MSG_TYPE_LF_PRICE_BOOK_20 = 106;
 const short MSG_TYPE_LF_BAR_MD        = 110;
+const short MSG_TYPE_LF_FUNDING       = 111;
 const short MSG_TYPE_LF_QRY_POS       = 201;
 const short MSG_TYPE_LF_RSP_POS       = 202;
 const short MSG_TYPE_LF_ORDER         = 204;

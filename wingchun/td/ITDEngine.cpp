@@ -206,7 +206,7 @@ void ITDEngine::listening()
                         strcpy(order->BrokerID, accounts[idx].BrokerID);
                         strcpy(order->InvestorID, accounts[idx].InvestorID);
                         strcpy(order->UserID, accounts[idx].UserID);
-                        strcpy(order->BusinessUnit, accounts[idx].BusinessUnit);
+                        //strcpy(order->BusinessUnit, accounts[idx].BusinessUnit);
                         string order_ref = std::to_string(local_id);
                         //通过orderRef来记录requestId(KfOrderID), InstrumentID
                         td_helper->record_order(local_id, requestId);
