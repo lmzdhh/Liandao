@@ -78,7 +78,15 @@ class LFPriceBook20Field(Structure):
         ("BidLevels", LFPriceLevel20Field),	
         ("AskLevels", LFPriceLevel20Field),	
         ]
- 
+class LFFundingField(Structure):
+    _field_=[
+        ("InstrumentID", c_char * 31),	 
+        ("ExchangeID", c_char * 9),	 
+        ("TimeStamp",c_uint64),
+        ("Interval",c_uint64),
+        ("Rate",c_double),
+        ("RateDaily",c_double),
+    ]
 
 class LFL2MarketDataField(Structure):
     _fields_ = [
@@ -234,6 +242,9 @@ class LFL2TradeField(Structure):
         ("Volume", c_uint64),	# 成交数量 
         ("OrderKind", c_char * 2),	# 报单类型 
         ("OrderBSFlag", c_char * 2),	# 内外盘标志 
+        ("MakerOrderID",c_char*64),
+        ("TakerOrderID",c_char*64),
+        ("TradeID",c_char*64)
         ]
 
 class LFBarMarketDataField(Structure):
@@ -244,9 +255,9 @@ class LFBarMarketDataField(Structure):
         ("UpperLimitPrice", c_int64),	# 涨停板价 
         ("LowerLimitPrice", c_int64),	# 跌停板价 
         ("StartUpdateTime", c_char * 13),	# 首tick修改时间 
-        ("StartUpdateMillisec", c_int),	# 首tick最后修改毫秒 
+        ("StartUpdateMillisec", c_int64),	# 首tick最后修改毫秒 
         ("EndUpdateTime", c_char * 13),	# 尾tick最后修改时间 
-        ("EndUpdateMillisec", c_int),	# 尾tick最后修改毫秒 
+        ("EndUpdateMillisec", c_int64),	# 尾tick最后修改毫秒 
         ("PeriodMillisec", c_int),	    #周期（毫秒）
         ("Open", c_int64),	# 开 
         ("Close", c_int64),	# 收 
@@ -283,7 +294,7 @@ class LFInputOrderField(Structure):
         ("BrokerID", c_char * 11),	# 经纪公司代码 
         ("UserID", c_char * 16),	# 用户代码 
         ("InvestorID", c_char * 19),	# 投资者代码 
-        ("BusinessUnit", c_char * 21),	# 业务单元 
+        ("BusinessUnit", c_char * 64),	# 业务单元 
         ("ExchangeID", c_char * 9),	# 交易所代码 
         ("InstrumentID", c_char * 31),	# 合约代码 
         ("OrderRef", c_char * 21),	# 报单引用 
@@ -300,7 +311,7 @@ class LFInputOrderField(Structure):
         ("StopPrice", c_double),	# 止损价 
         ("IsAutoSuspend", c_int),	# 自动挂起标志 
         ("ContingentCondition", c_char),	# 触发条件 LfContingentConditionType
-        ("MiscInfo", c_char * 30),	# 委托自定义标签 
+        ("MiscInfo", c_char * 64),	# 委托自定义标签 
         ("MassOrderSeqId", c_uint64),	
         ("MassOrderIndex", c_int),	
         ("MassOrderTotalNum", c_int),	
@@ -312,7 +323,7 @@ class LFRtnOrderField(Structure):
         ("UserID", c_char * 16),	# 用户代码 
         ("ParticipantID", c_char * 11),	# 会员代码 
         ("InvestorID", c_char * 19),	# 投资者代码 
-        ("BusinessUnit", c_char * 21),	# 业务单元 
+        ("BusinessUnit", c_char * 64),	# 业务单元 
         ("InstrumentID", c_char * 31),	# 合约代码 
         ("OrderRef", c_char * 21),	# 报单引用 
         ("ExchangeID", c_char * 11),	# 交易所代码 
@@ -335,12 +346,12 @@ class LFRtnTradeField(Structure):
         ("BrokerID", c_char * 11),	# 经纪公司代码 
         ("UserID", c_char * 16),	# 用户代码 
         ("InvestorID", c_char * 19),	# 投资者代码 
-        ("BusinessUnit", c_char * 21),	# 业务单元 
+        ("BusinessUnit", c_char * 64),	# 业务单元 
         ("InstrumentID", c_char * 31),	# 合约代码 
         ("OrderRef", c_char * 21),	# 报单引用 
         ("ExchangeID", c_char * 11),	# 交易所代码 
-        ("TradeID", c_char * 21),	# 成交编号 
-        ("OrderSysID", c_char * 31),	# 报单编号 
+        ("TradeID", c_char * 64),	# 成交编号 
+        ("OrderSysID", c_char * 64),	# 报单编号 
         ("ParticipantID", c_char * 11),	# 会员代码 
         ("ClientID", c_char * 21),	# 客户代码 
         ("Price", c_int64),	# 价格 
@@ -366,6 +377,7 @@ class LFOrderActionField(Structure):
         ("LimitPrice", c_int64),	# 价格 
         ("VolumeChange", c_uint64),	# 数量变化 
         ("KfOrderID", c_int),	# Kf系统内订单ID 
+        ("MiscInfo", c_char * 64),	# 委托自定义标签 
         ("MassOrderSeqId", c_uint64),	
         ("MassOrderIndex", c_int),	
         ("MassOrderTotalNum", c_int),	
@@ -533,9 +545,9 @@ DataFieldMap = {
 		'InstrumentID': 'c31',
 		'ExchangeID': 'c11',
 		'ParticipantID': 'c11',
-		'TradeID': 'c21',
+		'TradeID': 'c64',
 		'TradingDay': 'c13',
-		'BusinessUnit': 'c21',
+		'BusinessUnit': 'c64',
 		'HedgeFlag': lf.LfHedgeFlagTypeMap,
 		'Price': 'd',
 		'UserID': 'c16',
@@ -545,7 +557,7 @@ DataFieldMap = {
 		'Volume': 'i',
 		'InvestorID': 'c19',
 		'BrokerID': 'c11',
-		'OrderSysID': 'c31',
+		'OrderSysID': 'c64',
 		'TradeTime': 'c13',
 		'OffsetFlag': lf.LfOffsetFlagTypeMap,
 	},
@@ -616,7 +628,7 @@ DataFieldMap = {
 		'MinVolume': 'i',
 		'OffsetFlag': lf.LfOffsetFlagTypeMap,
 		'OrderPriceType': lf.LfOrderPriceTypeTypeMap,
-		'BusinessUnit': 'c21',
+		'BusinessUnit': 'c64',
 		'HedgeFlag': lf.LfHedgeFlagTypeMap,
 		'IsAutoSuspend': 'i',
 		'ForceCloseReason': lf.LfForceCloseReasonTypeMap,
@@ -629,7 +641,7 @@ DataFieldMap = {
 		'VolumeCondition': lf.LfVolumeConditionTypeMap,
 		'TimeCondition': lf.LfTimeConditionTypeMap,
 		'BrokerID': 'c11',
-		'MiscInfo': 'c30',
+		'MiscInfo': 'c64',
 		'StopPrice': 'd',
         'MassOrderSeqId':'i64',
 	    'MassOrderIndex':'i',
@@ -640,7 +652,7 @@ DataFieldMap = {
 		'ExchangeID': 'c11',
 		'ParticipantID': 'c11',
 		'OrderPriceType': lf.LfOrderPriceTypeTypeMap,
-		'BusinessUnit': 'c21',
+		'BusinessUnit': 'c64',
 		'HedgeFlag': lf.LfHedgeFlagTypeMap,
 		'VolumeTotalOriginal': 'i',
 		'RequestID': 'i',
@@ -714,6 +726,14 @@ DataFieldMap = {
         'BidLevels' : [],	
         'AskLevels' : [],	
 	},
+    'LFFundingField': {
+		'InstrumentID' : 'c31',	 
+        'ExchangeID' : 'c9',	 
+        'TimeStamp' : 'i64',
+        'Interval' : 'i64',
+        'Rate' : 'd',
+        'RateDaily' : 'd',	        
+	},
 	'LFRspPositionField': {
 		'InstrumentID': 'c31',
 		'PosiDirection': lf.LfPosiDirectionTypeMap,
@@ -731,9 +751,9 @@ DataFieldMap = {
         'UpperLimitPrice': 'i64',	# 涨停板价 
         'LowerLimitPrice': 'i64',	# 跌停板价 
         'StartUpdateTime': 'c13',	# 首tick修改时间 
-        'StartUpdateMillisec': 'i',	# 首tick最后修改毫秒 
+        'StartUpdateMillisec': 'i64',	# 首tick最后修改毫秒 
         'EndUpdateTime': 'c13',	# 尾tick最后修改时间 
-        'EndUpdateMillisec': 'i',	# 尾tick最后修改毫秒 
+        'EndUpdateMillisec': 'i64',	# 尾tick最后修改毫秒 
         'PeriodMillisec': 'i',	    #周期（毫秒）
         'Open':'i64',	
         'Close':'i64',	# 收 
@@ -752,6 +772,9 @@ DataFieldMap = {
 		'Price': 'd',
 		'Volume': 'd',
 		'TradeTime': 'c9',
+        'MakerOrderID':'c64',
+        'TakerOrderID':'c64',
+        'TradeID':'c64'
 	},
 	'LFOrderActionField': {
 		'InstrumentID': 'c31',
@@ -766,6 +789,7 @@ DataFieldMap = {
 		'BrokerID': 'c11',
 		'RequestID': 'i',
 		'OrderSysID': 'c31',
+        'MiscInfo': 'c64',
         'MassOrderSeqId':'i64',
 	    'MassOrderIndex':'i',
 	    'MassOrderTotalNum':'i',
@@ -776,6 +800,7 @@ MsgType2LFStruct = {
     lf.MsgTypes.MD: LFMarketDataField,
     lf.MsgTypes.L2_MD: LFL2MarketDataField,
     lf.MsgTypes.PRICE_BOOK_20: LFPriceBook20Field,
+    lf.MsgTypes.FUNDING: LFFundingField,
     lf.MsgTypes.L2_INDEX: LFL2IndexField,
     lf.MsgTypes.L2_ORDER: LFL2OrderField,
     lf.MsgTypes.L2_TRADE: LFL2TradeField,
@@ -820,6 +845,22 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_COINMEX: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_COINMEX: LFRtnTradeField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_COINMEX: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_BITFINEX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITFINEX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITFINEX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BITFINEX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITFINEX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITFINEX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITFINEX: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_BITMEX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITMEX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITMEX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BITMEX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITMEX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITMEX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITMEX: LFOrderActionField,
 
     lf.MsgTypes.MSG_TYPE_LF_MD_HUOBI: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_HUOBI: LFQryPositionField,
@@ -883,6 +924,7 @@ MsgType2LFStruct.update(SnifferMsgType2Struct)
 LFStruct2MsgType = {
     LFMarketDataField: lf.MsgTypes.MD,
     LFPriceBook20Field: lf.MsgTypes.PRICE_BOOK_20,
+    LFFundingField:lf.MsgTypes.FUNDING,
     LFL2MarketDataField: lf.MsgTypes.L2_MD,
     LFL2IndexField: lf.MsgTypes.L2_INDEX,
     LFL2OrderField: lf.MsgTypes.L2_ORDER,
