@@ -242,6 +242,9 @@ class LFL2TradeField(Structure):
         ("Volume", c_uint64),	# 成交数量 
         ("OrderKind", c_char * 2),	# 报单类型 
         ("OrderBSFlag", c_char * 2),	# 内外盘标志 
+        ("MakerOrderID",c_char*64),
+        ("TakerOrderID",c_char*64),
+        ("TradeID",c_char*64)
         ]
 
 class LFBarMarketDataField(Structure):
@@ -291,7 +294,7 @@ class LFInputOrderField(Structure):
         ("BrokerID", c_char * 11),	# 经纪公司代码 
         ("UserID", c_char * 16),	# 用户代码 
         ("InvestorID", c_char * 19),	# 投资者代码 
-        ("BusinessUnit", c_char * 21),	# 业务单元 
+        ("BusinessUnit", c_char * 64),	# 业务单元 
         ("ExchangeID", c_char * 9),	# 交易所代码 
         ("InstrumentID", c_char * 31),	# 合约代码 
         ("OrderRef", c_char * 21),	# 报单引用 
@@ -320,7 +323,7 @@ class LFRtnOrderField(Structure):
         ("UserID", c_char * 16),	# 用户代码 
         ("ParticipantID", c_char * 11),	# 会员代码 
         ("InvestorID", c_char * 19),	# 投资者代码 
-        ("BusinessUnit", c_char * 21),	# 业务单元 
+        ("BusinessUnit", c_char * 64),	# 业务单元 
         ("InstrumentID", c_char * 31),	# 合约代码 
         ("OrderRef", c_char * 21),	# 报单引用 
         ("ExchangeID", c_char * 11),	# 交易所代码 
@@ -343,12 +346,12 @@ class LFRtnTradeField(Structure):
         ("BrokerID", c_char * 11),	# 经纪公司代码 
         ("UserID", c_char * 16),	# 用户代码 
         ("InvestorID", c_char * 19),	# 投资者代码 
-        ("BusinessUnit", c_char * 21),	# 业务单元 
+        ("BusinessUnit", c_char * 64),	# 业务单元 
         ("InstrumentID", c_char * 31),	# 合约代码 
         ("OrderRef", c_char * 21),	# 报单引用 
         ("ExchangeID", c_char * 11),	# 交易所代码 
-        ("TradeID", c_char * 21),	# 成交编号 
-        ("OrderSysID", c_char * 31),	# 报单编号 
+        ("TradeID", c_char * 64),	# 成交编号 
+        ("OrderSysID", c_char * 64),	# 报单编号 
         ("ParticipantID", c_char * 11),	# 会员代码 
         ("ClientID", c_char * 21),	# 客户代码 
         ("Price", c_int64),	# 价格 
@@ -542,9 +545,9 @@ DataFieldMap = {
 		'InstrumentID': 'c31',
 		'ExchangeID': 'c11',
 		'ParticipantID': 'c11',
-		'TradeID': 'c21',
+		'TradeID': 'c64',
 		'TradingDay': 'c13',
-		'BusinessUnit': 'c21',
+		'BusinessUnit': 'c64',
 		'HedgeFlag': lf.LfHedgeFlagTypeMap,
 		'Price': 'd',
 		'UserID': 'c16',
@@ -554,7 +557,7 @@ DataFieldMap = {
 		'Volume': 'i',
 		'InvestorID': 'c19',
 		'BrokerID': 'c11',
-		'OrderSysID': 'c31',
+		'OrderSysID': 'c64',
 		'TradeTime': 'c13',
 		'OffsetFlag': lf.LfOffsetFlagTypeMap,
 	},
@@ -625,7 +628,7 @@ DataFieldMap = {
 		'MinVolume': 'i',
 		'OffsetFlag': lf.LfOffsetFlagTypeMap,
 		'OrderPriceType': lf.LfOrderPriceTypeTypeMap,
-		'BusinessUnit': 'c21',
+		'BusinessUnit': 'c64',
 		'HedgeFlag': lf.LfHedgeFlagTypeMap,
 		'IsAutoSuspend': 'i',
 		'ForceCloseReason': lf.LfForceCloseReasonTypeMap,
@@ -649,7 +652,7 @@ DataFieldMap = {
 		'ExchangeID': 'c11',
 		'ParticipantID': 'c11',
 		'OrderPriceType': lf.LfOrderPriceTypeTypeMap,
-		'BusinessUnit': 'c21',
+		'BusinessUnit': 'c64',
 		'HedgeFlag': lf.LfHedgeFlagTypeMap,
 		'VolumeTotalOriginal': 'i',
 		'RequestID': 'i',
@@ -769,6 +772,9 @@ DataFieldMap = {
 		'Price': 'd',
 		'Volume': 'd',
 		'TradeTime': 'c9',
+        'MakerOrderID':'c64',
+        'TakerOrderID':'c64',
+        'TradeID':'c64'
 	},
 	'LFOrderActionField': {
 		'InstrumentID': 'c31',

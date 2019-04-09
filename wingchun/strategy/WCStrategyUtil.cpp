@@ -130,7 +130,7 @@ int WCStrategyUtil::insert_market_order(short source,
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.BusinessUnit, strategy_name.c_str(),64);
     strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
@@ -155,7 +155,7 @@ int WCStrategyUtil::insert_limit_order(short source, string instrument_id, strin
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.BusinessUnit, strategy_name.c_str(),64);
     strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
@@ -180,7 +180,7 @@ int WCStrategyUtil::insert_fok_order(short source, string instrument_id, string 
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.BusinessUnit, strategy_name.c_str(),64);
     strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
@@ -205,7 +205,7 @@ int WCStrategyUtil::insert_fak_order(short source, string instrument_id, string 
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.BusinessUnit, strategy_name.c_str(),64);
     strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;

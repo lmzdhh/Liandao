@@ -246,6 +246,9 @@ struct LFL2TradeField
 	uint64_t   	Volume;                //成交数量
 	char_2   	OrderKind;             //报单类型
 	char_2   	OrderBSFlag;           //内外盘标志
+	char_64     MakerOrderID;
+	char_64     TakerOrderID;
+	char_64     TradeID;
 };
 
 struct LFBarMarketDataField
@@ -295,7 +298,7 @@ struct LFInputOrderField
 	char_11                    	BrokerID;              //经纪公司代码
 	char_16                    	UserID;                //用户代码
 	char_19                    	InvestorID;            //投资者代码
-	char_21                    	BusinessUnit;          //业务单元
+	char_64                    	BusinessUnit;          //业务单元
 	char_9                     	ExchangeID;            //交易所代码
 	char_31                    	InstrumentID;          //合约代码
 	char_21                    	OrderRef;              //报单引用
@@ -324,7 +327,7 @@ struct LFRtnOrderField
 	char_16                	UserID;                //用户代码
 	char_11                	ParticipantID;         //会员代码
 	char_19                	InvestorID;            //投资者代码
-	char_21                	BusinessUnit;          //业务单元
+	char_64                	BusinessUnit;          //业务单元
 	char_31                	InstrumentID;          //合约代码
 	char_21                	OrderRef;              //报单引用
 	char_11                	ExchangeID;            //交易所代码
@@ -347,12 +350,12 @@ struct LFRtnTradeField
 	char_11           	BrokerID;              //经纪公司代码
 	char_16           	UserID;                //用户代码
 	char_19           	InvestorID;            //投资者代码
-	char_21           	BusinessUnit;          //业务单元
+	char_64           	BusinessUnit;          //业务单元
 	char_31           	InstrumentID;          //合约代码
 	char_21           	OrderRef;              //报单引用
 	char_11           	ExchangeID;            //交易所代码
-	char_21           	TradeID;               //成交编号
-	char_31           	OrderSysID;            //报单编号
+	char_64           	TradeID;               //成交编号
+	char_64           	OrderSysID;            //报单编号
 	char_11           	ParticipantID;         //会员代码
 	char_21           	ClientID;              //客户代码
 	int64_t            	Price;                 //价格
