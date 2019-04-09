@@ -70,12 +70,12 @@ public:
     bool subscribe_market_data(boost::python::list tickers, short source);
 
     /** take actions */
-    int insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
-    int insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
-    int insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
-    int insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
+    int insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info = "");
+    int insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info = "");
+    int insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info = "");
+    int insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info = "");
     int req_position(short source);
-    int cancel_order(short source, int order_id);
+    int cancel_order(short source, int order_id,string misc_info = "");
 
     /** callback */
     /** process callback functions that match time, return number of functions that executed */
@@ -98,6 +98,11 @@ public:
     long   parse_time(string time_str);
     /** parse nano */
     string parse_nano(long nano);
+    /* generate a tag with info*/
+    string gen_md_trigger_tag(long time,short source,bool is_hedge = false);
+    string gen_trade_trigger_tag(long time,short source,bool is_hedge = false);
+    string gen_cancel_trigger_tag(long time,short source,int order_ref,int request_id,bool is_hedge = false);
+    string gen_timeout_trigger_tag(long time,short source,bool is_hedge = false);
 };
 
 DECLARE_PTR(WCStrategyUtil);

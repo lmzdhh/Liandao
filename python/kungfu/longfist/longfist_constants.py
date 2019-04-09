@@ -42,6 +42,7 @@ class MsgTypes:
     L2_TRADE = 105
     PRICE_BOOK_20 = 106
     BAR_MD = 110
+    FUNDING = 111
     QRY_POS = 201
     RSP_POS = 202
     ORDER = 204
