@@ -635,7 +635,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     if (UFR_data_map.find(data->InstrumentID) == UFR_data_map.end())
     {
         uint64_t UFRnums[2] = {0,0};
-        UFR_data_map.insert(make_pair(data->InstrumentID, UFRnums));
+        UFR_data_map.insert(std::make_pair(data->InstrumentID, UFRnums));
 
         //测试日志
         KF_LOG_DEBUG(logger, "[req_order_insert] add InstrumentID into UFR_data_map  instrumentID " << 
@@ -867,7 +867,7 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
         //判断该orderref是否已经在map中，没有的话加入进去
         if (UFR_orderRef_status_map.find(rtn_trade.OrderRef) == UFR_orderRef_status_map.end())
         {
-            UFR_orderRef_status_map.insert(pair<string, bool>(rtn_trade.OrderRef, false));
+            UFR_orderRef_status_map.insert(std::pair<string, bool>(rtn_trade.OrderRef, false));
 
             //测试日志
             KF_LOG_DEBUG(logger, "[onRspNewOrderRESULT] add OrderRef into UFR_orderRef_status_map " << 
