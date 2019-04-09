@@ -635,7 +635,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     if (UFR_data_map.find(data->InstrumentID) == UFR_data_map.end())
     {
         uint64_t UFRnums[2] = {0,0};
-        UFR_data_map.insert(pair<char_31, uint64_t(*)>(data->InstrumentID, UFRnums));
+        UFR_data_map.insert(make_pair(data->InstrumentID, UFRnums));
 
         //测试日志
         KF_LOG_DEBUG(logger, "[req_order_insert] add InstrumentID into UFR_data_map  instrumentID " << 
