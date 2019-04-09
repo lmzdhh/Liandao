@@ -637,11 +637,11 @@ void MDEngineBitmex::processTradeBinsData(Document& json)
             time_t gm_time = timegm(&time);
             gm_time-=1;
             time = *gmtime(&gm_time);
-            sprintf(market.EndUpdateTime,"%2d:%02d:%02d.999", time.tm_hour,time.tm_min,time.tm_sec);
+            sprintf(market.EndUpdateTime,"%02d:%02d:%02d.999", time.tm_hour,time.tm_min,time.tm_sec);
             market.EndUpdateMillisec = gm_time *1000 + 999;
             gm_time-=59;
             time = *gmtime(&gm_time);
-            sprintf(market.StartUpdateTime,"%2d:%02d:%02d.000", time.tm_hour,time.tm_min,time.tm_sec);
+            sprintf(market.StartUpdateTime,"%02d:%02d:%02d.000", time.tm_hour,time.tm_min,time.tm_sec);
             market.StartUpdateMillisec =gm_time *1000;
 
             strftime(market.TradingDay, 9, "%Y%m%d", &time);
