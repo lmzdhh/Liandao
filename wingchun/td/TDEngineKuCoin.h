@@ -221,7 +221,7 @@ WC_NAMESPACE_START
             struct lws* m_conn;
 
             std::mutex* m_mutexOrder = nullptr;
-            std::map<std::string,ResponsedOrderStatus> m_mapOrder;
+            std::map<std::string,PendingOrderStatus> m_mapOrder;
 
         private:
             std::string m_uniqueKey;
