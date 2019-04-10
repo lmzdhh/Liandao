@@ -24,12 +24,18 @@ WC_NAMESPACE_START
 
         struct PendingOrderStatus
         {
+            int64_t nVolume = 0;
+            int64_t nPrice = 0;
             char_31 InstrumentID = {0};   //合约代码
-            char_21 OrderRef = {0};       //报单引用
+            char_21 OrderRef = {0};   //报单引用
+            int nRequestID = -1;   
+            std::string strUserID;
             LfOrderStatusType OrderStatus = LF_CHAR_NotTouched;  //报单状态
-            uint64_t VolumeTraded = 0;  //今成交数量
-            int64_t averagePrice = 0;// given averagePrice on response of query_order
+            uint64_t VolumeTraded = 0;  //成交数量
+            LfDirectionType Direction;  //买卖方向
+            LfOrderPriceTypeType OrderPriceType; //报单价格条件
             std::string remoteOrderId;// sender_order response order id://{"orderId":19319936159776,"result":true}
+            std::string strClientId;
         };
 
         struct OrderActionSentTime
@@ -165,7 +171,7 @@ WC_NAMESPACE_START
             void orderActionNoResponseTimeOut();
         private:
             void get_account(AccountUnitKuCoin& unit, Document& json);
-            void send_order(AccountUnitKuCoin& unit, const char *code,
+            void send_order(AccountUnitKuCoin& unit, const char *code,const std::string& strClientId,
                             const char *side, const char *type, double size, double price, double funds, const string& strOrderRef,Document& json);
 
             void cancel_all_orders(AccountUnitKuCoin& unit, std::string code, Document& json);
@@ -178,7 +184,7 @@ WC_NAMESPACE_START
 
             std::string construct_request_body(const AccountUnitKuCoin& unit,const  std::string& data,bool isget = true);
             cpr::Header construct_request_header(AccountUnitKuCoin& unit,const std::string& strSign,const std::string& strContentType);
-            std::string createInsertOrdertring(const char *code,
+            std::string createInsertOrdertring(const char *code,const std::string& strClientId,
                                                const char *side, const char *type, double size, double price,const string& strOrderRef);
 
             cpr::Response Get(const std::string& url,const std::string& body, AccountUnitKuCoin& unit);
@@ -191,6 +197,9 @@ WC_NAMESPACE_START
         public:
             void writeErrorLog(std::string strError);
             void on_lws_data(struct lws* conn, const char* data, size_t len);
+            void onOrderChange( Document& d);
+            void onOrder(const PendingOrderStatus& stPendingOrderStatus);
+            void onTrade(const PendingOrderStatus& stPendingOrderStatus,int64_t nSize,int64_t nPrice,std::string& strTradeId,std::string& strTime);
             int lws_write_subscribe(struct lws* conn);
             void on_lws_connection_error(struct lws* conn);
         private:
@@ -210,6 +219,10 @@ WC_NAMESPACE_START
             std::vector<ServerInfo> m_vstServerInfos;
             std::string m_strToken;
             struct lws* m_conn;
+
+            std::mutex* m_mutexOrder = nullptr;
+            std::map<std::string,ResponsedOrderStatus> m_mapOrder;
+
         private:
             std::string m_uniqueKey;
             int HTTP_RESPONSE_OK = 200;

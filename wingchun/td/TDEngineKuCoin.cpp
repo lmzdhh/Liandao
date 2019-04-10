@@ -44,6 +44,7 @@ TDEngineKuCoin::TDEngineKuCoin(): ITDEngine(SOURCE_KUCOIN)
     logger = yijinjing::KfLog::getLogger("TradeEngine.KuCoin");
     KF_LOG_INFO(logger, "[TDEngineKuCoin]");
 
+    m_mutexOrder = new std::mutex();
     mutex_order_and_trade = new std::mutex();
     mutex_response_order_status = new std::mutex();
     mutex_orderaction_waiting_response = new std::mutex();
@@ -51,6 +52,7 @@ TDEngineKuCoin::TDEngineKuCoin(): ITDEngine(SOURCE_KUCOIN)
 
 TDEngineKuCoin::~TDEngineKuCoin()
 {
+    if(m_mutexOrder != nullptr) delete m_mutexOrder;
     if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
     if(mutex_response_order_status != nullptr) delete mutex_response_order_status;
     if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
@@ -154,6 +156,128 @@ std::string TDEngineKuCoin::getId()
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
  }
 
+ void TDEngineKuCoin::onOrder(const PendingOrderStatus& stPendingOrderStatus)
+ {
+            LFRtnOrderField rtn_order;
+            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+            rtn_order.requestID = stPendingOrderStatus.nRequestID;
+            rtn_order.OrderStatus = stPendingOrderStatus.OrderStatus;
+            rtn_order.VolumeTraded = stPendingOrderStatus.VolumeTraded;
+
+            //first send onRtnOrder about the status change or VolumeTraded change
+            strcpy(rtn_order.ExchangeID, "kucoin");
+            strncpy(rtn_order.UserID, stPendingOrderStatus.strUserID.c_str(), sizeof(rtn_order.UserID));
+            strncpy(rtn_order.InstrumentID, data->InstrumentID, sizeof(rtn_order.InstrumentID));
+            rtn_order.Direction = stPendingOrderStatus.Direction;
+            //No this setting on KuCoin
+            rtn_order.TimeCondition = LF_CHAR_GTC;
+            rtn_order.OrderPriceType = stPendingOrderStatus.OrderPriceType;
+            strncpy(rtn_order.OrderRef, stPendingOrderStatus.OrderRef, sizeof(rtn_order.OrderRef));
+            rtn_order.VolumeTotalOriginal = stPendingOrderStatus.nVolume - rtn_order.VolumeTraded;
+            rtn_order.LimitPrice = stPendingOrderStatus.nPrice;
+            rtn_order.VolumeTotal = stPendingOrderStatus.nVolume;
+            strncpy(rtn_order.BusinessUnit,stPendingOrderStatus.remoteOrderId.c_str(),sizeof(rtn_order.BusinessUnit));
+
+            on_rtn_order(&rtn_order);
+
+            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                    source_id, MSG_TYPE_LF_RTN_ORDER_KUCOIN,
+                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
+            
+            KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
+                        << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
+
+
+ }
+
+void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int64_t nSize,int64_t nPrice,std::string& strTradeId,std::string& strTime)
+{
+            LFRtnTradeField rtn_trade;
+            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+            strcpy(rtn_trade.ExchangeID, "kucoin");
+            strncpy(rtn_trade.UserID, stPendingOrderStatus.strUserID.c_str(), sizeof(rtn_trade.UserID));
+            strncpy(rtn_trade.InstrumentID, stPendingOrderStatus.InstrumentID, sizeof(rtn_trade.InstrumentID));
+            strncpy(rtn_trade.OrderRef, stPendingOrderStatus.OrderRef, sizeof(rtn_trade.OrderRef));
+            rtn_trade.Direction = stPendingOrderStatus.Direction;
+            //calculate the volumn and price (it is average too)
+            rtn_trade.Volume = nSize;
+            rtn_trade.Price = nPrice;
+            strncpy(rtn_trade.OrderSysID,stPendingOrderStatus.remoteOrderId.c_str(),sizeof(rtn_trade.OrderSysID));
+            strncpy(rtn_trade.TradeID, strTradeId.c_str(), sizeof(rtn_trade.TradeID));
+            strncpy(rtn_trade.TradeTime, strTime.c_str(), sizeof(rtn_trade.TradeTime));
+            strncpy(rtn_trade.ClientID, stPendingOrderStatus.strClientId.c_str(), sizeof(rtn_trade.ClientID));
+            on_rtn_trade(&rtn_trade);
+            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_KUCOIN, 1, -1);
+
+             KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction 
+                        << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+}
+
+ void TDEngineKuCoin::onOrderChange(Document& d)
+ {
+        if(d.HasMember("data"))
+        {
+            auto& data = d["data"];
+            if(data.HasMember("type"))
+            {
+                std::string strType = data["type"].GetString();
+                if(strType == "done" && data["reason"].GetString() == std::string("canceled"))
+                {
+                    std::string strOrderId = data["orderId"].GetString();
+                    std::lock_guard<std::mutex> lck(*m_mutexOrder); 
+                    auto it = m_mapOrder.find(strOrderId);
+                    if(it != m_mapOrder.end())
+                    {
+                        it->second.OrderStatus = LF_CHAR_Canceled;
+                        onOrder( it->second.OrderStatus);
+                        m_mapOrder.erase(it);
+                    }
+                }
+                if(strType == "match")
+                {
+                    std::string strOrderId = data["takerOrderId"].GetString();
+                    std::lock_guard<std::mutex> lck(*m_mutexOrder); 
+                    auto it = m_mapOrder.find(strOrderId);
+                    if(it != m_mapOrder.end())
+                    {
+                        int64_t nSize = std::round(std::stod(data["size"].GetString()) * scale_offset);
+                        int64_t nPrice = std::round(std::stod(data["price"].GetString()) * scale_offset);
+                        std::string strTradeId = data["tradeId"].GetString();
+                        std::string strTime = data["time"].GetString();
+                        it->second.VolumeTraded += nSize;
+                        it->second.OrderStatus =  it->second.VolumeTraded ==  it->second.nVolume ? LF_CHAR_AllTraded : LF_CHAR_PartTradedNotQueueing;
+                        onOrder( it->second.OrderStatus);
+                        onTrade(it->second.OrderStatus,nSize,nPrice,strTradeId,strTime);
+                       if( it->second.OrderStatus == LF_CHAR_AllTraded)
+                       {
+                            m_mapOrder.erase(it);
+                       }
+                    }
+
+                    std::string strOrderId = data["makerOrderId"].GetString();
+                    it = m_mapOrder.find(strOrderId);
+                    if(it != m_mapOrder.end())
+                    {
+                        int64_t nSize = std::round(std::stod(data["size"].GetString()) * scale_offset);
+                        int64_t nPrice = std::round(std::stod(data["price"].GetString()) * scale_offset);
+                        std::string strTradeId = data["tradeId"].GetString();
+                        std::string strTime = data["time"].GetString();
+                        it->second.VolumeTraded += nSize;
+                        it->second.OrderStatus =  it->second.VolumeTraded ==  it->second.nVolume ? LF_CHAR_AllTraded : LF_CHAR_PartTradedNotQueueing;
+                        onOrder( it->second.OrderStatus);
+                       onTrade(it->second.OrderStatus,nSize,nPrice,strTradeId,strTime);
+                       if( it->second.OrderStatus == LF_CHAR_AllTraded)
+                       {
+                            m_mapOrder.erase(it);
+                       }
+                    }
+
+                }
+            }
+        }
+ }
+
 void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
@@ -176,9 +300,7 @@ void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
 		}
 		if(strcmp(json["type"].GetString(), "message") == 0)
 		{
-            if(strcmp(json["subject"].GetString(), "trade.l2update") == 0)
-		    {
-	        }   
+           onOrderChange(json);
 		}	
 	} else 
     {
@@ -956,8 +1078,9 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
-    
-    send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
+    std::string strClientId = genClinetid(data->OrderRef);
+    std::lock_guard<std::mutex> lck(*m_mutexOrder);
+    send_order(unit, ticker.c_str(),strClientId, GetSide(data->Direction).c_str(),
                GetType(data->OrderPriceType).c_str(), fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, data->OrderRef,d);
     //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
     //not expected response
@@ -978,36 +1101,26 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data->OrderRef << " (remoteOrderId) "
                                                                        << remoteOrderId);
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
-            rtn_order.OrderStatus = LF_CHAR_NotTouched;
-            rtn_order.VolumeTraded = 0;
-
-            //first send onRtnOrder about the status change or VolumeTraded change
-            strcpy(rtn_order.ExchangeID, "kucoin");
-            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
-            rtn_order.Direction = data->Direction;
-            //No this setting on KuCoin
-            rtn_order.TimeCondition = LF_CHAR_GTC;
-            rtn_order.OrderPriceType = data->OrderPriceType;
-            strncpy(rtn_order.OrderRef, data->OrderRef, 13);
-            rtn_order.VolumeTotalOriginal = data->Volume;
-            rtn_order.LimitPrice = data->LimitPrice;
-            rtn_order.VolumeTotal = data->Volume;
-
-            std::string strOrderID = remoteOrderId;
-            strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
-            on_rtn_order(&rtn_order);
-            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_KUCOIN,
-                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
-
+            PendingOrderStatus stPendingOrderStatus;
+            stPendingOrderStatus.nVolume = data->Volume;
+            stPendingOrderStatus.nPrice = data->LimitPrice;;
+            strncpy(stPendingOrderStatus.InstrumentID, data->InstrumentID, sizeof(stPendingOrderStatus.InstrumentID));
+            strncpy(stPendingOrderStatus.OrderRef, data->OrderRef, sizeof(stPendingOrderStatus.OrderRef));
+            stPendingOrderStatus.strUserID = unit.api_key;
+            stPendingOrderStatus.OrderStatus = LF_CHAR_NotTouched;
+            stPendingOrderStatus.VolumeTraded = 0;
+            stPendingOrderStatus.Direction = data->Direction;
+            stPendingOrderStatus.OrderPriceType = data->OrderPriceType;
+            stPendingOrderStatus.remoteOrderId = remoteOrderId;
+            stPendingOrderStatus.nRequestID = requestId;
+            stPendingOrderStatus.strClientId = strClientId;
+            onOrder(stPendingOrderStatus);
+         
             KF_LOG_DEBUG(logger, "[req_order_insert] (addNewQueryOrdersAndTrades)" );
             char noneStatus = LF_CHAR_NotTouched;
-            addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
-
+            //addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
+            m_mapOrder[remoteOrderId] = stPendingOrderStatus;
             //success, only record raw data
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1,
                                           requestId, errorId, errorMsg.c_str());
@@ -1422,14 +1535,14 @@ void TDEngineKuCoin::get_account(AccountUnitKuCoin& unit, Document& json)
     "ord_type": "limit"
 }
  * */
-std::string TDEngineKuCoin::createInsertOrdertring(const char *code,
+std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::string& strClientId,
                                                     const char *side, const char *type, double size, double price,const string& strOrderRef)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
     writer.Key("clientOid");
-    writer.String(genClinetid(strOrderRef).c_str());
+    writer.String(strClientId.c_str());
 
     writer.Key("side");
     writer.String(side);
@@ -1451,7 +1564,7 @@ std::string TDEngineKuCoin::createInsertOrdertring(const char *code,
     return s.GetString();
 }
 
-void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,
+void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,const std::string& strClientId,
                                  const char *side, const char *type, double size, double price, double funds, const std::string& strOrderRef,Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
@@ -1463,7 +1576,7 @@ void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,
         should_retry = false;
 
         std::string requestPath = "/api/v1/orders";
-        response = Post(requestPath,createInsertOrdertring(code, side, type, size, price,strOrderRef),unit);
+        response = Post(requestPath,createInsertOrdertring(code, strClientId,side, type, size, price,strOrderRef),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
                                                   " (response.error.message) " << response.error.message <<
