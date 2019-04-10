@@ -285,8 +285,9 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 		
 			for(int i = 0; i < size; ++i)
 			{
-				md.BidLevels[i].price = stod(bids.GetArray()[i][0].GetString()) * scale_offset;
-				md.BidLevels[i].volume = stod(bids.GetArray()[i][1].GetString()) * scale_offset;
+				//CYS add std::round
+                                md.BidLevels[i].price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
+				md.BidLevels[i].volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
 			}
 			md.BidLevelCount = size;
 
@@ -304,8 +305,9 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 		
 			for(int i = 0; i < size; ++i)
 			{
-				md.AskLevels[i].price = stod(asks.GetArray()[i][0].GetString()) * scale_offset;
-				md.AskLevels[i].volume = stod(asks.GetArray()[i][1].GetString()) * scale_offset;
+				//CYS edit std::round
+				md.AskLevels[i].price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
+				md.AskLevels[i].volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
 			}
 			md.AskLevelCount = size;
 
@@ -372,6 +374,7 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 		strftime(market.EndUpdateTime,13, "%H:%M:%S", &end_tm);
 
 		market.PeriodMillisec = 60000;
+		//CYS edit std::round
 		market.Open = std::round(std::stod(data["o"].GetString()) * scale_offset);
 		market.Close = std::round(std::stod(data["c"].GetString()) * scale_offset);
 		market.Low = std::round(std::stod(data["l"].GetString()) * scale_offset);
@@ -424,32 +427,32 @@ void MDEngineBinance::GetAndHandleDepthResponse(const std::string& symbol, int l
     bool has_update = false;	    	
 	if(d.HasMember("bids") && d["bids"].IsArray() && d["bids"].Size() >= limit)
 	{
-		md.BidPrice1 = stod(d["bids"].GetArray()[0][0].GetString()) * scale_offset;
-		md.BidVolume1 = stod(d["bids"].GetArray()[0][1].GetString()) * scale_offset;
-		md.BidPrice2 = stod(d["bids"].GetArray()[1][0].GetString()) * scale_offset;
-		md.BidVolume2 = stod(d["bids"].GetArray()[1][1].GetString()) * scale_offset;
-		md.BidPrice3 = stod(d["bids"].GetArray()[2][0].GetString()) * scale_offset;
-		md.BidVolume3 = stod(d["bids"].GetArray()[2][1].GetString()) * scale_offset;
-		md.BidPrice4 = stod(d["bids"].GetArray()[3][0].GetString()) * scale_offset;
-		md.BidVolume4 = stod(d["bids"].GetArray()[3][1].GetString()) * scale_offset;
-		md.BidPrice5 = stod(d["bids"].GetArray()[4][0].GetString()) * scale_offset;
-		md.BidVolume5 = stod(d["bids"].GetArray()[4][1].GetString()) * scale_offset;
+		md.BidPrice1 = std::round(stod(d["bids"].GetArray()[0][0].GetString()) * scale_offset);
+		md.BidVolume1 = std::round(stod(d["bids"].GetArray()[0][1].GetString()) * scale_offset);
+		md.BidPrice2 = std::round(stod(d["bids"].GetArray()[1][0].GetString()) * scale_offset);
+		md.BidVolume2 = std::round(stod(d["bids"].GetArray()[1][1].GetString()) * scale_offset);
+		md.BidPrice3 = std::round(stod(d["bids"].GetArray()[2][0].GetString()) * scale_offset);
+		md.BidVolume3 = std::round(stod(d["bids"].GetArray()[2][1].GetString()) * scale_offset);
+		md.BidPrice4 = std::round(stod(d["bids"].GetArray()[3][0].GetString()) * scale_offset);
+		md.BidVolume4 = std::round(stod(d["bids"].GetArray()[3][1].GetString()) * scale_offset);
+		md.BidPrice5 = std::round(stod(d["bids"].GetArray()[4][0].GetString()) * scale_offset);
+		md.BidVolume5 = std::round(stod(d["bids"].GetArray()[4][1].GetString()) * scale_offset);
 		
 		has_update = true;
 	}
 
 	if(d.HasMember("asks") && d["asks"].IsArray() && d["asks"].Size() >= limit)
 	{
-		md.AskPrice1 = stod(d["asks"].GetArray()[0][0].GetString()) * scale_offset;
-		md.AskVolume1 = stod(d["asks"].GetArray()[0][1].GetString()) * scale_offset;
-		md.AskPrice2 = stod(d["asks"].GetArray()[1][0].GetString()) * scale_offset;
-		md.AskVolume2 = stod(d["asks"].GetArray()[1][1].GetString()) * scale_offset;
-		md.AskPrice3 = stod(d["asks"].GetArray()[2][0].GetString()) * scale_offset;
-		md.AskVolume3 = stod(d["asks"].GetArray()[2][1].GetString()) * scale_offset;
-		md.AskPrice4 = stod(d["asks"].GetArray()[3][0].GetString()) * scale_offset;
-		md.AskVolume4 = stod(d["asks"].GetArray()[3][1].GetString()) * scale_offset;
-		md.AskPrice5 = stod(d["asks"].GetArray()[4][0].GetString()) * scale_offset;
-		md.AskVolume5 = stod(d["asks"].GetArray()[4][1].GetString()) * scale_offset;
+		md.AskPrice1 = std::round(stod(d["asks"].GetArray()[0][0].GetString()) * scale_offset);
+		md.AskVolume1 = std::round(stod(d["asks"].GetArray()[0][1].GetString()) * scale_offset);
+		md.AskPrice2 = std::round(stod(d["asks"].GetArray()[1][0].GetString()) * scale_offset);
+		md.AskVolume2 = std::round(stod(d["asks"].GetArray()[1][1].GetString()) * scale_offset);
+		md.AskPrice3 = std::round(stod(d["asks"].GetArray()[2][0].GetString()) * scale_offset);
+		md.AskVolume3 = std::round(stod(d["asks"].GetArray()[2][1].GetString()) * scale_offset);
+		md.AskPrice4 = std::round(stod(d["asks"].GetArray()[3][0].GetString()) * scale_offset);
+		md.AskVolume4 = std::round(stod(d["asks"].GetArray()[3][1].GetString()) * scale_offset);
+		md.AskPrice5 = std::round(stod(d["asks"].GetArray()[4][0].GetString()) * scale_offset);
+		md.AskVolume5 = std::round(stod(d["asks"].GetArray()[4][1].GetString()) * scale_offset);
 		
 		has_update = true;
 	}
@@ -496,8 +499,8 @@ void MDEngineBinance::GetAndHandleTradeResponse(const std::string& symbol, int l
 		    last_trade_id = trade_id;
 		    if(ele.HasMember("price") && ele.HasMember("qty") && ele.HasMember("isBuyerMaker") && ele.HasMember("isBestMatch"))
 		    {
-			    trade.Price = std::stod(ele["price"].GetString()) * scale_offset;
-			    trade.Volume = std::stod(ele["qty"].GetString()) * scale_offset;
+			    trade.Price = std::round(std::stod(ele["price"].GetString()) * scale_offset);
+			    trade.Volume = std::round(std::stod(ele["qty"].GetString()) * scale_offset);
 			    trade.OrderKind[0] = ele["isBestMatch"].GetBool() ? 'B' : 'N';
 			    trade.OrderBSFlag[0] = ele["isBuyerMaker"].GetBool() ? 'B' : 'S';
 			    on_trade(&trade);

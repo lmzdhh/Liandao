@@ -32,7 +32,13 @@ def initialize(context):
     context.subscribe(tickers=[context.ticker], source=SOURCE.BINANCE)
 
 def on_price_book(context, price_book, source, rcv_time):
-    print 'symbol' , price_book.InstrumentID
-    print 'ExchangeID' , price_book.ExchangeID
-    print 'BidLevels' , price_book.BidLevels
-    print 'AskLevels' , price_book.BidLevels
+    #print 'symbol' , price_book.InstrumentID
+    #print 'ExchangeID' , price_book.ExchangeID
+    #print 'BidLevels' , price_book.BidLevels
+    #print 'AskLevels' , price_book.BidLevels
+    file_name="/code/binance.txt"
+    with open(file_name,'a') as file_object:
+        file_object.write('symbol '+ str(price_book.InstrumentID)+'\n')
+        file_object.write('ExchangeID '+str(price_book.ExchangeID)+'\n')
+        file_object.write('BidLevels '+str(price_book.BidLevels)+'\n')
+        file_object.write('AskLevels '+str(price_book.BidLevels)+'\n')
