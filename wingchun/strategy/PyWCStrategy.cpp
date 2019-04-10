@@ -263,7 +263,11 @@ BOOST_PYTHON_MODULE(libwingchunstrategy)
     .def("get_nano", &WCStrategyUtil::get_nano)
     .def("get_time", &WCStrategyUtil::get_time)
     .def("parse_time", &WCStrategyUtil::parse_time, (bp::arg("time_str")))
-    .def("parse_nano", &WCStrategyUtil::parse_nano, (bp::arg("nano_time")));
+    .def("parse_nano", &WCStrategyUtil::parse_nano, (bp::arg("nano_time")))
+    .def("gen_md_trigger_tag",&WCStrategyUtil::gen_md_trigger_tag,(bp::arg("time"),bp::arg("source"),bp::arg("is_hedge") = false))
+    .def("gen_trade_trigger_tag",&WCStrategyUtil::gen_trade_trigger_tag,(bp::arg("time"),bp::arg("source"),bp::arg("is_hedge") = false))
+    .def("gen_cancel_trigger_tag",&WCStrategyUtil::gen_cancel_trigger_tag,(bp::arg("time"),bp::arg("source"),bp::arg("order_ref"),bp::arg("request_id"),bp::arg("is_hedge") = false))
+    .def("gen_timeout_trigger_tag",&WCStrategyUtil::gen_timeout_trigger_tag,(bp::arg("time"),bp::arg("source"),bp::arg("is_hedge") = false));
 
     bp::class_<PosHandler, PosHandlerPtr>("PosHandler", bp::no_init)
     .def("update", &PosHandler::update_py, (bp::arg("ticker"), bp::arg("volume"), bp::arg("direction"), bp::arg("trade_off"), bp::arg("order_off")))

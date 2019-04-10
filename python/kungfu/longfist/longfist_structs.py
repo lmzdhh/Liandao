@@ -252,9 +252,9 @@ class LFBarMarketDataField(Structure):
         ("UpperLimitPrice", c_int64),	# 涨停板价 
         ("LowerLimitPrice", c_int64),	# 跌停板价 
         ("StartUpdateTime", c_char * 13),	# 首tick修改时间 
-        ("StartUpdateMillisec", c_int),	# 首tick最后修改毫秒 
+        ("StartUpdateMillisec", c_int64),	# 首tick最后修改毫秒 
         ("EndUpdateTime", c_char * 13),	# 尾tick最后修改时间 
-        ("EndUpdateMillisec", c_int),	# 尾tick最后修改毫秒 
+        ("EndUpdateMillisec", c_int64),	# 尾tick最后修改毫秒 
         ("PeriodMillisec", c_int),	    #周期（毫秒）
         ("Open", c_int64),	# 开 
         ("Close", c_int64),	# 收 
@@ -748,9 +748,9 @@ DataFieldMap = {
         'UpperLimitPrice': 'i64',	# 涨停板价 
         'LowerLimitPrice': 'i64',	# 跌停板价 
         'StartUpdateTime': 'c13',	# 首tick修改时间 
-        'StartUpdateMillisec': 'i',	# 首tick最后修改毫秒 
+        'StartUpdateMillisec': 'i64',	# 首tick最后修改毫秒 
         'EndUpdateTime': 'c13',	# 尾tick最后修改时间 
-        'EndUpdateMillisec': 'i',	# 尾tick最后修改毫秒 
+        'EndUpdateMillisec': 'i64',	# 尾tick最后修改毫秒 
         'PeriodMillisec': 'i',	    #周期（毫秒）
         'Open':'i64',	
         'Close':'i64',	# 收 

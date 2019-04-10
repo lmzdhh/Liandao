@@ -363,15 +363,17 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 		
 		int64_t nStartTime = data["t"].GetInt64();
 		int64_t nEndTime = data["T"].GetInt64();
-		market.StartUpdateMillisec = (int)(nStartTime%1000);
+		market.StartUpdateMillisec = nStartTime;
+		int ms = nStartTime % 1000;
 		nStartTime/= 1000;
 		start_tm = *localtime((time_t*)(&nStartTime));
-		strftime(market.StartUpdateTime,13, "%H:%M:%S", &start_tm);
-
-		market.EndUpdateMillisec = (int)(nEndTime%1000);
+		sprintf(market.StartUpdateTime,"%02d:%02d:%02d.%03d", start_tm.tm_hour,start_tm.tm_min,start_tm.tm_sec,ms);
+		market.EndUpdateMillisec = nEndTime;
+		ms = nEndTime%1000;
 		nEndTime/= 1000;
 		end_tm =  *localtime((time_t*)(&nEndTime));
-		strftime(market.EndUpdateTime,13, "%H:%M:%S", &end_tm);
+		//strftime(market.EndUpdateTime,13, "%H:%M:%S", &end_tm);
+		sprintf(market.EndUpdateTime,"%02d:%02d:%02d.%03d", end_tm.tm_hour,end_tm.tm_min,end_tm.tm_sec,ms);
 
 		market.PeriodMillisec = 60000;
 		//CYS edit std::round

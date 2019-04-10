@@ -99,7 +99,10 @@ public:
     /** parse nano */
     string parse_nano(long nano);
     /* generate a tag with info*/
-    string gen_tag(long time,short source_id,bool is_td_trigger,bool is_hedge,int order_ref = 0,int request_id = 0);
+    string gen_md_trigger_tag(long time,short source,bool is_hedge = false);
+    string gen_trade_trigger_tag(long time,short source,bool is_hedge = false);
+    string gen_cancel_trigger_tag(long time,short source,int order_ref,int request_id,bool is_hedge = false);
+    string gen_timeout_trigger_tag(long time,short source,bool is_hedge = false);
 };
 
 DECLARE_PTR(WCStrategyUtil);
