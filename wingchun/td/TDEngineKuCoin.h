@@ -88,6 +88,14 @@ WC_NAMESPACE_START
 
         };
 
+    struct ServerInfo
+    {
+    int nPingInterval = 0;
+    int nPingTimeOut = 0;
+    std::string strEndpoint ;
+    std::string strProtocol ;
+    bool bEncrypt = true;
+    };
       
 /**
  * CTP trade engine
@@ -179,10 +187,31 @@ WC_NAMESPACE_START
 
             void genUniqueKey();
             std::string genClinetid(const std::string& orderRef);
-        private:
-             std::string m_uniqueKey;
-            struct lws_context *context = nullptr;
 
+        public:
+            void writeErrorLog(std::string strError);
+            void on_lws_data(struct lws* conn, const char* data, size_t len);
+            int lws_write_subscribe(struct lws* conn);
+            void on_lws_connection_error(struct lws* conn);
+        private:
+            void onPong(struct lws* conn);
+            void Ping(struct lws* conn);       
+            std::string makeSubscribeL3Update(const std::map<std::string,int>& mapAllSymbols);
+            bool getToken(Document& d) ;
+            bool getServers(Document& d);
+            std::string getId();
+            int64_t getMSTime();
+            void loopwebsocket();
+        private:
+            bool m_shouldPing = true; 
+            bool m_isPong = false;
+            bool m_isSubL3 = false;    
+            struct lws_context *context = nullptr;
+            std::vector<ServerInfo> m_vstServerInfos;
+            std::string m_strToken;
+            struct lws* m_conn;
+        private:
+            std::string m_uniqueKey;
             int HTTP_RESPONSE_OK = 200;
             static constexpr int scale_offset = 1e8;
 
