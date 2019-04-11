@@ -235,7 +235,7 @@ class LFL2OrderField(Structure):
 
 class LFL2TradeField(Structure):
     _fields_ = [
-        ("TradeTime", c_char * 9),	# 成交时间（秒） 
+        ("TradeTime", c_char * 32),	# 成交时间（秒） 
         ("ExchangeID", c_char * 9),	# 交易所代码 
         ("InstrumentID", c_char * 31),	# 合约代码 
         ("Price", c_int64),	# 成交价格 
@@ -244,7 +244,8 @@ class LFL2TradeField(Structure):
         ("OrderBSFlag", c_char * 2),	# 内外盘标志 
         ("MakerOrderID",c_char*64),
         ("TakerOrderID",c_char*64),
-        ("TradeID",c_char*64)
+        ("TradeID",c_char*64),
+        ("Sequence",c_char*32)
         ]
 
 class LFBarMarketDataField(Structure):
@@ -357,7 +358,7 @@ class LFRtnTradeField(Structure):
         ("Price", c_int64),	# 价格 
         ("Volume", c_uint64),	# 数量 
         ("TradingDay", c_char * 13),	# 交易日 
-        ("TradeTime", c_char * 13),	# 成交时间 
+        ("TradeTime", c_char * 32),	# 成交时间 
         ("Direction", c_char),	# 买卖方向 LfDirectionType
         ("OffsetFlag", c_char),	# 开平标志 LfOffsetFlagType
         ("HedgeFlag", c_char),	# 投机套保标志 LfHedgeFlagType
@@ -558,7 +559,7 @@ DataFieldMap = {
 		'InvestorID': 'c19',
 		'BrokerID': 'c11',
 		'OrderSysID': 'c64',
-		'TradeTime': 'c13',
+		'TradeTime': 'c32',
 		'OffsetFlag': lf.LfOffsetFlagTypeMap,
 	},
 	'LFRspAccountField': {
@@ -771,10 +772,11 @@ DataFieldMap = {
 		'OrderBSFlag': 'c2',
 		'Price': 'd',
 		'Volume': 'd',
-		'TradeTime': 'c9',
+		'TradeTime': 'c32',
         'MakerOrderID':'c64',
         'TakerOrderID':'c64',
-        'TradeID':'c64'
+        'TradeID':'c64',
+        'Sequence':'c32'
 	},
 	'LFOrderActionField': {
 		'InstrumentID': 'c31',

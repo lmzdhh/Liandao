@@ -214,7 +214,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "OrderKind:" << std::setw(6) << "(c2)" << " " << ptr->OrderKind << std::endl \
 	
 #define PRINT_L2_TRADE(ptr) ""\
-	 << std::setw(20) << "TradeTime:" << std::setw(6) << "(c9)" << " " << ptr->TradeTime << std::endl \
+	 << std::setw(20) << "TradeTime:" << std::setw(6) << "(c32)" << " " << ptr->TradeTime << std::endl \
 	 << std::setw(20) << "ExchangeID:" << std::setw(6) << "(c9)" << " " << ptr->ExchangeID << std::endl \
 	 << std::setw(20) << "InstrumentID:" << std::setw(6) << "(c31)" << " " << ptr->InstrumentID << std::endl \
 	 << std::setw(20) << "Price:" << std::setw(6) << "(d)" << " " << ptr->Price << std::endl \
@@ -224,6 +224,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "MakerOrderID:" << std::setw(6) << "(c64)" << " " << ptr->MakerOrderID << std::endl \
 	 << std::setw(20) << "TakerOrderID:" << std::setw(6) << "(c64)" << " " << ptr->TakerOrderID << std::endl \
 	 << std::setw(20) << "TradeID:" << std::setw(6) << "(c64)" << " " << ptr->TradeID << std::endl \
+	 << std::setw(20) << "Sequence:" << std::setw(6) << "(c32)" << " " << ptr->Sequence << std::endl \
 	 
 #define PRINT_BAR_MD(ptr) ""\
 	 << std::setw(20) << "TradingDay:" << std::setw(6) << "(c9)" << " " << ptr->TradingDay << std::endl \
@@ -321,7 +322,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "Price:" << std::setw(6) << "(d)" << " " << ptr->Price << std::endl \
 	 << std::setw(20) << "Volume:" << std::setw(6) << "(i)" << " " << ptr->Volume << std::endl \
 	 << std::setw(20) << "TradingDay:" << std::setw(6) << "(c13)" << " " << ptr->TradingDay << std::endl \
-	 << std::setw(20) << "TradeTime:" << std::setw(6) << "(c13)" << " " << ptr->TradeTime << std::endl \
+	 << std::setw(20) << "TradeTime:" << std::setw(6) << "(c32)" << " " << ptr->TradeTime << std::endl \
 	 << std::setw(20) << "Direction:" << std::setw(6) << "(t)" << " " << getLfDirectionType(ptr->Direction) << std::endl \
 	 << std::setw(20) << "OffsetFlag:" << std::setw(6) << "(t)" << " " << getLfOffsetFlagType(ptr->OffsetFlag) << std::endl \
 	 << std::setw(20) << "HedgeFlag:" << std::setw(6) << "(t)" << " " << getLfHedgeFlagType(ptr->HedgeFlag) << std::endl \

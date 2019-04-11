@@ -16,6 +16,7 @@ typedef char char_16[16];
 typedef char char_13[13];
 typedef char char_2[2];
 typedef char char_11[11];
+typedef char char_32[32];
 
 struct LFMarketDataField
 {
@@ -239,7 +240,7 @@ struct LFL2OrderField
 
 struct LFL2TradeField
 {
-	char_9   	TradeTime;             //成交时间（秒）
+	char_32   	TradeTime;             //成交时间（秒）
 	char_9   	ExchangeID;            //交易所代码
 	char_31  	InstrumentID;          //合约代码
 	int64_t   	Price;                 //成交价格
@@ -249,6 +250,7 @@ struct LFL2TradeField
 	char_64     MakerOrderID;
 	char_64     TakerOrderID;
 	char_64     TradeID;
+	char_32     Sequence;    
 };
 
 struct LFBarMarketDataField
@@ -361,7 +363,7 @@ struct LFRtnTradeField
 	int64_t            	Price;                 //价格
 	uint64_t            Volume;                //数量
 	char_13           	TradingDay;            //交易日
-	char_13           	TradeTime;             //成交时间
+	char_32           	TradeTime;             //成交时间
 	LfDirectionType   	Direction;             //买卖方向
 	LfOffsetFlagType  	OffsetFlag;            //开平标志
 	LfHedgeFlagType   	HedgeFlag;             //投机套保标志
