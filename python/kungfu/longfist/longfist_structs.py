@@ -235,6 +235,7 @@ class LFL2TradeField(Structure):
         ("Volume", c_uint64),	# 成交数量 
         ("OrderKind", c_char * 2),	# 报单类型 
         ("OrderBSFlag", c_char * 2),	# 内外盘标志 
+        ("Status",c_int),           #状态码 quest3 edited by fxw
         ]
 
 class LFBarMarketDataField(Structure):
@@ -256,7 +257,8 @@ class LFBarMarketDataField(Structure):
         ("Volume", c_uint64),	# 区间交易量 
         ("StartVolume", c_uint64),	# 初始总交易量 
         ("BestBidPrice", c_int64),	 
-        ("BestAskPrice", c_int64)	
+        ("BestAskPrice", c_int64),
+        ("Status",c_int),   #状态码/*quest3 edited by fxw*/
         ]
 
 class LFQryPositionField(Structure):
@@ -744,7 +746,8 @@ DataFieldMap = {
         'Volume': 'i64',	# 区间交易量 
         'StartVolume': 'i64',	# 初始总交易量 
         'BestBidPrice':'i64',	 
-        'BestAskPrice':'i64'	
+        'BestAskPrice':'i64',	
+        'Status':'i',#状态码 /*quest3 edited by fxw*/
 	},
 	'LFL2TradeField': {
 		'InstrumentID': 'c31',
@@ -754,6 +757,7 @@ DataFieldMap = {
 		'Price': 'd',
 		'Volume': 'd',
 		'TradeTime': 'c9',
+        'Status':'i',#quest3 edited by fxw
 	},
 	'LFOrderActionField': {
 		'InstrumentID': 'c31',

@@ -76,7 +76,7 @@ yjj journal -n TD_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 20
 yjj journal -n TD_RAW_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 22206
  * */
 	static TDEngineBitfinex* global_md = nullptr;
-
+/*÷–Œƒ≤‚ ‘nice*/
 /*FXW's fix starts here*/
 cpr::Response TDEngineBitfinex::cancelOrder(AccountUnitBitfinex& unit, int64_t& remoteOrderId)//v1
 {

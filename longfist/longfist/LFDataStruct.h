@@ -238,6 +238,7 @@ struct LFL2TradeField
 	uint64_t   	Volume;                //成交数量
 	char_2   	OrderKind;             //报单类型
 	char_2   	OrderBSFlag;           //内外盘标志
+    int         Status;                 //状态码 0为正常//quest3 edited by fxw
 };
 
 struct LFBarMarketDataField
@@ -260,6 +261,7 @@ struct LFBarMarketDataField
 	uint64_t   	StartVolume;           //初始总交易量
     int64_t         BestBidPrice;      
     int64_t         BestAskPrice;
+    int Status;//状态码 0为正常/*quest3 edited by fxw*/
 };
 
 struct LFQryPositionField

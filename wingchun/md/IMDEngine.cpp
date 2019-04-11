@@ -221,14 +221,15 @@ void IMDEngine::on_market_bar_data(const LFBarMarketDataField* data)
     if (isRunning)
     {
         writer->write_frame(data, sizeof(LFBarMarketDataField), source_id, MSG_TYPE_LF_BAR_MD, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "%-10s [open %ld, close %ld | low %ld, high %ld] [best bid %ld, best ask %ld]",
+        KF_LOG_DEBUG_FMT(logger, "%-10s [open %ld, close %ld | low %ld, high %ld] [best bid %ld, best ask %ld][status %d]",/*quest3 editd by fxw*/
                          data->InstrumentID,
                          data->Open,
                          data->Close,
                          data->Low,
                          data->High,
                          data->BestBidPrice,
-                         data->BestAskPrice);
+                         data->BestAskPrice,
+                        data->Status);/*quest3 editd by fxw*/
     }
 }
 
@@ -254,9 +255,10 @@ void IMDEngine::on_trade(const LFL2TradeField* trade)
     if (isRunning)
     {
         writer->write_frame(trade, sizeof(LFL2TradeField), source_id, MSG_TYPE_LF_L2_TRADE, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "%-10s [%ld, %lu]",
+        KF_LOG_DEBUG_FMT(logger, "%-10s [%ld, %lu][%d]",/*quest3 edited by fxw*/
                          trade->InstrumentID,
                          trade->Price,
-                         trade->Volume);
+                         trade->Volume,
+                         trade->Status); /*quest3 edited by fxw*/
     }
 }

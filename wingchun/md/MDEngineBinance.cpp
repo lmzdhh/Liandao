@@ -87,11 +87,16 @@ static struct lws_protocols protocols[] =
 MDEngineBinance::MDEngineBinance(): IMDEngine(SOURCE_BINANCE)
 {
     logger = yijinjing::KfLog::getLogger("MdEngine.Binance");
+    timer[0] = getTimestamp();/*quest3 edited by fxw*/
+    timer[1] = timer[2] = timer[0];/*quest3 edited by fxw*/
 }
 
 void MDEngineBinance::load(const json& j_config)
 {
     book_depth_count = j_config["book_depth_count"].get<int>();
+    /*level_threshold = j_config["level_threshold"].get<int>();//quest3 edited by fxw ,need edit the kungfu.json*/
+    refresh_normal_check_book = j_config["refresh_normal_check_book"].get<int>();/*quest3 edited by fxw ,need edit the kungfu.json*/
+    refresh_normal_check_kline = j_config["refresh_normal_check_kline"].get<int>();/*quest3 edited by fxw ,need edit the kungfu.json*/
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
@@ -261,6 +266,7 @@ void MDEngineBinance::on_lws_market_trade(const char* data, size_t len)
 	trade.Volume = std::round(std::stod(d["q"].GetString()) * scale_offset);
 	//"m": true,        // Is the buyer the market maker?
 	trade.OrderBSFlag[0] = d["m"].GetBool() ? 'B' : 'S';
+    timer[0] = getTimestamp();/*quest3 edited by fxw*/
 	on_trade(&trade);
 }
 
@@ -323,7 +329,13 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 
         strcpy(md.InstrumentID, strategy_ticker.c_str());
 	    strcpy(md.ExchangeID, "binance");
-		priceBook[ticker]=md;
+        priceBook[ticker]=md;
+        /*quest3 edited by fxw,starts here*/
+        timer[1] = getTimestamp();
+        if (md.BidLevels[0].price > md.AskLevels[0].price)
+            md.Status = 2;
+        else md.Status = 0;
+        /*quest3 edited by fxw,ends here*/
 	    on_price_book_update(&md);
 	} 
 }
@@ -382,7 +394,9 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 		{
 			market.BestBidPrice = itPrice->second.BidLevels[0].price;
 			market.BestAskPrice = itPrice->second.AskLevels[0].price;
-		}
+        }
+        timer[2] = getTimestamp();/*quest3 edited by fxw*/
+        market.Status = 0;/*quest3 edited by fxw*/
 		on_market_bar_data(&market);
 	}
 }
@@ -528,10 +542,46 @@ void MDEngineBinance::loop()
 						GetAndHandleTradeResponse(symbol, trade_count);
 				}	
 			    */
+            /*quest3 edited by fxw starts here*/
+            /*判断是否在设定时间内更新与否，*/
+            int64_t now = getTimestamp();
+            KF_LOG_INFO(logger, "quest3: update check ");
+            if ((now - timer[1]) > refresh_normal_check_book * 1000)
+            {
+                LFPriceBook20Field md;
+                memset(&md, 0, sizeof(md));
+                md.Status = 3;
+                on_price_book_update(&md);
+                KF_LOG_INFO(logger, "quest3:failed price book update");
+            }
+            if ((now - timer[2]) > refresh_normal_check_kline * 1000)
+            {
+                LFBarMarketDataField market;
+                memset(&market, 0, sizeof(market));
+                market.Status = 3;
+                on_market_bar_data(&market);
+                KF_LOG_INFO(logger, "quest3:failed kline update");
+            }
+            /*quest3 edited by fxw ends here*/
 	
 				lws_service( context, rest_get_interval_ms );
-		}
+        }
 }
+/*quest3 edited by fxw,starts here*/
+int MDEngineBinance::Get_refresh_normal_check_book()
+{
+    return refresh_normal_check_book;
+}
+int MDEngineBinance::Get_refresh_normal_check_kline()
+{
+    return refresh_normal_check_kline;
+}
+inline int64_t MDEngineBinance::getTimestamp()
+{   /*返回的是毫秒*/
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return timestamp;
+}
+/*quest3 edited by fxw,ends here*/
 
 BOOST_PYTHON_MODULE(libbinancemd)
 {

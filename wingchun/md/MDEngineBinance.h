@@ -58,6 +58,11 @@ private:
     virtual void set_reader_thread() override;
 
     CoinPairWhiteList coinPairWhiteList;
+    /*:quest3 edited by fxw,starts here*/
+    int Get_refresh_normal_check_book();
+    int Get_refresh_normal_check_kline();
+    inline int64_t getTimestamp();
+        /*quest3 edited by fxw,ends here*/
 
 private:
     ThreadPtr rest_thread;
@@ -65,6 +70,12 @@ private:
     bool logged_in = false;
 
     int book_depth_count = 5;
+    /*quest3 edited by fxw,starts here*/
+    int level_threshold = 20;
+    int refresh_normal_check_book = 120;
+    int refresh_normal_check_kline = 120;
+    int64_t timer[3];
+    /*quest3 edited by fxw ends here*/
     int trade_count = 10;
     int rest_get_interval_ms = 500;
 
