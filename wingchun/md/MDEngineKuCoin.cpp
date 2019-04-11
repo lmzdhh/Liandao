@@ -638,6 +638,7 @@ void MDEngineKuCoin::onFills(Document& json)
     strncpy(trade.MakerOrderID, strMakerOrderId.c_str(),sizeof(trade.MakerOrderID));
     strncpy(trade.TakerOrderID, strTakerOrderId.c_str(),sizeof(trade.TakerOrderID));
     strncpy(trade.TradeID, strTradeId.c_str(),sizeof(trade.TradeID));
+     strncpy(trade.Sequence, strSequence.c_str(),sizeof(trade.Sequence));
     //strncpy(trade.MakerOrderID, strMakerOrderId.c_str(),sizeof(trade.MakerOrderID));
     trade.Price = std::round(std::stod(jsonData["price"].GetString()) * scale_offset);
     trade.Volume = std::round(std::stod(jsonData["size"].GetString()) * scale_offset);

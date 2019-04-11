@@ -1081,7 +1081,7 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     std::string strClientId = genClinetid(data->OrderRef);
     std::lock_guard<std::mutex> lck(*m_mutexOrder);
     send_order(unit, ticker.c_str(),strClientId, GetSide(data->Direction).c_str(),
-               GetType(data->OrderPriceType).c_str(), fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, data->OrderRef,d);
+               GetType(data->OrderPriceType).c_str(), fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, data->OrderRef,is_post_only(data),d);
     //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
     //not expected response
     if(!d.IsObject())
@@ -1536,7 +1536,7 @@ void TDEngineKuCoin::get_account(AccountUnitKuCoin& unit, Document& json)
 }
  * */
 std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::string& strClientId,
-                                                    const char *side, const char *type, double size, double price,const string& strOrderRef)
+                                                    const char *side, const char *type, double size, double price,const string& strOrderRef,bool isPostOnly)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);
@@ -1550,7 +1550,8 @@ std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::s
     writer.String(code);
     writer.Key("type");
     writer.String(type);
-
+    writer.Key("stp");
+    writer.String("CO");
     if(strcmp("market",type) != 0)
     {
         writer.Key("price");
@@ -1558,14 +1559,17 @@ std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::s
     }
     writer.Key("size");
     writer.Double(size);
-     writer.Key("stp");
-    writer.String("CO");
+    if(isPostOnly)
+    {
+        writer.Key("postOnly");
+        writer.Bool(isPostOnly);
+    }
     writer.EndObject();
     return s.GetString();
 }
 
 void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,const std::string& strClientId,
-                                 const char *side, const char *type, double size, double price, double funds, const std::string& strOrderRef,Document& json)
+                                 const char *side, const char *type, double size, double price, double funds, const std::string& strOrderRef, bool isPostOnly,Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
 
@@ -1576,7 +1580,7 @@ void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,const 
         should_retry = false;
 
         std::string requestPath = "/api/v1/orders";
-        response = Post(requestPath,createInsertOrdertring(code, strClientId,side, type, size, price,strOrderRef),unit);
+        response = Post(requestPath,createInsertOrdertring(code, strClientId,side, type, size, price,strOrderRef,isPostOnly),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
                                                   " (response.error.message) " << response.error.message <<
