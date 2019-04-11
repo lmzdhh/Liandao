@@ -643,8 +643,10 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         //测试日志
         KF_LOG_DEBUG(logger, "[req_order_insert] add InstrumentID into UFR_data_map  instrumentID " << 
                                 " InstrumentID " << data->InstrumentID <<
+                                " UFR_data_map.size " <<UFR_data_map.size() <<
                                 " enstrument_total " << UFR_data_map[data->InstrumentID][0] <<
-                                " volume_total " << UFR_data_map[data->InstrumentID][1]);
+                                " volume_total " << UFR_data_map[data->InstrumentID][1] <<
+                                );
 
     }
 
@@ -652,6 +654,17 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     if ((last_UFR_timestamp / 600000) != (timestamp / 600000))
     {
+
+        //测试日志
+        KF_LOG_DEBUG(logger, "[req_order_insert] reset UFR_data_map per 10mins " <<
+                                " UFR_data_map.size " << UFR_data_map.size() <<
+                                " InstrumentID " << data->InstrumentID <<
+                                " enstrument_total " << UFR_data_map[data->InstrumentID][0] <<
+                                " volume_total " << UFR_data_map[data->InstrumentID][1] <<
+
+                                " last_UFR_timestamp " << last_UFR_timestamp <<
+                                " current UFR_timestamp " << timestamp);
+
         last_UFR_timestamp = timestamp;
         std::map<string, uint64_t(*)>::iterator iter;
         //reset
@@ -664,6 +677,9 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         //测试日志
         KF_LOG_DEBUG(logger, "[req_order_insert] reset UFR_data_map per 10mins " <<
                                 " UFR_data_map.size " << UFR_data_map.size() <<
+                                " InstrumentID " << data->InstrumentID <<
+                                " enstrument_total " << UFR_data_map[data->InstrumentID][0] <<
+                                " volume_total " << UFR_data_map[data->InstrumentID][1] <<
                                 " last_UFR_timestamp " << last_UFR_timestamp <<
                                 " current UFR_timestamp " << timestamp);
     }
@@ -672,14 +688,18 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     if ((UFR_data_map[data->InstrumentID][0]+1) >= UFR_entrust_lower_limit)
     {
 
+        //计算UFR
+        float UFR = 1 - (float)UFR_data_map[data->InstrumentID][1]/(UFR_data_map[data->InstrumentID][0]+1);
+
         //测试日志
         KF_LOG_DEBUG(logger, "[req_order_insert] enstrument_total is reaching to UFR_entrust_lower_limit " <<
                                 "InstrumentID "<< data->InstrumentID <<
                                 " enstrument_total " << UFR_data_map[data->InstrumentID][0] <<
+                                " volume_total " << UFR_data_map[data->InstrumentID][1] <<
+                                " current UFR " << UFR <<
                                 " UFR_entrust_lower_limit " << UFR_entrust_lower_limit);
 
-        //计算UFR
-        float UFR = 1 - (float)UFR_data_map[data->InstrumentID][1]/(UFR_data_map[data->InstrumentID][0]+1);
+        
         if (UFR >= UFR_limit)
         {
 
@@ -780,7 +800,8 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
     //测试日志
             KF_LOG_DEBUG(logger, "[onRtnNewOrder] enstrument_total++ " << 
                                 " InstrumentID "<< data->InstrumentID <<
-                                " current enstrument_total " << UFR_data_map[data->InstrumentID][0] 
+                                " current enstrument_total " << UFR_data_map[data->InstrumentID][0] <<
+                                " volume_total " << UFR_data_map[data->InstrumentID][1] 
                                  );
 
     on_rtn_order(&rtn_order);
@@ -864,6 +885,16 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
         rtn_trade.Volume = std::round(stod(result["executedQty"].GetString()) * scale_offset);
         rtn_trade.Price = std::round(stod(result["price"].GetString()) * scale_offset);
 
+        //测试日志
+            KF_LOG_DEBUG(logger, "[onRspNewOrderRESULT] before on_rtn_trade " << 
+                                " InstrumentID "<< rtn_trade.InstrumentID <<
+                                " enstrument_total " << UFR_data_map[data->InstrumentID][0] <<
+                                " volume_total " << UFR_data_map[data->InstrumentID][1] <<
+                                " OrderRef " << rtn_trade.OrderRef <<
+                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
+                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
+                                 );
+
         on_rtn_trade(&rtn_trade);
 
         //---------------成交总量+1------------------------
@@ -876,8 +907,11 @@ void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, Account
             //测试日志
             KF_LOG_DEBUG(logger, "[onRspNewOrderRESULT] add OrderRef into UFR_orderRef_status_map " << 
                                 " InstrumentID "<< rtn_trade.InstrumentID <<
+                                " enstrument_total " << UFR_data_map[data->InstrumentID][0] <<
+                                " volume_total " << UFR_data_map[data->InstrumentID][1] <<
                                 " OrderRef " << rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef]
+                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
+                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
                                  );
         }
 
@@ -1007,6 +1041,17 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
 
         rtn_trade.Volume = volume;
         rtn_trade.Price = price;
+
+        //测试日志
+            KF_LOG_DEBUG(logger, "[onRspNewOrderFULL] before on_rtn_trade " << 
+                                " InstrumentID "<< rtn_trade.InstrumentID <<
+                                " enstrument_total " << UFR_data_map[data->InstrumentID][0] <<
+                                " volume_total " << UFR_data_map[data->InstrumentID][1] <<
+                                " OrderRef " << rtn_trade.OrderRef <<
+                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
+                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
+                                 );
+
         on_rtn_trade(&rtn_trade);
 
         //---------------成交总量+1------------------------
@@ -1018,8 +1063,11 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
             //测试日志
             KF_LOG_DEBUG(logger, "[onRspNewOrderFULL] add OrderRef into UFR_orderRef_status_map " << 
                                 " InstrumentID "<< rtn_trade.InstrumentID <<
+                                " enstrument_total " << UFR_data_map[data->InstrumentID][0] <<
+                                " volume_total " << UFR_data_map[data->InstrumentID][1] <<
                                 " OrderRef " << rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] 
+                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
+                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
                                  );
         }
 
@@ -1035,7 +1083,8 @@ void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUn
                                 " OrderRef "<< rtn_trade.OrderRef <<
                                 " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
                                 " enstrument_total " << UFR_data_map[rtn_trade.InstrumentID][0] <<
-                                " current volume_total " << UFR_data_map[rtn_trade.InstrumentID][1] 
+                                " current volume_total " << UFR_data_map[rtn_trade.InstrumentID][1] <<
+                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
                                  );
         }
 
@@ -1437,6 +1486,17 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                 }
             }
             if(match_one) {
+
+                //测试日志
+                KF_LOG_DEBUG(logger, "[retrieveTradeStatus] before on_rtn_trade " << 
+                                " InstrumentID "<< rtn_trade.InstrumentID <<
+                                " enstrument_total " << UFR_data_map[rtn_trade.InstrumentID][0] <<
+                                " volume_total " << UFR_data_map[rtn_trade.InstrumentID][1] <<
+                                " OrderRef " << rtn_trade.OrderRef <<
+                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
+                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
+                                 );
+
                 on_rtn_trade(&rtn_trade);
 
                 //---------------成交总量+1------------------------
@@ -1448,8 +1508,11 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                     //测试日志
                     KF_LOG_DEBUG(logger, "[retrieveTradeStatus] add OrderRef into UFR_orderRef_status_map " << 
                                         " InstrumentID "<< rtn_trade.InstrumentID <<
+                                        " enstrument_total " << UFR_data_map[rtn_trade.InstrumentID][0] <<
+                                        " volume_total " << UFR_data_map[rtn_trade.InstrumentID][1] <<
                                         " OrderRef " << rtn_trade.OrderRef <<
-                                        " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] 
+                                        " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
+                                        " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size() 
                                          );
                 }
 
@@ -1465,7 +1528,8 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
                                         " OrderRef "<< rtn_trade.OrderRef <<
                                         " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
                                         " enstrument_total " << UFR_data_map[rtn_trade.InstrumentID][0] <<
-                                        " current volume_total " << UFR_data_map[rtn_trade.InstrumentID][1]
+                                        " current volume_total " << UFR_data_map[rtn_trade.InstrumentID][1] <<
+                                        " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
                                          );
                 }
 
@@ -1495,6 +1559,16 @@ void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
         {
             if(! isExistSymbolInPendingBinanceOrderStatus(unit, tradeStatusIterator->InstrumentID, rtn_trade.OrderRef)) {
                 //all the OnRtnOrder is finished.
+
+                //测试日志
+                    KF_LOG_DEBUG(logger, "[retrieveTradeStatus] before OrderRef has not existed and remove from UFR_orderRef_status_map " << 
+                                        " InstrumentID "<< rtn_trade.InstrumentID <<
+                                        " OrderRef "<< rtn_trade.OrderRef <<
+                                        " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
+                                        " enstrument_total " << UFR_data_map[rtn_trade.InstrumentID][0] <<
+                                        " current volume_total " << UFR_data_map[rtn_trade.InstrumentID][1] <<
+                                        " UFR_orderRef_status_map.size "<<UFR_orderRef_status_map.size()
+                                         );
 
                 //订单已经不存在，从 UFR_orderRef_status_map 中剔除orderref
                 if (UFR_orderRef_status_map.find(rtn_trade.OrderRef) != UFR_orderRef_status_map.end())
