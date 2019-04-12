@@ -66,6 +66,14 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "BidLevelCount:" << std::setw(6) << "(i)" << " " << ptr->BidLevelCount << std::endl \
 	 << std::setw(20) << "AskLevelCount:" << std::setw(6) << "(i)" << " " << ptr->AskLevelCount << std::endl \
 
+#define PRINT_FUNDING(ptr) ""\
+	 << std::setw(20) << "InstrumentID:" << std::setw(6) << "(c31)" << " " << ptr->InstrumentID << std::endl \
+	 << std::setw(20) << "ExchangeID:" << std::setw(6) << "(c9)" << " " << ptr->ExchangeID << std::endl \
+	 << std::setw(20) << "TimeStamp:" << std::setw(6) << "(i64)" << " " << ptr->TimeStamp << std::endl \
+	 << std::setw(20) << "Interval:" << std::setw(6) << "(i64)" << " " << ptr->Interval << std::endl \
+	 << std::setw(20) << "Rate:" << std::setw(6) << "(d)" << " " << ptr->Rate << std::endl \
+	 << std::setw(20) << "RateDaily:" << std::setw(6) << "(d)" << " " << ptr->RateDaily << std::endl \
+
 #define PRINT_L2_MD(ptr) ""\
 	 << std::setw(20) << "TradingDay:" << std::setw(6) << "(c9)" << " " << ptr->TradingDay << std::endl \
 	 << std::setw(20) << "TimeStamp:" << std::setw(6) << "(c9)" << " " << ptr->TimeStamp << std::endl \
@@ -268,7 +276,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "StopPrice:" << std::setw(6) << "(d)" << " " << ptr->StopPrice << std::endl \
 	 << std::setw(20) << "IsAutoSuspend:" << std::setw(6) << "(i)" << " " << (int)ptr->IsAutoSuspend << std::endl \
 	 << std::setw(20) << "ContingentCondition:" << std::setw(6) << "(t)" << " " << getLfContingentConditionType(ptr->ContingentCondition) << std::endl \
-	 << std::setw(20) << "MiscInfo:" << std::setw(6) << "(c30)" << " " << ptr->MiscInfo << std::endl \
+	 << std::setw(20) << "MiscInfo:" << std::setw(6) << "(c64)" << " " << ptr->MiscInfo << std::endl \
 	 << std::setw(20) << "MassOrderSeqId:" << std::setw(6) << "(i)" << " " << ptr->MassOrderSeqId << std::endl \
 	 << std::setw(20) << "MassOrderIndex:" << std::setw(6) << "(i)" << " " << ptr->MassOrderIndex << std::endl \
 	 << std::setw(20) << "MassOrderTotalNum:" << std::setw(6) << "(i)" << " " << ptr->MassOrderTotalNum << std::endl \
@@ -328,6 +336,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "LimitPrice:" << std::setw(6) << "(d)" << " " << ptr->LimitPrice << std::endl \
 	 << std::setw(20) << "VolumeChange:" << std::setw(6) << "(i)" << " " << ptr->VolumeChange << std::endl \
 	 << std::setw(20) << "KfOrderID:" << std::setw(6) << "(i)" << " " << (int)ptr->KfOrderID << std::endl \
+	 << std::setw(20) << "MiscInfo:" << std::setw(6) << "(c64)" << " " << ptr->MiscInfo << std::endl \
 	 << std::setw(20) << "MassOrderSeqId:" << std::setw(6) << "(i)" << " " << ptr->MassOrderSeqId << std::endl \
 	 << std::setw(20) << "MassOrderIndex:" << std::setw(6) << "(i)" << " " << ptr->MassOrderIndex << std::endl \
 	 << std::setw(20) << "MassOrderTotalNum:" << std::setw(6) << "(i)" << " " << ptr->MassOrderTotalNum << std::endl \
@@ -578,6 +587,12 @@ inline void printData(const void* data, short msg_type)
 	 			std::cout << std::setw(20) << "AskLevel[" << i << "]:" << std::setw(6) 
 					<< "(i)" << " " << ptr->AskLevels[i].volume << "@" << ptr->AskLevels[i].price << std::endl;
 	 		}
+			break;
+		}
+		case MSG_TYPE_LF_FUNDING:
+		{
+			LFFundingField* ptr = (LFFundingField*)data;
+			std::cout << PRINT_FUNDING(ptr);
 			break;
 		}
 		case MSG_TYPE_LF_L2_INDEX:

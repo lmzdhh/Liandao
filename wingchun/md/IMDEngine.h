@@ -84,6 +84,8 @@ public:
     void on_price_book_update(const LFPriceBook20Field* data);
 
     void on_trade(const LFL2TradeField* trade);
+
+    void on_funding_update(const LFFundingField* data);
 };
 
 DECLARE_PTR(IMDEngine);

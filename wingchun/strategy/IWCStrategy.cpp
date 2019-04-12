@@ -118,6 +118,12 @@ void IWCStrategy::on_price_book_update(const LFPriceBook20Field* data, short sou
 					<< " (bidcount)" << data->BidLevelCount << " (askcount)" << data->AskLevelCount);
 }
 
+void IWCStrategy::on_funding_update(const LFFundingField* data, short source, long rcv_time)
+{
+    KF_LOG_DEBUG(logger, "[funding_update] (source)" << source << " (ticker)" << data->InstrumentID 
+				<< " (rate)" << data->Rate << " (rate_daily)" << data->RateDaily);
+}
+
 void IWCStrategy::on_market_data_level2(const LFL2MarketDataField* data, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[market_data_level2] (source)" << source << " (ticker)" << data->InstrumentID << " (lp)" << data->LastPrice);
@@ -252,32 +258,32 @@ bool IWCStrategy::td_is_connected(short source) const
     }
 
 /** util functions, check before calling WCStrategyUtil */
-int IWCStrategy::insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int IWCStrategy::insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     CHECK_TD_READY(source);
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
-    return util->insert_market_order(source, instrument_id, exchange_id, volume, direction, offset);
+    return util->insert_market_order(source, instrument_id, exchange_id, volume, direction, offset,misc_info);
 }
 
-int IWCStrategy::insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int IWCStrategy::insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     CHECK_TD_READY(source);
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
-    return util->insert_limit_order(source, instrument_id, exchange_id, price, volume, direction, offset);
+    return util->insert_limit_order(source, instrument_id, exchange_id, price, volume, direction, offset,misc_info);
 }
 
-int IWCStrategy::insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int IWCStrategy::insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     CHECK_TD_READY(source);
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
-    return util->insert_fok_order(source, instrument_id, exchange_id, price, volume, direction, offset);
+    return util->insert_fok_order(source, instrument_id, exchange_id, price, volume, direction, offset,misc_info);
 }
 
-int IWCStrategy::insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int IWCStrategy::insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     CHECK_TD_READY(source);
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
-    return util->insert_fak_order(source, instrument_id, exchange_id, price, volume, direction, offset);
+    return util->insert_fak_order(source, instrument_id, exchange_id, price, volume, direction, offset,misc_info);
 }
 
 int IWCStrategy::req_position(short source)
@@ -290,10 +296,10 @@ int IWCStrategy::req_position(short source)
     return util->req_position(source);
 }
 
-int IWCStrategy::cancel_order(short source, int order_id)
+int IWCStrategy::cancel_order(short source, int order_id,string misc_info)
 {
     CHECK_TD_READY(source);
-    return util->cancel_order(source, order_id);
+    return util->cancel_order(source, order_id,misc_info);
 }
 
 bool IWCStrategy::connectMonitor(const std::string &url, const std::string &name, const std::string &type)
