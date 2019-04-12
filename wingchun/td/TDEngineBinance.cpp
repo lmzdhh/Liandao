@@ -645,7 +645,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
                                 " InstrumentID " << data->InstrumentID <<
                                 " UFR_data_map.size " <<UFR_data_map.size() <<
                                 " enstrument_total " << UFR_data_map[data->InstrumentID][0] <<
-                                " volume_total " << UFR_data_map[data->InstrumentID][1] <<
+                                " volume_total " << UFR_data_map[data->InstrumentID][1] 
                                 );
 
     }
