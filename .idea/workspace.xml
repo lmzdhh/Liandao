@@ -9,7 +9,172 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="97c8f5aa-505e-4ec4-9669-26669bf641fd" name="Default Changelist" comment="" />
+    <list default="true" id="97c8f5aa-505e-4ec4-9669-26669bf641fd" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/liandao.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.vscode/ipch/96f0bdd6fe25ad2a/MDENGINEBINANCE.ipch" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.vscode/ipch/c29fbc1e4ff8ccde/STRATEGYUTIL.ipch" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/wingchun/td/TDEngineHuobi.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/wingchun/td/TDEngineHuobi.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/ctp/v6.3.6_20160606/lib/libthostmduserapi.so" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/ctp/v6.3.6_20160606/lib/libthostmduserapi.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/ctp/v6.3.6_20160606/lib/libthosttraderapi.so" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/ctp/v6.3.6_20160606/lib/libthosttraderapi.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/changelist.txt" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/changelist.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP API常见问题.doc" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP API常见问题.doc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP QuoteAPI使用UDP常见问题.doc" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP QuoteAPI使用UDP常见问题.doc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP 常见问题解答.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP 常见问题解答.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP模拟测试环境常见问题.doc" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP模拟测试环境常见问题.doc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP金融风控指标.doc" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP金融风控指标.doc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP错误代码速查表.doc" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/XTP错误代码速查表.doc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/html_quote_api_1.1.16.9.zip" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/html_quote_api_1.1.16.9.zip" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/html_trade_api_1.1.16.9.zip" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/html_trade_api_1.1.16.9.zip" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/quote_api_1.1.16.9.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/quote_api_1.1.16.9.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/trade_api_1.1.16.9.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/doc/trade_api_1.1.16.9.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xoms_api_fund_struct.h" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xoms_api_fund_struct.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xoms_api_struct.h" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xoms_api_struct.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xquote_api_struct.h" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xquote_api_struct.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xtp_api_data_type.h" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xtp_api_data_type.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xtp_api_struct.h" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xtp_api_struct.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xtp_api_struct_common.h" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xtp_api_struct_common.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xtp_quote_api.h" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xtp_quote_api.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xtp_trader_api.h" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/include/xtp_trader_api.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/lib/libsodium.so" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/lib/libsodium.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/lib/libsodium.so.18" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/lib/libsodium.so.18" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/lib/libxtpquoteapi.so" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/lib/libxtpquoteapi.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/lib/libxtptraderapi.so" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/api/xtp/XTP_API_20171115_1.1.16.9/lib/libxtptraderapi.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/longfist/longfist/LFConstants.h" beforeDir="false" afterPath="$PROJECT_DIR$/longfist/longfist/LFConstants.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/python/kungfu/wingchun/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/python/kungfu/wingchun/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/python/kungfu/wingchun/engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/python/kungfu/wingchun/engine.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/python/kungfu/wingchun/supervisor.py" beforeDir="false" afterPath="$PROJECT_DIR$/python/kungfu/wingchun/supervisor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rpm/bin/wingchun" beforeDir="false" afterPath="$PROJECT_DIR$/rpm/bin/wingchun" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rpm/bin/yjj" beforeDir="false" afterPath="$PROJECT_DIR$/rpm/bin/yjj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rpm/etc/supervisor/supervisord.conf" beforeDir="false" afterPath="$PROJECT_DIR$/rpm/etc/supervisor/supervisord.conf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rpm/etc/sysconfig/kungfu" beforeDir="false" afterPath="$PROJECT_DIR$/rpm/etc/sysconfig/kungfu" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rpm/etc/systemd/user/kungfu.service" beforeDir="false" afterPath="$PROJECT_DIR$/rpm/etc/systemd/user/kungfu.service" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rpm/scripts/post_install.sh" beforeDir="false" afterPath="$PROJECT_DIR$/rpm/scripts/post_install.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rpm/scripts/pre_install.sh" beforeDir="false" afterPath="$PROJECT_DIR$/rpm/scripts/pre_install.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/cpr/lib/libcpr.so" beforeDir="false" afterPath="$PROJECT_DIR$/utils/cpr/lib/libcpr.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/cpr/lib/libcrypto.so" beforeDir="false" afterPath="$PROJECT_DIR$/utils/cpr/lib/libcrypto.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/cpr/lib/libcrypto.so.10" beforeDir="false" afterPath="$PROJECT_DIR$/utils/cpr/lib/libcrypto.so.10" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/cpr/lib/libcurl.so" beforeDir="false" afterPath="$PROJECT_DIR$/utils/cpr/lib/libcurl.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/cpr/lib/libssl.so" beforeDir="false" afterPath="$PROJECT_DIR$/utils/cpr/lib/libssl.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/cpr/lib/libssl.so.10" beforeDir="false" afterPath="$PROJECT_DIR$/utils/cpr/lib/libssl.so.10" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/gzip/compress.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/utils/gzip/compress.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/gzip/config.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/utils/gzip/config.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/gzip/decompress.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/utils/gzip/decompress.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/gzip/utils.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/utils/gzip/utils.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/gzip/version.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/utils/gzip/version.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/libwebsockets/lib/libwebsockets.so.13" beforeDir="false" afterPath="$PROJECT_DIR$/utils/libwebsockets/lib/libwebsockets.so.13" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libCppUnit.so.1" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libCppUnit.so.1" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libCppUnitd.so.1" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libCppUnitd.so.1" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoCppParser.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoCppParser.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoCppParser.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoCppParser.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoCppParserd.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoCppParserd.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoCppParserd.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoCppParserd.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoCrypto.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoCrypto.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoCrypto.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoCrypto.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoCryptod.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoCryptod.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoCryptod.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoCryptod.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoData.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoData.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoData.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoData.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoDataMySQL.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoDataMySQL.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoDataMySQLd.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoDataMySQLd.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoDataODBC.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoDataODBC.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoDataODBCd.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoDataODBCd.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoDataSQLite.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoDataSQLite.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoDataSQLited.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoDataSQLited.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoDatad.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoDatad.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoDatad.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoDatad.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoEncodings.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoEncodings.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoEncodings.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoEncodings.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoEncodingsd.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoEncodingsd.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoEncodingsd.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoEncodingsd.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoFoundation.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoFoundation.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoFoundation.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoFoundation.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoFoundationd.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoFoundationd.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoFoundationd.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoFoundationd.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoJSON.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoJSON.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoJSON.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoJSON.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoJSONd.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoJSONd.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoJSONd.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoJSONd.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoNet.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoNet.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoNet.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoNet.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoNetSSL.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoNetSSL.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoNetSSLd.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoNetSSLd.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoNetd.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoNetd.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoNetd.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoNetd.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoUtil.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoUtil.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoUtild.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoUtild.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoXML.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoXML.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoXML.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoXML.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoXMLd.so.60" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoXMLd.so.60" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoXMLd.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoXMLd.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoZip.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoZip.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/poco/lib/libPocoZipd.so.61" beforeDir="false" afterPath="$PROJECT_DIR$/utils/poco/lib/libPocoZipd.so.61" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/zlib/lib/libz.so.1.2.11" beforeDir="false" afterPath="$PROJECT_DIR$/utils/zlib/lib/libz.so.1.2.11" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/base/IEngine.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/base/IEngine.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/base/IEngine.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/base/IEngine.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/base/WC_DECLARE.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/base/WC_DECLARE.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/IMDEngine.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/IMDEngine.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/IMDEngine.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/IMDEngine.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineBinance.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineBinance.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineBinance.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineBinance.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineBitfinex.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineBitfinex.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineBitfinex.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineBitfinex.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineBitmax.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineBitmax.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineBitmax.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineBitmax.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineCTP.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineCTP.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineCTP.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineCTP.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineCoinmex.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineCoinmex.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineCoinmex.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineCoinmex.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineHitBTC.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineHitBTC.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineHitBTC.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineHitBTC.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineIndodax.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineIndodax.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineMock.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineMock.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineMock.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineMock.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineOceanEx.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineOceanEx.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineOceanEx.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineOceanEx.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineXTP.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineXTP.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/MDEngineXTP.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/MDEngineXTP.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/libs/libcrypto.so" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/libs/libcrypto.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/libs/libcrypto.so.10" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/libs/libcrypto.so.10" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/libs/libcurl.so" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/libs/libcurl.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/libs/libssl.so" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/libs/libssl.so" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/md/libs/libssl.so.10" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/md/libs/libssl.so.10" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/strategy/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/strategy/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/strategy/cpp_demo/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/strategy/cpp_demo/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/strategy/manual_strategy/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/strategy/manual_strategy/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/strategy/py_demo/band_demo_strategy.py" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/strategy/py_demo/band_demo_strategy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/ITDEngine.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/ITDEngine.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/ITDEngine.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/ITDEngine.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineBinance.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineBinance.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineBinance.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineBinance.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineBitfinex.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineBitfinex.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineBitfinex.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineBitfinex.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineBitmax.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineBitmax.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineBitmax.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineBitmax.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineCTP.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineCTP.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineCTP.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineCTP.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineCoinmex.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineCoinmex.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineCoinmex.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineCoinmex.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineHitBTC.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineHitBTC.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineHitBTC.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineHitBTC.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineIndodax.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineIndodax.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineIndodax.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineIndodax.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineMock.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineMock.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineMock.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineMock.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineOceanEx.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineOceanEx.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineOceanEx.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineOceanEx.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineXTP.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineXTP.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/td/TDEngineXTP.h" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/td/TDEngineXTP.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wingchun/tool/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/wingchun/tool/CMakeLists.txt" afterDir="false" />
+    </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -22,9 +187,25 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineHuobi.h">
           <provider selected="true" editor-type-id="text-editor" />
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineXTP.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="988">
+              <caret line="85" column="35" lean-forward="true" selection-start-line="85" selection-start-column="35" selection-end-line="85" selection-end-column="35" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineXTP.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-5794" />
+          </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
@@ -67,8 +248,29 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="ProjectPane" />
       <pane id="Scope" />
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="liandao" type="b2602c69:ProjectViewProjectNode" />
+              <item name="liandao" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="liandao" type="b2602c69:ProjectViewProjectNode" />
+              <item name="liandao" type="462c0819:PsiDirectoryNode" />
+              <item name="wingchun" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="liandao" type="b2602c69:ProjectViewProjectNode" />
+              <item name="liandao" type="462c0819:PsiDirectoryNode" />
+              <item name="wingchun" type="462c0819:PsiDirectoryNode" />
+              <item name="td" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -106,16 +308,18 @@
       <workItem from="1554789684209" duration="11107000" />
       <workItem from="1554808457880" duration="1520000" />
       <workItem from="1555028274109" duration="696000" />
+      <workItem from="1555031004660" duration="236000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="14135000" />
+    <option name="totallyTimeSpent" value="14371000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-7" y="-7" width="1550" height="878" extended-state="6" />
+    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.26340482" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.26675603" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -127,7 +331,7 @@
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Database Changes" order="7" />
       <window_info anchor="bottom" id="Terminal" order="8" />
-      <window_info active="true" anchor="bottom" id="Event Log" order="9" side_tool="true" visible="true" weight="0.32931727" />
+      <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" visible="true" weight="0.3297587" />
       <window_info anchor="bottom" id="Version Control" order="10" weight="0.3297587" />
       <window_info anchor="bottom" id="CMake" order="11" visible="true" weight="0.17962466" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
@@ -260,23 +464,25 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineKuCoin.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="456">
-          <caret line="24" column="19" lean-forward="true" selection-start-line="24" selection-start-column="19" selection-end-line="24" selection-end-column="19" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineKuCoin.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-342" />
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineKuCoin.cpp" />
+    <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineKuCoin.h" />
     <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineHuobi.h">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineHuobi.cpp">
       <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineXTP.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-5794" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/wingchun/td/TDEngineXTP.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="988">
+          <caret line="85" column="35" lean-forward="true" selection-start-line="85" selection-start-column="35" selection-end-line="85" selection-end-column="35" />
+        </state>
+      </provider>
     </entry>
   </component>
 </project>
