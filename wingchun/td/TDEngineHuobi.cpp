@@ -1,4 +1,4 @@
-#include "TDEngineOceanEx.h"
+#include "TDEngineHuobi.h"
 #include "longfist/ctp.h"
 #include "longfist/LFUtils.h"
 #include "TypeConvert.hpp"
@@ -39,140 +39,503 @@ using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 USING_WC_NAMESPACE
 
-std::string g_private_key=R"(-----BEGIN RSA PRIVATE KEY-----
-MIIEowIBAAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8h
-Q1r6M6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmss
-U8zcLSzm72WTbC7HM8St2Ky5V4eCLHJsqCB/Je1Q/F6/K+pMMzPumornUpDgr6El
-UjjOgroRNnl5mgqB466Op1Xfnl/nLsHXetDPZ2Ekp4iQmCl5zR7sYMY0tUviVbjE
-GEQ6VobnkkZDH/pnjrdjWKW+Un6cO/WLDKKdsgloCBnFRH8jyAiifwTItTP+ejmK
-uqsjLUWcNJ/MtGvhTyxPd4z18SsgQ3g6Goc+swIBAwKCAQEAiP0oCPESE+d4C0Wr
-1rEQCvK8hlazSmCwzpThNaGE/ibqBuoWLOdRd8qIeP+H9t1BYfGnCYnh4JOzmfS6
-WnFDUMdi8w3erEloqotOUzRbG6Y6tEdy4oiSyMiZ9O5iSB8vd9hz5ch7j6+sHaGd
-xWr/bp41/ZR/cpwyzM1JvFyaNwoOJgA81SDUZjmZpfZYH7tc52JhlBJroJ3rQJFx
-O1yvLvMnM5akWhdVDtsRy2WUo5ToVbTFYOxqevstxwKNTpECxvl4+Rn8bIuzjo1b
-vQLWIepb6v9CFb0QNgP6IodxUg4vaNni/NCaD9Mc2mJiriFgpBKKwcdNgFIpveHP
-F9n6awKBgQDy4annCKGYJa+tD3IoQDDrugzxTZQ8eEXMRct1HUS9nhz4aI1Q8rF6
-BLbbrtNG6tVWfw45GdOMCQIVXTEkuoZkLHBx/Yr1mNyfNtE/3ej11pk8Lfr7K5Ie
-QaOX4ckpD6cI2t+4yI1DH2DNwYe17W5bcRSMpXIhRwUSJL9DQqZ50QKBgQDYlPbj
-CeX3w7P9rhXNKkCKzo4K+6YBtS06CBw4hIELAtdxcZlJHlUAMh92ANqO1RcvVhti
-7Q4OlQwNipFKb5p/N9C75XPOFtBvr1BBkzVmqJCh+Z/m+FFtNV8TaXB1qneughL9
-duT49igjK4SCwct05/vyr2/gaarPgeZANBnNQwKBgQCh68aaBcEQGR/ItPbFgCCd
-JrNLiQ19pYPdg9z4vi3Tvr368F419yD8AySSdIzZ8eOO/17Qu+JdW1a46Mtt0a7t
-cvWhU7H5EJMUzzYqk/Cj5GYoHqdSHQwUK8JlQTDGCm9bPJUl2wjXakCJK6/OnkmS
-S2MIbkwWL1i2wyos1xmmiwKBgQCQY09CBplP181TyWPeHCsHNF6x/RlWeMjRWr17
-AwCyAeT2S7uGFDiqzBT5VecJ42TKOWeXSLQJuLKzsbYxn7xUz+B9Q6KJZIr1H4rW
-YiOZxbXBURVEpYueI5S3m6BOcaUfAWH+T0NQpBrCHQMB1oejRVKhykqVm8c1AUQq
-zWaI1wKBgB6TWnnVGhx2jTei8YnD//IYplv8/kErxwHaC2yz7qvdBQB+ljuimGzm
-xefSDq993EWmKGYJ/IiiRoue2x6IX4EcrnG2hZ2sBfgjvjxGSm1s0w81XLMcMnL2
-+ItII2MKryk0lMyRyfVyaMr52wbXSo7Lali5wweXvxUCU1CGGUJD
------END RSA PRIVATE KEY-----
-)";
-
-std::string g_public_key=R"(
------BEGIN RSA PUBLIC KEY-----
-MIIBCAKCAQEAzXu8DWmbHds0EOiBwgmYEGwayYIM75EJNd9R0HJHfTpfCl8hQ1r6
-M6/MtX9L8kviEup6jk7S0N2NZu8Xh6nk+SsUbJTOAm4c/9D1fM6IqXlYDmssU8zc
-LSzm72WTbC7HM8St2Ky5V4eCLHJsqCB/Je1Q/F6/K+pMMzPumornUpDgr6ElUjjO
-groRNnl5mgqB466Op1Xfnl/nLsHXetDPZ2Ekp4iQmCl5zR7sYMY0tUviVbjEGEQ6
-VobnkkZDH/pnjrdjWKW+Un6cO/WLDKKdsgloCBnFRH8jyAiifwTItTP+ejmKuqsj
-LUWcNJ/MtGvhTyxPd4z18SsgQ3g6Goc+swIBAw==
------END RSA PUBLIC KEY-----
-)";
-TDEngineOceanEx::TDEngineOceanEx(): ITDEngine(SOURCE_OCEANEX)
+TDEngineHuoBi::TDEngineHuoBi(): ITDEngine(SOURCE_HUOBI)
 {
-    logger = yijinjing::KfLog::getLogger("TradeEngine.OceanEx");
-    KF_LOG_INFO(logger, "[TDEngineOceanEx]");
+    logger = yijinjing::KfLog::getLogger("TradeEngine.Huobi");
+    KF_LOG_INFO(logger, "[TDEngineHuoBi]");
 
     mutex_order_and_trade = new std::mutex();
     mutex_response_order_status = new std::mutex();
     mutex_orderaction_waiting_response = new std::mutex();
 }
 
-TDEngineOceanEx::~TDEngineOceanEx()
+TDEngineHuoBi::~TDEngineHuoBi()
 {
     if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
     if(mutex_response_order_status != nullptr) delete mutex_response_order_status;
     if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
 }
 
-std::mutex g_httpMutex;
-cpr::Response TDEngineOceanEx::Get(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
-{
-    std::string queryString= "?" + construct_request_body(unit,body);
-    string url = unit.baseUrl + method_url + queryString;
+static TDEngineHuoBi* global_md = nullptr;
 
-    std::unique_lock<std::mutex> lock(g_httpMutex);
-    const auto response = cpr::Get(Url{url}, cpr::VerifySsl{false},
-                              Header{{"Content-Type", "application/json"}}, Timeout{10000} );
-    lock.unlock();
-    KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
-                                               " (response.error.message) " << response.error.message <<
-                                               " (response.text) " << response.text.c_str());
-    return response;
+static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
+{
+    std::stringstream ss;
+    ss << "lws_callback,reason=" << reason << ",";
+    switch( reason )
+    {
+        case LWS_CALLBACK_CLIENT_ESTABLISHED:
+        {
+            ss << "LWS_CALLBACK_CLIENT_ESTABLISHED.";
+            global_md->writeErrorLog(ss.str());
+            //lws_callback_on_writable( wsi );
+            break;
+        }
+        case LWS_CALLBACK_PROTOCOL_INIT:
+        {
+            ss << "LWS_CALLBACK_PROTOCOL_INIT.";
+            global_md->writeErrorLog(ss.str());
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_RECEIVE:
+        {
+            ss << "LWS_CALLBACK_CLIENT_RECEIVE.";
+            global_md->writeErrorLog(ss.str());
+            if(global_md)
+            {
+                global_md->on_lws_data(wsi, (const char*)in, len);
+            }
+            break;
+        }
+        case LWS_CALLBACK_CLIENT_WRITEABLE:
+        {
+            ss << "LWS_CALLBACK_CLIENT_WRITEABLE.";
+            global_md->writeErrorLog(ss.str());
+            int ret = 0;
+            if(global_md)
+            {
+                ret = global_md->lws_write_subscribe(wsi);
+            }
+            break;
+        }
+        case LWS_CALLBACK_CLOSED:
+        {
+            // ss << "LWS_CALLBACK_CLOSED.";
+            // global_md->writeErrorLog(ss.str());
+            // break;
+        }
+        case LWS_CALLBACK_WSI_DESTROY:
+        case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
+        {
+            // ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
+            global_md->writeErrorLog(ss.str());
+            if(global_md)
+            {
+                global_md->on_lws_connection_error(wsi);
+            }
+            break;
+        }
+        default:
+            global_md->writeErrorLog(ss.str());
+            break;
+    }
+
+    return 0;
 }
 
-cpr::Response TDEngineOceanEx::Post(const std::string& method_url,const std::string& body, AccountUnitOceanEx& unit)
+std::string TDEngineHuoBi::getId()
 {
-    std::string reqbody = construct_request_body(unit,body,false);
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return  std::to_string(timestamp);
+}
 
+void TDEngineHuoBi::onPong(struct lws* conn)
+{
+    Ping(conn);
+}
+
+void TDEngineHuoBi::Ping(struct lws* conn)
+{
+    m_shouldPing = false;
+    StringBuffer sbPing;
+    Writer<StringBuffer> writer(sbPing);
+    writer.StartObject();
+    writer.Key("id");
+    writer.String(getId().c_str());
+    writer.Key("type");
+    writer.String("ping");
+    writer.EndObject();
+    std::string strPing = sbPing.GetString();
+    unsigned char msg[512];
+    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
+    int length = strPing.length();
+    KF_LOG_INFO(logger, "TDEngineHuoBi::lws_write_ping: " << strPing.c_str() << " ,len = " << length);
+    strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
+    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+}
+
+void TDEngineHuoBi::on_lws_data(struct lws* conn, const char* data, size_t len)
+{
+    //std::string strData = dealDataSprit(data);
+    KF_LOG_INFO(logger, "TDEngineHuoBi::on_lws_data: " << data);
+    Document json;
+    json.Parse(data);
+
+    if(!json.HasParseError() && json.IsObject() && json.HasMember("type") && json["type"].IsString())
+    {
+        if(strcmp(json["type"].GetString(), "welcome") == 0)
+        {
+            KF_LOG_INFO(logger, "MDEngineHuobi::on_lws_data: welcome");
+            lws_callback_on_writable(conn);
+        }
+        if(strcmp(json["type"].GetString(), "pong") == 0)
+        {
+            KF_LOG_INFO(logger, "MDEngineHuobi::on_lws_data: pong");
+            m_isPong = true;
+            m_conn = conn;
+        }
+        if(strcmp(json["type"].GetString(), "message") == 0)
+        {
+            if(strcmp(json["subject"].GetString(), "trade.l2update") == 0)
+            {
+            }
+        }
+    } else
+    {
+        KF_LOG_ERROR(logger, "MDEngineHuobi::on_lws_data . parse json error: " << data);
+    }
+
+}
+
+std::string TDEngineHuoBi::makeSubscribeL3Update(const std::map<std::string,int>& mapAllSymbols)
+{
+    StringBuffer sbUpdate;
+    Writer<StringBuffer> writer(sbUpdate);
+    writer.StartObject();
+    writer.Key("id");
+    writer.String(getId().c_str());
+    writer.Key("type");
+    writer.String("subscribe");
+    writer.Key("topic");
+    std::string strTopic = "/market/level2:";
+    for(const auto&  pair : mapAllSymbols)
+    {
+        strTopic += pair.first + ",";
+    }
+    strTopic.pop_back();
+    writer.String(strTopic.c_str());
+    writer.Key("privateChannel");
+    writer.String("false");
+    writer.Key("response");
+    writer.String("true");
+    writer.EndObject();
+    std::string strUpdate = sbUpdate.GetString();
+
+    return strUpdate;
+}
+
+int TDEngineHuoBi::lws_write_subscribe(struct lws* conn)
+{
+    KF_LOG_INFO(logger, "TDEngineHuoBi::lws_write_subscribe:" );
+
+    int ret = 0;
+
+    if(!m_isSubL3)
+    {
+        m_isSubL3 = true;
+
+        std::map<std::string,int> mapAllSymbols;
+        for(auto& unit : account_units)
+        {
+            for(auto& pair :  unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList())
+            {
+                mapAllSymbols[pair.second] = 0;
+            }
+        }
+
+        std::string strSubscribe = makeSubscribeL3Update(mapAllSymbols);
+        unsigned char msg[1024];
+        memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
+        int length = strSubscribe.length();
+        KF_LOG_INFO(logger, "TDEngineHuoBi::lws_write_subscribe: " << strSubscribe.c_str() << " ,len = " << length);
+        strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
+        ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+        lws_callback_on_writable(conn);
+    }
+    else
+    {
+        if(m_shouldPing)
+        {
+            m_isPong = false;
+            Ping(conn);
+        }
+    }
+
+    return ret;
+}
+
+void TDEngineHuoBi::on_lws_connection_error(struct lws* conn)
+{
+    KF_LOG_ERROR(logger, "TDEngineHuoBi::on_lws_connection_error. login again.");
+    //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
+    m_isPong = false;
+    m_shouldPing = true;
+    //no use it
+    long timeout_nsec = 0;
+    //reset sub
+    m_isSubL3 = false;
+
+    login(timeout_nsec);
+}
+
+static struct lws_protocols protocols[] =
+        {
+                {
+                        "md-protocol",
+                        ws_service_cb,
+                              0,
+                                 65536,
+                },
+                { NULL, NULL, 0, 0 } /* terminator */
+        };
+int lws_write_subscribe(struct lws* conn);
+void on_lws_connection_error(struct lws* conn);
+
+enum protocolList {
+    PROTOCOL_TEST,
+
+    PROTOCOL_LIST_COUNT
+};
+
+struct session_data {
+    int fd;
+};
+
+void TDEngineHuoBi::writeErrorLog(std::string strError)
+{
+    KF_LOG_ERROR(logger, strError);
+}
+
+bool TDEngineHuoBi::getToken(Document& d)
+{
+    int nTryCount = 0;
+    cpr::Response response;
+    do{
+        std::string url = "https://api.kucoin.com/api/v1/bullet-public";
+        response = cpr::Post(Url{url.c_str()}, Parameters{});
+
+    }while(++nTryCount < max_rest_retry_times && response.status_code != 200);
+
+    if(response.status_code != 200)
+    {
+        KF_LOG_ERROR(logger, "TDEngineHuoBi::login::getToken Error");
+        return false;
+    }
+
+    KF_LOG_INFO(logger, "TDEngineHuoBi::getToken: " << response.text.c_str());
+
+    d.Parse(response.text.c_str());
+    return true;
+}
+
+
+bool TDEngineHuoBi::getServers(Document& d)
+{
+    m_vstServerInfos.clear();
+    m_strToken = "";
+    if(d.HasMember("data"))
+    {
+        auto& data = d["data"];
+        if(data.HasMember("token"))
+        {
+            m_strToken = data["token"].GetString();
+            if(data.HasMember("instanceServers"))
+            {
+                int nSize = data["instanceServers"].Size();
+                for(int nPos = 0;nPos<nSize;++nPos)
+                {
+                    ServerInfo stServerInfo;
+                    auto& server = data["instanceServers"].GetArray()[nPos];
+                    if(server.HasMember("pingInterval"))
+                    {
+                        stServerInfo.nPingInterval = server["pingInterval"].GetInt();
+                    }
+                    if(server.HasMember("pingTimeOut"))
+                    {
+                        stServerInfo.nPingTimeOut = server["pingTimeOut"].GetInt();
+                    }
+                    if(server.HasMember("endpoint"))
+                    {
+                        stServerInfo.strEndpoint = server["endpoint"].GetString();
+                    }
+                    if(server.HasMember("protocol"))
+                    {
+                        stServerInfo.strProtocol = server["protocol"].GetString();
+                    }
+                    if(server.HasMember("encrypt"))
+                    {
+                        stServerInfo.bEncrypt = server["encrypt"].GetBool();
+                    }
+                    m_vstServerInfos.push_back(stServerInfo);
+                }
+            }
+        }
+    }
+    if(m_strToken == "" || m_vstServerInfos.empty())
+    {
+        KF_LOG_ERROR(logger, "TDEngineHuoBi::login::getServers Error");
+        return false;
+    }
+    return true;
+}
+
+int64_t TDEngineHuoBi::getMSTime()
+{
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return  timestamp;
+}
+
+//cys edit
+cpr::Header TDEngineHuoBi::construct_request_header(AccountUnitHuoBi& unit,const std::string& strSign,const std::string& strContentType)
+{
+    unsigned char * strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    std::string strSignatrue = base64_encode(strHmac,32);
+
+    if(strContentType.empty())
+    {
+        return cpr::Header{{"AccessKeyId",unit.api_key},
+                           {"SignatureMethod","HmacSHA256"},
+                           {"SignatureVersion","2"},
+                           {"Timestamp",std::to_string(getTimestamp())},
+                           {"Signature",strSignatrue}};
+    }
+    else
+    {
+        return cpr::Header{{"AccessKeyId",unit.api_key},
+                           {"SignatureMethod","HmacSHA256"},
+                           {"SignatureVersion","2"},
+                           {"Timestamp",std::to_string(getTimestamp())},
+                           {"Signature",strSignatrue}
+                           {"Contenr-Type",strContentType}};
+    }
+
+}
+//cys edit from huobi api
+std::mutex g_httpMutex;
+cpr::Response TDEngineHuoBi::Get(const std::string& method_url,const std::string& body, AccountUnitHuoBi& unit)
+{
     string url = unit.baseUrl + method_url;
+    //使用 UTF-8 编码，且进行了 URI 编码，十六进制字符必须大写，如 “:” 会被编码为 “%3A” ，空格被编码为 “%20”。
+    //时间戳（Timestamp）需要以YYYY-MM-DDThh:mm:ss格式添加并且进行 URI 编码。
+    std::string strTimestamp = std::to_string(getTimestamp());
+    std::string strAccessKeyId=unit.api_key;
+    std::string strSignatureMethod="HmacSHA256";
+    std::string strSignatureVersion="2";
+    std::string strSign = "GET\n"+"api.huobi.pro\n" + method_url+"\n"+
+                            "AccessKeyId="+strAccessKeyId+"&"+
+                            "SignatureMethod="+strSignatureMethod+"&"+
+                            "SignatureVersion="+strSignatureVersion+"&"+
+                            "Timestamp="+strTimestamp;
+    KF_LOG_INFO(logger, "strSign = " << strSign );
+    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    KF_LOG_INFO(logger, "strHmac = " << strHmac );
+    std::string strSignatrue = base64_encode(strHmac,32);
+    cpr::Header mapHeader = cpr::Header{{"AccessKeyId",strAccessKeyId},
+                                        {"SignatureMethod",strSignatureMethod},
+                                        {"SignatureVersion",strSignatureVersion},
+                                        {"Timestamp",strTimestamp},
+                                        {"Signature",strSignatrue}};
+    KF_LOG_INFO(logger, "AccessKeyId = " << strAccessKeyId
+                                         << ", SignatureMethod = " << strSignatureMethod
+                                         << ", SignatureVersion = " << strSignatureVersion
+                                         << ", Timestamp = " << strTimestamp);
+
+
     std::unique_lock<std::mutex> lock(g_httpMutex);
-    auto response = cpr::Post(Url{url}, cpr::VerifySsl{false},
-                    Header{{"Content-Type", "application/json"},
-                           {"Content-Length", to_string(reqbody.size())}},
-                    Body{reqbody}, Timeout{30000});
+    const auto response = cpr::Get(Url{url},
+                                   Header{mapHeader}, Timeout{10000} );
     lock.unlock();
-    KF_LOG_INFO(logger, "[post] (url) " << url <<"(body) "<< reqbody<< " (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
                                        " (response.error.message) " << response.error.message <<
                                        " (response.text) " << response.text.c_str());
     return response;
 }
-int64_t TDEngineOceanEx::checkPrice(int64_t price,std::string coinPair)
+//cys edit
+cpr::Response TDEngineHuoBi::Delete(const std::string& method_url,const std::string& body, AccountUnitHuoBi& unit)
 {
-    //如117.17精度为2
-    //转换为LF标准应当为11717000000
-    //当117.17 表现为117.16999998 时，LF价格为11716999998，应当使用此算法矫正
-    int64_t base = 8;
-    auto it = mapPricePrecision.find(coinPair);
-    if(it == mapPricePrecision.end())
-    {
-        return price;
-    }
-    base = std::pow(10,base-it->second);//1000000
-    int64_t frontPart = price/base;//11716
-    int64_t backPart = price%base;//999998
-    if(backPart*2 >= base)
-    {
-        frontPart+=1;//11717
-    }
-    return frontPart*base;//11717000000
+    string url = unit.baseUrl + method_url + body;
+    std::string strTimestamp = std::to_string(getTimestamp());
+    std::string strAccessKeyId=unit.api_key;
+    std::string strSignatureMethod="HmacSHA256";
+    std::string strSignatureVersion="2";
+    std::string strSign = "DELETE\n"+"api.huobi.pro\n" + method_url+"\n"+
+                            "AccessKeyId="+strAccessKeyId+"&"+
+                            "SignatureMethod="+strSignatureMethod+"&"+
+                            "SignatureVersion="+strSignatureVersion+"&"+
+                            "Timestamp="+strTimestamp;
+    KF_LOG_INFO(logger, "strSign = " << strSign );
+    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    KF_LOG_INFO(logger, "strHmac = " << strHmac );
+    std::string strSignatrue = base64_encode(strHmac,32);
+    cpr::Header mapHeader = cpr::Header{{"AccessKeyId",strAccessKeyId},
+                                        {"SignatureMethod",strSignatureMethod},
+                                        {"SignatureVersion",strSignatureVersion},
+                                        {"Timestamp",strTimestamp},
+                                        {"Signature",strSignatrue}};
+    KF_LOG_INFO(logger, "AccessKeyId = " << strAccessKeyId
+                                         << ", SignatureMethod = " << strSignatureMethod
+                                         << ", SignatureVersion = " << strSignatureVersion
+                                         << ", Timestamp = " << strTimestamp);
+
+    std::unique_lock<std::mutex> lock(g_httpMutex);
+    const auto response = cpr::Delete(Url{url},Header{mapHeader}, Timeout{10000} );
+    lock.unlock();
+    KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
+                                       " (response.error.message) " << response.error.message <<
+                                       " (response.text) " << response.text.c_str());
+    return response;
 }
-void TDEngineOceanEx::init()
+//cys edit
+cpr::Response TDEngineHuoBi::Post(const std::string& method_url,const std::string& body, AccountUnitHuoBi& unit)
 {
+    std::string strTimestamp = std::to_string(getTimestamp());
+    std::string strAccessKeyId=unit.api_key;
+    std::string strSignatureMethod="HmacSHA256";
+    std::string strSignatureVersion="2";
+    std::string strSign = "POST\n"+"api.huobi.pro\n" + method_url+"\n"+
+                            "AccessKeyId="+strAccessKeyId+"&"+
+                            "SignatureMethod="+strSignatureMethod+"&"+
+                            "SignatureVersion="+strSignatureVersion+"&"+
+                            "Timestamp="+strTimestamp;
+    KF_LOG_INFO(logger, "strSign = " << strSign );
+    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    std::string strSignatrue = base64_encode(strHmac,32);
+    cpr::Header mapHeader = cpr::Header{{"AccessKeyId",strAccessKeyId},
+                                        {"SignatureMethod",strSignatureMethod},
+                                        {"SignatureVersion",strSignatureVersion},
+                                        {"Timestamp",strTimestamp},
+                                        {"Signature",strSignatrue}};
+
+
+    string url = unit.baseUrl + method_url;
+    std::unique_lock<std::mutex> lock(g_httpMutex);
+    auto response = cpr::Post(Url{url}, Header{mapHeader},
+                              Body{body},Timeout{30000});
+    lock.unlock();
+    KF_LOG_INFO(logger, "[post] (url) " << url <<"(body) "<< body<< " (response.status_code) " << response.status_code <<
+                                        " (response.error.message) " << response.error.message <<
+                                        " (response.text) " << response.text.c_str());
+    return response;
+}
+
+void TDEngineHuoBi::init()
+{
+    genUniqueKey();
     ITDEngine::init();
     JournalPair tdRawPair = getTdRawJournalPair(source_id);
     raw_writer = yijinjing::JournalSafeWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
     KF_LOG_INFO(logger, "[init]");
 }
 
-void TDEngineOceanEx::pre_load(const json& j_config)
+void TDEngineHuoBi::pre_load(const json& j_config)
 {
     KF_LOG_INFO(logger, "[pre_load]");
 }
 
-void TDEngineOceanEx::resize_accounts(int account_num)
+void TDEngineHuoBi::resize_accounts(int account_num)
 {
     account_units.resize(account_num);
     KF_LOG_INFO(logger, "[resize_accounts]");
 }
 
-TradeAccount TDEngineOceanEx::load_account(int idx, const json& j_config)
+TradeAccount TDEngineHuoBi::load_account(int idx, const json& j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
     // internal load
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
     string passphrase = j_config["passphrase"].get<string>();
+    //https://api.huobi.pro
     string baseUrl = j_config["baseUrl"].get<string>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
@@ -192,7 +555,7 @@ TradeAccount TDEngineOceanEx::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
 
-    AccountUnitOceanEx& unit = account_units[idx];
+    AccountUnitHuoBi& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
     unit.passphrase = passphrase;
@@ -201,13 +564,13 @@ TradeAccount TDEngineOceanEx::load_account(int idx, const json& j_config)
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
 //test rs256
-    std::string data ="{}";
-    std::string signature =utils::crypto::rsa256_private_sign(data, g_private_key);
-    std::string sign = base64_encode((unsigned char*)signature.c_str(), signature.size());
-    std::cout  << "[TDEngineOceanEx] (test rs256-base64-sign)" << sign << std::endl;
+    //  std::string data ="{}";
+    //  std::string signature =utils::crypto::rsa256_private_sign(data, g_private_key);
+    // std::string sign = base64_encode((unsigned char*)signature.c_str(), signature.size());
+    //std::cout  << "[TDEngineHuoBi] (test rs256-base64-sign)" << sign << std::endl;
 
-    std::string decodeStr = utils::crypto::rsa256_pub_verify(data,signature, g_public_key);
-    std::cout  << "[TDEngineOceanEx] (test rs256-verify)" << (decodeStr.empty()?"yes":"no") << std::endl;
+    //std::string decodeStr = utils::crypto::rsa256_pub_verify(data,signature, g_public_key);
+    //std::cout  << "[TDEngineHuoBi] (test rs256-verify)" << (decodeStr.empty()?"yes":"no") << std::endl;
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
@@ -217,35 +580,21 @@ TradeAccount TDEngineOceanEx::load_account(int idx, const json& j_config)
 
     //display usage:
     if(unit.coinPairWhiteList.Size() == 0) {
-        KF_LOG_ERROR(logger, "TDEngineOceanEx::load_account: please add whiteLists in kungfu.json like this :");
+        KF_LOG_ERROR(logger, "TDEngineHuoBi::load_account: please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
         KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
         KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
         KF_LOG_ERROR(logger, "},");
     }
-    //precision
-    if(j_config.find("pricePrecision") != j_config.end()) {
-                //has whiteLists
-        json precision = j_config["pricePrecision"].get<json>();
-        if(precision.is_object())
-        {
-            for (json::iterator it = precision.begin(); it != precision.end(); ++it)
-            {
-                std::string strategy_coinpair = it.key();
-                int pair_precision = it.value();
-                std::cout <<  "[pricePrecision] (strategy_coinpair) " << strategy_coinpair << " (precision) " << pair_precision<< std::endl;
-                mapPricePrecision.insert(std::make_pair(strategy_coinpair, pair_precision));
-            }
-        }
-    }
+
     //test
     Document json;
     get_account(unit, json);
     printResponse(json);
     cancel_all_orders(unit, "etc_eth", json);
     printResponse(json);
-
+    getPriceIncrement(unit);
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -254,46 +603,157 @@ TradeAccount TDEngineOceanEx::load_account(int idx, const json& j_config)
     return account;
 }
 
-void TDEngineOceanEx::connect(long timeout_nsec)
+void TDEngineHuoBi::connect(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "[connect]");
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
-        AccountUnitOceanEx& unit = account_units[idx];
+        AccountUnitHuoBi& unit = account_units[idx];
+        unit.logged_in = true;
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
-        Document doc;
+        // Document doc;
         //
-        std::string requestPath = "/key";
-        const auto response = Get(requestPath,"{}",unit);
+        //std::string requestPath = "/key";
+        // const auto response = Get(requestPath,"{}",unit);
 
-        getResponse(response.status_code, response.text, response.error.message, doc);
+        //  getResponse(response.status_code, response.text, response.error.message, doc);
 
-        if ( !unit.logged_in && doc.HasMember("code"))
+        // if ( !unit.logged_in && doc.HasMember("code"))
+        //{
+        //   int code = doc["code"].GetInt();
+        //   unit.logged_in = (code == 0);
+        //}
+    }
+}
+//火币暂时未用到
+void TDEngineHuoBi::getPriceIncrement(AccountUnitHuoBi& unit)
+{
+    auto& coinPairWhiteList = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList();
+    for(auto& pair : coinPairWhiteList)
+    {
+        Document json;
+        const auto response = Get("/api/v1/symbols/" + pair.second,"",unit);
+        json.Parse(response.text.c_str());
+        const static std::string strSuccesse = "200000";
+        if(json.HasMember("code") && json["code"].GetString() == strSuccesse)
         {
-            int code = doc["code"].GetInt();
-            unit.logged_in = (code == 0);
+            auto& data = json["data"];
+            PriceIncrement stPriceIncrement;
+            stPriceIncrement.nBaseMinSize = std::round(std::stod(data["baseMinSize"].GetString())* scale_offset);
+            stPriceIncrement.nPriceIncrement = std::round(std::stod(data["priceIncrement"].GetString()) * scale_offset);
+            stPriceIncrement.nQuoteIncrement = std::round(std::stod(data["quoteIncrement"].GetString()) * scale_offset);
+            unit.mapPriceIncrement.insert(std::make_pair(pair.first,stPriceIncrement));
+
+            KF_LOG_INFO(logger, "[getPriceIncrement] (BaseMinSize )" << stPriceIncrement.nBaseMinSize << "(PriceIncrement)" << stPriceIncrement.nPriceIncrement
+                                                                     << "(QuoteIncrement)" << stPriceIncrement.nQuoteIncrement);
         }
     }
 }
 
-
-void TDEngineOceanEx::login(long timeout_nsec)
+void TDEngineHuoBi::login(long timeout_nsec)
 {
-    KF_LOG_INFO(logger, "[login]");
+    KF_LOG_INFO(logger, "TDEngineHuoBi::login:");
+
+    global_md = this;
+
+    Document d;
+    if(!getToken(d))
+    {
+        return;
+    }
+    if(!getServers(d))
+    {
+        return;
+    }
+    m_isSubL3 = false;
+    global_md = this;
+    int inputPort = 8443;
+    int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
+
+    struct lws_context_creation_info ctxCreationInfo;
+    struct lws_client_connect_info clientConnectInfo;
+    struct lws *wsi = NULL;
+    struct lws_protocols protocol;
+
+    memset(&ctxCreationInfo, 0, sizeof(ctxCreationInfo));
+    memset(&clientConnectInfo, 0, sizeof(clientConnectInfo));
+
+    ctxCreationInfo.port = CONTEXT_PORT_NO_LISTEN;
+    ctxCreationInfo.iface = NULL;
+    ctxCreationInfo.protocols = protocols;
+    ctxCreationInfo.ssl_cert_filepath = NULL;
+    ctxCreationInfo.ssl_private_key_filepath = NULL;
+    ctxCreationInfo.extensions = NULL;
+    ctxCreationInfo.gid = -1;
+    ctxCreationInfo.uid = -1;
+    ctxCreationInfo.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+    ctxCreationInfo.fd_limit_per_thread = 1024;
+    ctxCreationInfo.max_http_header_pool = 1024;
+    ctxCreationInfo.ws_ping_pong_interval=1;
+    ctxCreationInfo.ka_time = 10;
+    ctxCreationInfo.ka_probes = 10;
+    ctxCreationInfo.ka_interval = 10;
+
+    protocol.name  = protocols[PROTOCOL_TEST].name;
+    protocol.callback = &ws_service_cb;
+    protocol.per_session_data_size = sizeof(struct session_data);
+    protocol.rx_buffer_size = 0;
+    protocol.id = 0;
+    protocol.user = NULL;
+
+    context = lws_create_context(&ctxCreationInfo);
+    KF_LOG_INFO(logger, "TDEngineHuoBi::login: context created.");
+
+
+    if (context == NULL) {
+        KF_LOG_ERROR(logger, "TDEngineHuoBi::login: context is NULL. return");
+        return;
+    }
+
+    // Set up the client creation info
+    auto& stServerInfo = m_vstServerInfos.front();
+    std::string strAddress = stServerInfo.strEndpoint;
+    size_t nAddressEndPos = strAddress.find_last_of('/');
+    std::string strPath = strAddress.substr(nAddressEndPos);
+    strPath += "?token=";
+    strPath += m_strToken;
+    strPath += "&[connectId=" +  getId() +"]";
+    strAddress = strAddress.substr(0,nAddressEndPos);
+    strAddress = strAddress.substr(strAddress.find_last_of('/') + 1);
+    clientConnectInfo.address = strAddress.c_str();
+    clientConnectInfo.path = strPath.c_str(); // Set the info's path to the fixed up url path
+    clientConnectInfo.context = context;
+    clientConnectInfo.port = 443;
+    clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+    clientConnectInfo.host =strAddress.c_str();
+    clientConnectInfo.origin = strAddress.c_str();
+    clientConnectInfo.ietf_version_or_minus_one = -1;
+    clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
+    clientConnectInfo.pwsi = &wsi;
+
+    KF_LOG_INFO(logger, "TDEngineHuoBi::login: address = " << clientConnectInfo.address << ",path = " << clientConnectInfo.path);
+
+    wsi = lws_client_connect_via_info(&clientConnectInfo);
+    if (wsi == NULL) {
+        KF_LOG_ERROR(logger, "TDEngineHuoBi::login: wsi create error.");
+        return;
+    }
+    KF_LOG_INFO(logger, "TDEngineHuoBi::login: wsi create success.");
+
     connect(timeout_nsec);
 }
 
-void TDEngineOceanEx::logout()
+void TDEngineHuoBi::logout()
 {
     KF_LOG_INFO(logger, "[logout]");
 }
 
-void TDEngineOceanEx::release_api()
+void TDEngineHuoBi::release_api()
 {
     KF_LOG_INFO(logger, "[release_api]");
 }
 
-bool TDEngineOceanEx::is_logged_in() const
+bool TDEngineHuoBi::is_logged_in() const
 {
     KF_LOG_INFO(logger, "[is_logged_in]");
     for (auto& unit: account_units)
@@ -304,14 +764,14 @@ bool TDEngineOceanEx::is_logged_in() const
     return true;
 }
 
-bool TDEngineOceanEx::is_connected() const
+bool TDEngineHuoBi::is_connected() const
 {
     KF_LOG_INFO(logger, "[is_connected]");
     return is_logged_in();
 }
 
 
-std::string TDEngineOceanEx::GetSide(const LfDirectionType& input) {
+std::string TDEngineHuoBi::GetSide(const LfDirectionType& input) {
     if (LF_CHAR_Buy == input) {
         return "buy";
     } else if (LF_CHAR_Sell == input) {
@@ -321,7 +781,7 @@ std::string TDEngineOceanEx::GetSide(const LfDirectionType& input) {
     }
 }
 
-LfDirectionType TDEngineOceanEx::GetDirection(std::string input) {
+LfDirectionType TDEngineHuoBi::GetDirection(std::string input) {
     if ("buy" == input) {
         return LF_CHAR_Buy;
     } else if ("sell" == input) {
@@ -331,7 +791,7 @@ LfDirectionType TDEngineOceanEx::GetDirection(std::string input) {
     }
 }
 
-std::string TDEngineOceanEx::GetType(const LfOrderPriceTypeType& input) {
+std::string TDEngineHuoBi::GetType(const LfOrderPriceTypeType& input) {
     if (LF_CHAR_LimitPrice == input) {
         return "limit";
     } else if (LF_CHAR_AnyPrice == input) {
@@ -341,7 +801,7 @@ std::string TDEngineOceanEx::GetType(const LfOrderPriceTypeType& input) {
     }
 }
 
-LfOrderPriceTypeType TDEngineOceanEx::GetPriceType(std::string input) {
+LfOrderPriceTypeType TDEngineHuoBi::GetPriceType(std::string input) {
     if ("limit" == input) {
         return LF_CHAR_LimitPrice;
     } else if ("market" == input) {
@@ -351,26 +811,32 @@ LfOrderPriceTypeType TDEngineOceanEx::GetPriceType(std::string input) {
     }
 }
 //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-LfOrderStatusType TDEngineOceanEx::GetOrderStatus(std::string input) {
-    if ("wait" == input) {
-        return LF_CHAR_NotTouched;
-    } else if ("done" == input) {
-        return LF_CHAR_AllTraded;
-    } else if ("cancel" == input) {
+LfOrderStatusType TDEngineHuoBi::GetOrderStatus(bool isCancel,int64_t nSize,int64_t nDealSize) {
+
+    if(isCancel)
+    {
         return LF_CHAR_Canceled;
-    } else {
+    }
+    if(nDealSize == 0)
+    {
         return LF_CHAR_NotTouched;
     }
+    if(nSize > nDealSize)
+    {
+        return  LF_CHAR_PartTradedQueueing;
+    }
+    return LF_CHAR_AllTraded;
 }
 
 /**
  * req functions
+ * 查询账户持仓
  */
-void TDEngineOceanEx::req_investor_position(const LFQryPositionField* data, int account_index, int requestId)
+void TDEngineHuoBi::req_investor_position(const LFQryPositionField* data, int account_index, int requestId)
 {
     KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId);
 
-    AccountUnitOceanEx& unit = account_units[account_index];
+    AccountUnitHuoBi& unit = account_units[account_index];
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key << " (InstrumentID) " << data->InstrumentID);
 
     LFRspPositionField pos;
@@ -387,68 +853,104 @@ void TDEngineOceanEx::req_investor_position(const LFQryPositionField* data, int 
     int errorId = 0;
     std::string errorMsg = "";
     Document d;
+    //调用get函数获取用户信息，保存在d中
+/*
+{
+  "data": {
+    "id": 100009,
+    "type": "spot",
+    "state": "working",
+    "list": [
+      {
+        "currency": "usdt",
+        "type": "trade",
+        "balance": "5007.4362872650"
+      },
+      {
+        "currency": "usdt",
+        "type": "frozen",
+        "balance": "348.1199920000"
+      }
+    ],
+    "user-id": 10000
+  }
+}
+*/
     get_account(unit, d);
-
-    if(!d.HasParseError() && d.IsObject() && d.HasMember("code"))
+    KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
+    if(d.IsObject() && d.HasMember("code"))
     {
-        errorId = d["code"].GetInt();
-        if(errorId != 0) {
-            if (d.HasMember("message") && d["message"].IsString()) {
-                errorMsg = d["message"].GetString();
+        KF_LOG_INFO(logger, "[req_investor_position] (getcode)" );
+        errorId =  std::round(std::stod(d["code"].GetString()));
+        KF_LOG_INFO(logger, "[req_investor_position] (errorId)" << errorId);
+        if(errorId != 200000) {
+            if (d.HasMember("msg") && d["msg"].IsString()) {
+                errorMsg = d["msg"].GetString();
             }
             KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId
                                                                    << " (errorMsg) " << errorMsg);
-            raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+            raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_HUOBI, 1, requestId, errorId, errorMsg.c_str());
         }
     }
-    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_OCEANEX, 1, requestId);
-
-
-
-
-/*
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_HUOBI, 1, requestId);
+/*账户余额
+查询指定账户的余额，支持以下账户：
+spot：现货账户， margin：杠杆账户，otc：OTC 账户，point：点卡账户
+HTTP 请求
+GET /v1/account/accounts/{account-id}/balance
 {
-  "code": 0,
   "data": {
-    "accounts": [
-      {"locked": "0.0", "balance": "99.9", "currency": "oce"},
-      {"locked": "0.0", "balance": "99.9", "currency": "usd"},
-      {"locked": "0.0", "balance": "99.9", "currency": "vet"},
-      {"locked": "0.0", "balance": "99.9", "currency": "vtho"}
-      ]
-    },
-  "message": "Operation is successful"
+    "id": 100009,
+    "type": "spot",
+    "state": "working",
+    "list": [
+      {
+        "currency": "usdt",
+        "type": "trade",
+        "balance": "5007.4362872650"
+      },
+      {
+        "currency": "usdt",
+        "type": "frozen",
+        "balance": "348.1199920000"
+      }
+    ],
+    "user-id": 10000
+  }
 }
-* */
-    std::vector<LFRspPositionField> tmp_vector;
-    if(!d.HasParseError() && d.IsObject() && d.HasMember("data") && d["data"].IsObject() && d["data"].HasMember("accounts")
-        && d["data"]["accounts"].IsArray())
+*/
+    std::map<std::string,LFRspPositionField> tmp_map;
+    if(!d.HasParseError() && d.HasMember("data"))
     {
-        size_t len = d["data"]["accounts"].Size();
-        auto& accounts = d["data"]["accounts"];
-
+        auto& jisonData = d["data"];
+        size_t len = d["data"]["list"].Size();
         KF_LOG_INFO(logger, "[req_investor_position] (accounts.length)" << len);
         for(size_t i = 0; i < len; i++)
         {
-            std::string symbol = accounts.GetArray()[i]["currency"].GetString();
+            std::string symbol = jisonData.GetArray()[i]["currency"].GetString();
+            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol);
             std::string ticker = unit.positionWhiteList.GetKeyByValue(symbol);
+            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (ticker) " << ticker);
             if(ticker.length() > 0) {
-                strncpy(pos.InstrumentID, ticker.c_str(), 31);
-                pos.Position = std::round(std::stod(accounts.GetArray()[i]["balance"].GetString()) * scale_offset);
-                tmp_vector.push_back(pos);
-                KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol
-                                                                          << " balance:" << accounts.GetArray()[i]["balance"].GetString()
-                                                                          << " locked: " << accounts.GetArray()[i]["locked"].GetString());
-                KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
+                uint64_t nPosition = std::round(std::stod(jisonData.GetArray()[i]["balance"].GetString()) * scale_offset);
+                auto it = tmp_map.find(ticker);
+                if(it == tmp_map.end())
+                {
+                    it = tmp_map.insert(std::make_pair(ticker,pos)).first;
+                    strncpy(it->second.InstrumentID, ticker.c_str(), 31);
+                }
+                it->second.Position += nPosition;
+                KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << it->second.Position);
             }
         }
     }
 
     //send the filtered position
-    int position_count = tmp_vector.size();
+    int position_count = tmp_map.size();
     if(position_count > 0) {
-        for (int i = 0; i < position_count; i++) {
-            on_rsp_position(&tmp_vector[i], i == (position_count - 1), requestId, errorId, errorMsg.c_str());
+        for (auto it =  tmp_map.begin() ; it != tmp_map.end() ;  ++it) {
+            --position_count;
+            on_rsp_position(&it->second, position_count == 0, requestId, 0, errorMsg.c_str());
         }
     }
     else
@@ -458,22 +960,46 @@ void TDEngineOceanEx::req_investor_position(const LFQryPositionField* data, int 
     }
 }
 
-void TDEngineOceanEx::req_qry_account(const LFQryAccountField *data, int account_index, int requestId)
+void TDEngineHuoBi::req_qry_account(const LFQryAccountField *data, int account_index, int requestId)
 {
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-
-void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
+void TDEngineHuoBi::dealPriceVolume(AccountUnitHuoBi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVolume)
 {
-    AccountUnitOceanEx& unit = account_units[account_index];
+    KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
+    auto it = unit.mapPriceIncrement.find(symbol);
+    if(it == unit.mapPriceIncrement.end())
+    {
+        KF_LOG_INFO(logger, "[dealPriceVolume] symbol not find :" << symbol);
+        nDealVolume = 0;
+        return ;
+    }
+    else
+    {
+        if(it->second.nBaseMinSize > nVolume)
+        {
+            KF_LOG_INFO(logger, "[dealPriceVolume] (Volume) "  << nVolume  << " <  (BaseMinSize)  "  << it->second.nBaseMinSize << " (symbol)" << symbol);
+            nDealVolume = 0;
+            return ;
+        }
+        nDealVolume =  it->second.nQuoteIncrement  > 0 ? nVolume / it->second.nQuoteIncrement * it->second.nQuoteIncrement : nVolume;
+        nDealPrice = it->second.nPriceIncrement > 0 ? nPrice / it->second.nPriceIncrement * it->second.nPriceIncrement : nPrice;
+    }
+    KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << symbol << " (Volume)" << nVolume << " (Price)" << nPrice
+                                                      << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
+}
+
+void TDEngineHuoBi::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
+{
+    AccountUnitHuoBi& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Tid)" << data->InstrumentID
                                               << " (Volume)" << data->Volume
                                               << " (LimitPrice)" << data->LimitPrice
                                               << " (OrderRef)" << data->OrderRef);
-    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1/*ISLAST*/, requestId);
+    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HUOBI, 1/*ISLAST*/, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -485,21 +1011,36 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
         KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList, ignore it  (rid)" << requestId <<
                                                                                       " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HUOBI, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
 
     double funds = 0;
     Document d;
+    //精度处理
+    int64_t fixedPrice = 0;
+    int64_t fixedVolume = 0;
+    dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
 
-    int64_t fixedPrice = data->LimitPrice;
-
-    send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
-               GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, d);
-    //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
+    if(fixedVolume == 0)
+    {
+        KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error" << ticker);
+        errorId = 200;
+        errorMsg = data->InstrumentID;
+        errorMsg += " : quote less than baseMinSize";
+        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HUOBI, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    }
+    const auto resp = Get("/v1/account/accounts","{}",unit);
+    Document j;
+    j.Parse(resp.text.c_str());
+    std::string accountId = std::to_string(j["data"].GetArray()[0]["id"]);
+    send_order(unit, accountId, fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, "api",
+                ticker.c_str(), GetType(data->OrderPriceType).c_str(),d);
     //not expected response
-    if(d.HasParseError() || !d.IsObject())
+    if(!d.IsObject())
     {
         errorId = 100;
         errorMsg = "send_order http response has parse error or is not json. please check the log";
@@ -507,81 +1048,56 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
                                                                            errorId << " (errorMsg) " << errorMsg);
     } else  if(d.HasMember("code"))
     {
-        int code = d["code"].GetInt();
-        if(code == 0) {
-            /*
-             {
-                "code": 0,
-                "data": {
-                    "remaining_volume": "0.25",
-                    "trades_count": 0,
-                    "created_at": "2018-09-19T02:31:45Z",
-                    "side": "buy",
-                    "id": 1,
-                    "volume": "0.25",
-                    "ord_type": "limit",
-                    "price": "10.0",
-                    "avg_price": "0.0",
-                    "state": "wait",
-                    "executed_volume": "0.0",
-                    "market": "vetusd"
-                    },
-                "message": "Operation is successful"
-                }
-             * */
+        int code =std::round(std::stod(d["code"].GetString()));
+        if(code == 200000) {
             //if send successful and the exchange has received ok, then add to  pending query order list
-            int64_t remoteOrderId = d["data"]["id"].GetInt64();
+            std::string remoteOrderId = d["data"]["orderId"].GetString();
             //fix defect of use the old value
             localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data->OrderRef << " (remoteOrderId) "
                                                                        << remoteOrderId);
-            //on_rtn_oder
-            rapidjson::Value &dataRsp = d["data"];
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
             rtn_order.OrderStatus = LF_CHAR_NotTouched;
-            rtn_order.VolumeTraded = std::round(
-                    std::stod(dataRsp["executed_volume"].GetString()) * scale_offset);
+            rtn_order.VolumeTraded = 0;
 
             //first send onRtnOrder about the status change or VolumeTraded change
-            strcpy(rtn_order.ExchangeID, "oceanex");
+            strcpy(rtn_order.ExchangeID, "huobi");
             strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
-            rtn_order.Direction = GetDirection(dataRsp["side"].GetString());
-            //No this setting on OceanEx
+            rtn_order.Direction = data->Direction;
+            //No this setting on Huobi
             rtn_order.TimeCondition = LF_CHAR_GTC;
-            rtn_order.OrderPriceType = GetPriceType(dataRsp["ord_type"].GetString());
+            rtn_order.OrderPriceType = data->OrderPriceType;
             strncpy(rtn_order.OrderRef, data->OrderRef, 13);
-            rtn_order.VolumeTotalOriginal = std::round(std::stod(dataRsp["volume"].GetString()) * scale_offset);
-            if(dataRsp.HasMember("price") && dataRsp["price"].IsString())
-                rtn_order.LimitPrice = std::round(std::stod(dataRsp["price"].GetString()) * scale_offset);
-            rtn_order.VolumeTotal = std::round(
-                    std::stod(dataRsp["remaining_volume"].GetString()) * scale_offset);
+            rtn_order.VolumeTotalOriginal = data->Volume;
+            rtn_order.LimitPrice = data->LimitPrice;
+            rtn_order.VolumeTotal = data->Volume;
 
-            std::string strOrderID = std::to_string(remoteOrderId);
+            std::string strOrderID = remoteOrderId;
             strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
             on_rtn_order(&rtn_order);
             raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_OCEANEX,
+                                    source_id, MSG_TYPE_LF_RTN_ORDER_HUOBI,
                                     1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
 
-
+            KF_LOG_DEBUG(logger, "[req_order_insert] (addNewQueryOrdersAndTrades)" );
             char noneStatus = LF_CHAR_NotTouched;
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
 
             //success, only record raw data
-            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1,
+            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HUOBI, 1,
                                           requestId, errorId, errorMsg.c_str());
-
+            KF_LOG_DEBUG(logger, "[req_order_insert] success" );
             return;
 
         }else {
             errorId = code;
-            if(d.HasMember("message") && d["message"].IsString())
+            if(d.HasMember("msg") && d["msg"].IsString())
             {
-                errorMsg = d["message"].GetString();
+                errorMsg = d["msg"].GetString();
             }
             KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                                errorId << " (errorMsg) " << errorMsg);
@@ -590,63 +1106,20 @@ void TDEngineOceanEx::req_order_insert(const LFInputOrderField* data, int accoun
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HUOBI, 1, requestId, errorId, errorMsg.c_str());
     }
 }
 
-//websocket的消息通常回来的比restful快，这时候因为消息里面有OrderId却找不到OrderRef，会先放入responsedOrderStatusNoOrderRef，
-//当sendOrder返回OrderId信息之后,再处理这个信息
-void TDEngineOceanEx::handlerResponsedOrderStatus(AccountUnitOceanEx& unit)
+void TDEngineHuoBi::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
 {
-    std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
-
-    std::vector<ResponsedOrderStatus>::iterator noOrderRefOrserStatusItr;
-    for(noOrderRefOrserStatusItr = responsedOrderStatusNoOrderRef.begin(); noOrderRefOrserStatusItr != responsedOrderStatusNoOrderRef.end(); ) {
-
-        //has no orderRed Order status, should link this OrderRef and handler it.
-        ResponsedOrderStatus responsedOrderStatus = (*noOrderRefOrserStatusItr);
-
-        std::vector<PendingOrderStatus>::iterator orderStatusIterator;
-        for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); ++orderStatusIterator)
-        {
-//            KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] (orderStatusIterator->remoteOrderId)"<< orderStatusIterator->remoteOrderId << " (orderId)" << responsedOrderStatus.orderId);
-            if(orderStatusIterator->remoteOrderId == responsedOrderStatus.orderId)
-            {
-                break;
-            }
-        }
-
-        if(orderStatusIterator == unit.pendingOrderStatus.end()) {
-            KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] not find this pendingOrderStatus of order id, ignore it.(orderId)"<< responsedOrderStatus.orderId);
-            ++noOrderRefOrserStatusItr;
-        } else {
-            KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] handlerResponseOrderStatus (responsedOrderStatus.orderId)"<< responsedOrderStatus.orderId);
-            handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
-
-            //remove order when finish
-            if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
-               || orderStatusIterator->OrderStatus == LF_CHAR_Error)
-            {
-                KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] remove a pendingOrderStatus. (orderStatusIterator->remoteOrderId)" << orderStatusIterator->remoteOrderId);
-                orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
-            }
-
-            KF_LOG_INFO(logger, "[handlerResponsedOrderStatus] responsedOrderStatusNoOrderRef erase(noOrderRefOrserStatusItr)"<< noOrderRefOrserStatusItr->orderId);
-            noOrderRefOrserStatusItr = responsedOrderStatusNoOrderRef.erase(noOrderRefOrserStatusItr);
-        }
-    }
-}
-
-void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
-{
-    AccountUnitOceanEx& unit = account_units[account_index];
+    AccountUnitHuoBi& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Iid)" << data->InvestorID
                                               << " (OrderRef)" << data->OrderRef
                                               << " (KfOrderID)" << data->KfOrderID);
 
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_HUOBI, 1, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -658,13 +1131,13 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
         KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
                                                                                        errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_HUOBI, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
 
-    std::map<std::string, int64_t>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
-    int64_t remoteOrderId = 0;
+    std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
+    std::string remoteOrderId;
     if(itr == localOrderRefRemoteOrderId.end()) {
         errorId = 1;
         std::stringstream ss;
@@ -673,7 +1146,7 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
         KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. "
                 << " (rid)" << requestId << " (orderRef)" << data->OrderRef << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_HUOBI, 1, requestId, errorId, errorMsg.c_str());
         return;
     } else {
         remoteOrderId = itr->second;
@@ -682,33 +1155,14 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
     }
 
     Document d;
-    cancel_order(unit, ticker, std::to_string(remoteOrderId), d);
+    cancel_order(unit, ticker, remoteOrderId, d);
 
-/*
- * {
-  "code": 0,
-  "data": {
-    "remaining_volume": "0.25",
-    "trades_count": 0,
-    "created_at": "2018-09-19T02:31:45Z",
-    "side": "buy",
-    "id": 1,
-    "volume": "0.25",
-    "ord_type": "limit",
-    "price": "10.0",
-    "avg_price": "0.0",
-    "state": "wait",
-    "executed_volume": "0.0",
-    "market": "vetusd"
-    },
-  "message": "Operation is successful"
-}
- * */
-    if(!d.HasParseError() && d.HasMember("code") && d["code"].GetInt() != 0) {
-        errorId = d["code"].GetInt();
-        if(d.HasMember("message") && d["message"].IsString())
+    std::string strSuccessCode =  "200000";
+    if(!d.HasParseError() && d.HasMember("code") && strSuccessCode != d["code"].GetString()) {
+        errorId = std::stoi(d["code"].GetString());
+        if(d.HasMember("msg") && d["msg"].IsString())
         {
-            errorMsg = d["message"].GetString();
+            errorMsg = d["msg"].GetString();
         }
         KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId
                                                                        << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
@@ -717,20 +1171,20 @@ void TDEngineOceanEx::req_order_action(const LFOrderActionField* data, int accou
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-	raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_HUOBI, 1, requestId, errorId, errorMsg.c_str());
 
     } else {
         //addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
 
-       // addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
+        // addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
 
         //TODO:   onRtn order/on rtn trade
 
     }
-    }
+}
 
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
-void TDEngineOceanEx::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, int64_t remoteOrderId)
+void TDEngineHuoBi::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId)
 {
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
@@ -741,12 +1195,13 @@ void TDEngineOceanEx::addRemoteOrderIdOrderActionSentTime(const LFOrderActionFie
     remoteOrderIdOrderActionSentTime[remoteOrderId] = newOrderActionSent;
 }
 
-void TDEngineOceanEx::GetAndHandleOrderTradeResponse()
+void TDEngineHuoBi::GetAndHandleOrderTradeResponse()
 {
+    // KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse]" );
     //every account
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
-        AccountUnitOceanEx& unit = account_units[idx];
+        AccountUnitHuoBi& unit = account_units[idx];
         if (!unit.logged_in)
         {
             continue;
@@ -756,13 +1211,12 @@ void TDEngineOceanEx::GetAndHandleOrderTradeResponse()
     }//end every account
 }
 
-
-void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
+//恢复订单状态
+void TDEngineHuoBi::retrieveOrderStatus(AccountUnitHuoBi& unit)
 {
     //KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
-
 
     std::vector<PendingOrderStatus>::iterator orderStatusIterator;
 
@@ -783,31 +1237,8 @@ void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
         );
 
         Document d;
-        query_order(unit, ticker, std::to_string(orderStatusIterator->remoteOrderId), d);
+        query_order(unit, ticker,orderStatusIterator->remoteOrderId, d);
 
-        /*
-
-{
-  "code": 0,
-  "data": [
-    {
-      "remaining_volume": "0.25",
-      "trades_count": 0,
-      "created_at": "2018-09-19T03:02:40Z",
-      "side": "buy",
-      "id": 7,
-      "volume": "0.25",
-      "ord_type": "limit",
-      "price": "10.0",
-      "avg_price": "0.0",
-      "state": "wait",
-      "executed_volume": "0.0",
-      "market": "vetusd"
-    }
-  ],
-  "message": "Operation is successful"
-}
-        */
         //parse order status
         //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
         if(d.HasParseError()) {
@@ -817,42 +1248,43 @@ void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
                                                                                            << " (remoteOrderId) " << orderStatusIterator->remoteOrderId);
             continue;
         }
-        if(d.HasMember("code") && d["code"].GetInt() == 0)
+        const std::string strSuccessCode = "200000";
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] query_order:");
+        if(d.HasMember("code") && strSuccessCode ==  d["code"].GetString())
         {
-            rapidjson::Value &dataArray = d["data"];
-            if(dataArray.IsArray() && dataArray.Size() > 0) {
-                rapidjson::Value &data = dataArray[0];
-                ResponsedOrderStatus responsedOrderStatus;
-                responsedOrderStatus.ticker = ticker;
-                responsedOrderStatus.averagePrice = std::round(std::stod(data["avg_price"].GetString()) * scale_offset);
-                responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
-                //报单价格条件
-                responsedOrderStatus.OrderPriceType = GetPriceType(data["ord_type"].GetString());
-                //买卖方向
-                responsedOrderStatus.Direction = GetDirection(data["side"].GetString());
-                //报单状态
-                responsedOrderStatus.OrderStatus = GetOrderStatus(data["state"].GetString());
-                if(data.HasMember("price") && data["price"].IsString())
-                    responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
-                responsedOrderStatus.volume = std::round(std::stod(data["volume"].GetString()) * scale_offset);
-                //今成交数量
-                responsedOrderStatus.VolumeTraded = std::round(
-                        std::stod(data["executed_volume"].GetString()) * scale_offset);
-                responsedOrderStatus.openVolume = std::round(
-                        std::stod(data["remaining_volume"].GetString()) * scale_offset);
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
+            rapidjson::Value &data = d["data"];
+            ResponsedOrderStatus responsedOrderStatus;
+            responsedOrderStatus.ticker = ticker;
+            double dDealFunds = std::stod(data["dealFunds"].GetString());
+            double dDealSize = std::stod(data["dealSize"].GetString());
+            responsedOrderStatus.averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
+            responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
+            //报单价格条件
+            responsedOrderStatus.OrderPriceType = GetPriceType(data["type"].GetString());
+            //买卖方向
+            responsedOrderStatus.Direction = GetDirection(data["side"].GetString());
+            //报单状态
+            int64_t nDealSize = std::round(dDealSize * scale_offset);
+            int64_t nSize = std::round(std::stod(data["size"].GetString()) * scale_offset);
+            responsedOrderStatus.OrderStatus = GetOrderStatus(data["cancelExist"].GetBool(),nSize,nDealSize);
+            responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
+            responsedOrderStatus.volume = nSize;
+            //今成交数量
+            responsedOrderStatus.VolumeTraded = nDealSize;
+            responsedOrderStatus.openVolume =  nSize - nDealSize;
 
-                handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
+            handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
 
-                //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
-                remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
-            }
+            //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
+            remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
         } else {
-            std::string errorMsg = "";
-
-            int errorId = d["code"].GetInt();
-            if(d.HasMember("message") && d["message"].IsString())
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
+            std::string errorMsg;
+            std::string errorId = d["code"].GetString();
+            if(d.HasMember("msg") && d["msg"].IsString())
             {
-                errorMsg = d["message"].GetString();
+                errorMsg = d["msg"].GetString();
             }
 
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
@@ -874,15 +1306,15 @@ void TDEngineOceanEx::retrieveOrderStatus(AccountUnitOceanEx& unit)
     }
 }
 
-void TDEngineOceanEx::addNewQueryOrdersAndTrades(AccountUnitOceanEx& unit, const char_31 InstrumentID,
-                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                 const uint64_t VolumeTraded, int64_t remoteOrderId)
+void TDEngineHuoBi::addNewQueryOrdersAndTrades(AccountUnitHuoBi& unit, const char_31 InstrumentID,
+                                                const char_21 OrderRef, const LfOrderStatusType OrderStatus,
+                                                const uint64_t VolumeTraded, const std::string& remoteOrderId)
 {
+    KF_LOG_DEBUG(logger, "[addNewQueryOrdersAndTrades]" );
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
     PendingOrderStatus status;
-    memset(&status, 0, sizeof(PendingOrderStatus));
     strncpy(status.InstrumentID, InstrumentID, 31);
     strncpy(status.OrderRef, OrderRef, 21);
     status.OrderStatus = OrderStatus;
@@ -897,7 +1329,7 @@ void TDEngineOceanEx::addNewQueryOrdersAndTrades(AccountUnitOceanEx& unit, const
 }
 
 
-void TDEngineOceanEx::moveNewOrderStatusToPending(AccountUnitOceanEx& unit)
+void TDEngineHuoBi::moveNewOrderStatusToPending(AccountUnitHuoBi& unit)
 {
     std::lock_guard<std::mutex> pending_guard_mutex(*mutex_order_and_trade);
     std::lock_guard<std::mutex> response_guard_mutex(*mutex_response_order_status);
@@ -911,20 +1343,38 @@ void TDEngineOceanEx::moveNewOrderStatusToPending(AccountUnitOceanEx& unit)
     }
 }
 
-void TDEngineOceanEx::set_reader_thread()
+void TDEngineHuoBi::set_reader_thread()
 {
     ITDEngine::set_reader_thread();
 
-    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineOceanEx::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineOceanEx::loop, this)));
+    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineHuoBi::loop");
+    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineHuoBi::loopwebsocket, this)));
 
-
-    KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineOceanEx::loopOrderActionNoResponseTimeOut");
-    orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineOceanEx::loopOrderActionNoResponseTimeOut, this)));
+    KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineHuoBi::loopOrderActionNoResponseTimeOut");
+    orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineHuoBi::loopOrderActionNoResponseTimeOut, this)));
 }
 
+void TDEngineHuoBi::loopwebsocket()
+{
+    time_t nLastTime = time(0);
 
-void TDEngineOceanEx::loop()
+    while(isRunning)
+    {
+        time_t nNowTime = time(0);
+        if(m_isPong && (nNowTime - nLastTime>= 30))
+        {
+            m_isPong = false;
+            nLastTime = nNowTime;
+            KF_LOG_INFO(logger, "TDEngineHuoBi::loop: last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
+            m_shouldPing = true;
+            lws_callback_on_writable(m_conn);
+        }
+        //KF_LOG_INFO(logger, "TDEngineHuoBi::loop:lws_service");
+        lws_service( context, rest_get_interval_ms );
+    }
+}
+
+void TDEngineHuoBi::loop()
 {
     KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
     while(isRunning)
@@ -942,7 +1392,7 @@ void TDEngineOceanEx::loop()
 }
 
 
-void TDEngineOceanEx::loopOrderActionNoResponseTimeOut()
+void TDEngineHuoBi::loopOrderActionNoResponseTimeOut()
 {
     KF_LOG_INFO(logger, "[loopOrderActionNoResponseTimeOut] (isRunning) " << isRunning);
     while(isRunning)
@@ -952,7 +1402,7 @@ void TDEngineOceanEx::loopOrderActionNoResponseTimeOut()
     }
 }
 
-void TDEngineOceanEx::orderActionNoResponseTimeOut()
+void TDEngineHuoBi::orderActionNoResponseTimeOut()
 {
 //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut]");
     int errorId = 100;
@@ -963,7 +1413,7 @@ void TDEngineOceanEx::orderActionNoResponseTimeOut()
     int64_t currentNano = getTimestamp();
     int64_t timeBeforeNano = currentNano - orderaction_max_waiting_seconds * 1000;
 //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (currentNano)" << currentNano << " (timeBeforeNano)" << timeBeforeNano);
-    std::map<int64_t, OrderActionSentTime>::iterator itr;
+    std::map<std::string, OrderActionSentTime>::iterator itr;
     for(itr = remoteOrderIdOrderActionSentTime.begin(); itr != remoteOrderIdOrderActionSentTime.end();)
     {
         if(itr->second.sentNameTime < timeBeforeNano)
@@ -978,7 +1428,7 @@ void TDEngineOceanEx::orderActionNoResponseTimeOut()
 //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (remoteOrderIdOrderActionSentTime.size)" << remoteOrderIdOrderActionSentTime.size());
 }
 
-void TDEngineOceanEx::printResponse(const Document& d)
+void TDEngineHuoBi::printResponse(const Document& d)
 {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -986,7 +1436,7 @@ void TDEngineOceanEx::printResponse(const Document& d)
     KF_LOG_INFO(logger, "[printResponse] ok (text) " << buffer.GetString());
 }
 
-void TDEngineOceanEx::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
+void TDEngineHuoBi::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
 {
     if(http_status_code >= HTTP_RESPONSE_OK && http_status_code <= 299)
     {
@@ -997,26 +1447,26 @@ void TDEngineOceanEx::getResponse(int http_status_code, std::string responseText
         Document::AllocatorType& allocator = json.GetAllocator();
         int errorId = 1;
         json.AddMember("code", errorId, allocator);
-        //KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
+        KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
         rapidjson::Value val;
         val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
-        json.AddMember("message", val, allocator);
+        json.AddMember("msg", val, allocator);
     } else
     {
         Document d;
         d.Parse(responseText.c_str());
-        //KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
+        KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
         json.SetObject();
         Document::AllocatorType& allocator = json.GetAllocator();
         json.AddMember("code", http_status_code, allocator);
 
         rapidjson::Value val;
         val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
-        json.AddMember("message", val, allocator);
+        json.AddMember("msg", val, allocator);
     }
 }
 
-std::string TDEngineOceanEx::construct_request_body(const AccountUnitOceanEx& unit,const  std::string& data,bool isget)
+std::string TDEngineHuoBi::construct_request_body(const AccountUnitHuoBi& unit,const  std::string& data,bool isget)
 {
     std::string pay_load = R"({"uid":")" + unit.api_key + R"(","data":)" + data + R"(})";
     std::string request_body = utils::crypto::jwt_create(pay_load,unit.secret_key);
@@ -1025,69 +1475,82 @@ std::string TDEngineOceanEx::construct_request_body(const AccountUnitOceanEx& un
 }
 
 
-void TDEngineOceanEx::get_account(AccountUnitOceanEx& unit, Document& json)
+void TDEngineHuoBi::get_account(AccountUnitHuoBi& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
-
-    std::string requestPath = "/members/me";
+    /*
+    账户余额
+    查询指定账户的余额，支持以下账户：
+    spot：现货账户， margin：杠杆账户，otc：OTC 账户，point：点卡账户
+    HTTP 请求
+    GET /v1/account/accounts/{account-id}/balance
+    */
+    const auto resp = Get("/v1/account/accounts","{}",unit);
+    Document j;
+    j.Parse(resp.text.c_str());
+    std::string requestPath = "/v1/account/accounts/"+std::to_string(j["data"].GetArray()[0]["id"])+"/balance";
     //std::string queryString= construct_request_body(unit,"{}");
     //RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA
-            ;//construct_request_body(unit, "{}");
-
+    //construct_request_body(unit, "{}");
     //string url = unit.baseUrl + requestPath + queryString;
-
     const auto response = Get(requestPath,"{}",unit);
-    return getResponse(response.status_code, response.text, response.error.message, json);
+    json.Parse(response.text.c_str());
+    return ;
 }
-
 /*
- * {
-    "market": "vetusd",
-    "side": "buy",
-    "volume": 0.25,
-    "price": 10,
-    "ord_type": "limit"
+{
+  "account-id": "100009",
+  "amount": "10.1",
+  "price": "100.1",
+  "source": "api",
+  "symbol": "ethusdt",
+  "type": "buy-limit"
 }
  * */
-std::string TDEngineOceanEx::createInsertOrdertring(const char *code,
-                                                    const char *side, const char *type, double size, double price)
+std::string TDEngineHuoBi::createInsertOrdertring(const char *accountId,
+        const char *amount, const char *price, const cahr *source, const char *symbol,const char *type)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
-    writer.Key("market");
-    writer.String(code);
-
-    writer.Key("side");
-    writer.String(side);
-
-    writer.Key("volume");
-    writer.Double(size);
-    if(strcmp("market",type) != 0)
-    {
-        writer.Key("price");
-        writer.Double(price);
-    }
-    writer.Key("ord_type");
+    writer.Key("account-id");
+    writer.String(accountId);
+    writer.Key("amount");
+    writer.String(amount);
+    writer.Key("price");
+    writer.String(price);
+    writer.Key("source");
+    writer.String(source);
+    writer.Key("symbol");
+    writer.String(symbol);
+    writer.Key("type");
     writer.String(type);
-
     writer.EndObject();
     return s.GetString();
 }
 
-void TDEngineOceanEx::send_order(AccountUnitOceanEx& unit, const char *code,
-                                 const char *side, const char *type, double size, double price, double funds, Document& json)
+void TDEngineHuoBi::send_order(AccountUnitHuoBi& unit, const char *accountId,
+        const char *amount, const char *price, const cahr *source, const char *symbol,const char *type,Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
-
+    /*火币下单请求参数
+     *{
+        "account-id": "100009",
+        "amount": "10.1",
+        "price": "100.1",
+        "source": "api",
+        "symbol": "ethusdt",
+        "type": "buy-limit"
+      }
+     */
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
     do {
         should_retry = false;
-
-        std::string requestPath = "/orders";
-        response = Post(requestPath,createInsertOrdertring(code, side, type, size, price),unit);
+        //火币下单post /v1/order/orders/place
+        std::string requestPath = "/v1/order/orders/place";
+        response = Post(requestPath,createInsertOrdertring(accountId, amount, price, source, symbol,type),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
                                                   " (response.error.message) " << response.error.message <<
@@ -1111,36 +1574,62 @@ void TDEngineOceanEx::send_order(AccountUnitOceanEx& unit, const char *code,
 
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
-
-bool TDEngineOceanEx::shouldRetry(Document& doc)
+/*火币返回数据格式
+{
+  "status": "ok",
+  "ch": "market.btcusdt.kline.1day",
+  "ts": 1499223904680,
+  "data": // per API response data in nested JSON object
+}
+*/
+bool TDEngineHuoBi::shouldRetry(Document& doc)
 {
     bool ret = false;
-    if(!doc.IsObject() || !doc.HasMember("code") || doc["code"].GetInt() != 0)
+    std::string strCode ;
+    if(doc.HasMember("status"))
+    {
+        strCode = doc["status"].GetString();
+    }
+    bool isObJect = doc.IsObject();
+    if(!isObJect || strCode != "ok")
     {
         ret = true;
     }
-//    if( 502 == http_status_code
-//        || (errorMsg.size() > 0 && errorMsg.find("error setting certificate verify locations") >= 0)
-//        || (401 == http_status_code && errorMsg.size() > 0 && errorMsg.find("Auth error") >= 0) )
-//    {
-//        return true;
-//    }
+
+    KF_LOG_INFO(logger, "[shouldRetry] isObJect = " << isObJect << ",strCode = " << strCode);
+
     return ret;
 }
 
-void TDEngineOceanEx::cancel_all_orders(AccountUnitOceanEx& unit, std::string code, Document& json)
+void TDEngineHuoBi::cancel_all_orders(AccountUnitHuoBi& unit, std::string code, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
-
-    std::string requestPath = "/orders/clear";
+    //火币获取account-id
+    const auto resp = Get("/v1/account/accounts","{}",unit);
+    Document j;
+    j.Parse(resp.text.c_str());
+    std::string accountId = std::to_string(j["data"].GetArray()[0]["id"]);
+    //火币post批量撤销订单
+    std::string requestPath = "/v1/order/orders/batchCancelOpenOrders";
     //std::string queryString= "?user_jwt=RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA";//construct_request_body(unit, "{}");
-
-    auto response = Post(requestPath,"{}",unit);
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("account-id");
+    writer.String(accountId);
+    writer.Key("symbol");
+    writer.String("");
+    writer.Key("side");
+    writer.String("");
+    writer.Key("size");
+    writer.Int(100);
+    writer.EndObject();
+    auto response = Post(requestPath,s.GetString(),unit);
 
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-void TDEngineOceanEx::cancel_order(AccountUnitOceanEx& unit, std::string code, std::string orderId, Document& json)
+void TDEngineHuoBi::cancel_order(AccountUnitHuoBi& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
 
@@ -1149,10 +1638,10 @@ void TDEngineOceanEx::cancel_order(AccountUnitOceanEx& unit, std::string code, s
     bool should_retry = false;
     do {
         should_retry = false;
-
-        std::string requestPath = "/order/delete";
+        //火币post撤单请求
+        std::string requestPath = "/v1/order/orders/" + orderId + "/submitcancel";
         //std::string queryString= construct_request_body(unit, "{\"id\":" + orderId + "}");
-        response = Post(requestPath,"{\"id\":" + orderId + "}",unit);
+        response = Post(requestPath,"",unit);
 
         //json.Clear();
         getResponse(response.status_code, response.text, response.error.message, json);
@@ -1166,25 +1655,28 @@ void TDEngineOceanEx::cancel_order(AccountUnitOceanEx& unit, std::string code, s
 
 
     KF_LOG_INFO(logger, "[cancel_order] out_retry " << retry_times << " (response.status_code) " << response.status_code <<
-                                                                           " (response.error.message) " << response.error.message <<
-                                                                           " (response.text) " << response.text.c_str() );
+                                                    " (response.error.message) " << response.error.message <<
+                                                    " (response.text) " << response.text.c_str() );
 
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-void TDEngineOceanEx::query_order(AccountUnitOceanEx& unit, std::string code, std::string orderId, Document& json)
+void TDEngineHuoBi::query_order(AccountUnitHuoBi& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[query_order]");
-    std::string requestPath = "/orders";
-    auto response = Get(requestPath,"{\"ids\": [" + orderId + "]}",unit);
-
-    getResponse(response.status_code, response.text, response.error.message, json);
+    //火币get查询订单详情
+    std::string requestPath = "/v1/order/orders/" + orderId;
+    auto response = Get(requestPath,"",unit);
+    json.Parse(response.text.c_str());
+    //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
 
 
-void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
+void TDEngineHuoBi::handlerResponseOrderStatus(AccountUnitHuoBi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
 {
+    KF_LOG_INFO(logger, "[handlerResponseOrderStatus]");
+
     if( (responsedOrderStatus.OrderStatus == 'b' && '1' == orderStatusIterator-> OrderStatus || responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus) && responsedOrderStatus.VolumeTraded == orderStatusIterator->VolumeTraded)
     {//no change
         return;
@@ -1206,17 +1698,17 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
             LFRtnOrderField rtn_order;
             memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
-            std::string strOrderID = std::to_string(orderStatusIterator->remoteOrderId);
+            std::string strOrderID = orderStatusIterator->remoteOrderId;
             strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
 
             rtn_order.OrderStatus = LF_CHAR_PartTradedNotQueueing;
             rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
             //first send onRtnOrder about the status change or VolumeTraded change
-            strcpy(rtn_order.ExchangeID, "oceanex");
+            strcpy(rtn_order.ExchangeID, "huobi");
             strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
             rtn_order.Direction = responsedOrderStatus.Direction;
-            //No this setting on OceanEx
+            //No this setting on Huobi
             rtn_order.TimeCondition = LF_CHAR_GTC;
             rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
             strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
@@ -1228,28 +1720,33 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
             //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
             //on_rtn_order(&rtn_order);
             raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_OCEANEX,
+                                    source_id, MSG_TYPE_LF_RTN_ORDER_HUOBI,
                                     1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
 
             //send OnRtnTrade
             LFRtnTradeField rtn_trade;
             memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-            strcpy(rtn_trade.ExchangeID, "oceanex");
+            strcpy(rtn_trade.ExchangeID, "huobi");
             strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
             strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
             rtn_trade.Direction = rtn_order.Direction;
-            uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
-            uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
+            double oldAmount = (double)orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
+            double newAmount = (double)rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
 
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            rtn_trade.Price = checkPrice((newAmount - oldAmount)*1.0/(rtn_trade.Volume),orderStatusIterator->InstrumentID);//(newAmount - oldAmount)/(rtn_trade.Volume);
+            double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
+            rtn_trade.Price =(price + 0.000000001)*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_OCEANEX, 1, -1);
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_HUOBI, 1, -1);
+
+            KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
+                                                                  << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+
 
         }
 
@@ -1257,18 +1754,18 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
         LFRtnOrderField rtn_order;
         memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
-        std::string strOrderID = std::to_string(orderStatusIterator->remoteOrderId);
+        std::string strOrderID = orderStatusIterator->remoteOrderId;
         strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
 
         rtn_order.OrderStatus = LF_CHAR_Canceled;
         rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
 
         //first send onRtnOrder about the status change or VolumeTraded change
-        strcpy(rtn_order.ExchangeID, "oceanex");
+        strcpy(rtn_order.ExchangeID, "huobi");
         strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
         strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
         rtn_order.Direction = responsedOrderStatus.Direction;
-        //OceanEx has no this setting
+        //Huobi has no this setting
         rtn_order.TimeCondition = LF_CHAR_GTC;
         rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
         strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
@@ -1279,8 +1776,11 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_OCEANEX,
+                                source_id, MSG_TYPE_LF_RTN_ORDER_HUOBI,
                                 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+        KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
+                                                            << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
 
 
         //third, update last status for next query_order
@@ -1295,11 +1795,11 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
         LFRtnOrderField rtn_order;
         memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
-        std::string strOrderID = std::to_string(orderStatusIterator->remoteOrderId);
+        std::string strOrderID = orderStatusIterator->remoteOrderId;
         strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
 
         KF_LOG_INFO(logger, "[handlerResponseOrderStatus] VolumeTraded Change  LastOrderPsp:" << orderStatusIterator->VolumeTraded << ", NewOrderRsp: " << responsedOrderStatus.VolumeTraded  <<
-                                                        " NewOrderRsp.Status " << responsedOrderStatus.OrderStatus);
+                                                                                              " NewOrderRsp.Status " << responsedOrderStatus.OrderStatus);
         if(responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched && responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded) {
             rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
         } else{
@@ -1308,11 +1808,11 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
         rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
 
         //first send onRtnOrder about the status change or VolumeTraded change
-        strcpy(rtn_order.ExchangeID, "oceanex");
+        strcpy(rtn_order.ExchangeID, "huobi");
         strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
         strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
         rtn_order.Direction = responsedOrderStatus.Direction;
-        //No this setting on OceanEx
+        //No this setting on Huobi
         rtn_order.TimeCondition = LF_CHAR_GTC;
         rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
         strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
@@ -1322,8 +1822,11 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
 
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_OCEANEX,
+                                source_id, MSG_TYPE_LF_RTN_ORDER_HUOBI,
                                 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+        KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
+                                                            << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
 
         int64_t newAveragePrice = responsedOrderStatus.averagePrice;
         //second, if the status is PartTraded/AllTraded, send OnRtnTrade
@@ -1333,21 +1836,26 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
         {
             LFRtnTradeField rtn_trade;
             memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-            strcpy(rtn_trade.ExchangeID, "oceanex");
+            strcpy(rtn_trade.ExchangeID, "huobi");
             strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
             strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
             rtn_trade.Direction = rtn_order.Direction;
-            uint64_t oldAmount = orderStatusIterator->VolumeTraded * orderStatusIterator->averagePrice;
-            uint64_t newAmount = rtn_order.VolumeTraded * newAveragePrice;
+            double oldAmount = (double)orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
+            double newAmount = (double)rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
 
             //calculate the volumn and price (it is average too)
             rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            rtn_trade.Price = checkPrice((newAmount - oldAmount)*1.0/(rtn_trade.Volume),orderStatusIterator->InstrumentID);//(newAmount - oldAmount)/(rtn_trade.Volume);
+            double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
+            rtn_trade.Price = (price + 0.000000001)*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_OCEANEX, 1, -1);
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_HUOBI, 1, -1);
+
+            KF_LOG_INFO(logger, "[on_rtn_trade] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
+                                                                << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+
         }
         //third, update last status for next query_order
         orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
@@ -1356,7 +1864,7 @@ void TDEngineOceanEx::handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::
     }
 }
 
-std::string TDEngineOceanEx::parseJsonToString(Document &d)
+std::string TDEngineHuoBi::parseJsonToString(Document &d)
 {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -1366,22 +1874,39 @@ std::string TDEngineOceanEx::parseJsonToString(Document &d)
 }
 
 
-inline int64_t TDEngineOceanEx::getTimestamp()
+inline int64_t TDEngineHuoBi::getTimestamp()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return timestamp;
 }
 
+void TDEngineHuoBi::genUniqueKey()
+{
+    struct tm cur_time = getCurLocalTime();
+    //SSMMHHDDN
+    char key[11]{0};
+    snprintf((char*)key, 11, "%02d%02d%02d%02d%1s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
+    m_uniqueKey = key;
+}
+
+//clientid =  m_uniqueKey+orderRef
+std::string TDEngineHuoBi::genClinetid(const std::string &orderRef)
+{
+    static int nIndex = 0;
+    return m_uniqueKey + orderRef + std::to_string(nIndex++);
+}
+
+
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
 
-BOOST_PYTHON_MODULE(liboceanextd)
+BOOST_PYTHON_MODULE(libhuobitd)
 {
     using namespace boost::python;
-    class_<TDEngineOceanEx, boost::shared_ptr<TDEngineOceanEx> >("Engine")
-            .def(init<>())
-            .def("init", &TDEngineOceanEx::initialize)
-            .def("start", &TDEngineOceanEx::start)
-            .def("stop", &TDEngineOceanEx::stop)
-            .def("logout", &TDEngineOceanEx::logout)
-            .def("wait_for_stop", &TDEngineOceanEx::wait_for_stop);
+    class_<TDEngineHuoBi, boost::shared_ptr<TDEngineHuoBi> >("Engine")
+     .def(init<>())
+        .def("init", &TDEngineHuoBi::initialize)
+        .def("start", &TDEngineHuoBi::start)
+        .def("stop", &TDEngineHuoBi::stop)
+        .def("logout", &TDEngineHuoBi::logout)
+        .def("wait_for_stop", &TDEngineHuoBi::wait_for_stop);
 }
