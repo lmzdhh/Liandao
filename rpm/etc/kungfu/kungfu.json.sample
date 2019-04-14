@@ -642,14 +642,12 @@
 					"passphrase": "passphrase",
 					"baseUrl": "https://api.kucoin.com",
 					"whiteLists": {
-						"strategy_coinpair(base_quote)": "exchange_coinpair",
 						"btc_usdt": "BTC-USDT",
 						"eth_usdt": "ETH-USDT",
 						"vet_usdt": "VET-USDT",
 						"eth_btc": "ETH-BTC",
 						"vet_btc": "VET-BTC",
-						"vet_eth": "VET-ETH",
-						"btc_eth": "BTC-ETH"
+						"vet_eth": "VET-ETH"
 					},
 					"positionWhiteLists": {
 						"ETC": "ETC",

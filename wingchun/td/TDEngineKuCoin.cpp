@@ -82,7 +82,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		case LWS_CALLBACK_CLIENT_RECEIVE:
 		{
 		     ss << "LWS_CALLBACK_CLIENT_RECEIVE.";
-            global_md->writeErrorLog(ss.str());
+           		//global_md->writeErrorLog(ss.str());
 			if(global_md)
 			{
 				global_md->on_lws_data(wsi, (const char*)in, len);
@@ -281,7 +281,7 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
 void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
-	KF_LOG_INFO(logger, "TDEngineKuCoin::on_lws_data: " << data);
+//	KF_LOG_INFO(logger, "TDEngineKuCoin::on_lws_data: " << data);
     Document json;
 	json.Parse(data);
 
@@ -319,7 +319,7 @@ std::string TDEngineKuCoin::makeSubscribeL3Update(const std::map<std::string,int
 	writer.Key("type");
 	writer.String("subscribe");
 	writer.Key("topic");
-    std::string strTopic = "/market/level2:";
+    std::string strTopic = "/market/level3:";
     for(const auto&  pair : mapAllSymbols)
     {
         strTopic += pair.first + ",";
@@ -572,7 +572,7 @@ cpr::Response TDEngineKuCoin::Delete(const std::string& method_url,const std::st
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Delete(Url{url},Header{mapHeader}, Timeout{10000} );
     lock.unlock();
-    KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[delete] (url) " << url << " (response.status_code) " << response.status_code <<
                                                " (response.error.message) " << response.error.message <<
                                                " (response.text) " << response.text.c_str());
     return response;
@@ -718,6 +718,7 @@ void TDEngineKuCoin::connect(long timeout_nsec)
          //   unit.logged_in = (code == 0);
         //}
     }
+	login(timeout_nsec);
 }
 
    void TDEngineKuCoin::getPriceIncrement(AccountUnitKuCoin& unit)
@@ -834,7 +835,7 @@ void TDEngineKuCoin::login(long timeout_nsec)
 	}
 	KF_LOG_INFO(logger, "TDEngineKuCoin::login: wsi create success.");
 
-    connect(timeout_nsec);
+    //connect(timeout_nsec);
 }
 
 void TDEngineKuCoin::logout()
@@ -1169,7 +1170,7 @@ void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int accoun
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
-
+    std::lock_guard<std::mutex> lck(*m_mutexOrder);
     std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
     std::string remoteOrderId;
     if(itr == localOrderRefRemoteOrderId.end()) {
