@@ -615,13 +615,38 @@ void MDEngineBitmex::processTradeBinsData(Document& json)
     for(int count = 0; count < data.Size(); count++)
     {
         auto& update = data.GetArray()[count];
-        std::string timestamp = update["timestamp"].GetString();
+        
 
         LFBarMarketDataField market;
         memset(&market, 0, sizeof(market));
         strcpy(market.InstrumentID, ticker.c_str());
         strcpy(market.ExchangeID, "bitmex");
 
+        std::string timestamp = update["timestamp"].GetString();//'2019-01-06T03:32:00.000Z'
+        if(timestamp.size() == strlen("2019-01-06T03:32:00.000Z"))
+        {
+            //sprintf(market.TradingDay, "%s%s%s", timestamp.substr(0,4).c_str(),timestamp.substr(5,7).c_str(),timestamp.substr(8,10).c_str());
+            struct tm time;
+            time.tm_year = std::stoi(timestamp.substr(0,4))-1900;
+            time.tm_mon = std::stoi(timestamp.substr(5,7))-1;
+            time.tm_mday = std::stoi(timestamp.substr(8,10));
+            time.tm_hour = std::stoi(timestamp.substr(11,13));
+            time.tm_min = std::stoi(timestamp.substr(14,16));
+            time.tm_sec = std::stoi(timestamp.substr(17,19));
+            
+            time_t gm_time = timegm(&time);
+            gm_time-=1;
+            time = *gmtime(&gm_time);
+            sprintf(market.EndUpdateTime,"%02d:%02d:%02d.999", time.tm_hour,time.tm_min,time.tm_sec);
+            market.EndUpdateMillisec = gm_time *1000 + 999;
+            gm_time-=59;
+            time = *gmtime(&gm_time);
+            sprintf(market.StartUpdateTime,"%02d:%02d:%02d.000", time.tm_hour,time.tm_min,time.tm_sec);
+            market.StartUpdateMillisec =gm_time *1000;
+
+            strftime(market.TradingDay, 9, "%Y%m%d", &time);
+        }
+        /*
         struct tm cur_tm, start_tm, end_tm;
         time_t now = time(0);
         cur_tm = *localtime(&now);
@@ -635,7 +660,7 @@ void MDEngineBitmex::processTradeBinsData(Document& json)
         end_tm = cur_tm;
         market.EndUpdateMillisec = kungfu::yijinjing::parseTm(end_tm) / 1000000;
         strftime(market.EndUpdateTime, 13, "%H:%M:%S", &end_tm);
-
+        */
         market.PeriodMillisec = 60000;
         market.Open = std::round(update["open"].GetFloat() * scale_offset);;
         market.Close = std::round(update["close"].GetFloat() * scale_offset);;
