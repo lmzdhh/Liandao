@@ -39,24 +39,24 @@ using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 USING_WC_NAMESPACE
 
-TDEngineHuoBi::TDEngineHuoBi(): ITDEngine(SOURCE_HUOBI)
+TDEngineHuobi::TDEngineHuobi(): ITDEngine(SOURCE_HUOBI)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.Huobi");
-    KF_LOG_INFO(logger, "[TDEngineHuoBi]");
+    KF_LOG_INFO(logger, "[TDEngineHuobi]");
 
     mutex_order_and_trade = new std::mutex();
     mutex_response_order_status = new std::mutex();
     mutex_orderaction_waiting_response = new std::mutex();
 }
 
-TDEngineHuoBi::~TDEngineHuoBi()
+TDEngineHuobi::~TDEngineHuobi()
 {
     if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
     if(mutex_response_order_status != nullptr) delete mutex_response_order_status;
     if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
 }
 
-static TDEngineHuoBi* global_md = nullptr;
+static TDEngineHuobi* global_md = nullptr;
 
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
@@ -123,18 +123,18 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
     return 0;
 }
 
-std::string TDEngineHuoBi::getId()
+std::string TDEngineHuobi::getId()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return  std::to_string(timestamp);
 }
 
-void TDEngineHuoBi::onPong(struct lws* conn)
+void TDEngineHuobi::onPong(struct lws* conn)
 {
     Ping(conn);
 }
 
-void TDEngineHuoBi::Ping(struct lws* conn)
+void TDEngineHuobi::Ping(struct lws* conn)
 {
     m_shouldPing = false;
     StringBuffer sbPing;
@@ -149,15 +149,15 @@ void TDEngineHuoBi::Ping(struct lws* conn)
     unsigned char msg[512];
     memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
     int length = strPing.length();
-    KF_LOG_INFO(logger, "TDEngineHuoBi::lws_write_ping: " << strPing.c_str() << " ,len = " << length);
+    KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_ping: " << strPing.c_str() << " ,len = " << length);
     strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 }
 
-void TDEngineHuoBi::on_lws_data(struct lws* conn, const char* data, size_t len)
+void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
-    KF_LOG_INFO(logger, "TDEngineHuoBi::on_lws_data: " << data);
+    KF_LOG_INFO(logger, "TDEngineHuobi::on_lws_data: " << data);
     Document json;
     json.Parse(data);
 
@@ -187,7 +187,7 @@ void TDEngineHuoBi::on_lws_data(struct lws* conn, const char* data, size_t len)
 
 }
 
-std::string TDEngineHuoBi::makeSubscribeL3Update(const std::map<std::string,int>& mapAllSymbols)
+std::string TDEngineHuobi::makeSubscribeL3Update(const std::map<std::string,int>& mapAllSymbols)
 {
     StringBuffer sbUpdate;
     Writer<StringBuffer> writer(sbUpdate);
@@ -214,9 +214,9 @@ std::string TDEngineHuoBi::makeSubscribeL3Update(const std::map<std::string,int>
     return strUpdate;
 }
 
-int TDEngineHuoBi::lws_write_subscribe(struct lws* conn)
+int TDEngineHuobi::lws_write_subscribe(struct lws* conn)
 {
-    KF_LOG_INFO(logger, "TDEngineHuoBi::lws_write_subscribe:" );
+    KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_subscribe:" );
 
     int ret = 0;
 
@@ -237,7 +237,7 @@ int TDEngineHuoBi::lws_write_subscribe(struct lws* conn)
         unsigned char msg[1024];
         memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
         int length = strSubscribe.length();
-        KF_LOG_INFO(logger, "TDEngineHuoBi::lws_write_subscribe: " << strSubscribe.c_str() << " ,len = " << length);
+        KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_subscribe: " << strSubscribe.c_str() << " ,len = " << length);
         strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
         ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
         lws_callback_on_writable(conn);
@@ -254,9 +254,9 @@ int TDEngineHuoBi::lws_write_subscribe(struct lws* conn)
     return ret;
 }
 
-void TDEngineHuoBi::on_lws_connection_error(struct lws* conn)
+void TDEngineHuobi::on_lws_connection_error(struct lws* conn)
 {
-    KF_LOG_ERROR(logger, "TDEngineHuoBi::on_lws_connection_error. login again.");
+    KF_LOG_ERROR(logger, "TDEngineHuobi::on_lws_connection_error. login again.");
     //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
     m_isPong = false;
     m_shouldPing = true;
@@ -291,12 +291,12 @@ struct session_data {
     int fd;
 };
 
-void TDEngineHuoBi::writeErrorLog(std::string strError)
+void TDEngineHuobi::writeErrorLog(std::string strError)
 {
     KF_LOG_ERROR(logger, strError);
 }
 
-bool TDEngineHuoBi::getToken(Document& d)
+bool TDEngineHuobi::getToken(Document& d)
 {
     int nTryCount = 0;
     cpr::Response response;
@@ -308,18 +308,18 @@ bool TDEngineHuoBi::getToken(Document& d)
 
     if(response.status_code != 200)
     {
-        KF_LOG_ERROR(logger, "TDEngineHuoBi::login::getToken Error");
+        KF_LOG_ERROR(logger, "TDEngineHuobi::login::getToken Error");
         return false;
     }
 
-    KF_LOG_INFO(logger, "TDEngineHuoBi::getToken: " << response.text.c_str());
+    KF_LOG_INFO(logger, "TDEngineHuobi::getToken: " << response.text.c_str());
 
     d.Parse(response.text.c_str());
     return true;
 }
 
 
-bool TDEngineHuoBi::getServers(Document& d)
+bool TDEngineHuobi::getServers(Document& d)
 {
     m_vstServerInfos.clear();
     m_strToken = "";
@@ -363,20 +363,20 @@ bool TDEngineHuoBi::getServers(Document& d)
     }
     if(m_strToken == "" || m_vstServerInfos.empty())
     {
-        KF_LOG_ERROR(logger, "TDEngineHuoBi::login::getServers Error");
+        KF_LOG_ERROR(logger, "TDEngineHuobi::login::getServers Error");
         return false;
     }
     return true;
 }
 
-int64_t TDEngineHuoBi::getMSTime()
+int64_t TDEngineHuobi::getMSTime()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return  timestamp;
 }
 
 //cys edit
-cpr::Header TDEngineHuoBi::construct_request_header(AccountUnitHuoBi& unit,const std::string& strSign,const std::string& strContentType)
+cpr::Header TDEngineHuobi::construct_request_header(AccountUnitHuobi& unit,const std::string& strSign,const std::string& strContentType)
 {
     unsigned char * strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     std::string strSignatrue = base64_encode(strHmac,32);
@@ -402,7 +402,7 @@ cpr::Header TDEngineHuoBi::construct_request_header(AccountUnitHuoBi& unit,const
 }
 //cys edit from huobi api
 std::mutex g_httpMutex;
-cpr::Response TDEngineHuoBi::Get(const std::string& method_url,const std::string& body, AccountUnitHuoBi& unit)
+cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string& body, AccountUnitHuobi& unit)
 {
     string url = unit.baseUrl + method_url;
     //使用 UTF-8 编码，且进行了 URI 编码，十六进制字符必须大写，如 “:” 会被编码为 “%3A” ，空格被编码为 “%20”。
@@ -442,7 +442,7 @@ cpr::Response TDEngineHuoBi::Get(const std::string& method_url,const std::string
     return response;
 }
 //cys edit
-cpr::Response TDEngineHuoBi::Post(const std::string& method_url,const std::string& body, AccountUnitHuoBi& unit)
+cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::string& body, AccountUnitHuobi& unit)
 {
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strAccessKeyId=unit.api_key;
@@ -475,7 +475,7 @@ cpr::Response TDEngineHuoBi::Post(const std::string& method_url,const std::strin
     return response;
 }
 
-void TDEngineHuoBi::init()
+void TDEngineHuobi::init()
 {
     genUniqueKey();
     ITDEngine::init();
@@ -484,18 +484,18 @@ void TDEngineHuoBi::init()
     KF_LOG_INFO(logger, "[init]");
 }
 
-void TDEngineHuoBi::pre_load(const json& j_config)
+void TDEngineHuobi::pre_load(const json& j_config)
 {
     KF_LOG_INFO(logger, "[pre_load]");
 }
 
-void TDEngineHuoBi::resize_accounts(int account_num)
+void TDEngineHuobi::resize_accounts(int account_num)
 {
     account_units.resize(account_num);
     KF_LOG_INFO(logger, "[resize_accounts]");
 }
 
-TradeAccount TDEngineHuoBi::load_account(int idx, const json& j_config)
+TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
     // internal load
@@ -522,7 +522,7 @@ TradeAccount TDEngineHuoBi::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
 
-    AccountUnitHuoBi& unit = account_units[idx];
+    AccountUnitHuobi& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
     unit.passphrase = passphrase;
@@ -535,10 +535,10 @@ TradeAccount TDEngineHuoBi::load_account(int idx, const json& j_config)
     //  std::string data ="{}";
     //  std::string signature =utils::crypto::rsa256_private_sign(data, g_private_key);
     // std::string sign = base64_encode((unsigned char*)signature.c_str(), signature.size());
-    //std::cout  << "[TDEngineHuoBi] (test rs256-base64-sign)" << sign << std::endl;
+    //std::cout  << "[TDEngineHuobi] (test rs256-base64-sign)" << sign << std::endl;
 
     //std::string decodeStr = utils::crypto::rsa256_pub_verify(data,signature, g_public_key);
-    //std::cout  << "[TDEngineHuoBi] (test rs256-verify)" << (decodeStr.empty()?"yes":"no") << std::endl;
+    //std::cout  << "[TDEngineHuobi] (test rs256-verify)" << (decodeStr.empty()?"yes":"no") << std::endl;
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
@@ -548,7 +548,7 @@ TradeAccount TDEngineHuoBi::load_account(int idx, const json& j_config)
 
     //display usage:
     if(unit.coinPairWhiteList.Size() == 0) {
-        KF_LOG_ERROR(logger, "TDEngineHuoBi::load_account: please add whiteLists in kungfu.json like this :");
+        KF_LOG_ERROR(logger, "TDEngineHuobi::load_account: please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
         KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
@@ -571,12 +571,12 @@ TradeAccount TDEngineHuoBi::load_account(int idx, const json& j_config)
     return account;
 }
 
-void TDEngineHuoBi::connect(long timeout_nsec)
+void TDEngineHuobi::connect(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "[connect]");
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
-        AccountUnitHuoBi& unit = account_units[idx];
+        AccountUnitHuobi& unit = account_units[idx];
         unit.logged_in = true;
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         // Document doc;
@@ -594,7 +594,7 @@ void TDEngineHuoBi::connect(long timeout_nsec)
     }
 }
 //火币暂时未用到
-void TDEngineHuoBi::getPriceIncrement(AccountUnitHuoBi& unit)
+void TDEngineHuobi::getPriceIncrement(AccountUnitHuobi& unit)
 {
     auto& coinPairWhiteList = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList();
     for(auto& pair : coinPairWhiteList)
@@ -618,9 +618,9 @@ void TDEngineHuoBi::getPriceIncrement(AccountUnitHuoBi& unit)
     }
 }
 
-void TDEngineHuoBi::login(long timeout_nsec)
+void TDEngineHuobi::login(long timeout_nsec)
 {
-    KF_LOG_INFO(logger, "TDEngineHuoBi::login:");
+    KF_LOG_INFO(logger, "TDEngineHuobi::login:");
 
     global_md = this;
 
@@ -670,11 +670,11 @@ void TDEngineHuoBi::login(long timeout_nsec)
     protocol.user = NULL;
 
     context = lws_create_context(&ctxCreationInfo);
-    KF_LOG_INFO(logger, "TDEngineHuoBi::login: context created.");
+    KF_LOG_INFO(logger, "TDEngineHuobi::login: context created.");
 
 
     if (context == NULL) {
-        KF_LOG_ERROR(logger, "TDEngineHuoBi::login: context is NULL. return");
+        KF_LOG_ERROR(logger, "TDEngineHuobi::login: context is NULL. return");
         return;
     }
 
@@ -699,29 +699,29 @@ void TDEngineHuoBi::login(long timeout_nsec)
     clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
     clientConnectInfo.pwsi = &wsi;
 
-    KF_LOG_INFO(logger, "TDEngineHuoBi::login: address = " << clientConnectInfo.address << ",path = " << clientConnectInfo.path);
+    KF_LOG_INFO(logger, "TDEngineHuobi::login: address = " << clientConnectInfo.address << ",path = " << clientConnectInfo.path);
 
     wsi = lws_client_connect_via_info(&clientConnectInfo);
     if (wsi == NULL) {
-        KF_LOG_ERROR(logger, "TDEngineHuoBi::login: wsi create error.");
+        KF_LOG_ERROR(logger, "TDEngineHuobi::login: wsi create error.");
         return;
     }
-    KF_LOG_INFO(logger, "TDEngineHuoBi::login: wsi create success.");
+    KF_LOG_INFO(logger, "TDEngineHuobi::login: wsi create success.");
 
     connect(timeout_nsec);
 }
 
-void TDEngineHuoBi::logout()
+void TDEngineHuobi::logout()
 {
     KF_LOG_INFO(logger, "[logout]");
 }
 
-void TDEngineHuoBi::release_api()
+void TDEngineHuobi::release_api()
 {
     KF_LOG_INFO(logger, "[release_api]");
 }
 
-bool TDEngineHuoBi::is_logged_in() const
+bool TDEngineHuobi::is_logged_in() const
 {
     KF_LOG_INFO(logger, "[is_logged_in]");
     for (auto& unit: account_units)
@@ -732,14 +732,14 @@ bool TDEngineHuoBi::is_logged_in() const
     return true;
 }
 
-bool TDEngineHuoBi::is_connected() const
+bool TDEngineHuobi::is_connected() const
 {
     KF_LOG_INFO(logger, "[is_connected]");
     return is_logged_in();
 }
 
 
-std::string TDEngineHuoBi::GetSide(const LfDirectionType& input) {
+std::string TDEngineHuobi::GetSide(const LfDirectionType& input) {
     if (LF_CHAR_Buy == input) {
         return "buy";
     } else if (LF_CHAR_Sell == input) {
@@ -749,7 +749,7 @@ std::string TDEngineHuoBi::GetSide(const LfDirectionType& input) {
     }
 }
 
-LfDirectionType TDEngineHuoBi::GetDirection(std::string input) {
+LfDirectionType TDEngineHuobi::GetDirection(std::string input) {
     if ("buy" == input) {
         return LF_CHAR_Buy;
     } else if ("sell" == input) {
@@ -759,7 +759,7 @@ LfDirectionType TDEngineHuoBi::GetDirection(std::string input) {
     }
 }
 
-std::string TDEngineHuoBi::GetType(const LfOrderPriceTypeType& input) {
+std::string TDEngineHuobi::GetType(const LfOrderPriceTypeType& input) {
     if (LF_CHAR_LimitPrice == input) {
         return "limit";
     } else if (LF_CHAR_AnyPrice == input) {
@@ -769,7 +769,7 @@ std::string TDEngineHuoBi::GetType(const LfOrderPriceTypeType& input) {
     }
 }
 
-LfOrderPriceTypeType TDEngineHuoBi::GetPriceType(std::string input) {
+LfOrderPriceTypeType TDEngineHuobi::GetPriceType(std::string input) {
     if ("limit" == input) {
         return LF_CHAR_LimitPrice;
     } else if ("market" == input) {
@@ -779,7 +779,7 @@ LfOrderPriceTypeType TDEngineHuoBi::GetPriceType(std::string input) {
     }
 }
 //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-LfOrderStatusType TDEngineHuoBi::GetOrderStatus(bool isCancel,int64_t nSize,int64_t nDealSize) {
+LfOrderStatusType TDEngineHuobi::GetOrderStatus(bool isCancel,int64_t nSize,int64_t nDealSize) {
 
     if(isCancel)
     {
@@ -800,11 +800,11 @@ LfOrderStatusType TDEngineHuoBi::GetOrderStatus(bool isCancel,int64_t nSize,int6
  * req functions
  * 查询账户持仓
  */
-void TDEngineHuoBi::req_investor_position(const LFQryPositionField* data, int account_index, int requestId)
+void TDEngineHuobi::req_investor_position(const LFQryPositionField* data, int account_index, int requestId)
 {
     KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId);
 
-    AccountUnitHuoBi& unit = account_units[account_index];
+    AccountUnitHuobi& unit = account_units[account_index];
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key << " (InstrumentID) " << data->InstrumentID);
 
     LFRspPositionField pos;
@@ -857,14 +857,15 @@ void TDEngineHuoBi::req_investor_position(const LFQryPositionField* data, int ac
     KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
     if(d.IsObject() && d.HasMember("status"))
     {
-        std::string status=d["status"];
+        std::string status=d["status"].GetString();
         KF_LOG_INFO(logger, "[req_investor_position] (get status)" );
         errorId =  std::round(std::stod(d["id"].GetString()));
         KF_LOG_INFO(logger, "[req_investor_position] (status)" << status);
         KF_LOG_INFO(logger, "[req_investor_position] (errorId)" << errorId);
         if(status != "ok") {
             if (d.HasMember("err-msg") && d["err-msg"].IsString()) {
-                errorMsg = d["err-code"].GetString()+"\t"+d["err-msg"].GetString();
+                std::string tab="\t";
+                errorMsg = d["err-code"].GetString()+tab+d["err-msg"].GetString();
             }
             KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId
                                                                    << " (errorMsg) " << errorMsg);
@@ -908,7 +909,7 @@ GET /v1/account/accounts/{account-id}/balance
             pos.Position = std::round(std::stod(accounts.GetArray()[i]["balance"].GetString()) * scale_offset);
             tmp_vector.push_back(pos);
             KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId 
-                            << " (symbol) " << symbol << " (position) " << it->second.Position);
+                            << " (symbol) " << symbol << " (position) " << pos.Position);
         }
     }
 
@@ -926,12 +927,12 @@ GET /v1/account/accounts/{account-id}/balance
     }
 }
 
-void TDEngineHuoBi::req_qry_account(const LFQryAccountField *data, int account_index, int requestId)
+void TDEngineHuobi::req_qry_account(const LFQryAccountField *data, int account_index, int requestId)
 {
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-void TDEngineHuoBi::dealPriceVolume(AccountUnitHuoBi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVolume)
+void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVolume)
 {
     KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
     auto it = unit.mapPriceIncrement.find(symbol);
@@ -956,9 +957,9 @@ void TDEngineHuoBi::dealPriceVolume(AccountUnitHuoBi& unit,const std::string& sy
                                                       << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
 }
 
-void TDEngineHuoBi::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
+void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
-    AccountUnitHuoBi& unit = account_units[account_index];
+    AccountUnitHuobi& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Tid)" << data->InstrumentID
@@ -1057,7 +1058,8 @@ void TDEngineHuoBi::req_order_insert(const LFInputOrderField* data, int account_
             errorId = std::round(std::stod(d["id"]));
             if(d.HasMember("err-msg") && d["err-msg"].IsString())
             {
-                errorMsg = d["err-code"].GetString()+"\t"+d["err-msg"].GetString();
+                std::string tab="\t";
+                errorMsg = d["err-code"].GetString()+tab+d["err-msg"].GetString();
             }
             KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                                errorId << " (errorMsg) " << errorMsg);
@@ -1070,9 +1072,9 @@ void TDEngineHuoBi::req_order_insert(const LFInputOrderField* data, int account_
     }
 }
 
-void TDEngineHuoBi::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
+void TDEngineHuobi::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
 {
-    AccountUnitHuoBi& unit = account_units[account_index];
+    AccountUnitHuobi& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Iid)" << data->InvestorID
@@ -1122,7 +1124,8 @@ void TDEngineHuoBi::req_order_action(const LFOrderActionField* data, int account
         errorId = std::stoi(d["id"].GetString());
         if(d.HasMember("err-msg") && d["err-msg"].IsString())
         {
-            errorMsg = d["err-code"].GetString()+"\t"+d["err-msg"].GetString();
+            std::string tab="\t";
+            errorMsg = d["err-code"].GetString()+tab+d["err-msg"].GetString();
         }
         KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId
                                                                        << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
@@ -1139,7 +1142,7 @@ void TDEngineHuoBi::req_order_action(const LFOrderActionField* data, int account
     }
 }
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
-void TDEngineHuoBi::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId)
+void TDEngineHuobi::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId)
 {
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
@@ -1150,13 +1153,13 @@ void TDEngineHuoBi::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField
     remoteOrderIdOrderActionSentTime[remoteOrderId] = newOrderActionSent;
 }
 
-void TDEngineHuoBi::GetAndHandleOrderTradeResponse()
+void TDEngineHuobi::GetAndHandleOrderTradeResponse()
 {
     // KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse]" );
     //every account
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
-        AccountUnitHuoBi& unit = account_units[idx];
+        AccountUnitHuobi& unit = account_units[idx];
         if (!unit.logged_in)
         {
             continue;
@@ -1167,7 +1170,7 @@ void TDEngineHuoBi::GetAndHandleOrderTradeResponse()
 }
 
 //恢复订单状态
-void TDEngineHuoBi::retrieveOrderStatus(AccountUnitHuoBi& unit)
+void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit)
 {
     //KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
@@ -1261,7 +1264,7 @@ void TDEngineHuoBi::retrieveOrderStatus(AccountUnitHuoBi& unit)
     }
 }
 
-void TDEngineHuoBi::addNewQueryOrdersAndTrades(AccountUnitHuoBi& unit, const char_31 InstrumentID,
+void TDEngineHuobi::addNewQueryOrdersAndTrades(AccountUnitHuobi& unit, const char_31 InstrumentID,
                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                                 const uint64_t VolumeTraded, const std::string& remoteOrderId)
 {
@@ -1284,7 +1287,7 @@ void TDEngineHuoBi::addNewQueryOrdersAndTrades(AccountUnitHuoBi& unit, const cha
 }
 
 
-void TDEngineHuoBi::moveNewOrderStatusToPending(AccountUnitHuoBi& unit)
+void TDEngineHuobi::moveNewOrderStatusToPending(AccountUnitHuobi& unit)
 {
     std::lock_guard<std::mutex> pending_guard_mutex(*mutex_order_and_trade);
     std::lock_guard<std::mutex> response_guard_mutex(*mutex_response_order_status);
@@ -1298,18 +1301,18 @@ void TDEngineHuoBi::moveNewOrderStatusToPending(AccountUnitHuoBi& unit)
     }
 }
 
-void TDEngineHuoBi::set_reader_thread()
+void TDEngineHuobi::set_reader_thread()
 {
     ITDEngine::set_reader_thread();
 
-    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineHuoBi::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineHuoBi::loopwebsocket, this)));
+    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineHuobi::loop");
+    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineHuobi::loopwebsocket, this)));
 
-    KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineHuoBi::loopOrderActionNoResponseTimeOut");
-    orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineHuoBi::loopOrderActionNoResponseTimeOut, this)));
+    KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineHuobi::loopOrderActionNoResponseTimeOut");
+    orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineHuobi::loopOrderActionNoResponseTimeOut, this)));
 }
 
-void TDEngineHuoBi::loopwebsocket()
+void TDEngineHuobi::loopwebsocket()
 {
     time_t nLastTime = time(0);
 
@@ -1320,16 +1323,16 @@ void TDEngineHuoBi::loopwebsocket()
         {
             m_isPong = false;
             nLastTime = nNowTime;
-            KF_LOG_INFO(logger, "TDEngineHuoBi::loop: last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
+            KF_LOG_INFO(logger, "TDEngineHuobi::loop: last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
             m_shouldPing = true;
             lws_callback_on_writable(m_conn);
         }
-        //KF_LOG_INFO(logger, "TDEngineHuoBi::loop:lws_service");
+        //KF_LOG_INFO(logger, "TDEngineHuobi::loop:lws_service");
         lws_service( context, rest_get_interval_ms );
     }
 }
 
-void TDEngineHuoBi::loop()
+void TDEngineHuobi::loop()
 {
     KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
     while(isRunning)
@@ -1347,7 +1350,7 @@ void TDEngineHuoBi::loop()
 }
 
 
-void TDEngineHuoBi::loopOrderActionNoResponseTimeOut()
+void TDEngineHuobi::loopOrderActionNoResponseTimeOut()
 {
     KF_LOG_INFO(logger, "[loopOrderActionNoResponseTimeOut] (isRunning) " << isRunning);
     while(isRunning)
@@ -1357,7 +1360,7 @@ void TDEngineHuoBi::loopOrderActionNoResponseTimeOut()
     }
 }
 
-void TDEngineHuoBi::orderActionNoResponseTimeOut()
+void TDEngineHuobi::orderActionNoResponseTimeOut()
 {
 //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut]");
     int errorId = 100;
@@ -1383,7 +1386,7 @@ void TDEngineHuoBi::orderActionNoResponseTimeOut()
 //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (remoteOrderIdOrderActionSentTime.size)" << remoteOrderIdOrderActionSentTime.size());
 }
 
-void TDEngineHuoBi::printResponse(const Document& d)
+void TDEngineHuobi::printResponse(const Document& d)
 {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -1391,7 +1394,7 @@ void TDEngineHuoBi::printResponse(const Document& d)
     KF_LOG_INFO(logger, "[printResponse] ok (text) " << buffer.GetString());
 }
 
-void TDEngineHuoBi::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
+void TDEngineHuobi::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
 {
     if(http_status_code >= HTTP_RESPONSE_OK && http_status_code <= 299)
     {
@@ -1421,7 +1424,7 @@ void TDEngineHuoBi::getResponse(int http_status_code, std::string responseText, 
     }
 }
 
-std::string TDEngineHuoBi::construct_request_body(const AccountUnitHuoBi& unit,const  std::string& data,bool isget)
+std::string TDEngineHuobi::construct_request_body(const AccountUnitHuobi& unit,const  std::string& data,bool isget)
 {
     std::string pay_load = R"({"uid":")" + unit.api_key + R"(","data":)" + data + R"(})";
     std::string request_body = utils::crypto::jwt_create(pay_load,unit.secret_key);
@@ -1430,7 +1433,7 @@ std::string TDEngineHuoBi::construct_request_body(const AccountUnitHuoBi& unit,c
 }
 
 
-void TDEngineHuoBi::get_account(AccountUnitHuoBi& unit, Document& json)
+void TDEngineHuobi::get_account(AccountUnitHuobi& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
     /*
@@ -1440,6 +1443,7 @@ void TDEngineHuoBi::get_account(AccountUnitHuoBi& unit, Document& json)
     HTTP 请求
     GET /v1/account/accounts/{account-id}/balance
     */
+   std::string getPath="/v1/account/accounts/";
     std::string requestPath = getPath+std::to_string(unit.accountId)+"/balance";
     //std::string queryString= construct_request_body(unit,"{}");
     //RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA
@@ -1449,7 +1453,7 @@ void TDEngineHuoBi::get_account(AccountUnitHuoBi& unit, Document& json)
     json.Parse(response.text.c_str());
     return ;
 }
-long TDEngineHuoBi::getAccountId(AccountUnitHuoBi& unit){
+long TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     std::string getPath="/v1/account/accounts/";
     const auto resp = Get("/v1/account/accounts","{}",unit);
     Document j;
@@ -1467,7 +1471,7 @@ long TDEngineHuoBi::getAccountId(AccountUnitHuoBi& unit){
   "type": "buy-limit"
 }
  * */
-std::string TDEngineHuoBi::createInsertOrdertring(const char *accountId,
+std::string TDEngineHuobi::createInsertOrdertring(const char *accountId,
         const char *amount, const char *price, const char *source, const char *symbol,const char *type)
 {
     StringBuffer s;
@@ -1542,7 +1546,7 @@ void TDEngineOceanEx::send_order(AccountUnitOceanEx& unit, const char *code,
   "data": // per API response data in nested JSON object
 }
 */
-bool TDEngineHuoBi::shouldRetry(Document& doc)
+bool TDEngineHuobi::shouldRetry(Document& doc)
 {
     bool ret = false;
     std::string strCode ;
@@ -1559,7 +1563,7 @@ bool TDEngineHuoBi::shouldRetry(Document& doc)
     return ret;
 }
 
-void TDEngineHuoBi::cancel_all_orders(AccountUnitHuoBi& unit, std::string code, Document& json)
+void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
     std::string accountId = std::to_string(unit.accountId);
@@ -1582,7 +1586,7 @@ void TDEngineHuoBi::cancel_all_orders(AccountUnitHuoBi& unit, std::string code, 
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-void TDEngineHuoBi::cancel_order(AccountUnitHuoBi& unit, std::string code, std::string orderId, Document& json)
+void TDEngineHuobi::cancel_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
 
@@ -1615,7 +1619,7 @@ void TDEngineHuoBi::cancel_order(AccountUnitHuoBi& unit, std::string code, std::
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-void TDEngineHuoBi::query_order(AccountUnitHuoBi& unit, std::string code, std::string orderId, Document& json)
+void TDEngineHuobi::query_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[query_order]");
     //火币get查询订单详情
@@ -1628,7 +1632,7 @@ void TDEngineHuoBi::query_order(AccountUnitHuoBi& unit, std::string code, std::s
 
 
 
-void TDEngineHuoBi::handlerResponseOrderStatus(AccountUnitHuoBi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
+void TDEngineHuobi::handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
 {
     KF_LOG_INFO(logger, "[handlerResponseOrderStatus]");
 
@@ -1819,7 +1823,7 @@ void TDEngineHuoBi::handlerResponseOrderStatus(AccountUnitHuoBi& unit, std::vect
     }
 }
 
-std::string TDEngineHuoBi::parseJsonToString(Document &d)
+std::string TDEngineHuobi::parseJsonToString(Document &d)
 {
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
@@ -1829,13 +1833,13 @@ std::string TDEngineHuoBi::parseJsonToString(Document &d)
 }
 
 
-inline int64_t TDEngineHuoBi::getTimestamp()
+inline int64_t TDEngineHuobi::getTimestamp()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return timestamp;
 }
 
-void TDEngineHuoBi::genUniqueKey()
+void TDEngineHuobi::genUniqueKey()
 {
     struct tm cur_time = getCurLocalTime();
     //SSMMHHDDN
@@ -1845,7 +1849,7 @@ void TDEngineHuoBi::genUniqueKey()
 }
 
 //clientid =  m_uniqueKey+orderRef
-std::string TDEngineHuoBi::genClinetid(const std::string &orderRef)
+std::string TDEngineHuobi::genClinetid(const std::string &orderRef)
 {
     static int nIndex = 0;
     return m_uniqueKey + orderRef + std::to_string(nIndex++);
@@ -1857,11 +1861,11 @@ std::string TDEngineHuoBi::genClinetid(const std::string &orderRef)
 BOOST_PYTHON_MODULE(libhuobitd)
 {
     using namespace boost::python;
-    class_<TDEngineHuoBi, boost::shared_ptr<TDEngineHuoBi> >("Engine")
+    class_<TDEngineHuobi, boost::shared_ptr<TDEngineHuobi> >("Engine")
      .def(init<>())
-        .def("init", &TDEngineHuoBi::initialize)
-        .def("start", &TDEngineHuoBi::start)
-        .def("stop", &TDEngineHuoBi::stop)
-        .def("logout", &TDEngineHuoBi::logout)
-        .def("wait_for_stop", &TDEngineHuoBi::wait_for_stop);
+        .def("init", &TDEngineHuobi::initialize)
+        .def("start", &TDEngineHuobi::start)
+        .def("stop", &TDEngineHuobi::stop)
+        .def("logout", &TDEngineHuobi::logout)
+        .def("wait_for_stop", &TDEngineHuobi::wait_for_stop);
 }

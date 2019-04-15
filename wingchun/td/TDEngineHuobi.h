@@ -71,7 +71,7 @@ struct PriceIncrement
     int64_t nQuoteIncrement = 0;
 };
 
-struct AccountUnitHuoBi
+struct AccountUnitHuobi
 {
     string api_key;//uid
     string secret_key;
@@ -101,7 +101,7 @@ struct ServerInfo
 /**
  * CTP trade engine
  */
-class TDEngineHuoBi: public ITDEngine
+class TDEngineHuobi: public ITDEngine
 {
 public:
     /** init internal journal writer (both raw and send) */
@@ -117,7 +117,7 @@ public:
     virtual void release_api();
     virtual bool is_connected() const;
     virtual bool is_logged_in() const;
-    virtual string name() const { return "TDEngineHuoBi"; };
+    virtual string name() const { return "TDEngineHuobi"; };
 
     // req functions
     virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
@@ -127,13 +127,13 @@ public:
 
 
 public:
-    TDEngineHuoBi();
-    ~TDEngineHuoBi();
+    TDEngineHuobi();
+    ~TDEngineHuobi();
 
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
-    vector<AccountUnitHuoBi> account_units;
+    vector<AccountUnitHuobi> account_units;
 
     std::string GetSide(const LfDirectionType& input);
     LfDirectionType GetDirection(std::string input);
@@ -147,16 +147,16 @@ private:
     void loop();
     std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
-    void addNewQueryOrdersAndTrades(AccountUnitHuoBi& unit, const char_31 InstrumentID,
+    void addNewQueryOrdersAndTrades(AccountUnitHuobi& unit, const char_31 InstrumentID,
                                     const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                     const uint64_t VolumeTraded, const std::string& remoteOrderId);
-    void retrieveOrderStatus(AccountUnitHuoBi& unit);
-    void moveNewOrderStatusToPending(AccountUnitHuoBi& unit);
+    void retrieveOrderStatus(AccountUnitHuobi& unit);
+    void moveNewOrderStatusToPending(AccountUnitHuobi& unit);
 
-    void handlerResponseOrderStatus(AccountUnitHuoBi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
+    void handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
     void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
-    void getPriceIncrement(AccountUnitHuoBi& unit);
-    void dealPriceVolume(AccountUnitHuoBi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVome);
+    void getPriceIncrement(AccountUnitHuobi& unit);
+    void dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVome);
 
     std::string parseJsonToString(Document &d);
 
@@ -165,24 +165,24 @@ private:
     void loopOrderActionNoResponseTimeOut();
     void orderActionNoResponseTimeOut();
 private:
-    void get_account(AccountUnitHuoBi& unit, Document& json);
-    void send_order(AccountUnitOceanEx& unit, const char *code,
+    void get_account(AccountUnitHuobi& unit, Document& json);
+    void send_order(AccountUnitHuobi& unit, const char *code,
                             const char *side, const char *type, double size, double price, double funds, Document& json);
-    void cancel_all_orders(AccountUnitHuoBi& unit, std::string code, Document& json);
-    void cancel_order(AccountUnitHuoBi& unit, std::string code, std::string orderId, Document& json);
-    void query_order(AccountUnitHuoBi& unit, std::string code, std::string orderId, Document& json);
+    void cancel_all_orders(AccountUnitHuobi& unit, std::string code, Document& json);
+    void cancel_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json);
+    void query_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
 
     bool shouldRetry(Document& d);
 
-    std::string construct_request_body(const AccountUnitHuoBi& unit,const  std::string& data,bool isget = true);
-    cpr::Header construct_request_header(AccountUnitHuoBi& unit,const std::string& strSign,const std::string& strContentType);
+    std::string construct_request_body(const AccountUnitHuobi& unit,const  std::string& data,bool isget = true);
+    cpr::Header construct_request_header(AccountUnitHuobi& unit,const std::string& strSign,const std::string& strContentType);
     std::string createInsertOrdertring(const char *accountId,
                     const char *amount, const char *price, const char *source, const char *symbol,const char *type);
 
-    cpr::Response Get(const std::string& url,const std::string& body, AccountUnitHuoBi& unit);
-    cpr::Response Post(const std::string& url,const std::string& body, AccountUnitHuoBi& unit);
+    cpr::Response Get(const std::string& url,const std::string& body, AccountUnitHuobi& unit);
+    cpr::Response Post(const std::string& url,const std::string& body, AccountUnitHuobi& unit);
 
     void genUniqueKey();
     std::string genClinetid(const std::string& orderRef);
@@ -193,7 +193,7 @@ public:
     int lws_write_subscribe(struct lws* conn);
     void on_lws_connection_error(struct lws* conn);
     //cys add
-    long getAccountId();
+    long getAccountId(AccountUnitHuobi& unit);
 private:
     void onPong(struct lws* conn);
     void Ping(struct lws* conn);
