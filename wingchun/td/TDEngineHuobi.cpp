@@ -432,7 +432,8 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
                                          << ", SignatureMethod = " << strSignatureMethod
                                          << ", SignatureVersion = " << strSignatureVersion
                                          << ", Timestamp = " << strTimestamp
-                                         << "Url = " << method_url);
+                                         << ", Url = " << method_url
+                                         <<", Signature = "<<strSignatrue);
 
 
     std::unique_lock<std::mutex> lock(g_httpMutex);
@@ -470,7 +471,8 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
                                          << ", SignatureMethod = " << strSignatureMethod
                                          << ", SignatureVersion = " << strSignatureVersion
                                          << ", Timestamp = " << strTimestamp
-                                         << "Url = " << method_url);
+                                         << ", Url = " << method_url
+                                         <<", Signature = "<<strSignatrue);
     string url = unit.baseUrl + method_url;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{mapHeader},
@@ -1452,6 +1454,7 @@ void TDEngineHuobi::get_account(AccountUnitHuobi& unit, Document& json)
     return ;
 }
 std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
+    KF_LOG_DEBUG(logger,"[getAccountID] ");
     std::string getPath="/v1/account/accounts/";
     const auto resp = Get("/v1/account/accounts","{}",unit);
     Document j;
