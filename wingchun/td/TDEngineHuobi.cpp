@@ -378,10 +378,11 @@ int64_t TDEngineHuobi::getMSTime()
 }
 
 //cys edit
+/*
 cpr::Header TDEngineHuobi::construct_request_header(AccountUnitHuobi& unit,const std::string& strSign,const std::string& strContentType)
 {
     unsigned char * strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    std::string strSignatrue = base64_encode(strHmac,std::strlen((char *)strHmac));
+    std::string strSignatrue = base64_encode(strHmac,32);
 
     if(strContentType.empty())
     {
@@ -401,12 +402,12 @@ cpr::Header TDEngineHuobi::construct_request_header(AccountUnitHuobi& unit,const
                            {"Contenr-Type",strContentType}};
     }
 
-}
+}*/
 //cys edit from huobi api
 std::mutex g_httpMutex;
 cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string& body, AccountUnitHuobi& unit)
 {
-    string url = unit.baseUrl + method_url;
+    //string url = unit.baseUrl + method_url;
     //使用 UTF-8 编码，且进行了 URI 编码，十六进制字符必须大写，如 “:” 会被编码为 “%3A” ，空格被编码为 “%20”。
     //时间戳（Timestamp）需要以YYYY-MM-DDThh:mm:ss格式添加并且进行 URI 编码。
     std::string strTimestamp = getHuobiTime();
@@ -422,23 +423,17 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
     KF_LOG_INFO(logger, "strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     KF_LOG_INFO(logger, "strHmac = " << strHmac );
-    std::string strSignatrue = base64_encode(strHmac,std::strlen((char *)strHmac));
-    cpr::Header mapHeader = cpr::Header{{"AccessKeyId",strAccessKeyId},
-                                        {"SignatureMethod",strSignatureMethod},
-                                        {"SignatureVersion",strSignatureVersion},
-                                        {"Timestamp",strTimestamp},
-                                        {"Signature",strSignatrue}};
-    KF_LOG_INFO(logger, "AccessKeyId = " << strAccessKeyId
-                                         << ", SignatureMethod = " << strSignatureMethod
-                                         << ", SignatureVersion = " << strSignatureVersion
-                                         << ", Timestamp = " << strTimestamp
-                                         << ", Url = " << method_url
-                                         <<", Signature = "<<strSignatrue);
-
+    //std::strlen((char *)strHmac)
+    std::string strSignatrue = base64_encode(strHmac,32);
+    string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
+                    "SignatureMethod="+strSignatureMethod+"&"+
+                    "SignatureVersion="+strSignatureVersion+"&"+
+                    "Timestamp="+strTimestamp+"&"+
+                    "Signature="+strSignatrue;
 
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Get(Url{url},
-                                   Header{mapHeader}, Timeout{10000} );
+                                   Header{{"Content-Type", "application/json"}}, Timeout{10000} );
     lock.unlock();
     KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
                                        " (response.error.message) " << response.error.message <<
@@ -460,22 +455,14 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
                             "Timestamp="+strTimestamp;
     KF_LOG_INFO(logger, "strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    std::string strSignatrue = base64_encode(strHmac,std::strlen((char *)strHmac));
-    cpr::Header mapHeader = cpr::Header{{"AccessKeyId",strAccessKeyId},
-                                        {"SignatureMethod",strSignatureMethod},
-                                        {"SignatureVersion",strSignatureVersion},
-                                        {"Timestamp",strTimestamp},
-                                        {"Signature",strSignatrue}};
-
-    KF_LOG_INFO(logger, "AccessKeyId = " << strAccessKeyId
-                                         << ", SignatureMethod = " << strSignatureMethod
-                                         << ", SignatureVersion = " << strSignatureVersion
-                                         << ", Timestamp = " << strTimestamp
-                                         << ", Url = " << method_url
-                                         <<", Signature = "<<strSignatrue);
-    string url = unit.baseUrl + method_url;
+    std::string strSignatrue = base64_encode(strHmac,32);
+    string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
+                    "SignatureMethod="+strSignatureMethod+"&"+
+                    "SignatureVersion="+strSignatureVersion+"&"+
+                    "Timestamp="+strTimestamp+"&"+
+                    "Signature="+strSignatrue;
     std::unique_lock<std::mutex> lock(g_httpMutex);
-    auto response = cpr::Post(Url{url}, Header{mapHeader},
+    auto response = cpr::Post(Url{url}, Header{{"Content-Type", "application/json"}},
                               Body{body},Timeout{30000});
     lock.unlock();
     KF_LOG_INFO(logger, "[post] (url) " << url <<"(body) "<< body<< " (response.status_code) " << response.status_code <<
@@ -536,7 +523,6 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     unit.secret_key = secret_key;
     unit.passphrase = passphrase;
     unit.baseUrl = baseUrl;
-    unit.accountId=getAccountId(unit);
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl << " (accountId)"<<unit.accountId);
 
@@ -564,7 +550,7 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
         KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
         KF_LOG_ERROR(logger, "},");
     }
-
+    unit.accountId=getAccountId(unit);
     //test
     Document json;
     get_account(unit, json);
