@@ -76,7 +76,7 @@ yjj journal -n TD_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 20
 yjj journal -n TD_RAW_BITFINEX -s 20180911-18:02:00 -e 20181001-19:00:00 -d -t -m 22206
  * */
 	static TDEngineBitfinex* global_md = nullptr;
-/*ÖÐÎÄ²âÊÔnice*/
+/*ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½nice*/
 /*FXW's fix starts here*/
 cpr::Response TDEngineBitfinex::cancelOrder(AccountUnitBitfinex& unit, int64_t& remoteOrderId)//v1
 {
@@ -748,7 +748,7 @@ int TDEngineBitfinex::lws_write_subscribe(struct lws* conn)
 	AccountUnitBitfinex& unit = findAccountUnitBitfinexByWebsocketConn(conn);
 	moveNewtoPending(unit);
 
-	//ÓÐ´ý·¢ËÍµÄÊý¾Ý£¬ÏÈ°Ñ´ý·¢ËÍµÄ·¢Íê£¬ÔÚ¼ÌÐø¶©ÔÄÂß¼­¡£  ping?
+	//ï¿½Ð´ï¿½ï¿½ï¿½ï¿½Íµï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½È°Ñ´ï¿½ï¿½ï¿½ï¿½ÍµÄ·ï¿½ï¿½ê£¬ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½  ping?
 	if (unit.pendingSendMsg.size() > 0) {
 		unsigned char msg[512];
 		memset(&msg[LWS_PRE], 0, 512 - LWS_PRE);
@@ -908,9 +908,9 @@ void TDEngineBitfinex::onAuth(struct lws* conn, Document& json)
 	  ]
 	]
 
-SYMBOL	string	Pair (tBTCUSD, ¡­).
+SYMBOL	string	Pair (tBTCUSD, ï¿½ï¿½).
 STATUS	string	Status (ACTIVE, CLOSED).
-¡ÀAMOUNT	float	Size of the position. Positive values means a long position, negative values means a short position.
+ï¿½ï¿½AMOUNT	float	Size of the position. Positive values means a long position, negative values means a short position.
 BASE_PRICE	float	The price at which you entered your position.
 MARGIN_FUNDING	float	The amount of funding being used for this position.
 MARGIN_FUNDING_TYPE	int	0 for daily, 1 for term.
@@ -972,7 +972,7 @@ void TDEngineBitfinex::onPosition(struct lws* conn, Document& json)
 ]
 
  ID	integer	Trade database id
-PAIR	string	Pair (BTCUSD, ¡­)
+PAIR	string	Pair (BTCUSD, ï¿½ï¿½)
 MTS_CREATE	integer	Execution timestamp
 ORDER_ID	integer	Order id
 EXEC_AMOUNT	float	Positive means buy, negative means sell
@@ -990,7 +990,7 @@ MAKER	int	1 if true, 0 if false
  //te
 
  /*
-  ÒòÎªocÊÇÏÈµ½À´µÄ£¬ ocÈç¹ûÓöµ½EXECUTED¿ªÍ·µÄ×´Ì¬£¬¾Íon_rtn_order±¨¸æÈ«³É½»¡£teºÍtuÊÇºóÀ´µ½À´µÄ£¬¶øÇÒteÀïÃæÊÇÖ»ÓÐEXEC_AMOUNT	Ã»ÓÐorigin_amount²»ÄÜÖªµÀÊÇ²»ÊÇÈ«³É½»£¬±¨¸ö²¿·Ö³É½»on_rtn_order·´¶ø»áÒýÆð»ìÏý¡£ËùÒÔÔÚÕâÀï£¬ºöÂÔÕâ¸öon_rtn_order£¬Ö±½ÓÔÚÖ®ºóµÄtuÖ±½Ó±¨on_rtn_trade
+  ï¿½ï¿½Îªocï¿½ï¿½ï¿½Èµï¿½ï¿½ï¿½ï¿½Ä£ï¿½ ocï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½EXECUTEDï¿½ï¿½Í·ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½on_rtn_orderï¿½ï¿½ï¿½ï¿½È«ï¿½É½ï¿½ï¿½ï¿½teï¿½ï¿½tuï¿½Çºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½teï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½EXEC_AMOUNT	Ã»ï¿½ï¿½origin_amountï¿½ï¿½ï¿½ï¿½Öªï¿½ï¿½ï¿½Ç²ï¿½ï¿½ï¿½È«ï¿½É½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö³É½ï¿½on_rtn_orderï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½on_rtn_orderï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½ï¿½tuÖ±ï¿½Ó±ï¿½on_rtn_trade
   * */
 void TDEngineBitfinex::onTradeExecuted(struct lws* conn, Document& json)
 {
@@ -1034,7 +1034,7 @@ void TDEngineBitfinex::onTradeExecuted(struct lws* conn, Document& json)
 		strcpy(rtn_order.ExchangeID, "bitfinex");
 		strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
 
-		//ÕâÖÖ·½·¨ÎÞ·¨ÅÐ¶ÏÈ«²¿³É½»£¬ Ö»ÄÜÒ»Ö±ÊÇ²¿·Ö³É½»µÄ×´Ì¬
+		//ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½Þ·ï¿½ï¿½Ð¶ï¿½È«ï¿½ï¿½ï¿½É½ï¿½ï¿½ï¿½ Ö»ï¿½ï¿½Ò»Ö±ï¿½Ç²ï¿½ï¿½Ö³É½ï¿½ï¿½ï¿½×´Ì¬
 		rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
 
 		strncpy(rtn_order.InstrumentID, ticker.c_str(), 31);
@@ -1085,7 +1085,7 @@ void TDEngineBitfinex::onTradeExecuted(struct lws* conn, Document& json)
 ]
 
 ID	integer	Trade database id
-PAIR	string	Pair (BTCUSD, ¡­)
+PAIR	string	Pair (BTCUSD, ï¿½ï¿½)
 MTS_CREATE	integer	Execution timestamp
 ORDER_ID	integer	Order id
 EXEC_AMOUNT	float	Positive means buy, negative means sell
@@ -1217,7 +1217,7 @@ void TDEngineBitfinex::onTradeExecutionUpdate(struct lws* conn, Document& json)
  ID	int	Order ID
 GID	int	Group ID
 CID	int	Client Order ID
-SYMBOL	string	Pair (tBTCUSD, ¡­)
+SYMBOL	string	Pair (tBTCUSD, ï¿½ï¿½)
 MTS_CREATE	int	Millisecond timestamp of creation
 MTS_UPDATE	int	Millisecond timestamp of update
 AMOUNT	float	Positive means buy, negative means sell.
@@ -1294,7 +1294,7 @@ oc	order cancel
  ID	int	Order ID
 GID	int	Group ID
 CID	int	Client Order ID
-SYMBOL	string	Pair (tBTCUSD, ¡­)
+SYMBOL	string	Pair (tBTCUSD, ï¿½ï¿½)
 MTS_CREATE	int	Millisecond timestamp of creation
 MTS_UPDATE	int	Millisecond timestamp of update
 AMOUNT	float	Positive means buy, negative means sell.
@@ -1303,8 +1303,8 @@ TYPE	string	The type of the order: LIMIT, MARKET, STOP, TRAILING STOP, EXCHANGE 
 TYPE_PREV	string	Previous order type
 ORDER_STATUS	string	Order Status: ACTIVE, EXECUTED @ PRICE(AMOUNT) e.g. "EXECUTED @ 107.6(-0.2)", PARTIALLY FILLED @ PRICE(AMOUNT), INSUFFICIENT MARGIN was: PARTIALLY FILLED @ PRICE(AMOUNT), CANCELED, CANCELED was: PARTIALLY FILLED @ PRICE(AMOUNT)
 
--------ÏÖÔÚÓÃÒÔ EXECUTED¿ªÍ·µÄ×´Ì¬À´±íÊ¾È«³É½»£¬¶øÊµ¼ÊÉÏ£¬Õâ¸ö×´Ì¬¿ÉÄÜ°üº¬²¿·Ö³É½»Ö®ºóµÄÈ«³É½»£¬
--------ÕâÊ±ºòoc»áÌø¹ýÄÇ¸ö²¿·Ö³É½»£¬Ö±½Ó±¨¸æ×îÐÂµÄÈ«³É½»£¬ÖÁÓÚÔõÃ´Çø±ðÕæÊµµÄÁ½¸ö³É½»£¬Òª¿¿ºóÃæµÄÁ½¸ötu£¬ À´ÐÎ³ÉÁ½¸öon_rtn_trade
+-------ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ EXECUTEDï¿½ï¿½Í·ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½Ê¾È«ï¿½É½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½Ï£ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½Ü°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö³É½ï¿½Ö®ï¿½ï¿½ï¿½È«ï¿½É½ï¿½ï¿½ï¿½
+-------ï¿½ï¿½Ê±ï¿½ï¿½ocï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¸ï¿½ï¿½ï¿½ï¿½Ö³É½ï¿½ï¿½ï¿½Ö±ï¿½Ó±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½È«ï¿½É½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½tuï¿½ï¿½ ï¿½ï¿½ï¿½Î³ï¿½ï¿½ï¿½ï¿½ï¿½on_rtn_trade
 "EXECUTED @ 0.0085406(-0.31225457): was PARTIALLY FILLED @ 0.0085406(-0.68784543)",
 
 
@@ -1381,7 +1381,7 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
 
 
 	if (remaining_amount >= 0) {
-		//Ê£ÓàÊýÁ¿
+		//Ê£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		rtn_order.VolumeTotal = std::round(remaining_amount * scale_offset);
 		rtn_order.Direction = LF_CHAR_Buy;
 	}
@@ -1391,14 +1391,14 @@ void TDEngineBitfinex::onOrder(struct lws* conn, rapidjson::Value& order_i)
 	}
 
 	if (amount_orig > 0) {
-		//ÊýÁ¿
+		//ï¿½ï¿½ï¿½ï¿½
 		rtn_order.VolumeTotalOriginal = std::round(amount_orig * scale_offset);
 	}
 	else {
 		rtn_order.VolumeTotalOriginal = std::round(amount_orig * scale_offset * -1);
 	}
 
-	//½ñ³É½»ÊýÁ¿
+	//ï¿½ï¿½É½ï¿½ï¿½ï¿½ï¿½ï¿½
 	rtn_order.VolumeTraded = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTotal;
 
 
@@ -1709,7 +1709,7 @@ void TDEngineBitfinex::req_order_insert(const LFInputOrderField* data, int accou
 		return;
 	}
 	KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
-
+  on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
 	//Price (Not required for market orders)
 	double price = data->LimitPrice*1.0 / scale_offset;
 
@@ -1735,7 +1735,7 @@ void TDEngineBitfinex::req_order_insert(const LFInputOrderField* data, int accou
 	if (data->VolumeCondition == LF_CHAR_CV) {
 		//WCStrategyUtil.cpp
 		//insert_fok_order: order.VolumeCondition = LF_CHAR_CV;
-		//ÔÚÉè¼ÆÉÏ»¹Ã»·¨×ÔÓÉÇÐ»»£¬hardcodeÖ»Ö§³ÖEXCHANGE ÀàÐÍµÄ½»Ò×
+		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï»ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½hardcodeÖ»Ö§ï¿½ï¿½EXCHANGE ï¿½ï¿½ï¿½ÍµÄ½ï¿½ï¿½ï¿½
 		type = "EXCHANGE FOK";
 	}
 	else {
@@ -1823,7 +1823,7 @@ void TDEngineBitfinex::req_order_action(const LFOrderActionField* data, int acco
 	}
 	else {
 		/*
-		//remote order id ÊÇÔÚon-reqÏûÏ¢ÀïÃæ»ñÈ¡µÄ£¬ Èç¹û·¢µ¥ºó£¬»¹Ã»ÊÕµ½o-req¾Í³·µ¥£¬¾ÍÖ»ÄÜÊ¹ÓÃcid+dateStrÁË
+		//remote order id ï¿½ï¿½ï¿½ï¿½on-reqï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½Ä£ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ó£¬»ï¿½Ã»ï¿½Õµï¿½o-reqï¿½Í³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½Ê¹ï¿½ï¿½cid+dateStrï¿½ï¿½
 		std::string cancelOrderJsonString = createCancelOrderCIdJsonString(cid, insertData.dateStr);
 		addPendingSendMsg(unit, cancelOrderJsonString);
 		KF_LOG_DEBUG(logger, "[req_order_action] createCancelOrderIdJsonString (cid) " << cid << " (dateStr)" << insertData.dateStr);
