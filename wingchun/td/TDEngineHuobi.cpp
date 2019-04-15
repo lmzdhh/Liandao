@@ -377,32 +377,6 @@ int64_t TDEngineHuobi::getMSTime()
     return  timestamp;
 }
 
-//cys edit
-/*
-cpr::Header TDEngineHuobi::construct_request_header(AccountUnitHuobi& unit,const std::string& strSign,const std::string& strContentType)
-{
-    unsigned char * strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    std::string strSignatrue = base64_encode(strHmac,32);
-
-    if(strContentType.empty())
-    {
-        return cpr::Header{{"AccessKeyId",unit.api_key},
-                           {"SignatureMethod","HmacSHA256"},
-                           {"SignatureVersion","2"},
-                           {"Timestamp",getHuobiTime()},
-                           {"Signature",strSignatrue}};
-    }
-    else
-    {
-        return cpr::Header{{"AccessKeyId",unit.api_key},
-                           {"SignatureMethod","HmacSHA256"},
-                           {"SignatureVersion","2"},
-                           {"Timestamp",getHuobiTime()},
-                           {"Signature",strSignatrue},
-                           {"Contenr-Type",strContentType}};
-    }
-
-}*/
 //cys edit from huobi api
 std::mutex g_httpMutex;
 cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string& body, AccountUnitHuobi& unit)
@@ -1414,15 +1388,6 @@ void TDEngineHuobi::getResponse(int http_status_code, std::string responseText, 
     }
 }
 
-std::string TDEngineHuobi::construct_request_body(const AccountUnitHuobi& unit,const  std::string& data,bool isget)
-{
-    std::string pay_load = R"({"uid":")" + unit.api_key + R"(","data":)" + data + R"(})";
-    std::string request_body = utils::crypto::jwt_create(pay_load,unit.secret_key);
-    //std::cout  << "[construct_request_body] (request_body)" << request_body << std::endl;
-    return  isget ? "user_jwt="+request_body:R"({"user_jwt":")"+request_body+"\"}";
-}
-
-
 void TDEngineHuobi::get_account(AccountUnitHuobi& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
@@ -1453,7 +1418,7 @@ std::string TDEngineHuobi::getHuobiTime(){
     time_t timep;
     time (&timep);
     char tmp[64];
-    strftime(tmp, sizeof(tmp), "%Y-%m-%dT%H%%3A%M%%3A%S",localtime(&timep) );
+    strftime(tmp, sizeof(tmp), "%Y-%m-%dT%H%%3A%M%%3A%S",gmtime(&timep) );
     std::string huobiTime=tmp;
     return huobiTime;
 }
@@ -1570,7 +1535,6 @@ void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, 
     std::string accountId = unit.accountId;
     //火币post批量撤销订单
     std::string requestPath = "/v1/order/orders/batchCancelOpenOrders";
-    //std::string queryString= "?user_jwt=RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA";//construct_request_body(unit, "{}");
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
@@ -1599,7 +1563,6 @@ void TDEngineHuobi::cancel_order(AccountUnitHuobi& unit, std::string code, std::
         //火币post撤单请求
         std::string postPath="/v1/order/orders/";
         std::string requestPath = postPath+ orderId + "/submitcancel";
-        //std::string queryString= construct_request_body(unit, "{\"id\":" + orderId + "}");
         response = Post(requestPath,"",unit);
 
         //json.Clear();
@@ -1853,7 +1816,7 @@ std::string TDEngineHuobi::parseJsonToString(Document &d)
 
 inline int64_t TDEngineHuobi::getTimestamp()
 {
-    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    long long timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return timestamp;
 }
 

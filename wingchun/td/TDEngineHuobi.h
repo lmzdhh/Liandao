@@ -175,9 +175,7 @@ private:
     void printResponse(const Document& d);
 
     bool shouldRetry(Document& d);
-
-    std::string construct_request_body(const AccountUnitHuobi& unit,const  std::string& data,bool isget = true);
-    cpr::Header construct_request_header(AccountUnitHuobi& unit,const std::string& strSign,const std::string& strContentType);
+    
     std::string createInsertOrdertring(const char *accountId,
                     const char *amount, const char *price, const char *source, const char *symbol,const char *type);
 
