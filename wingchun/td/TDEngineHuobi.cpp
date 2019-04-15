@@ -1055,7 +1055,7 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
             return;
 
         }else {
-            errorId = std::round(std::stod(d["id"]));
+            errorId = std::round(std::stod(d["id"].GetString()));
             if(d.HasMember("err-msg") && d["err-msg"].IsString())
             {
                 std::string tab="\t";
@@ -1502,7 +1502,7 @@ std::string TDEngineHuobi::createInsertOrdertring(const char *accountId,
         "type": "buy-limit"
     }
 */
-void TDEngineOceanEx::send_order(AccountUnitOceanEx& unit, const char *code,
+void TDEngineOceanEx::send_order(AccountUnitHuobi& unit, const char *code,
                                  const char *side, const char *type, double size, double price, double funds, Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
