@@ -95,26 +95,14 @@ void MDEngineBinance::load(const json& j_config)
 {
     book_depth_count = j_config["book_depth_count"].get<int>();
     /*level_threshold = j_config["level_threshold"].get<int>();//quest3 edited by fxw ,need edit the kungfu.json*/
-    /*quest3 fxw v2 starts*/
-    Value::ConstMemberIterator itr =j_config.FindMember("refresh_normal_check_book_s");
-    if(itr != j_config.MemberEnd())
-    {
-        refresh_normal_check_book_s=itr->value.get<int>();
+    /*quest3v4 fxw starts*/
+    if(j_config.find("refresh_normal_check_book_s") != j_config.end()) {
+        refresh_normal_check_book_s = j_config["refresh_normal_check_book_s"].get<int>();
     }
-    else
-    {
-        refresh_normal_check_book_s=120;
+    if(j_config.find("refresh_normal_check_kline_s") != j_config.end()) {
+        refresh_normal_check_kline_s = j_config["refresh_normal_check_kline_s"].get<int>();
     }
-    itr =j_config.FindMember("refresh_normal_check_kline_s");
-    if(itr != j_config.MemberEnd())
-    {
-        refresh_normal_check_kline_s=itr->value.get<int>();
-    }
-    else
-    {
-        refresh_normal_check_kline_s=120;
-    }
-    /*quest3 fxw v2 ends*/
+    /*quest3v4 fxw ends*/
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 

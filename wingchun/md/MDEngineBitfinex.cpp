@@ -38,6 +38,30 @@ USING_WC_NAMESPACE
 
 static MDEngineBitfinex* global_md = nullptr;
 
+/*quest3 fxw v4 starts*/
+int MDEngineBitfinex::GetSnapShotAndRtn(std::string ticker)//v1
+{
+    std::string requestPath = "/v1/book/";
+    string url = "https://api.bitfinex.com" + requestPath +ticker;//complete url
+    KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]the url we ask" << url);
+    cpr::Response response = Get(
+        Url{ url }, cpr::VerifySsl{ false }
+    );
+    if (response.status_code >= 200 && response.status_code <= 299)
+    {
+        KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]request succeeded,the text is :" << response.text.c_str());
+        Document json;
+        json.Parse(response.text.c_str());  
+    }
+    else
+    {
+        KF_LOG_DEBUG(logger, "[quest2 fxw GetSnapShot]request failed");
+        KF_LOG_DEBUG(logger, "[quest2 fxw GetSnapShot](response.status_code)"<<response.status_code<<"(response.text)"<<response.text.c_str());
+    }
+    return  0;
+}
+/*quest3 fxw v4 ends*/
+
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
 
@@ -762,63 +786,55 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 //            KF_LOG_INFO(logger, " update(2)"<< json.GetArray()[last_element].GetArray()[2].GetDouble() );
         }
     }
-
-    // has any update
+    //has any update
     LFPriceBook20Field md;
     memset(&md, 0, sizeof(md));
     if(priceBook20Assembler.Assembler(ticker, md)) {
         strcpy(md.ExchangeID, "bitfinex");
 
         KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: on_price_book_update");
-        //on_price_book_update(&md);
-        /*quest2 FXW's edits start here*/
+        /*on_price_book_update(&md);*/
+        /*quest2 FXW's edits start here*/ /* almost all changed */
         if (priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_asks(ticker) ||
                 priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_bids(ticker) 
                 /*|| priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker) */
-            )
+           )
         {
             md.Status = 1;
             /*need re-login*/
-            KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex::onDepth: on_price_book_update failed ,lose level,re-login....");
+            KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update failed ,lose level,re-login....");
             on_price_book_update(&md);
-            on_lws_connection_error(NULL);
-            KF_LOG_DEBUG(logger, "[quest2 fxw's edits v2]login is true?" << logged_in);
+
         }
         else if((priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker))&&once)
-        {
+        {/*这个if分支仅是为测试用*/
             once=0;
             md.Status = 4;
             /*need re-login*/
-            KF_LOG_DEBUG(logger, "[quest2test]MDEngineBitfinex::onDepth: on_price_book_update test relogin....");
+            KF_LOG_DEBUG(logger, "[quest2test]MDEngineBitfinex on_price_book_update test relogin....");
             on_price_book_update(&md);
-            lws_cancel_service(context);
-            on_lws_connection_error(NULL);
-            KF_LOG_DEBUG(logger, "[quest2test]login is true?" << logged_in);
-
+            GetSnapShotAndRtn(ticker);
+            sleep(6000);
         }
         else if((-1 == priceBook20Assembler.GetBestBidPrice(ticker)) ||(-1 == priceBook20Assembler.GetBestAskPrice(ticker))||
-                                priceBook20Assembler.GetBestBidPrice(ticker) >= priceBook20Assembler.GetBestAskPrice(ticker))
+                priceBook20Assembler.GetBestBidPrice(ticker) >= priceBook20Assembler.GetBestAskPrice(ticker))
         {
             md.Status = 2;
             /*need re-login*/
-            KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex::onDepth: on_price_book_update failed ,orderbook crossed,re-login....");
+            KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update failed ,orderbook crossed,re-login....");
             on_price_book_update(&md);
-            lws_cancel_service(context);/*quest2 fxw's edits v2*/
-            setContextNull();/*quest2 fxw's edits v2*/
-            on_lws_connection_error(NULL);
-            KF_LOG_DEBUG(logger, "[quest2 fxw's edits v2]login is true?" << logged_in);
-
         }
         else
         {
             md.Status = 0;
             on_price_book_update(&md);
             timer = getTimestamp();/*quest2 fxw's edits v3*/
-            KF_LOG_DEBUG(logger, "[FXW successed]MDEngineBitfinex::onDepth: on_price_book_update successed");
+            KF_LOG_DEBUG(logger, "[FXW successed]MDEngineBitfinex on_price_book_update successed");
         }
 
         /*quest2 FXW's edits end here*/
     }
+
 }
 
 std::string MDEngineBitfinex::parseJsonToString(Document &d)
