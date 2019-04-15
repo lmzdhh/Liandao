@@ -55,8 +55,51 @@ int MDEngineBitfinex::GetSnapShotAndRtn(std::string ticker)//v1
     if (response.status_code >= 200 && response.status_code <= 299)
     {
         KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]request succeeded,the text is :" << response.text.c_str());
-        Document json;
-        json.Parse(response.text.c_str());  
+        Document d;
+        d.Parse(response.text.c_str());  
+        LFPriceBook20Field md;
+        strcpy(md.ExchangeID, "bitfinex");
+        strcpy(md.InstrumentID, ticker.c_str());
+        md.UpdateMicroSecond = getTimestamp();
+        md.Status = 0;
+        if (d.HasMember("bids"))
+        {
+            auto& bids = d["bids"];
+            if (bids.IsArray() && bids.Size() > 0)
+            {
+                auto size = std::min((int)bids.Size(), 20);
+                for (int i = 0; i < size; ++i)
+                {
+                    md.BidLevels[i].price = stod(bids.GetArray()[i]["price"].GetString()) * scale_offset;
+                    md.BidLevels[i].volume = stod(bids.GetArray()[i]["amount"].GetString()) * scale_offset;
+                    KF_LOG_DEBUG(logger, "[quest2v4]bids price:"<<md.BidLevels[i].price<<"volume:"<<md.BidLevels[i].volume);
+                }
+                md.BidLevelCount = size;
+            }
+        }
+        if (d.HasMember("asks"))
+        {
+            auto& asks = d["asks"];
+
+            if (asks.IsArray() && asks.Size() > 0)
+            {
+                auto size = std::min((int)asks.Size(), 20);
+
+                for (int i = 0; i < size; ++i)
+                {
+                    md.AskLevels[i].price = stod(asks.GetArray()[i]["price"].GetString()) * scale_offset;
+                    md.AskLevels[i].volume = stod(asks.GetArray()[i]["amount"].GetString()) * scale_offset;
+                    KF_LOG_DEBUG(logger, "[quest2v4]asks price:"<<md.AskLevels[i].price<<"volume:"<<md.AskLevels[i].volume);
+                }
+                md.AskLevelCount = size;
+            }
+        }
+        if (md.BidLevels[0].price > md.AskLevels[0].price)
+            md.Status = 2;
+        else md.Status = 0;
+        timer = getTimestamp();
+        on_price_book_update(&md);
+        KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]snapshot price book update succeeded");
     }
     else
     {
