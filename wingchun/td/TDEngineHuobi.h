@@ -85,6 +85,7 @@ struct AccountUnitHuoBi
     std::map<std::string,PriceIncrement> mapPriceIncrement;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
+    long accountId;
 
 };
 
@@ -165,8 +166,8 @@ private:
     void orderActionNoResponseTimeOut();
 private:
     void get_account(AccountUnitHuoBi& unit, Document& json);
-    void send_order(AccountUnitHuoBi& unit, const char *accountId,const char *amount,
-             const char *price, const char *source, const char *symbol,const char *type,Document& json);
+    void send_order(AccountUnitOceanEx& unit, const char *code,
+                            const char *side, const char *type, double size, double price, double funds, Document& json);
     void cancel_all_orders(AccountUnitHuoBi& unit, std::string code, Document& json);
     void cancel_order(AccountUnitHuoBi& unit, std::string code, std::string orderId, Document& json);
     void query_order(AccountUnitHuoBi& unit, std::string code, std::string orderId, Document& json);
@@ -182,7 +183,6 @@ private:
 
     cpr::Response Get(const std::string& url,const std::string& body, AccountUnitHuoBi& unit);
     cpr::Response Post(const std::string& url,const std::string& body, AccountUnitHuoBi& unit);
-    cpr::Response Delete(const std::string& url,const std::string& body, AccountUnitHuoBi& unit);
 
     void genUniqueKey();
     std::string genClinetid(const std::string& orderRef);
@@ -192,6 +192,8 @@ public:
     void on_lws_data(struct lws* conn, const char* data, size_t len);
     int lws_write_subscribe(struct lws* conn);
     void on_lws_connection_error(struct lws* conn);
+    //cys add
+    long getAccountId();
 private:
     void onPong(struct lws* conn);
     void Ping(struct lws* conn);

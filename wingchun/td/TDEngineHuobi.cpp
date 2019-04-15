@@ -442,42 +442,6 @@ cpr::Response TDEngineHuoBi::Get(const std::string& method_url,const std::string
     return response;
 }
 //cys edit
-cpr::Response TDEngineHuoBi::Delete(const std::string& method_url,const std::string& body, AccountUnitHuoBi& unit)
-{
-    string url = unit.baseUrl + method_url + body;
-    std::string strTimestamp = std::to_string(getTimestamp());
-    std::string strAccessKeyId=unit.api_key;
-    std::string strSignatureMethod="HmacSHA256";
-    std::string strSignatureVersion="2";
-    std::string deletePath="DELETE\n";
-    std::string strSign = deletePath+"api.huobi.pro\n" + method_url+"\n"+
-                            "AccessKeyId="+strAccessKeyId+"&"+
-                            "SignatureMethod="+strSignatureMethod+"&"+
-                            "SignatureVersion="+strSignatureVersion+"&"+
-                            "Timestamp="+strTimestamp;
-    KF_LOG_INFO(logger, "strSign = " << strSign );
-    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    KF_LOG_INFO(logger, "strHmac = " << strHmac );
-    std::string strSignatrue = base64_encode(strHmac,32);
-    cpr::Header mapHeader = cpr::Header{{"AccessKeyId",strAccessKeyId},
-                                        {"SignatureMethod",strSignatureMethod},
-                                        {"SignatureVersion",strSignatureVersion},
-                                        {"Timestamp",strTimestamp},
-                                        {"Signature",strSignatrue}};
-    KF_LOG_INFO(logger, "AccessKeyId = " << strAccessKeyId
-                                         << ", SignatureMethod = " << strSignatureMethod
-                                         << ", SignatureVersion = " << strSignatureVersion
-                                         << ", Timestamp = " << strTimestamp);
-
-    std::unique_lock<std::mutex> lock(g_httpMutex);
-    const auto response = cpr::Delete(Url{url},Header{mapHeader}, Timeout{10000} );
-    lock.unlock();
-    KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
-                                       " (response.error.message) " << response.error.message <<
-                                       " (response.text) " << response.text.c_str());
-    return response;
-}
-//cys edit
 cpr::Response TDEngineHuoBi::Post(const std::string& method_url,const std::string& body, AccountUnitHuoBi& unit)
 {
     std::string strTimestamp = std::to_string(getTimestamp());
@@ -563,6 +527,7 @@ TradeAccount TDEngineHuoBi::load_account(int idx, const json& j_config)
     unit.secret_key = secret_key;
     unit.passphrase = passphrase;
     unit.baseUrl = baseUrl;
+    unit.accountId=getAccountId(unit);
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
@@ -856,7 +821,7 @@ void TDEngineHuoBi::req_investor_position(const LFQryPositionField* data, int ac
     int errorId = 0;
     std::string errorMsg = "";
     Document d;
-    //调用get函数获取用户信息，保存在d中
+    //调用get函数获取用户信息，保存在d中https://api.huobi.pro/v1/accout/accouts
 /*
 {
   "data": {
@@ -878,17 +843,28 @@ void TDEngineHuoBi::req_investor_position(const LFQryPositionField* data, int ac
     "user-id": 10000
   }
 }
+错误码
+错误信息返回格式
+{
+  "id": "id generate by client",
+  "status": "error",
+  "err-code": "err-code",
+  "err-msg": "err-message",
+  "ts": 1487152091345
+}
 */
     get_account(unit, d);
     KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
-    if(d.IsObject() && d.HasMember("code"))
+    if(d.IsObject() && d.HasMember("status"))
     {
-        KF_LOG_INFO(logger, "[req_investor_position] (getcode)" );
-        errorId =  std::round(std::stod(d["code"].GetString()));
+        std::string status=d["status"];
+        KF_LOG_INFO(logger, "[req_investor_position] (get status)" );
+        errorId =  std::round(std::stod(d["id"].GetString()));
+        KF_LOG_INFO(logger, "[req_investor_position] (status)" << status);
         KF_LOG_INFO(logger, "[req_investor_position] (errorId)" << errorId);
-        if(errorId != 200000) {
-            if (d.HasMember("msg") && d["msg"].IsString()) {
-                errorMsg = d["msg"].GetString();
+        if(status != "ok") {
+            if (d.HasMember("err-msg") && d["err-msg"].IsString()) {
+                errorMsg = d["err-code"].GetString()+"\t"+d["err-msg"].GetString();
             }
             KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId
                                                                    << " (errorMsg) " << errorMsg);
@@ -897,9 +873,6 @@ void TDEngineHuoBi::req_investor_position(const LFQryPositionField* data, int ac
     }
     send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_HUOBI, 1, requestId);
 /*账户余额
-查询指定账户的余额，支持以下账户：
-spot：现货账户， margin：杠杆账户，otc：OTC 账户，point：点卡账户
-HTTP 请求
 GET /v1/account/accounts/{account-id}/balance
 {
   "data": {
@@ -922,38 +895,28 @@ GET /v1/account/accounts/{account-id}/balance
   }
 }
 */
-    std::map<std::string,LFRspPositionField> tmp_map;
+    std::vector<LFRspPositionField> tmp_vector;
     if(!d.HasParseError() && d.HasMember("data"))
     {
-        auto& jisonData = d["data"];
+        auto& accounts = d["data"];
         size_t len = d["data"]["list"].Size();
         KF_LOG_INFO(logger, "[req_investor_position] (accounts.length)" << len);
         for(size_t i = 0; i < len; i++)
         {
-            std::string symbol = jisonData.GetArray()[i]["currency"].GetString();
+            std::string symbol = accounts.GetArray()[i]["currency"].GetString();
             KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol);
-            std::string ticker = unit.positionWhiteList.GetKeyByValue(symbol);
-            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (ticker) " << ticker);
-            if(ticker.length() > 0) {
-                uint64_t nPosition = std::round(std::stod(jisonData.GetArray()[i]["balance"].GetString()) * scale_offset);
-                auto it = tmp_map.find(ticker);
-                if(it == tmp_map.end())
-                {
-                    it = tmp_map.insert(std::make_pair(ticker,pos)).first;
-                    strncpy(it->second.InstrumentID, ticker.c_str(), 31);
-                }
-                it->second.Position += nPosition;
-                KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << it->second.Position);
-            }
+            pos.Position = std::round(std::stod(accounts.GetArray()[i]["balance"].GetString()) * scale_offset);
+            tmp_vector.push_back(pos);
+            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId 
+                            << " (symbol) " << symbol << " (position) " << it->second.Position);
         }
     }
 
     //send the filtered position
-    int position_count = tmp_map.size();
+    int position_count = tmp_vector.size();
     if(position_count > 0) {
-        for (auto it =  tmp_map.begin() ; it != tmp_map.end() ;  ++it) {
-            --position_count;
-            on_rsp_position(&it->second, position_count == 0, requestId, 0, errorMsg.c_str());
+        for (int i = 0; i < position_count; i++) {
+            on_rsp_position(&tmp_vector[i], i == (position_count - 1), requestId, errorId, errorMsg.c_str());
         }
     }
     else
@@ -1021,11 +984,9 @@ void TDEngineHuoBi::req_order_insert(const LFInputOrderField* data, int account_
 
     double funds = 0;
     Document d;
-    //精度处理
-    int64_t fixedPrice = 0;
+    /*int64_t fixedPrice = 0;
     int64_t fixedVolume = 0;
     dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
-
     if(fixedVolume == 0)
     {
         KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error" << ticker);
@@ -1035,13 +996,9 @@ void TDEngineHuoBi::req_order_insert(const LFInputOrderField* data, int account_
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HUOBI, 1, requestId, errorId, errorMsg.c_str());
         return;
-    }
-    const auto resp = Get("/v1/account/accounts","{}",unit);
-    Document j;
-    j.Parse(resp.text.c_str());
-    std::string accountId = j["data"].GetArray()[0]["id"].GetString();
-    send_order(unit, accountId, fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, "api",
-                ticker.c_str(), GetType(data->OrderPriceType).c_str(),d);
+    }*/
+    send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
+            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset, funds, d);
     //not expected response
     if(!d.IsObject())
     {
@@ -1049,12 +1006,12 @@ void TDEngineHuoBi::req_order_insert(const LFInputOrderField* data, int account_
         errorMsg = "send_order http response has parse error or is not json. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                            errorId << " (errorMsg) " << errorMsg);
-    } else  if(d.HasMember("code"))
+    } else  if(d.HasMember("status"))
     {
-        int code =std::round(std::stod(d["code"].GetString()));
-        if(code == 200000) {
+        std::string status =d["status"].GetString();
+        if(status == "ok") {
             //if send successful and the exchange has received ok, then add to  pending query order list
-            std::string remoteOrderId = d["data"]["orderId"].GetString();
+            std::string remoteOrderId = d["data"].GetString();
             //fix defect of use the old value
             localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
@@ -1097,10 +1054,10 @@ void TDEngineHuoBi::req_order_insert(const LFInputOrderField* data, int account_
             return;
 
         }else {
-            errorId = code;
-            if(d.HasMember("msg") && d["msg"].IsString())
+            errorId = std::round(std::stod(d["id"]));
+            if(d.HasMember("err-msg") && d["err-msg"].IsString())
             {
-                errorMsg = d["msg"].GetString();
+                errorMsg = d["err-code"].GetString()+"\t"+d["err-msg"].GetString();
             }
             KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                                errorId << " (errorMsg) " << errorMsg);
@@ -1160,17 +1117,16 @@ void TDEngineHuoBi::req_order_action(const LFOrderActionField* data, int account
     Document d;
     cancel_order(unit, ticker, remoteOrderId, d);
 
-    std::string strSuccessCode =  "200000";
-    if(!d.HasParseError() && d.HasMember("code") && strSuccessCode != d["code"].GetString()) {
-        errorId = std::stoi(d["code"].GetString());
-        if(d.HasMember("msg") && d["msg"].IsString())
+    std::string strSuccessCode =  "ok";
+    if(!d.HasParseError() && d.HasMember("status") && strSuccessCode != d["status"].GetString()) {
+        errorId = std::stoi(d["id"].GetString());
+        if(d.HasMember("err-msg") && d["err-msg"].IsString())
         {
-            errorMsg = d["msg"].GetString();
+            errorMsg = d["err-code"].GetString()+"\t"+d["err-msg"].GetString();
         }
         KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId
                                                                        << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
-
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
@@ -1178,14 +1134,10 @@ void TDEngineHuoBi::req_order_action(const LFOrderActionField* data, int account
 
     } else {
         //addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
-
         // addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
-
         //TODO:   onRtn order/on rtn trade
-
     }
 }
-
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
 void TDEngineHuoBi::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId)
 {
@@ -1488,11 +1440,7 @@ void TDEngineHuoBi::get_account(AccountUnitHuoBi& unit, Document& json)
     HTTP 请求
     GET /v1/account/accounts/{account-id}/balance
     */
-    std::string getPath="/v1/account/accounts/";
-    const auto resp = Get("/v1/account/accounts","{}",unit);
-    Document j;
-    j.Parse(resp.text.c_str());
-    std::string requestPath = getPath+j["data"].GetArray()[0]["id"].GetString()+"/balance";
+    std::string requestPath = getPath+std::to_string(unit.accountId)+"/balance";
     //std::string queryString= construct_request_body(unit,"{}");
     //RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA
     //construct_request_body(unit, "{}");
@@ -1500,6 +1448,14 @@ void TDEngineHuoBi::get_account(AccountUnitHuoBi& unit, Document& json)
     const auto response = Get(requestPath,"{}",unit);
     json.Parse(response.text.c_str());
     return ;
+}
+long TDEngineHuoBi::getAccountId(AccountUnitHuoBi& unit){
+    std::string getPath="/v1/account/accounts/";
+    const auto resp = Get("/v1/account/accounts","{}",unit);
+    Document j;
+    j.Parse(resp.text.c_str());
+    long accountId=j["data"].GetArray()[0]["id"];
+    return accountId;
 }
 /*
 {
@@ -1532,21 +1488,22 @@ std::string TDEngineHuoBi::createInsertOrdertring(const char *accountId,
     writer.EndObject();
     return s.GetString();
 }
-
-void TDEngineHuoBi::send_order(AccountUnitHuoBi& unit, const char *accountId,
-        const char *amount, const char *price, const char *source, const char *symbol,const char *type,Document& json)
-{
-    KF_LOG_INFO(logger, "[send_order]");
-    /*火币下单请求参数
-     *{
+/*火币下单请求参数
+    {
         "account-id": "100009",
         "amount": "10.1",
         "price": "100.1",
         "source": "api",
         "symbol": "ethusdt",
         "type": "buy-limit"
-      }
-     */
+    }
+*/
+void TDEngineOceanEx::send_order(AccountUnitOceanEx& unit, const char *code,
+                                 const char *side, const char *type, double size, double price, double funds, Document& json)
+{
+    KF_LOG_INFO(logger, "[send_order]");
+    std::string s=side,t=type;
+    std::string st=s+"-"+t;
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
@@ -1554,7 +1511,8 @@ void TDEngineHuoBi::send_order(AccountUnitHuoBi& unit, const char *accountId,
         should_retry = false;
         //火币下单post /v1/order/orders/place
         std::string requestPath = "/v1/order/orders/place";
-        response = Post(requestPath,createInsertOrdertring(accountId, amount, price, source, symbol,type),unit);
+        response = Post(requestPath,createInsertOrdertring(unit.accountId, std::to_string(size).c_str(), std::to_string(price).c_str(),
+                        "api",code,st),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
                                                   " (response.error.message) " << response.error.message <<
@@ -1569,8 +1527,6 @@ void TDEngineHuoBi::send_order(AccountUnitHuoBi& unit, const char *accountId,
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
         }
     } while(should_retry && retry_times < max_rest_retry_times);
-
-
 
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
                                                                          " (response.error.message) " << response.error.message <<
@@ -1599,20 +1555,14 @@ bool TDEngineHuoBi::shouldRetry(Document& doc)
     {
         ret = true;
     }
-
     KF_LOG_INFO(logger, "[shouldRetry] isObJect = " << isObJect << ",strCode = " << strCode);
-
     return ret;
 }
 
 void TDEngineHuoBi::cancel_all_orders(AccountUnitHuoBi& unit, std::string code, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
-    //火币获取account-id
-    const auto resp = Get("/v1/account/accounts","{}",unit);
-    Document j;
-    j.Parse(resp.text.c_str());
-    std::string accountId = j["data"].GetArray()[0]["id"].GetString();
+    std::string accountId = std::to_string(unit.accountId);
     //火币post批量撤销订单
     std::string requestPath = "/v1/order/orders/batchCancelOpenOrders";
     //std::string queryString= "?user_jwt=RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA";//construct_request_body(unit, "{}");
@@ -1629,7 +1579,6 @@ void TDEngineHuoBi::cancel_all_orders(AccountUnitHuoBi& unit, std::string code, 
     writer.Int(100);
     writer.EndObject();
     auto response = Post(requestPath,s.GetString(),unit);
-
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
