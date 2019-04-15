@@ -395,7 +395,7 @@ cpr::Header TDEngineHuoBi::construct_request_header(AccountUnitHuoBi& unit,const
                            {"SignatureMethod","HmacSHA256"},
                            {"SignatureVersion","2"},
                            {"Timestamp",std::to_string(getTimestamp())},
-                           {"Signature",strSignatrue}
+                           {"Signature",strSignatrue},
                            {"Contenr-Type",strContentType}};
     }
 
@@ -411,7 +411,8 @@ cpr::Response TDEngineHuoBi::Get(const std::string& method_url,const std::string
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
-    std::string strSign = "GET\n"+"api.huobi.pro\n" + method_url+"\n"+
+    std::string getPath="GET\n";
+    std::string strSign = getPath+"api.huobi.pro\n" + method_url+"\n"+
                             "AccessKeyId="+strAccessKeyId+"&"+
                             "SignatureMethod="+strSignatureMethod+"&"+
                             "SignatureVersion="+strSignatureVersion+"&"+
@@ -448,7 +449,8 @@ cpr::Response TDEngineHuoBi::Delete(const std::string& method_url,const std::str
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
-    std::string strSign = "DELETE\n"+"api.huobi.pro\n" + method_url+"\n"+
+    std::string deletePath="DELETE\n";
+    std::string strSign = deletePath+"api.huobi.pro\n" + method_url+"\n"+
                             "AccessKeyId="+strAccessKeyId+"&"+
                             "SignatureMethod="+strSignatureMethod+"&"+
                             "SignatureVersion="+strSignatureVersion+"&"+
@@ -482,7 +484,8 @@ cpr::Response TDEngineHuoBi::Post(const std::string& method_url,const std::strin
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
-    std::string strSign = "POST\n"+"api.huobi.pro\n" + method_url+"\n"+
+    std::string postPath="POST\n";
+    std::string strSign = postPath+"api.huobi.pro\n" + method_url+"\n"+
                             "AccessKeyId="+strAccessKeyId+"&"+
                             "SignatureMethod="+strSignatureMethod+"&"+
                             "SignatureVersion="+strSignatureVersion+"&"+
@@ -1036,7 +1039,7 @@ void TDEngineHuoBi::req_order_insert(const LFInputOrderField* data, int account_
     const auto resp = Get("/v1/account/accounts","{}",unit);
     Document j;
     j.Parse(resp.text.c_str());
-    std::string accountId = std::to_string(j["data"].GetArray()[0]["id"]);
+    std::string accountId = j["data"].GetArray()[0]["id"].GetString();
     send_order(unit, accountId, fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, "api",
                 ticker.c_str(), GetType(data->OrderPriceType).c_str(),d);
     //not expected response
@@ -1485,10 +1488,11 @@ void TDEngineHuoBi::get_account(AccountUnitHuoBi& unit, Document& json)
     HTTP 请求
     GET /v1/account/accounts/{account-id}/balance
     */
+    std::string getPath="/v1/account/accounts/";
     const auto resp = Get("/v1/account/accounts","{}",unit);
     Document j;
     j.Parse(resp.text.c_str());
-    std::string requestPath = "/v1/account/accounts/"+std::to_string(j["data"].GetArray()[0]["id"])+"/balance";
+    std::string requestPath = getPath+j["data"].GetArray()[0]["id"].GetString()+"/balance";
     //std::string queryString= construct_request_body(unit,"{}");
     //RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA
     //construct_request_body(unit, "{}");
@@ -1508,7 +1512,7 @@ void TDEngineHuoBi::get_account(AccountUnitHuoBi& unit, Document& json)
 }
  * */
 std::string TDEngineHuoBi::createInsertOrdertring(const char *accountId,
-        const char *amount, const char *price, const cahr *source, const char *symbol,const char *type)
+        const char *amount, const char *price, const char *source, const char *symbol,const char *type)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);
@@ -1530,7 +1534,7 @@ std::string TDEngineHuoBi::createInsertOrdertring(const char *accountId,
 }
 
 void TDEngineHuoBi::send_order(AccountUnitHuoBi& unit, const char *accountId,
-        const char *amount, const char *price, const cahr *source, const char *symbol,const char *type,Document& json)
+        const char *amount, const char *price, const char *source, const char *symbol,const char *type,Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
     /*火币下单请求参数
@@ -1608,7 +1612,7 @@ void TDEngineHuoBi::cancel_all_orders(AccountUnitHuoBi& unit, std::string code, 
     const auto resp = Get("/v1/account/accounts","{}",unit);
     Document j;
     j.Parse(resp.text.c_str());
-    std::string accountId = std::to_string(j["data"].GetArray()[0]["id"]);
+    std::string accountId = j["data"].GetArray()[0]["id"].GetString();
     //火币post批量撤销订单
     std::string requestPath = "/v1/order/orders/batchCancelOpenOrders";
     //std::string queryString= "?user_jwt=RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA";//construct_request_body(unit, "{}");
@@ -1616,7 +1620,7 @@ void TDEngineHuoBi::cancel_all_orders(AccountUnitHuoBi& unit, std::string code, 
     Writer<StringBuffer> writer(s);
     writer.StartObject();
     writer.Key("account-id");
-    writer.String(accountId);
+    writer.String(accountId.c_str());
     writer.Key("symbol");
     writer.String("");
     writer.Key("side");
@@ -1639,7 +1643,8 @@ void TDEngineHuoBi::cancel_order(AccountUnitHuoBi& unit, std::string code, std::
     do {
         should_retry = false;
         //火币post撤单请求
-        std::string requestPath = "/v1/order/orders/" + orderId + "/submitcancel";
+        std::string postPath="/v1/order/orders/";
+        std::string requestPath = postPath+ orderId + "/submitcancel";
         //std::string queryString= construct_request_body(unit, "{\"id\":" + orderId + "}");
         response = Post(requestPath,"",unit);
 
@@ -1665,7 +1670,8 @@ void TDEngineHuoBi::query_order(AccountUnitHuoBi& unit, std::string code, std::s
 {
     KF_LOG_INFO(logger, "[query_order]");
     //火币get查询订单详情
-    std::string requestPath = "/v1/order/orders/" + orderId;
+    std::string getPath = "/v1/order/orders/";
+    std::string requestPath = getPath + orderId;
     auto response = Get(requestPath,"",unit);
     json.Parse(response.text.c_str());
     //getResponse(response.status_code, response.text, response.error.message, json);

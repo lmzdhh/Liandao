@@ -166,7 +166,7 @@ private:
 private:
     void get_account(AccountUnitHuoBi& unit, Document& json);
     void send_order(AccountUnitHuoBi& unit, const char *accountId,const char *amount,
-             const char *price, const cahr *source, const char *symbol,const char *type,Document& json);
+             const char *price, const char *source, const char *symbol,const char *type,Document& json);
     void cancel_all_orders(AccountUnitHuoBi& unit, std::string code, Document& json);
     void cancel_order(AccountUnitHuoBi& unit, std::string code, std::string orderId, Document& json);
     void query_order(AccountUnitHuoBi& unit, std::string code, std::string orderId, Document& json);
@@ -178,7 +178,7 @@ private:
     std::string construct_request_body(const AccountUnitHuoBi& unit,const  std::string& data,bool isget = true);
     cpr::Header construct_request_header(AccountUnitHuoBi& unit,const std::string& strSign,const std::string& strContentType);
     std::string createInsertOrdertring(const char *accountId,
-                    const char *amount, const char *price, const cahr *source, const char *symbol,const char *type);
+                    const char *amount, const char *price, const char *source, const char *symbol,const char *type);
 
     cpr::Response Get(const std::string& url,const std::string& body, AccountUnitHuoBi& unit);
     cpr::Response Post(const std::string& url,const std::string& body, AccountUnitHuoBi& unit);
