@@ -194,6 +194,7 @@ public:
     void on_lws_connection_error(struct lws* conn);
     //cys add
     std::string getAccountId(AccountUnitHuobi& unit);
+    std::string getHuobiTime();
 private:
     void onPong(struct lws* conn);
     void Ping(struct lws* conn);

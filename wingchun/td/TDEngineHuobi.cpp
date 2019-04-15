@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <mutex>
 #include <chrono>
+#include <time.h>
 #include "../../utils/crypto/openssl_util.h"
 
 using cpr::Post;
@@ -387,7 +388,7 @@ cpr::Header TDEngineHuobi::construct_request_header(AccountUnitHuobi& unit,const
         return cpr::Header{{"AccessKeyId",unit.api_key},
                            {"SignatureMethod","HmacSHA256"},
                            {"SignatureVersion","2"},
-                           {"Timestamp",std::to_string(getTimestamp())},
+                           {"Timestamp",getHuobiTime()},
                            {"Signature",strSignatrue}};
     }
     else
@@ -395,7 +396,7 @@ cpr::Header TDEngineHuobi::construct_request_header(AccountUnitHuobi& unit,const
         return cpr::Header{{"AccessKeyId",unit.api_key},
                            {"SignatureMethod","HmacSHA256"},
                            {"SignatureVersion","2"},
-                           {"Timestamp",std::to_string(getTimestamp())},
+                           {"Timestamp",getHuobiTime()},
                            {"Signature",strSignatrue},
                            {"Contenr-Type",strContentType}};
     }
@@ -408,7 +409,7 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
     string url = unit.baseUrl + method_url;
     //使用 UTF-8 编码，且进行了 URI 编码，十六进制字符必须大写，如 “:” 会被编码为 “%3A” ，空格被编码为 “%20”。
     //时间戳（Timestamp）需要以YYYY-MM-DDThh:mm:ss格式添加并且进行 URI 编码。
-    std::string strTimestamp = std::to_string(getTimestamp());
+    std::string strTimestamp = getHuobiTime();
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
@@ -445,7 +446,7 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
 //cys edit
 cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::string& body, AccountUnitHuobi& unit)
 {
-    std::string strTimestamp = std::to_string(getTimestamp());
+    std::string strTimestamp = getHuobiTime();
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
@@ -1456,6 +1457,14 @@ std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     j.Parse(resp.text.c_str());
     std::string accountId=j["data"].GetArray()[0]["id"].GetString();
     return accountId;
+}
+std::string TDEngineHuobi::getHuobiTime(){
+    time_t timep;
+    time (&timep);
+    char tmp[64];
+    strftime(tmp, sizeof(tmp), "%Y-%m-%dT%H%%3A%M%%3A%S",localtime(&timep) );
+    std::string huobiTime=tmp;
+    return huobiTime;
 }
 /*
 {
