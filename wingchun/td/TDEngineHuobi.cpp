@@ -381,7 +381,7 @@ int64_t TDEngineHuobi::getMSTime()
 cpr::Header TDEngineHuobi::construct_request_header(AccountUnitHuobi& unit,const std::string& strSign,const std::string& strContentType)
 {
     unsigned char * strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    std::string strSignatrue = base64_encode(strHmac,32);
+    std::string strSignatrue = base64_encode(strHmac,std::strlen(strHmac));
 
     if(strContentType.empty())
     {
@@ -422,7 +422,7 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
     KF_LOG_INFO(logger, "strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     KF_LOG_INFO(logger, "strHmac = " << strHmac );
-    std::string strSignatrue = base64_encode(strHmac,32);
+    std::string strSignatrue = base64_encode(strHmac,std::strlen(strHmac));
     cpr::Header mapHeader = cpr::Header{{"AccessKeyId",strAccessKeyId},
                                         {"SignatureMethod",strSignatureMethod},
                                         {"SignatureVersion",strSignatureVersion},
@@ -431,7 +431,8 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
     KF_LOG_INFO(logger, "AccessKeyId = " << strAccessKeyId
                                          << ", SignatureMethod = " << strSignatureMethod
                                          << ", SignatureVersion = " << strSignatureVersion
-                                         << ", Timestamp = " << strTimestamp);
+                                         << ", Timestamp = " << strTimestamp
+                                         << "Url = " << method_url);
 
 
     std::unique_lock<std::mutex> lock(g_httpMutex);
@@ -458,14 +459,18 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
                             "Timestamp="+strTimestamp;
     KF_LOG_INFO(logger, "strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    std::string strSignatrue = base64_encode(strHmac,32);
+    std::string strSignatrue = base64_encode(strHmac,std::strlen(strHmac));
     cpr::Header mapHeader = cpr::Header{{"AccessKeyId",strAccessKeyId},
                                         {"SignatureMethod",strSignatureMethod},
                                         {"SignatureVersion",strSignatureVersion},
                                         {"Timestamp",strTimestamp},
                                         {"Signature",strSignatrue}};
 
-
+    KF_LOG_INFO(logger, "AccessKeyId = " << strAccessKeyId
+                                         << ", SignatureMethod = " << strSignatureMethod
+                                         << ", SignatureVersion = " << strSignatureVersion
+                                         << ", Timestamp = " << strTimestamp
+                                         << "Url = " << method_url);
     string url = unit.baseUrl + method_url;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{mapHeader},
@@ -1442,10 +1447,6 @@ void TDEngineHuobi::get_account(AccountUnitHuobi& unit, Document& json)
     */
    std::string getPath="/v1/account/accounts/";
     std::string requestPath = getPath+unit.accountId+"/balance";
-    //std::string queryString= construct_request_body(unit,"{}");
-    //RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA
-    //construct_request_body(unit, "{}");
-    //string url = unit.baseUrl + requestPath + queryString;
     const auto response = Get(requestPath,"{}",unit);
     json.Parse(response.text.c_str());
     return ;
@@ -1456,6 +1457,7 @@ std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     Document j;
     j.Parse(resp.text.c_str());
     std::string accountId=j["data"].GetArray()[0]["id"].GetString();
+    KF_LOG_DEBUG(logger,"[getAccountID] (accountId) "<<accountId);
     return accountId;
 }
 std::string TDEngineHuobi::getHuobiTime(){
