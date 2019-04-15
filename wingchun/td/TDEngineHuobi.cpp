@@ -1445,7 +1445,7 @@ void TDEngineHuobi::get_account(AccountUnitHuobi& unit, Document& json)
     GET /v1/account/accounts/{account-id}/balance
     */
    std::string getPath="/v1/account/accounts/";
-    std::string requestPath = getPath+std::to_string(unit.accountId)+"/balance";
+    std::string requestPath = getPath+unit.accountId+"/balance";
     //std::string queryString= construct_request_body(unit,"{}");
     //RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA
     //construct_request_body(unit, "{}");
@@ -1454,12 +1454,12 @@ void TDEngineHuobi::get_account(AccountUnitHuobi& unit, Document& json)
     json.Parse(response.text.c_str());
     return ;
 }
-long TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
+std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     std::string getPath="/v1/account/accounts/";
     const auto resp = Get("/v1/account/accounts","{}",unit);
     Document j;
     j.Parse(resp.text.c_str());
-    long accountId=j["data"].GetArray()[0]["id"];
+    std::string accountId=j["data"].GetArray()[0]["id"].GetString();
     return accountId;
 }
 /*
@@ -1516,7 +1516,7 @@ void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
         should_retry = false;
         //火币下单post /v1/order/orders/place
         std::string requestPath = "/v1/order/orders/place";
-        response = Post(requestPath,createInsertOrdertring(unit.accountId, std::to_string(size).c_str(), std::to_string(price).c_str(),
+        response = Post(requestPath,createInsertOrdertring(unit.accountId.c_str(), std::to_string(size).c_str(), std::to_string(price).c_str(),
                         "api",code,st.c_str()),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
@@ -1566,7 +1566,7 @@ bool TDEngineHuobi::shouldRetry(Document& doc)
 void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
-    std::string accountId = std::to_string(unit.accountId);
+    std::string accountId = unit.accountId;
     //火币post批量撤销订单
     std::string requestPath = "/v1/order/orders/batchCancelOpenOrders";
     //std::string queryString= "?user_jwt=RkTgU1lne1aWSBnC171j0eJe__fILSclRpUJ7SWDDulWd4QvLa0-WVRTeyloJOsjyUtduuF0K0SdkYqXR-ibuULqXEDGCGSHSed8WaNtHpvf-AyCI-JKucLH7bgQxT1yPtrJC6W31W5dQ2Spp3IEpXFS49pMD3FRFeHF4HAImo9VlPUM_bP-1kZt0l9RbzWjxVtaYbx3L8msXXyr_wqacNnIV6X9m8eie_DqZHYzGrN_25PfAFgKmghfpL-jmu53kgSyTw5v-rfZRP9VMAuryRIMvOf9LBuMaxcuFn7PjVJx8F7fcEPBCd0roMTLKhHjFidi6QxZNUO1WKSkoSbRxA";//construct_request_body(unit, "{}");

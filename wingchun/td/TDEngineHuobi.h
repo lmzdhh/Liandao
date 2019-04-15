@@ -85,7 +85,7 @@ struct AccountUnitHuobi
     std::map<std::string,PriceIncrement> mapPriceIncrement;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
-    long accountId;
+    std::string accountId;
 
 };
 
@@ -193,7 +193,7 @@ public:
     int lws_write_subscribe(struct lws* conn);
     void on_lws_connection_error(struct lws* conn);
     //cys add
-    long getAccountId(AccountUnitHuobi& unit);
+    std::string getAccountId(AccountUnitHuobi& unit);
 private:
     void onPong(struct lws* conn);
     void Ping(struct lws* conn);
