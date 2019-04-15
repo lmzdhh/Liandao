@@ -16,6 +16,7 @@
 #include <chrono>
 #include "../../utils/crypto/openssl_util.h"
 
+using cpr::Post;
 using cpr::Delete;
 using cpr::Url;
 using cpr::Body;
@@ -1516,11 +1517,11 @@ void TDEngineOceanEx::send_order(AccountUnitHuobi& unit, const char *code,
         //火币下单post /v1/order/orders/place
         std::string requestPath = "/v1/order/orders/place";
         response = Post(requestPath,createInsertOrdertring(unit.accountId, std::to_string(size).c_str(), std::to_string(price).c_str(),
-                        "api",code,st),unit);
+                        "api",code,st.c_str()),unit);
 
-        KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
-                                                  " (response.error.message) " << response.error.message <<
-                                                  " (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
+        KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
+                                                  << " (response.error.message) " << response.error.message 
+                                                  <<" (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
 
         //json.Clear();
         getResponse(response.status_code, response.text, response.error.message, json);
@@ -1532,9 +1533,8 @@ void TDEngineOceanEx::send_order(AccountUnitHuobi& unit, const char *code,
         }
     } while(should_retry && retry_times < max_rest_retry_times);
 
-    KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
-                                                                         " (response.error.message) " << response.error.message <<
-                                                                         " (response.text) " << response.text.c_str() );
+    KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<" (response.error.message) " 
+                                                                        << response.error.message << " (response.text) " << response.text.c_str() );
 
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
