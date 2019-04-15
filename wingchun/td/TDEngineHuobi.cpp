@@ -395,7 +395,7 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
                             "SignatureVersion="+strSignatureVersion+"&"+
                             "Timestamp="+strTimestamp;
     KF_LOG_INFO(logger, "strSign = " << strSign );
-    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    unsigned char* strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
     KF_LOG_INFO(logger, "strHmac = " << strHmac );
     //std::strlen((char *)strHmac)
     std::string strSignatrue = base64_encode(strHmac,32);
@@ -428,7 +428,7 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
                             "SignatureVersion="+strSignatureVersion+"&"+
                             "Timestamp="+strTimestamp;
     KF_LOG_INFO(logger, "strSign = " << strSign );
-    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    unsigned char* strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
     std::string strSignatrue = base64_encode(strHmac,32);
     string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
                     "SignatureMethod="+strSignatureMethod+"&"+
