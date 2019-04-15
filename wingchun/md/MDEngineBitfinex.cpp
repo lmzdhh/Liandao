@@ -41,11 +41,16 @@ static MDEngineBitfinex* global_md = nullptr;
 /*quest3 fxw v4 starts*/
 int MDEngineBitfinex::GetSnapShotAndRtn(std::string ticker)//v1
 {
+    std::string symbol=ticker;
+    symbol.erase(3,1);
     std::string requestPath = "/v1/book/";
-    string url = "https://api.bitfinex.com" + requestPath +ticker;//complete url
-    KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]the url we ask" << url);
+    std::string body="";
+    string url = "https://api.bitfinex.com" + requestPath +symbol;//complete url
+    KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]the url we ask :" << url);
     cpr::Response response = Get(
-        Url{ url }, cpr::VerifySsl{ false }
+        Url{ url }, cpr::VerifySsl{ false },
+        cpr::Body{body},
+        cpr::Timeout{10000}
     );
     if (response.status_code >= 200 && response.status_code <= 299)
     {
@@ -811,8 +816,9 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
             once=0;
             md.Status = 4;
             /*need re-login*/
-            KF_LOG_DEBUG(logger, "[quest2test]MDEngineBitfinex on_price_book_update test relogin....");
+            KF_LOG_DEBUG(logger, "[quest2test]MDEngineBitfinex on_price_book_update test request orderbook snapshot....");
             on_price_book_update(&md);
+            KF_LOG_DEBUG(logger, "[quest2test]ticker this time:"<<ticker);
             GetSnapShotAndRtn(ticker);
             sleep(6000);
         }
