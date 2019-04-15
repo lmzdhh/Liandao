@@ -689,7 +689,7 @@ void TDEngineBithumb::retrieveOrderStatus(AccountUnitBithumb& unit)
                 errorMsg = d["message"].GetString();
             }
 
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] query_trade fail." << " (symbol)" << it->second.InstrumentID
+            KF_LOG_ERROR(logger, "[retrieveOrderStatus] query_trade fail_0." << " (symbol)" << it->second.InstrumentID
                                                                          << " (orderRef)" << it->second.OrderRef
                                                                          << " (errorId)" << errorId
                                                                          << " (errorMsg)" << errorMsg);
@@ -757,7 +757,7 @@ void TDEngineBithumb::retrieveOrderStatus(AccountUnitBithumb& unit)
                 errorMsg = docOrder["message"].GetString();
             }
 
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] query_trade fail." << " (symbol)" << iter->second.InstrumentID
+            KF_LOG_ERROR(logger, "[retrieveOrderStatus] query_trade fail_1." << " (symbol)" << iter->second.InstrumentID
                                                                          << " (orderRef)" << iter->second.OrderRef
                                                                          << " (errorId)" << errorId
                                                                          << " (errorMsg)" << errorMsg);
