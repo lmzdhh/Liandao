@@ -1503,7 +1503,7 @@ std::string TDEngineHuobi::createInsertOrdertring(const char *accountId,
         "type": "buy-limit"
     }
 */
-void TDEngineOceanEx::send_order(AccountUnitHuobi& unit, const char *code,
+void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
                                  const char *side, const char *type, double size, double price, double funds, Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
