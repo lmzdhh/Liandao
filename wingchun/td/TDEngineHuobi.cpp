@@ -530,7 +530,7 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     unit.baseUrl = baseUrl;
     unit.accountId=getAccountId(unit);
 
-    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
+    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl << " (accountId)"<<unit.accountId);
 
 //test rs256
     //  std::string data ="{}";
@@ -561,9 +561,9 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     printResponse(json);
-    cancel_all_orders(unit, "etc_eth", json);
+    cancel_all_orders(unit, "btc_usd", json);
     printResponse(json);
-    getPriceIncrement(unit);
+    //getPriceIncrement(unit);
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -581,12 +581,9 @@ void TDEngineHuobi::connect(long timeout_nsec)
         unit.logged_in = true;
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         // Document doc;
-        //
         //std::string requestPath = "/key";
         // const auto response = Get(requestPath,"{}",unit);
-
         //  getResponse(response.status_code, response.text, response.error.message, doc);
-
         // if ( !unit.logged_in && doc.HasMember("code"))
         //{
         //   int code = doc["code"].GetInt();
@@ -612,7 +609,6 @@ void TDEngineHuobi::getPriceIncrement(AccountUnitHuobi& unit)
             stPriceIncrement.nPriceIncrement = std::round(std::stod(data["priceIncrement"].GetString()) * scale_offset);
             stPriceIncrement.nQuoteIncrement = std::round(std::stod(data["quoteIncrement"].GetString()) * scale_offset);
             unit.mapPriceIncrement.insert(std::make_pair(pair.first,stPriceIncrement));
-
             KF_LOG_INFO(logger, "[getPriceIncrement] (BaseMinSize )" << stPriceIncrement.nBaseMinSize << "(PriceIncrement)" << stPriceIncrement.nPriceIncrement
                                                                      << "(QuoteIncrement)" << stPriceIncrement.nQuoteIncrement);
         }
@@ -1170,7 +1166,7 @@ void TDEngineHuobi::GetAndHandleOrderTradeResponse()
     }//end every account
 }
 
-//恢复订单状态
+//订单状态
 void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit)
 {
     //KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
@@ -1197,9 +1193,8 @@ void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit)
 
         Document d;
         query_order(unit, ticker,orderStatusIterator->remoteOrderId, d);
-
         //parse order status
-        //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
+        //订单状态，submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
         if(d.HasParseError()) {
             //HasParseError, skip
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order response HasParseError " << " (symbol)" << orderStatusIterator->InstrumentID
@@ -1562,7 +1557,13 @@ bool TDEngineHuobi::shouldRetry(Document& doc)
     KF_LOG_INFO(logger, "[shouldRetry] isObJect = " << isObJect << ",strCode = " << strCode);
     return ret;
 }
-
+/*
+响应数据
+参数名称	是否必须	数据类型	描述	取值范围
+success-count	true	int	成功取消的订单数	
+failed-count	true	int	取消失败的订单数	
+next-id	true	long	下一个符合取消条件的订单号	
+*/
 void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
@@ -1576,9 +1577,9 @@ void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, 
     writer.Key("account-id");
     writer.String(accountId.c_str());
     writer.Key("symbol");
-    writer.String("");
+    writer.String(GetType(data->OrderPriceType).c_str());
     writer.Key("side");
-    writer.String("");
+    writer.String(GetSide(data->Direction).c_str());
     writer.Key("size");
     writer.Int(100);
     writer.EndObject();
@@ -1618,7 +1619,24 @@ void TDEngineHuobi::cancel_order(AccountUnitHuobi& unit, std::string code, std::
 
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
-
+/*
+响应数据
+字段名称	是否必须	数据类型	描述	取值范围
+account-id	true	long	账户 ID	
+amount	    true	string	订单数量	
+canceled-at	false	long	订单撤销时间	
+created-at	true	long	订单创建时间	
+field-amount	true	string	已成交数量	
+field-cash-amount	true	string	已成交总金额	
+field-fees	true	string	已成交手续费（买入为币，卖出为钱）	
+finished-at	false	long	订单变为终结态的时间，不是成交时间，包含“已撤单”状态	
+id	true	long	订单ID	
+price	    true	string	订单价格	
+source	    true	string	订单来源	api
+state	    true	string	订单状态	submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
+symbol	    true	string	交易对	btcusdt, ethbtc, rcneth ...
+type	    true	string	订单类型	buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖, buy-ioc：IOC买单, sell-ioc：IOC卖单
+*/
 void TDEngineHuobi::query_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[query_order]");
@@ -1627,6 +1645,7 @@ void TDEngineHuobi::query_order(AccountUnitHuobi& unit, std::string code, std::s
     std::string requestPath = getPath + orderId;
     auto response = Get(requestPath,"",unit);
     json.Parse(response.text.c_str());
+    KF_LOG_DEBUG(logger,"[query_order] response "<<response.test.c_str());
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1650,7 +1669,6 @@ void TDEngineHuobi::handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vect
         当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
          //2018-09-12.  不清楚websocket会不会有这个问题，先做同样的处理
         */
-
         //虽然是撤单状态，但是已经成交的数量和上一次记录的数量不一样，期间一定发生了部分成交. 要补发 LF_CHAR_PartTradedQueueing
         if(responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded) {
             //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
