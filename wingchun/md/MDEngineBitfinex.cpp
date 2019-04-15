@@ -16,6 +16,7 @@
 #include <cpr/cpr.h>
 #include <chrono>
 
+#include <unistd.h>
 
 using cpr::Get;
 using cpr::Url;
@@ -254,6 +255,7 @@ void MDEngineBitfinex::login(long timeout_nsec) {
     KF_LOG_INFO(logger, "MDEngineBitfinex::login: wsi create success.");
 
     logged_in = true;
+    timer = getTimestamp();/*quest2 fxw's edits v3*/
 }
 
 void MDEngineBitfinex::set_reader_thread()
@@ -779,10 +781,20 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
             /*need re-login*/
             KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex::onDepth: on_price_book_update failed ,lose level,re-login....");
             on_price_book_update(&md);
-            lws_cancel_service(context);/*quest2 fxw's edits v2*/
-            setContextNull();/*quest2 fxw's edits v2*/
             on_lws_connection_error(NULL);
             KF_LOG_DEBUG(logger, "[quest2 fxw's edits v2]login is true?" << logged_in);
+        }
+        else if((priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker))&&once)
+        {
+            once=0;
+            md.Status = 4;
+            /*need re-login*/
+            KF_LOG_DEBUG(logger, "[quest2test]MDEngineBitfinex::onDepth: on_price_book_update test relogin....");
+            on_price_book_update(&md);
+            lws_cancel_service(context);
+            on_lws_connection_error(NULL);
+            KF_LOG_DEBUG(logger, "[quest2test]login is true?" << logged_in);
+
         }
         else if((-1 == priceBook20Assembler.GetBestBidPrice(ticker)) ||(-1 == priceBook20Assembler.GetBestAskPrice(ticker))||
                                 priceBook20Assembler.GetBestBidPrice(ticker) >= priceBook20Assembler.GetBestAskPrice(ticker))
