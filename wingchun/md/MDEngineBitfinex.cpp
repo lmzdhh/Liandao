@@ -60,7 +60,7 @@ int MDEngineBitfinex::GetSnapShotAndRtn(std::string ticker)//v1
         LFPriceBook20Field md;
         strcpy(md.ExchangeID, "bitfinex");
         strcpy(md.InstrumentID, ticker.c_str());
-        md.UpdateMicroSecond = getTimestamp();
+        md.UpdateMicroSecond =0;
         md.Status = 0;
         if (d.HasMember("bids"))
         {
@@ -842,7 +842,7 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 
         KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: on_price_book_update");
         /*on_price_book_update(&md);*/
-        /*quest2 FXW's edits start here*/ /* almost all changed */
+        /*quest2 FXW's edits start here*/
         if (priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_asks(ticker) ||
                 priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_bids(ticker) 
                 /*|| priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker) */
@@ -852,19 +852,20 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
             /*need re-login*/
             KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update failed ,lose level,re-login....");
             on_price_book_update(&md);
+            GetSnapShotAndRtn(ticker);
 
         }
-        else if((priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker))&&once)
-        {/*这个if分支仅是为测试用*/
+        /*else if((priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker))&&once)
+        {//这个if分支仅是为测试用
             once=0;
             md.Status = 4;
-            /*need re-login*/
+            //need re-login
             KF_LOG_DEBUG(logger, "[quest2test]MDEngineBitfinex on_price_book_update test request orderbook snapshot....");
             on_price_book_update(&md);
             KF_LOG_DEBUG(logger, "[quest2test]ticker this time:"<<ticker);
             GetSnapShotAndRtn(ticker);
             sleep(6000);
-        }
+        }*/
         else if((-1 == priceBook20Assembler.GetBestBidPrice(ticker)) ||(-1 == priceBook20Assembler.GetBestAskPrice(ticker))||
                 priceBook20Assembler.GetBestBidPrice(ticker) >= priceBook20Assembler.GetBestAskPrice(ticker))
         {
@@ -872,6 +873,7 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
             /*need re-login*/
             KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update failed ,orderbook crossed,re-login....");
             on_price_book_update(&md);
+            GetSnapShotAndRtn(ticker);
         }
         else
         {
