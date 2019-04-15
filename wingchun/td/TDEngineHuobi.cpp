@@ -395,8 +395,9 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
                             "SignatureVersion="+strSignatureVersion+"&"+
                             "Timestamp="+strTimestamp;
     KF_LOG_INFO(logger, "strSign = " << strSign );
-    unsigned char* strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
-    KF_LOG_INFO(logger, "strHmac = " << strHmac );
+    KF_LOG_INFO(logger,"secret = "<<unit.secret_key);
+    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    KF_LOG_INFO(logger, "[Get] strHmac = " << strHmac );
     //std::strlen((char *)strHmac)
     std::string strSignatrue = base64_encode(strHmac,32);
     string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
@@ -409,7 +410,7 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
     const auto response = cpr::Get(Url{url},
                                    Header{{"Content-Type", "application/json"}}, Timeout{10000} );
     lock.unlock();
-    KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
+    KF_LOG_INFO(logger, "[Get] (url) " << url << " (response.status_code) " << response.status_code <<
                                        " (response.error.message) " << response.error.message <<
                                        " (response.text) " << response.text.c_str());
     return response;
@@ -428,7 +429,9 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
                             "SignatureVersion="+strSignatureVersion+"&"+
                             "Timestamp="+strTimestamp;
     KF_LOG_INFO(logger, "strSign = " << strSign );
-    unsigned char* strHmac = hmac_sha256(unit.secret_key.c_str(),strSign.c_str());
+    KF_LOG_INFO(logger,"secret = "<<unit.secret_key);
+    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    KF_LOG_INFO(logger, "[Post] strHmac = " << strHmac );
     std::string strSignatrue = base64_encode(strHmac,32);
     string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
                     "SignatureMethod="+strSignatureMethod+"&"+
@@ -1818,7 +1821,7 @@ std::string TDEngineHuobi::parseJsonToString(Document &d)
 
 inline int64_t TDEngineHuobi::getTimestamp()
 {
-    long long timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return timestamp;
 }
 
