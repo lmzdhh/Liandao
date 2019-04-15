@@ -381,7 +381,7 @@ int64_t TDEngineHuobi::getMSTime()
 cpr::Header TDEngineHuobi::construct_request_header(AccountUnitHuobi& unit,const std::string& strSign,const std::string& strContentType)
 {
     unsigned char * strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    std::string strSignatrue = base64_encode(strHmac,std::strlen(strHmac));
+    std::string strSignatrue = base64_encode(strHmac,std::strlen((char *)strHmac));
 
     if(strContentType.empty())
     {
@@ -422,7 +422,7 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
     KF_LOG_INFO(logger, "strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     KF_LOG_INFO(logger, "strHmac = " << strHmac );
-    std::string strSignatrue = base64_encode(strHmac,std::strlen(strHmac));
+    std::string strSignatrue = base64_encode(strHmac,std::strlen((char *)strHmac));
     cpr::Header mapHeader = cpr::Header{{"AccessKeyId",strAccessKeyId},
                                         {"SignatureMethod",strSignatureMethod},
                                         {"SignatureVersion",strSignatureVersion},
@@ -459,7 +459,7 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
                             "Timestamp="+strTimestamp;
     KF_LOG_INFO(logger, "strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    std::string strSignatrue = base64_encode(strHmac,std::strlen(strHmac));
+    std::string strSignatrue = base64_encode(strHmac,std::strlen((char *)strHmac));
     cpr::Header mapHeader = cpr::Header{{"AccessKeyId",strAccessKeyId},
                                         {"SignatureMethod",strSignatureMethod},
                                         {"SignatureVersion",strSignatureVersion},
