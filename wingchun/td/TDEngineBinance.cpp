@@ -107,8 +107,23 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
 		m_interfaceMgr.init(interfaces, interface_timeout);
 		m_interfaceMgr.print();
 	}
-	
+	AccountUnitBinance& unit = account_units[idx];
     // internal load
+    auto iter = j_config.find("accounts");
+    if (iter != j_config.end())
+    {
+        int account_num = iter.value().size();
+        if(account_num < 1)
+        {
+            KF_LOG_ERROR(logger, "[load_account] no tarde account info !");
+        }
+        for (auto& j_account: iter.value())
+        {
+            string api_key = j_account["APIKey"].get<string>();
+            string secret_key = j_account["SecretKey"].get<string>();
+            unit.keyPairs.insert(std::make_pair(api_key,secret_key));
+        }
+    }
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
@@ -165,9 +180,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
 
 
-    AccountUnitBinance& unit = account_units[idx];
-    unit.api_key = api_key;
-    unit.secret_key = secret_key;
+    
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key);
 

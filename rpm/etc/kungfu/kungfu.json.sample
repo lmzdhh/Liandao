@@ -234,8 +234,12 @@
 					"interfaces": "10.0.0.22-10.0.0.193-10.0.0.104",
 					"interface_timeout_ms": 30000,
 					"interface_switch": 1,
-					"APIKey": "your-api-key",
-					"SecretKey": "your-secret-key",
+					"users":[
+						{
+							"APIKey": "your-api-key",
+							"SecretKey": "your-secret-key"
+						}
+					]
 					"whiteLists": {
 						"etc_eth": "ETCETH",
 						"trx_btc": "TRXBTC"

@@ -56,8 +56,9 @@ struct SendOrderFilter
 
 struct AccountUnitBinance
 {
-    std::string api_key;
-    std::string secret_key;
+    //std::string api_key;
+    //std::string secret_key;
+    std::map<std::string,std::string> keyPairs;
     // internal flags
     bool    logged_in;
     std::vector<PendingBinanceOrderStatus> newOrderStatus;
@@ -265,6 +266,8 @@ private:
     int max_rest_retry_times = 3;
     int retry_interval_milliseconds = 1000;
 	int m_interface_switch = 0;
+
+
 };
 
 WC_NAMESPACE_END
