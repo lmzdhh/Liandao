@@ -67,20 +67,20 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
     switch( reason )
     {
         case LWS_CALLBACK_CLIENT_ESTABLISHED:
-        {
+        {//lws callback client established
             ss << "LWS_CALLBACK_CLIENT_ESTABLISHED.";
             global_md->writeErrorLog(ss.str());
             //lws_callback_on_writable( wsi );
             break;
         }
         case LWS_CALLBACK_PROTOCOL_INIT:
-        {
+        {//lws callback protocol init
             ss << "LWS_CALLBACK_PROTOCOL_INIT.";
             global_md->writeErrorLog(ss.str());
             break;
         }
         case LWS_CALLBACK_CLIENT_RECEIVE:
-        {
+        {//
             ss << "LWS_CALLBACK_CLIENT_RECEIVE.";
             global_md->writeErrorLog(ss.str());
             if(global_md)
@@ -824,7 +824,8 @@ void TDEngineHuobi::req_investor_position(const LFQryPositionField* data, int ac
     {
         std::string status=d["status"].GetString();
         KF_LOG_INFO(logger, "[req_investor_position] (get status)" );
-        errorId =  std::round(std::stod(d["id"].GetString()));
+        //errorId =  std::round(std::stod(d["id"].GetString()));
+        errorId = 404;
         KF_LOG_INFO(logger, "[req_investor_position] (status)" << status);
         KF_LOG_INFO(logger, "[req_investor_position] (errorId)" << errorId);
         if(status != "ok") {
@@ -1020,7 +1021,8 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
             return;
 
         }else {
-            errorId = std::round(std::stod(d["id"].GetString()));
+            //errorId = std::round(std::stod(d["id"].GetString()));
+            errorId=404;
             if(d.HasMember("err-msg") && d["err-msg"].IsString())
             {
                 std::string tab="\t";

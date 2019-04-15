@@ -623,8 +623,8 @@
 		"huobi": {
 			"accounts": [{
 				"info": {
-					"APIKey": "dab57dd6-11bb2fd4-d31c173f-b05ab",
-					"SecretKey": "b6d0714b-852952f7-c761de26-2c9c8",
+					"APIKey": "1c574897-588985ef-4b53184b-69e48",
+					"SecretKey": "6fae0be0-d8985c81-fe49a4c1-3f47d",
 					"passphrase": "your-passphrase",
 					"baseUrl": "https://api.huobi.pro",
 					"whiteLists": {
