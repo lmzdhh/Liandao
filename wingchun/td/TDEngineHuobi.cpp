@@ -1577,9 +1577,9 @@ void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, 
     writer.Key("account-id");
     writer.String(accountId.c_str());
     writer.Key("symbol");
-    writer.String(GetType(data->OrderPriceType).c_str());
+    writer.String("");
     writer.Key("side");
-    writer.String(GetSide(data->Direction).c_str());
+    writer.String("");
     writer.Key("size");
     writer.Int(100);
     writer.EndObject();
@@ -1645,7 +1645,7 @@ void TDEngineHuobi::query_order(AccountUnitHuobi& unit, std::string code, std::s
     std::string requestPath = getPath + orderId;
     auto response = Get(requestPath,"",unit);
     json.Parse(response.text.c_str());
-    KF_LOG_DEBUG(logger,"[query_order] response "<<response.test.c_str());
+    KF_LOG_DEBUG(logger,"[query_order] response "<<response.text.c_str());
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
