@@ -771,15 +771,18 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
         //on_price_book_update(&md);
         /*quest2 FXW's edits start here*/
         if (priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_asks(ticker) ||
-                priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_bids(ticker) ||
-                priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker)
-           )
+                priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_bids(ticker) 
+                /*|| priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker) */
+            )
         {
             md.Status = 1;
             /*need re-login*/
             KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex::onDepth: on_price_book_update failed ,lose level,re-login....");
             on_price_book_update(&md);
+            lws_cancel_service(context);/*quest2 fxw's edits v2*/
+            setContextNull();/*quest2 fxw's edits v2*/
             on_lws_connection_error(NULL);
+            KF_LOG_DEBUG(logger, "[quest2 fxw's edits v2]login is true?" << logged_in);
         }
         else if((-1 == priceBook20Assembler.GetBestBidPrice(ticker)) ||(-1 == priceBook20Assembler.GetBestAskPrice(ticker))||
                                 priceBook20Assembler.GetBestBidPrice(ticker) >= priceBook20Assembler.GetBestAskPrice(ticker))
@@ -788,13 +791,17 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
             /*need re-login*/
             KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex::onDepth: on_price_book_update failed ,orderbook crossed,re-login....");
             on_price_book_update(&md);
+            lws_cancel_service(context);/*quest2 fxw's edits v2*/
+            setContextNull();/*quest2 fxw's edits v2*/
             on_lws_connection_error(NULL);
+            KF_LOG_DEBUG(logger, "[quest2 fxw's edits v2]login is true?" << logged_in);
 
         }
         else
         {
             md.Status = 0;
             on_price_book_update(&md);
+            timer = getTimestamp();/*quest2 fxw's edits v3*/
             KF_LOG_DEBUG(logger, "[FXW successed]MDEngineBitfinex::onDepth: on_price_book_update successed");
         }
 
@@ -857,6 +864,17 @@ void MDEngineBitfinex::loop()
 {
     while(isRunning)
     {
+        /*quest2 fxw's edits v3 starts here*/
+        int64_t lag=getTimestamp()-timer;
+        if ((lag / 1000) > refresh_normal_check_book_s)
+        {
+            LFPriceBook20Field md;
+            memset(&md, 0, sizeof(md));
+            md.Status = 3;
+            on_price_book_update(&md);
+            KF_LOG_DEBUG(logger, "[quest2 fxw's edits v3]MDEngineBitfinex::update error status 3,lag is "<<lag);
+        }
+        /*quest2 fxw's edits v3 ends here*/
         int n = lws_service( context, rest_get_interval_ms );
         std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
     }

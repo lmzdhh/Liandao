@@ -59,8 +59,8 @@ private:
 
     CoinPairWhiteList coinPairWhiteList;
     /*:quest3 edited by fxw,starts here*/
-    int Get_refresh_normal_check_book();
-    int Get_refresh_normal_check_kline();
+    int Get_refresh_normal_check_book_s();
+    int Get_refresh_normal_check_kline_s();
     inline int64_t getTimestamp();
         /*quest3 edited by fxw,ends here*/
 
@@ -72,8 +72,8 @@ private:
     int book_depth_count = 5;
     /*quest3 edited by fxw,starts here*/
     int level_threshold = 20;
-    int refresh_normal_check_book = 120;
-    int refresh_normal_check_kline = 120;
+    int refresh_normal_check_book_s = 120;
+    int refresh_normal_check_kline_s = 120;
     int64_t timer[3];
     /*quest3 edited by fxw ends here*/
     int trade_count = 10;
