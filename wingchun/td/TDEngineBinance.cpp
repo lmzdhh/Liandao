@@ -179,6 +179,10 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
 
+    if(j_config.find("cancel_timeout_ms") != j_config.end()) {
+        cancel_timeout_milliseconds = j_config["cancel_timeout_ms"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (cancel_timeout_ms)" << cancel_timeout_milliseconds);
 
     
 
@@ -291,7 +295,7 @@ void TDEngineBinance::connect(long timeout_nsec)
         }
     }
     //sync time of exchange
-    timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
+    getTimeDiffOfExchange(account_units[0]);
 }
 
 bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc)
@@ -648,7 +652,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         KF_LOG_ERROR(logger, "[req_order_insert] send_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
 
-    if(errorId != 0)
+    //if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
     }
@@ -952,6 +956,10 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
     }
+    else
+    {
+        mapCancelOrder.insert(std::make_pair(data->OrderRef,OrderActionInfo{getTimestamp(),*data,requestId}));
+    }
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 }
 
@@ -976,7 +984,7 @@ void TDEngineBinance::GetAndHandleOrderTradeResponse()
     if(sync_time_interval <= 0) {
         //reset
         sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
-        timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
+        getTimeDiffOfExchange(account_units[0]);
         KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
     }
 
@@ -1111,14 +1119,29 @@ void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
                                                                                     << " (orderId)" << orderStatusIterator->OrderRef);
         }
-
         //remove order when finish
         if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
            || orderStatusIterator->OrderStatus == LF_CHAR_Error)
         {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
             orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
-        } else {
+            //
+            auto it = mapCancelOrder.find(orderStatusIterator->OrderRef);
+            if(it != mapCancelOrder.end())
+            {
+                mapCancelOrder.erase(it);
+            }
+
+        }
+        else {
+           
+            //
+            auto it = mapCancelOrder.find(orderStatusIterator->OrderRef);
+            if(it != mapCancelOrder.end() and (getTimestamp() - it->second.rcv_time) > cancel_timeout_milliseconds)
+            {
+                on_rsp_order_action(&(it->second.data),it->second.request_id , 101, "no response after cancel order for a long time");
+            }
+            //
             ++orderStatusIterator;
         }
         //KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
@@ -1599,8 +1622,9 @@ Timestamp for this request was 1000ms ahead of the server's time.
  * */
 bool TDEngineBinance::shouldRetry(int http_status_code, std::string errorMsg, std::string text)
 {
-    if( 400 == http_status_code && text.find(":-1021,") != std::string::npos )
+    if( 400 == http_status_code && text.find(":-1021") != std::string::npos )
     {
+        getTimeDiffOfExchange(account_units[0]);
         return true;
     }
     return false;
@@ -1778,7 +1802,7 @@ bool TDEngineBinance::isHandling()
 void TDEngineBinance::get_order(AccountUnitBinance& unit, const char *symbol, long orderId, const char *origClientOrderId, Document& json)
 {
     KF_LOG_INFO(logger, "[get_order]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;//5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/order?";
@@ -1971,7 +1995,7 @@ void TDEngineBinance::cancel_order(AccountUnitBinance& unit, const char *symbol,
 void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol, int limit, int64_t fromId, Document &json)
 {
     KF_LOG_INFO(logger, "[get_my_trades]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;//5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/myTrades?";
@@ -2048,7 +2072,7 @@ void TDEngineBinance::get_my_trades(AccountUnitBinance& unit, const char *symbol
 void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symbol, Document &json)
 {
     KF_LOG_INFO(logger, "[get_open_orders]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;//5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/openOrders?";
@@ -2128,7 +2152,7 @@ void TDEngineBinance::get_open_orders(AccountUnitBinance& unit, const char *symb
 void TDEngineBinance::get_exchange_time(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_exchange_time]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;//5000;
     std::string Timestamp = std::to_string(getTimestamp());
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v1/time";
@@ -2173,7 +2197,7 @@ void TDEngineBinance::get_exchange_infos(AccountUnitBinance& unit, Document &jso
 void TDEngineBinance::get_account(AccountUnitBinance& unit, Document &json)
 {
     KF_LOG_INFO(logger, "[get_account]");
-    long recvWindow = 5000;
+    long recvWindow = order_insert_recvwindow_ms;//5000;
     std::string Timestamp = getTimestampString();
     std::string Method = "GET";
     std::string requestPath = "https://api.binance.com/api/v3/account?";
@@ -2232,7 +2256,7 @@ std::string TDEngineBinance::getTimestampString()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     KF_LOG_DEBUG(logger, "[getTimestampString] (timestamp)" << timestamp << " (timeDiffOfExchange)" << timeDiffOfExchange << " (exchange_shift_ms)" << exchange_shift_ms);
-    timestamp =  timestamp - timeDiffOfExchange + exchange_shift_ms;
+    timestamp =  timestamp + timeDiffOfExchange + exchange_shift_ms;
     KF_LOG_INFO(logger, "[getTimestampString] (new timestamp)" << timestamp);
     std::string timestampStr;
     std::stringstream convertStream;
@@ -2246,12 +2270,22 @@ int64_t TDEngineBinance::getTimeDiffOfExchange(AccountUnitBinance& unit)
 {
     KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
     //reset to 0
-    int64_t timeDiffOfExchange = 0;
-//
+    Document d;
+    int64_t start_time = getTimestamp();
+    get_exchange_time(unit, d);
+    if(!d.HasParseError() && d.HasMember("serverTime"))
+    {//binance serverTime
+        int64_t exchangeTime = d["serverTime"].GetInt64();
+        //KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
+        int64_t finish_time = getTimestamp();
+        timeDiffOfExchange = exchangeTime-(finish_time+start_time)/2;
+    }
+
+
 //    int calculateTimes = 3;
 //    int64_t accumulationDiffTime = 0;
 //    bool hasResponse = false;
-//    for(int i = 0 ; i < calculateTimes; i++)
+//   for(int i = 0 ; i < calculateTimes; i++)
 //    {
 //        Document d;
 //        int64_t start_time = getTimestamp();

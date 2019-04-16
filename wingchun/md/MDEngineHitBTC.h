@@ -80,8 +80,10 @@ public:
 
 private:
     void onDepth(Document& json);
+    void onDepthHit(Document& json);
     void onTickers(Document& json);
     void onFills(Document& json);
+    void onFillsHit(Document& json);
 
     std::string parseJsonToString(const char* in);
     std::string createDepthJsonString(std::string base, std::string quote);

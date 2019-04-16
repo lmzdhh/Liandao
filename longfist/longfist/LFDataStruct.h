@@ -202,6 +202,15 @@ struct LFL2MarketDataField
 	double   	NumOfferOrders;        //卖方委托价位数
 };
 
+struct LFFundingField
+{
+	char_31  	InstrumentID;
+	char_9   	ExchangeID;
+	int64_t     TimeStamp;
+	int64_t		Interval;
+	double		Rate;
+	double 		RateDaily;
+};
 struct LFL2IndexField
 {
 	char_9   	TradingDay;            //交易日
@@ -247,9 +256,9 @@ struct LFBarMarketDataField
 	int64_t   	UpperLimitPrice;       //涨停板价
 	int64_t   	LowerLimitPrice;       //跌停板价
 	char_13  	StartUpdateTime;       //首tick修改时间
-	int      	StartUpdateMillisec;   //首tick最后修改毫秒
+	int64_t     StartUpdateMillisec;   //首tick最后修改毫秒
 	char_13  	EndUpdateTime;         //尾tick最后修改时间
-	int      	EndUpdateMillisec;     //尾tick最后修改毫秒
+	int64_t     EndUpdateMillisec;     //尾tick最后修改毫秒
 	int			PeriodMillisec;        //周期（毫秒）
 	int64_t   	Open;                  //开
 	int64_t   	Close;                 //收
@@ -303,7 +312,7 @@ struct LFInputOrderField
 	double                     	StopPrice;             //止损价
 	int                        	IsAutoSuspend;         //自动挂起标志
 	LfContingentConditionType  	ContingentCondition;   //触发条件
-	char_30                    	MiscInfo;              //委托自定义标签
+	char_64                    	MiscInfo;              //委托自定义标签
 	uint64_t			MassOrderSeqId;
 	int				MassOrderIndex;
 	int				MassOrderTotalNum;
@@ -368,7 +377,8 @@ struct LFOrderActionField
 	char     	ActionFlag;            //报单操作标志
 	int64_t   	LimitPrice;            //价格
 	uint64_t    VolumeChange;          //数量变化
-	int      	KfOrderID;             //Kf系统内订单ID
+	int      	KfOrderID;             //Kf系统内订单ID	
+	char_64     MiscInfo;              //委托自定义标签
 	uint64_t	MassOrderSeqId;
 	int			MassOrderIndex;
 	int			MassOrderTotalNum;

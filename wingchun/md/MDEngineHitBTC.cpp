@@ -254,7 +254,7 @@ void MDEngineHitBTC::login(long timeout_nsec)
 	KF_LOG_INFO(logger, "MDEngineHitBTC::login:");
 	global_md = this;
 
-	char inputURL[300] = "wss://websocket.coinmex.com";
+	char inputURL[300] = "wss://api.hitbtc.com/api/2/ws";
 	int inputPort = 8443;
 	const char *urlProtocol, *urlTempPath;
 	char urlPath[300];
@@ -401,21 +401,21 @@ void MDEngineHitBTC::on_lws_data(struct lws* conn, const char* data, size_t len)
     Document json;
 	json.Parse(data);
 
-	if(!json.HasParseError() && json.IsObject() && json.HasMember("type") && json["type"].IsString())
+	if(!json.HasParseError() && json.IsObject() && json.HasMember("method"))
 	{
 
-		if(strcmp(json["type"].GetString(), "depth") == 0)
+		if(strcmp(json["method"].GetString(), "updateOrderbook") == 0)
 		{
-			KF_LOG_INFO(logger, "MDEngineHitBTC::on_lws_data: is depth");
-            onDepth(json);
+			KF_LOG_INFO(logger, "MDEngineHitBTC::on_lws_data: is book update");
+            onDepthHit(json);
 		}
 
-		if(strcmp(json["type"].GetString(), "fills") == 0)
+		else if(strcmp(json["method"].GetString(), "updateTrades") == 0)
 		{
-			KF_LOG_INFO(logger, "MDEngineHitBTC::on_lws_data: is fills");
-            onFills(json);
+			KF_LOG_INFO(logger, "MDEngineHitBTC::on_lws_data: is trade");
+            onFillsHit(json);
 		}
-        if(strcmp(json["type"].GetString(), "tickers") == 0)
+        else if(strcmp(json["method"].GetString(), "ticker") == 0)
         {
             KF_LOG_INFO(logger, "MDEngineHitBTC::on_lws_data: is tickers");
             onTickers(json);
@@ -487,6 +487,56 @@ void MDEngineHitBTC::onTickers(Document& d)
 
 }
 
+
+//{"jsonrpc":"2.0","method":"updateTrades","params":{"data":
+// [{"id":400312606,"price":"0.031321","quantity":"0.004","side":"buy","timestamp":"2018-11-18T01:36:32.174Z"},
+// {"id":400312607,"price":"0.031324","quantity":"0.014","side":"buy","timestamp":"2018-11-18T01:36:32.174Z"}],"symbol":"ETHBTC"}}
+void MDEngineHitBTC::onFillsHit(Document& json)
+{
+    if(!json.HasMember("data") || !json["data"].IsArray())
+    {
+        KF_LOG_ERROR(logger, "MDEngineHitBTC::[onFills] invalid market trade message");
+        return;
+    }
+
+    std::string symbol="";
+    if(json.HasMember("symbol") && json["symbol"].IsString()) {
+        symbol = json["symbol"].GetString();
+    }
+
+    KF_LOG_INFO(logger, "MDEngineHitBTC::onFills:" << "Symbol: "<< symbol);
+
+    std::string ticker = getWhiteListCoinpairFrom(symbol);
+    if(ticker.length() == 0) {
+        return;
+    }
+
+    int len = json["data"].Size();
+
+    for(int i = 0 ; i < len; i++) {
+        LFL2TradeField trade;
+        memset(&trade, 0, sizeof(trade));
+        strcpy(trade.InstrumentID, ticker.c_str());
+        strcpy(trade.ExchangeID, "HitBTC");
+
+        auto &tradeData = json["data"].GetArray()[i];
+
+        std::string priceStr = tradeData["price"].GetString();
+        std::string qtyStr = tradeData["quantity"].GetString();
+
+        trade.Price = std::round(std::stod(priceStr) * scale_offset);
+        trade.Volume = std::round(std::stod(qtyStr) * scale_offset);
+        trade.OrderBSFlag[0] = "buy" == tradeData["side"].GetString() ? 'B' : 'S';
+
+        KF_LOG_INFO(logger, "MDEngineHitBTC::[onFills] (ticker)" << symbol <<
+                                                                 " (Price)" << trade.Price <<
+                                                                 " (trade.Volume)" << trade.Volume);
+        on_trade(&trade);
+    }
+
+
+}
+
 void MDEngineHitBTC::onFills(Document& json)
 {
     /*
@@ -547,7 +597,161 @@ void MDEngineHitBTC::onFills(Document& json)
     }
 }
 
-// {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],"bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
+//sample HitBTC mesage
+/*{"jsonrpc":"2.0","method":"updateOrderbook","params":{"ask":[{"price":"0.033772","size":"2.344"},
+ * {"price":"0.033774","size":"0.000"},{"price":"0.033813","size":"10.145"},{"price":"0.033820","size":"0.000"},
+ * {"price":"0.034017","size":"10.089"},{"price":"0.034031","size":"0.000"},{"price":"0.034051","size":"15.933"},
+ * {"price":"0.034062","size":"16.765"},{"price":"0.034077","size":"23.386"},{"price":"0.034105","size":"0.000"},
+ * {"price":"0.034149","size":"0.000"},{"price":"0.034160","size":"0.000"},{"price":"0.034165","size":"26.365"},
+ * {"price":"0.034176","size":"20.446"},{"price":"0.034207","size":"0.000"},{"price":"0.034218","size":"28.204"},
+ * {"price":"0.034257","size":"0.000"},{"price":"0.034278","size":"29.869"},{"price":"0.034285","size":"0.000"},
+ * {"price":"0.034288","size":"22.409"},{"price":"0.034374","size":"0.000"},{"price":"0.034410","size":"29.976"},
+ * {"price":"0.034438","size":"0.030"},{"price":"0.034451","size":"0.000"},{"price":"0.034512","size":"29.508"},
+ *{"price":"0.034516","size":"30.699"},{"price":"0.034549","size":"0.200"},{"price":"0.034648","size":"34.985"},
+ * {"price":"0.034740","size":"0.000"},{"price":"0.034845","size":"32.562"},{"price":"0.034847","size":"0.000"},
+ * {"price":"0.034951","size":"41.828"},{"price":"0.034972","size":"0.000"},{"price":"0.035067","size":"0.000"}],
+ * "bid":[{"price":"0.033705","size":"0.000"},{"price":"0.033703","size":"0.500"},
+ * {"price":"0.033682","size":"0.000"},{"price":"0.033657","size":"8.953"},{"price":"0.033640","size":"12.389"},
+ * {"price":"0.033635","size":"0.000"},{"price":"0.033623","size":"16.819"},{"price":"0.033615","size":"0.000"},
+ * {"price":"0.030149","size":"0.000"},{"price":"0.029836","size":"121.917"}],"symbol":"ETHBTC","sequence":12701142}}*/
+void MDEngineHitBTC::onDepthHit(Document& json)
+{
+    bool asks_update = false;
+    bool bids_update = false;
+
+
+    std::string ticker = "";
+    if (json.HasMember("symbol")) {
+        ticker = json["symbol"].GetString();
+    }
+    KF_LOG_INFO(logger, "MDEngineHitBTC::onDepth:" << "(ticker) " << ticker);
+    std::map<int64_t, uint64_t> *asksPriceAndVolume;
+    std::map<int64_t, uint64_t> *bidsPriceAndVolume;
+
+    auto iter = tickerAskPriceMap.find(ticker);
+    if (iter != tickerAskPriceMap.end()) {
+        asksPriceAndVolume = iter->second;
+//        KF_LOG_INFO(logger, "MDEngineHitBTC::onDepth:" << "ticker : " << ticker << "  get from map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
+    } else {
+        asksPriceAndVolume = new std::map<int64_t, uint64_t>();
+        tickerAskPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t> *>(ticker, asksPriceAndVolume));
+//        KF_LOG_INFO(logger, "MDEngineHitBTC::onDepth:" << "ticker : " << ticker << "  insert into map (asksPriceAndVolume.size) " << asksPriceAndVolume->size());
+    }
+
+    iter = tickerBidPriceMap.find(ticker);
+    if (iter != tickerBidPriceMap.end()) {
+        bidsPriceAndVolume = iter->second;
+//        KF_LOG_INFO(logger, "MDEngineHitBTC::onDepth:" << "ticker : " << ticker << "  get from map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
+    } else {
+        bidsPriceAndVolume = new std::map<int64_t, uint64_t>();
+        tickerBidPriceMap.insert(std::pair<std::string, std::map<int64_t, uint64_t> *>(ticker, bidsPriceAndVolume));
+//        KF_LOG_INFO(logger, "MDEngineHitBTC::onDepth:" << "ticker : " << ticker << "  insert into map (bidsPriceAndVolume.size) " << bidsPriceAndVolume->size());
+    }
+
+    //make depth map
+    if (json.HasMember("params") && json["params"].IsObject()) {
+        if (json["params"].HasMember("ask") && json["params"]["ask"].IsArray()) {
+            int len = json["params"]["ask"].Size();
+            auto &asks = json["params"]["ask"];
+            for (int i = 0; i < len; i++) {
+                int64_t price = std::round(stod(asks.GetArray()[i]["price"].GetString()) * scale_offset);
+                uint64_t volume = std::round(stod(asks.GetArray()[i]["size"].GetString()) * scale_offset);
+                //if volume is 0, remove it
+                if (volume == 0) {
+                    asksPriceAndVolume->erase(price);
+                    KF_LOG_INFO(logger,
+                                "MDEngineHitBTC::onDepth: ##########################################asksPriceAndVolume volume == 0############################# price:"
+                                        << price << "  volume:" << volume);
+                } else {
+                    asksPriceAndVolume->erase(price);
+                    asksPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+                }
+                KF_LOG_INFO(logger, "MDEngineHitBTC::onDepth: asks price:" << price << "  volume:" << volume);
+                asks_update = true;
+            }
+        }
+
+        if (json["params"].HasMember("bid") && json["params"]["bid"].IsArray()) {
+            int len = json["params"]["bid"].Size();
+            auto &bids = json["params"]["bid"];
+            for (int i = 0; i < len; i++) {
+                int64_t price = std::round(stod(bids.GetArray()[i]["price"].GetString()) * scale_offset);
+                uint64_t volume = std::round(stod(bids.GetArray()[i]["size"].GetString()) * scale_offset);
+                //if volume is 0, remove it
+                if (volume == 0) {
+                    bidsPriceAndVolume->erase(price);
+                    KF_LOG_INFO(logger,
+                                "MDEngineHitBTC::onDepth: ##########################################bidsPriceAndVolume volume == 0############################# price:"
+                                        << price << "  volume:" << volume);
+                } else {
+                    bidsPriceAndVolume->erase(price);
+                    bidsPriceAndVolume->insert(std::pair<int64_t, uint64_t>(price, volume));
+                }
+                KF_LOG_INFO(logger, "MDEngineHitBTC::onDepth: bids price:" << price << "  volume:" << volume);
+                bids_update = true;
+            }
+        }
+    }
+    
+    // has any update
+    if(asks_update || bids_update)
+    {
+        //create book update
+        std::vector<PriceAndVolume> sort_result;
+        LFPriceBook20Field md;
+        memset(&md, 0, sizeof(md));
+
+        sortMapByKey(*asksPriceAndVolume, sort_result, sort_price_desc);
+        std::cout<<"asksPriceAndVolume sorted desc:"<< std::endl;
+        for(int i=0; i<sort_result.size(); i++)
+        {
+            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
+        }
+        //asks 	卖方深度 from big to little
+        int askTotalSize = (int)sort_result.size();
+        auto size = std::min(askTotalSize, 20);
+
+        for(int i = 0; i < size; ++i)
+        {
+            md.AskLevels[i].price = sort_result[askTotalSize - i - 1].price;
+            md.AskLevels[i].volume = sort_result[askTotalSize - i - 1].volume;
+            KF_LOG_INFO(logger, "MDEngineHitBTC::onDepth:  LFPriceBook20Field AskLevels: (i)" << i << "(price)" << md.AskLevels[i].price<<  "  (volume)"<< md.AskLevels[i].volume);
+        }
+        md.AskLevelCount = size;
+
+
+        sort_result.clear();
+        sortMapByKey(*bidsPriceAndVolume, sort_result, sort_price_asc);
+        std::cout<<"bidsPriceAndVolume sorted asc:"<< std::endl;
+        for(int i=0; i<sort_result.size(); i++)
+        {
+            std::cout << i << "    " << sort_result[i].price << "," << sort_result[i].volume << std::endl;
+        }
+        //bids 	买方深度 from big to little
+        int bidTotalSize = (int)sort_result.size();
+        size = std::min(bidTotalSize, 20);
+
+        for(int i = 0; i < size; ++i)
+        {
+            md.BidLevels[i].price = sort_result[bidTotalSize - i - 1].price;
+            md.BidLevels[i].volume = sort_result[bidTotalSize - i - 1].volume;
+            KF_LOG_INFO(logger, "MDEngineHitBTC::onDepth:  LFPriceBook20Field BidLevels: (i) " << i << "(price)" << md.BidLevels[i].price<<  "  (volume)"<< md.BidLevels[i].volume);
+        }
+        md.BidLevelCount = size;
+        sort_result.clear();
+
+
+        strcpy(md.InstrumentID, ticker.c_str());
+        strcpy(md.ExchangeID, "mock");
+
+        KF_LOG_INFO(logger, "MDEngineHitBTC::onDepth: on_price_book_update");
+        on_price_book_update(&md);
+    }
+
+}
+
+// {"base":"btc","biz":"spot","data":{"asks":[["6628.6245","0"],["6624.3958","0"]],
+// "bids":[["6600.7846","0"],["6580.8484","0"]]},"quote":"usdt","type":"depth","zip":false}
 void MDEngineHitBTC::onDepth(Document& json)
 {
     bool asks_update = false;

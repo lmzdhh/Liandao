@@ -79,6 +79,13 @@ struct AccountUnitBinance
     CoinPairWhiteList positionWhiteList;
 };
 
+struct OrderActionInfo
+{
+    int64_t rcv_time;
+    LFOrderActionField data;
+    int request_id;
+};
+
 /**
  * CTP trade engine
  */
@@ -266,8 +273,8 @@ private:
     int max_rest_retry_times = 3;
     int retry_interval_milliseconds = 1000;
 	int m_interface_switch = 0;
-
-
+    int cancel_timeout_milliseconds = 5000;
+    std::map<std::string,OrderActionInfo> mapCancelOrder;
 };
 
 WC_NAMESPACE_END

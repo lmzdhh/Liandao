@@ -204,6 +204,7 @@ const short MSG_TYPE_LF_L2_ORDER      = 104;
 const short MSG_TYPE_LF_L2_TRADE      = 105;
 const short MSG_TYPE_LF_PRICE_BOOK_20 = 106;
 const short MSG_TYPE_LF_BAR_MD        = 110;
+const short MSG_TYPE_LF_FUNDING       = 111;
 const short MSG_TYPE_LF_QRY_POS       = 201;
 const short MSG_TYPE_LF_RSP_POS       = 202;
 const short MSG_TYPE_LF_ORDER         = 204;

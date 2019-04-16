@@ -77,6 +77,7 @@ private:
     std::string createQuoteBinsJsonString(std::string symbol);
     std::string createTradeJsonString(std::string symbol);
     std::string createTradeBinsJsonString(std::string symbol);
+    std::string createFundingJsonString();
     void debugPrint(std::vector<std::string> &jsons);
 
     // enter event loop and close any active websocket connections after done
@@ -86,6 +87,7 @@ private:
     void processTradingData(Document& json);
     void processQuoteData(Document& json);
     void processTradeBinsData(Document& json);
+    void processFundingData(Document& json);
 };
 
 DECLARE_PTR(MDEngineBitmex);
