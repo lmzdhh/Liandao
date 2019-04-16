@@ -87,6 +87,17 @@ struct OrderActionInfo
     int request_id;
 };
 
+//----UFR_data_map-----
+struct UFRUnit
+{
+    uint64_t enstrumentNum; //委托总量
+    uint64_t volumeNum; //成交总量
+
+    UFRUnit(){
+        memset(this, 0 ,sizeof(UFRUnit));
+    }
+};
+
 /**
  * CTP trade engine
  */
@@ -257,9 +268,9 @@ private:
   //  uint64_t last_test_timestamp = 0;
 
     ////////////// UFR /////////////////////
-    float UFR_limit = 0.998;    //触发条件·未成交率上限
+    float UFR_limit = 0.3;    //触发条件·未成交率上限
     int UFR_entrust_lower_limit = 300;  //触发条件·委托单数量下限
-    std::map<string, uint64_t(*)> UFR_data_map;    //< 合约代码， {委托总量，成交总量} >
+    std::map<string, UFRUnit> UFR_data_map;    //< 合约代码， {委托总量，成交总量} >
     uint64_t last_UFR_timestamp = 0;    //
     std::map<string, bool> UFR_orderRef_status_map;
 
