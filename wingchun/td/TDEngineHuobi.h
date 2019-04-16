@@ -14,8 +14,9 @@
 #include <document.h>
 #include <libwebsockets.h>
 #include <cpr/cpr.h>
+#include <stringbuffer.h>
 using rapidjson::Document;
-
+using rapidjson::StringBuffer;
 WC_NAMESPACE_START
 
 /**
