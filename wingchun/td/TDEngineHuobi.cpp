@@ -390,7 +390,7 @@ std::string TDEngineHuobi::getHuobiSignatrue(std::string parameters[],int psize,
     KF_LOG_INFO(logger, "[getHuobiSignatrue] strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     KF_LOG_INFO(logger, "[getHuobiSignatrue] strHmac = " << strHmac );
-    std::string strSignatrue = base64_url_encode(strHmac,32);
+    std::string strSignatrue = escapeURL(base64_encode(strHmac,32));
     KF_LOG_INFO(logger, "[getHuobiSignatrue] Signatrue = " << strSignatrue );
     return strSignatrue;
 }
