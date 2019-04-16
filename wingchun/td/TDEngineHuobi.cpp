@@ -1538,10 +1538,10 @@ void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, 
     writer.StartObject();
     writer.Key("account-id");
     writer.String(accountId.c_str());
-    /*writer.Key("symbol");
-    writer.String("");
+    writer.Key("symbol");
+    writer.String("btc");
     writer.Key("side");
-    writer.String("");*/
+    writer.String("buy");
     writer.Key("size");
     writer.Int(100);
     //write Signature
