@@ -191,6 +191,8 @@ public:
     int lws_write_subscribe(struct lws* conn);
     void on_lws_connection_error(struct lws* conn);
     //cys add
+    char dec2hexChar(short int n)；
+    std::string escapeURL(const string &URL);
     std::string getAccountId(AccountUnitHuobi& unit);
     std::string getHuobiTime();
     std::string getHuobiSignatrue(std::string parameters[],int psize,std::string timestamp,std::string method_url,std::string reqType,AccountUnitHuobi& unit);

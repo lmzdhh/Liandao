@@ -389,9 +389,48 @@ std::string TDEngineHuobi::getHuobiSignatrue(std::string parameters[],int psize,
     KF_LOG_INFO(logger, "[getHuobiSignatrue] strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     KF_LOG_INFO(logger, "[getHuobiSignatrue] strHmac = " << strHmac );
-    std::string strSignatrue = base64_encode(strHmac,32);
+    std::string strSignatrue = escapeURL(base64_encode(strHmac,32));
     KF_LOG_INFO(logger, "[getHuobiSignatrue] Signatrue = " << strSignatrue );
     return strSignatrue;
+}
+char TDEngineHuobi::dec2hexChar(short int n) {
+	if (0 <= n && n <= 9) {
+		return char(short('0') + n);
+	}
+	else if (10 <= n && n <= 15) {
+		return char(short('A') + n - 10);
+	}
+	else {
+		return char(0);
+	}
+}
+std::string TDEngineHuobi::escapeURL(const string &URL)
+{
+	string result = "";
+	for (unsigned int i = 0; i < URL.size(); i++) {
+		char c = URL[i];
+		if (
+			('0' <= c && c <= '9') ||
+			('a' <= c && c <= 'z') ||
+			('A' <= c && c <= 'Z') ||
+			c == '/' || c == '.'
+			) {
+			result += c;
+		}
+		else {
+			int j = (short int)c;
+			if (j < 0) {
+				j += 256;
+			}
+			int i1, i0;
+			i1 = j / 16;
+			i0 = j - i1 * 16;
+			result += '%';
+			result += dec2hexChar(i1);
+			result += dec2hexChar(i0);
+		}
+	}
+	return result;
 }
 //cys edit from huobi api
 std::mutex g_httpMutex;
