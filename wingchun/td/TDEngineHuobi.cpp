@@ -853,7 +853,7 @@ GET /v1/account/accounts/{account-id}/balance
     std::vector<LFRspPositionField> tmp_vector;
     if(!d.HasParseError() && d.HasMember("data"))
     {
-        auto& accounts = d["data"];
+        auto& accounts = d["data"]["list"];
         size_t len = d["data"]["list"].Size();
         KF_LOG_INFO(logger, "[req_investor_position] (accounts.length)" << len);
         for(size_t i = 0; i < len; i++)
@@ -1076,7 +1076,7 @@ void TDEngineHuobi::req_order_action(const LFOrderActionField* data, int account
 
     std::string strSuccessCode =  "ok";
     if(!d.HasParseError() && d.HasMember("status") && strSuccessCode != d["status"].GetString()) {
-        errorId = std::stoi(d["id"].GetString());
+        errorId = 404;
         if(d.HasMember("err-msg") && d["err-msg"].IsString())
         {
             std::string tab="\t";
