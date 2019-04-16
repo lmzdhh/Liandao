@@ -47,6 +47,7 @@
         "tuple": "cpp",
         "typeinfo": "cpp",
         "utility": "cpp",
-        "csignal": "cpp"
+        "csignal": "cpp",
+        "bitset": "cpp"
     }
 }

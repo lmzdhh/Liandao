@@ -376,9 +376,8 @@ int64_t TDEngineHuobi::getMSTime()
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return  timestamp;
 }
-std::string TDEngineHuobi::getHuobiSignatrueUrl(std::string parameters[],int psize,std::string method_url,
+std::string TDEngineHuobi::getHuobiSignatrue(std::string parameters[],int psize,std::string timestamp,std::string method_url,
                                                 std::string reqType,AccountUnitHuobi& unit){
-    std::string strTimestamp = getHuobiTime();
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
@@ -386,50 +385,25 @@ std::string TDEngineHuobi::getHuobiSignatrueUrl(std::string parameters[],int psi
                             "AccessKeyId="+strAccessKeyId+"&"+
                             "SignatureMethod="+strSignatureMethod+"&"+
                             "SignatureVersion="+strSignatureVersion+"&"+
-                            "Timestamp="+strTimestamp;
+                            "Timestamp="+timestamp;
     KF_LOG_INFO(logger, "[getHuobiSignatrue] strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     KF_LOG_INFO(logger, "[getHuobiSignatrue] strHmac = " << strHmac );
     std::string strSignatrue = base64_encode(strHmac,32);
     KF_LOG_INFO(logger, "[getHuobiSignatrue] Signatrue = " << strSignatrue );
-    string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
-                    "SignatureMethod="+strSignatureMethod+"&"+
-                    "SignatureVersion="+strSignatureVersion+"&"+
-                    "Timestamp="+strTimestamp+"&"+
-                    "Signature="+strSignatrue;
-    return url;
+    return strSignatrue;
 }
 //cys edit from huobi api
 std::mutex g_httpMutex;
 cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string& body, AccountUnitHuobi& unit)
 {
-    //string url = unit.baseUrl + method_url;
-    //使用 UTF-8 编码，且进行了 URI 编码，十六进制字符必须大写，如 “:” 会被编码为 “%3A” ，空格被编码为 “%20”。
-    //时间戳（Timestamp）需要以YYYY-MM-DDThh:mm:ss格式添加并且进行 URI 编码。
-    /*std::string strTimestamp = getHuobiTime();
-    std::string strAccessKeyId=unit.api_key;
-    std::string strSignatureMethod="HmacSHA256";
-    std::string strSignatureVersion="2";
-    std::string reqType="GET\n";
-    std::string strSign = reqType+"api.huobi.pro\n" + method_url+"\n"+
-                            "AccessKeyId="+strAccessKeyId+"&"+
-                            "SignatureMethod="+strSignatureMethod+"&"+
-                            "SignatureVersion="+strSignatureVersion+"&"+
-                            "Timestamp="+strTimestamp;
-    KF_LOG_INFO(logger, "strSign = " << strSign );
-    KF_LOG_INFO(logger,"secret = "<<unit.secret_key);
-    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    KF_LOG_INFO(logger, "[Get] strHmac = " << strHmac );
-    //std::strlen((char *)strHmac)
-    std::string strSignatrue = base64_encode(strHmac,32);
-    KF_LOG_INFO(logger, "[Get] Signatrue = " << strSignatrue );
-    string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
-                    "SignatureMethod="+strSignatureMethod+"&"+
-                    "SignatureVersion="+strSignatureVersion+"&"+
+    std::string strTimestamp = getHuobiTime();
+    string strSignatrue=getHuobiSignatrue(NULL,0,strTimestamp,method_url,"GET\n",unit);
+    string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+unit.api_key+"&"+
+                    "SignatureMethod=HmacSHA256&"+
+                    "SignatureVersion=2&"+
                     "Timestamp="+strTimestamp+"&"+
                     "Signature="+strSignatrue;
-    */
-    string url=getHuobiSignatrueUrl(NULL,0,method_url,"GET\n",unit);
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Get(Url{url},
                                    Header{{"Content-Type", "application/json"}}, Timeout{10000} );
@@ -442,30 +416,13 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
 //cys edit
 cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::string& body, AccountUnitHuobi& unit)
 {
-    /*std::string strTimestamp = getHuobiTime();
-    std::string strAccessKeyId=unit.api_key;
-    std::string strSignatureMethod="HmacSHA256";
-    std::string strSignatureVersion="2";
-    std::string reqType="POST\n";
-    std::string strSign = reqType+"api.huobi.pro\n" + method_url+"\n"+
-                            "AccessKeyId="+strAccessKeyId+"&"+
-                            "SignatureMethod="+strSignatureMethod+"&"+
-                            "SignatureVersion="+strSignatureVersion+"&"+
-                            "Timestamp="+strTimestamp;
-    KF_LOG_INFO(logger, "strSign = " << strSign );
-    KF_LOG_INFO(logger,"secret = "<<unit.secret_key);
-    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    KF_LOG_INFO(logger, "[POST] strHmac = " << strHmac );
-    //std::strlen((char *)strHmac)
-    std::string strSignatrue = base64_encode(strHmac,32);
-    KF_LOG_INFO(logger, "[POST] Signatrue = " << strSignatrue );
-    string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
-                    "SignatureMethod="+strSignatureMethod+"&"+
-                    "SignatureVersion="+strSignatureVersion+"&"+
+    std::string strTimestamp = getHuobiTime();
+    string strSignatrue=getHuobiSignatrue(NULL,0,strTimestamp,method_url,"POST\n",unit);
+    string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+unit.api_key+"&"+
+                    "SignatureMethod=HmacSHA256&"+
+                    "SignatureVersion=2&"+
                     "Timestamp="+strTimestamp+"&"+
                     "Signature="+strSignatrue;
-    */
-    string url=getHuobiSignatrueUrl(NULL,0,method_url,"POST\n",unit);
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{{"Content-Type", "application/json"}},
                               Body{body},Timeout{30000});
@@ -475,7 +432,38 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
                                         " (response.text) " << response.text.c_str());
     return response;
 }
-
+cpr::Response TDEngineHuobi::Post(const std::string& method_url,StringBuffer& body, AccountUnitHuobi& unit){
+    std::string strTimestamp = getHuobiTime();
+    string strSignatrue=getHuobiSignatrue(NULL,0,strTimestamp,method_url,"POST\n",unit);
+    Writer<StringBuffer> writer(body);
+    writer.StartObject();
+    writer.Key("AccessKeyId");
+    writer.String(unit.api_key.c_str());
+    writer.Key("SignatureMethod");
+    writer.String("HmacSHA256");
+    writer.Key("SignatureVersion");
+    writer.String("2");
+    writer.Key("Timestamp");
+    writer.String(strTimestamp.c_str());
+    writer.Key("SignatureVersion");
+    writer.String("2");
+    writer.Key("Signature");
+    writer.String(strSignatrue.c_str());
+    writer.EndObject();
+    string url = unit.baseUrl + method_url;/*+"?"+"AccessKeyId="+unit.api_key+"&"+
+                    "SignatureMethod=HmacSHA256&"+
+                    "SignatureVersion=2&"+
+                    "Timestamp="+strTimestamp+"&"+
+                    "Signature="+strSignatrue;*/
+    std::unique_lock<std::mutex> lock(g_httpMutex);
+    auto response = cpr::Post(Url{url}, Header{{"Content-Type", "application/json"}},
+                              Body{body.GetString()},Timeout{30000});
+    lock.unlock();
+    KF_LOG_INFO(logger, "[POST] (url) " << url <<"(body) "<< body.GetString()<< " (response.status_code) " << response.status_code <<
+                                        " (response.error.message) " << response.error.message <<
+                                        " (response.text) " << response.text.c_str());
+    return response;
+}
 void TDEngineHuobi::init()
 {
     genUniqueKey();
@@ -1589,7 +1577,7 @@ void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, 
     writer.Key("size");
     writer.Int(10);
     writer.EndObject();
-    auto response = Post(requestPath,s.GetString(),unit);
+    auto response = Post(requestPath,s,unit);
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 

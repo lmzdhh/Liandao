@@ -181,7 +181,7 @@ private:
 
     cpr::Response Get(const std::string& url,const std::string& body, AccountUnitHuobi& unit);
     cpr::Response Post(const std::string& url,const std::string& body, AccountUnitHuobi& unit);
-
+    cpr::Response Post(const std::string& url,StringBuffer& body, AccountUnitHuobi& unit);
     void genUniqueKey();
     std::string genClinetid(const std::string& orderRef);
 
@@ -193,7 +193,7 @@ public:
     //cys add
     std::string getAccountId(AccountUnitHuobi& unit);
     std::string getHuobiTime();
-    std::string getHuobiSignatrueUrl(std::string parameters[],int psize,std::string method_url,std::string reqType,AccountUnitHuobi& unit);
+    std::string getHuobiSignatrue(std::string parameters[],int psize,std::string timestamp,std::string method_url,std::string reqType,AccountUnitHuobi& unit);
 private:
     void onPong(struct lws* conn);
     void Ping(struct lws* conn);
