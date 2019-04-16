@@ -1418,9 +1418,10 @@ std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     j.Parse(resp.text.c_str());
     int n=j["data"].Size();
     std::string type="spot";//现货账户
+    std::string accountId;
     for(int i=0;i<n;i++){
         if(type==j["data"].GetArray()[i]["type"].GetString()){
-            std::string accountId=std::to_string(j["data"].GetArray()[i]["id"].GetInt());
+            accountId=std::to_string(j["data"].GetArray()[i]["id"].GetInt());
             break;
         }
     }
