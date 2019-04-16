@@ -410,7 +410,7 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
     std::string reqType="GET\n";
-    std::string strSign = getPath+"api.huobi.pro\n" + method_url+"\n"+
+    std::string strSign = reqType+"api.huobi.pro\n" + method_url+"\n"+
                             "AccessKeyId="+strAccessKeyId+"&"+
                             "SignatureMethod="+strSignatureMethod+"&"+
                             "SignatureVersion="+strSignatureVersion+"&"+
@@ -445,7 +445,7 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
     std::string reqType="POST\n";
-    std::string strSign = getPath+"api.huobi.pro\n" + method_url+"\n"+
+    std::string strSign = reqType+"api.huobi.pro\n" + method_url+"\n"+
                             "AccessKeyId="+strAccessKeyId+"&"+
                             "SignatureMethod="+strSignatureMethod+"&"+
                             "SignatureVersion="+strSignatureVersion+"&"+
