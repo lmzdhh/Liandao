@@ -90,8 +90,8 @@ struct OrderActionInfo
 //----UFR_data_map-----
 struct UFRUnit
 {
-    uint64_t enstrumentNum; //委托总量
-    uint64_t volumeNum; //成交总量
+    std::atomic<uint64_t> enstrumentNum; //委托总量
+    std::atomic<uint64_t> volumeNum; //成交总量
 
     UFRUnit(){
         memset(this, 0 ,sizeof(UFRUnit));
