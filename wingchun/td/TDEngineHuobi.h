@@ -193,6 +193,7 @@ public:
     //cys add
     std::string getAccountId(AccountUnitHuobi& unit);
     std::string getHuobiTime();
+    std::string getHuobiSignatrueUrl(std::string parameters[],int psize,std::string method_url,std::string reqType,AccountUnitHuobi& unit);
 private:
     void onPong(struct lws* conn);
     void Ping(struct lws* conn);

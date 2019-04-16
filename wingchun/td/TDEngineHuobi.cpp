@@ -376,7 +376,28 @@ int64_t TDEngineHuobi::getMSTime()
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return  timestamp;
 }
-
+std::string TDEngineHuobi::getHuobiSignatrueUrl(std::string parameters[],int psize,std::string method_url,std::string reqType,AccountUnitHuobi& unit){
+    std::string strTimestamp = getHuobiTime();
+    std::string strAccessKeyId=unit.api_key;
+    std::string strSignatureMethod="HmacSHA256";
+    std::string strSignatureVersion="2";
+    std::string strSign = reqType+"api.huobi.pro\n" + method_url+"\n"+
+                            "AccessKeyId="+strAccessKeyId+"&"+
+                            "SignatureMethod="+strSignatureMethod+"&"+
+                            "SignatureVersion="+strSignatureVersion+"&"+
+                            "Timestamp="+strTimestamp;
+    KF_LOG_INFO(logger, "[getHuobiSignatrue] strSign = " << strSign );
+    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    KF_LOG_INFO(logger, "[getHuobiSignatrue] strHmac = " << strHmac );
+    std::string strSignatrue = base64_encode(strHmac,32);
+    KF_LOG_INFO(logger, "[getHuobiSignatrue] Signatrue = " << strSignatrue );
+    string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
+                    "SignatureMethod="+strSignatureMethod+"&"+
+                    "SignatureVersion="+strSignatureVersion+"&"+
+                    "Timestamp="+strTimestamp+"&"+
+                    "Signature="+strSignatrue;
+    return url;
+}
 //cys edit from huobi api
 std::mutex g_httpMutex;
 cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string& body, AccountUnitHuobi& unit)
@@ -388,7 +409,7 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
-    std::string getPath="GET\n";
+    std::string reqType="GET\n";
     std::string strSign = getPath+"api.huobi.pro\n" + method_url+"\n"+
                             "AccessKeyId="+strAccessKeyId+"&"+
                             "SignatureMethod="+strSignatureMethod+"&"+
@@ -400,6 +421,7 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
     KF_LOG_INFO(logger, "[Get] strHmac = " << strHmac );
     //std::strlen((char *)strHmac)
     std::string strSignatrue = base64_encode(strHmac,32);
+    KF_LOG_INFO(logger, "[Get] Signatrue = " << strSignatrue );
     string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
                     "SignatureMethod="+strSignatureMethod+"&"+
                     "SignatureVersion="+strSignatureVersion+"&"+
@@ -422,8 +444,8 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
-    std::string postPath="POST\n";
-    std::string strSign = postPath+"api.huobi.pro\n" + method_url+"\n"+
+    std::string reqType="POST\n";
+    std::string strSign = getPath+"api.huobi.pro\n" + method_url+"\n"+
                             "AccessKeyId="+strAccessKeyId+"&"+
                             "SignatureMethod="+strSignatureMethod+"&"+
                             "SignatureVersion="+strSignatureVersion+"&"+
@@ -431,8 +453,10 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
     KF_LOG_INFO(logger, "strSign = " << strSign );
     KF_LOG_INFO(logger,"secret = "<<unit.secret_key);
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    KF_LOG_INFO(logger, "[Post] strHmac = " << strHmac );
+    KF_LOG_INFO(logger, "[Get] strHmac = " << strHmac );
+    //std::strlen((char *)strHmac)
     std::string strSignatrue = base64_encode(strHmac,32);
+    KF_LOG_INFO(logger, "[Get] Signatrue = " << strSignatrue );
     string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+strAccessKeyId+"&"+
                     "SignatureMethod="+strSignatureMethod+"&"+
                     "SignatureVersion="+strSignatureVersion+"&"+
@@ -1559,7 +1583,7 @@ void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, 
     writer.Key("side");
     writer.String("");
     writer.Key("size");
-    writer.Int(100);
+    writer.Int(10);
     writer.EndObject();
     auto response = Post(requestPath,s.GetString(),unit);
     getResponse(response.status_code, response.text, response.error.message, json);
