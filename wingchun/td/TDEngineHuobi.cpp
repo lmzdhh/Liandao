@@ -39,6 +39,7 @@ using std::stoi;
 using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
+using utils::crypto::base64_url_encode;
 USING_WC_NAMESPACE
 
 TDEngineHuobi::TDEngineHuobi(): ITDEngine(SOURCE_HUOBI)
