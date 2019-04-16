@@ -1570,12 +1570,12 @@ void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, 
     writer.StartObject();
     writer.Key("account-id");
     writer.String(accountId.c_str());
-    writer.Key("symbol");
+    /*writer.Key("symbol");
     writer.String("");
     writer.Key("side");
-    writer.String("");
+    writer.String("");*/
     writer.Key("size");
-    writer.Int(10);
+    writer.Int(100);
     writer.EndObject();
     auto response = Post(requestPath,s,unit);
     getResponse(response.status_code, response.text, response.error.message, json);
