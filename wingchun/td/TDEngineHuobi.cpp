@@ -1407,6 +1407,7 @@ void TDEngineHuobi::get_account(AccountUnitHuobi& unit, Document& json)
     std::string requestPath = getPath+unit.accountId+"/balance";
     const auto response = Get(requestPath,"{}",unit);
     json.Parse(response.text.c_str());
+    KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
 }
 std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
@@ -1415,7 +1416,14 @@ std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     const auto resp = Get("/v1/account/accounts","{}",unit);
     Document j;
     j.Parse(resp.text.c_str());
-    std::string accountId=j["data"].GetArray()[0]["id"].GetString();
+    int n=j["data"].Size();
+    std::string type="spot";//现货账户
+    for(int i=0;i<n;i++){
+        if(type==j["data"].GetArray()[i]["type"].GetString()){
+            std::string accountId=std::to_string(j["data"].GetArray()[i]["id"].GetInt());
+            break;
+        }
+    }
     KF_LOG_DEBUG(logger,"[getAccountID] (accountId) "<<accountId);
     return accountId;
 }
