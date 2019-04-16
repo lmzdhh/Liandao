@@ -516,7 +516,8 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     printResponse(json);
-    cancel_all_orders(unit, "btc_usd", json);
+    cancel_order(unit,"code","1",json);
+    //cancel_all_orders(unit, "btc_usd", json);
     printResponse(json);
     //getPriceIncrement(unit);
     // set up
