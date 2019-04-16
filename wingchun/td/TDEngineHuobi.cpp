@@ -416,50 +416,12 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
 //cys edit
 cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::string& body, AccountUnitHuobi& unit)
 {
-    std::string strTimestamp = getHuobiTime();
-    string strSignatrue=getHuobiSignatrue(NULL,0,strTimestamp,method_url,"POST\n",unit);
-    string url = unit.baseUrl + method_url+"?"+"AccessKeyId="+unit.api_key+"&"+
-                    "SignatureMethod=HmacSHA256&"+
-                    "SignatureVersion=2&"+
-                    "Timestamp="+strTimestamp+"&"+
-                    "Signature="+strSignatrue;
+    string url = unit.baseUrl + method_url;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{{"Content-Type", "application/json"}},
                               Body{body},Timeout{30000});
     lock.unlock();
     KF_LOG_INFO(logger, "[POST] (url) " << url <<"(body) "<< body<< " (response.status_code) " << response.status_code <<
-                                        " (response.error.message) " << response.error.message <<
-                                        " (response.text) " << response.text.c_str());
-    return response;
-}
-cpr::Response TDEngineHuobi::Post(const std::string& method_url,StringBuffer& body, AccountUnitHuobi& unit){
-    std::string strTimestamp = getHuobiTime();
-    string strSignatrue=getHuobiSignatrue(NULL,0,strTimestamp,method_url,"POST\n",unit);
-    Writer<StringBuffer> writer(body);
-    writer.StartObject();
-    writer.Key("AccessKeyId");
-    writer.String(unit.api_key.c_str());
-    writer.Key("SignatureMethod");
-    writer.String("HmacSHA256");
-    writer.Key("SignatureVersion");
-    writer.String("2");
-    writer.Key("Timestamp");
-    writer.String(strTimestamp.c_str());
-    writer.Key("SignatureVersion");
-    writer.String("2");
-    writer.Key("Signature");
-    writer.String(strSignatrue.c_str());
-    writer.EndObject();
-    string url = unit.baseUrl + method_url;/*+"?"+"AccessKeyId="+unit.api_key+"&"+
-                    "SignatureMethod=HmacSHA256&"+
-                    "SignatureVersion=2&"+
-                    "Timestamp="+strTimestamp+"&"+
-                    "Signature="+strSignatrue;*/
-    std::unique_lock<std::mutex> lock(g_httpMutex);
-    auto response = cpr::Post(Url{url}, Header{{"Content-Type", "application/json"}},
-                              Body{body.GetString()},Timeout{30000});
-    lock.unlock();
-    KF_LOG_INFO(logger, "[POST] (url) " << url <<"(body) "<< body.GetString()<< " (response.status_code) " << response.status_code <<
                                         " (response.error.message) " << response.error.message <<
                                         " (response.text) " << response.text.c_str());
     return response;
@@ -1565,6 +1527,8 @@ void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, 
     std::string accountId = unit.accountId;
     //火币post批量撤销订单
     std::string requestPath = "/v1/order/orders/batchCancelOpenOrders";
+    std::string strTimestamp = getHuobiTime();
+    string strSignatrue=getHuobiSignatrue(NULL,0,strTimestamp,requestPath,"POST\n",unit);
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
@@ -1576,8 +1540,21 @@ void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, 
     writer.String("");*/
     writer.Key("size");
     writer.Int(100);
+    //write Signature
+    writer.Key("AccessKeyId");
+    writer.String(unit.api_key.c_str());
+    writer.Key("SignatureMethod");
+    writer.String("HmacSHA256");
+    writer.Key("SignatureVersion");
+    writer.String("2");
+    writer.Key("Timestamp");
+    writer.String(strTimestamp.c_str());
+    writer.Key("SignatureVersion");
+    writer.String("2");
+    writer.Key("Signature");
+    writer.String(strSignatrue.c_str());
     writer.EndObject();
-    auto response = Post(requestPath,s,unit);
+    auto response = Post(requestPath,s.GetString(),unit);
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 

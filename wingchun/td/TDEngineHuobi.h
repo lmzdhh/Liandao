@@ -182,7 +182,6 @@ private:
 
     cpr::Response Get(const std::string& url,const std::string& body, AccountUnitHuobi& unit);
     cpr::Response Post(const std::string& url,const std::string& body, AccountUnitHuobi& unit);
-    cpr::Response Post(const std::string& url,StringBuffer& body, AccountUnitHuobi& unit);
     void genUniqueKey();
     std::string genClinetid(const std::string& orderRef);
 
