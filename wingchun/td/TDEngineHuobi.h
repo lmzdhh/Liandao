@@ -64,12 +64,23 @@ struct ResponsedOrderStatus
     uint64_t trunoverVolume = 0;
     uint64_t volume = 0;
 };
-//价格增量
-struct PriceIncrement
+//价格和数量精度
+/*
+字段名称	数据类型	描述
+base-currency	string	交易对中的基础币种
+quote-currency	string	交易对中的报价币种
+price-precision	integer	交易对报价的精度（小数点后位数）
+amount-precision	integer	交易对基础币种计数精度（小数点后位数）
+symbol-partition	string	交易区，可能值: [main，innovation，bifurcation]
+*/
+struct PriceVolumePrecision
 {
-    int64_t nBaseMinSize = 0;
-    int64_t nPriceIncrement = 0;
-    int64_t nQuoteIncrement = 0;
+    std::string baseCurrency;
+    std::string quoteCurrency;
+    int pricePrecision=0;
+    int amountPrecision=0;
+    std::string symbolPartition;
+    std::string symbol;
 };
 
 struct AccountUnitHuobi
@@ -83,7 +94,7 @@ struct AccountUnitHuobi
     bool    logged_in;
     std::vector<PendingOrderStatus> newOrderStatus;
     std::vector<PendingOrderStatus> pendingOrderStatus;
-    std::map<std::string,PriceIncrement> mapPriceIncrement;
+    std::map<std::string,PriceVolumePrecision> mapPriceVolumePrecision;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
     std::string accountId;
@@ -140,7 +151,7 @@ private:
     LfDirectionType GetDirection(std::string input);
     std::string GetType(const LfOrderPriceTypeType& input);
     LfOrderPriceTypeType GetPriceType(std::string input);
-    LfOrderStatusType GetOrderStatus(bool isCancel,int64_t nSize,int64_t nDealSize);
+    LfOrderStatusType GetOrderStatus(std::string state);
     inline int64_t getTimestamp();
 
 
@@ -156,8 +167,8 @@ private:
 
     void handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
     void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
-    void getPriceIncrement(AccountUnitHuobi& unit);
-    void dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVome);
+    void getPriceVolumePrecision(AccountUnitHuobi& unit);
+    void dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,double& nDealPrice,double& nDealVome);
 
     std::string parseJsonToString(Document &d);
 
@@ -168,7 +179,7 @@ private:
 private:
     void get_account(AccountUnitHuobi& unit, Document& json);
     void send_order(AccountUnitHuobi& unit, const char *code,
-                            const char *side, const char *type, double size, double price, double funds, Document& json);
+                            const char *side, const char *type, double volume, double price, Document& json);
     void cancel_all_orders(AccountUnitHuobi& unit, std::string code, Document& json);
     void cancel_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json);
     void query_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json);

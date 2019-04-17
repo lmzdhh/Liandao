@@ -15,6 +15,7 @@
 #include <mutex>
 #include <chrono>
 #include <time.h>
+#include <math.h>
 #include "../../utils/crypto/openssl_util.h"
 
 using cpr::Post;
@@ -559,7 +560,7 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     cancel_order(unit,"code","1",json);
     //cancel_all_orders(unit, "btc_usd", json);
     printResponse(json);
-    //getPriceIncrement(unit);
+    //getPriceVolumePrecision(unit);
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -587,27 +588,54 @@ void TDEngineHuobi::connect(long timeout_nsec)
         //}
     }
 }
-//火币暂时未用到
-void TDEngineHuobi::getPriceIncrement(AccountUnitHuobi& unit)
-{
-    auto& coinPairWhiteList = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList();
-    for(auto& pair : coinPairWhiteList)
+//火币
+/*
+字段名称	数据类型	描述
+base-currency	string	交易对中的基础币种
+quote-currency	string	交易对中的报价币种
+price-precision	integer	交易对报价的精度（小数点后位数）
+amount-precision	integer	交易对基础币种计数精度（小数点后位数）
+symbol-partition	string	交易区，可能值: [main，innovation，bifurcation]
+  "data": [
     {
-        Document json;
-        const auto response = Get("/api/v1/symbols/" + pair.second,"",unit);
-        json.Parse(response.text.c_str());
-        const static std::string strSuccesse = "200000";
-        if(json.HasMember("code") && json["code"].GetString() == strSuccesse)
-        {
-            auto& data = json["data"];
-            PriceIncrement stPriceIncrement;
-            stPriceIncrement.nBaseMinSize = std::round(std::stod(data["baseMinSize"].GetString())* scale_offset);
-            stPriceIncrement.nPriceIncrement = std::round(std::stod(data["priceIncrement"].GetString()) * scale_offset);
-            stPriceIncrement.nQuoteIncrement = std::round(std::stod(data["quoteIncrement"].GetString()) * scale_offset);
-            unit.mapPriceIncrement.insert(std::make_pair(pair.first,stPriceIncrement));
-            KF_LOG_INFO(logger, "[getPriceIncrement] (BaseMinSize )" << stPriceIncrement.nBaseMinSize << "(PriceIncrement)" << stPriceIncrement.nPriceIncrement
-                                                                     << "(QuoteIncrement)" << stPriceIncrement.nQuoteIncrement);
+        "base-currency": "btc",
+        "quote-currency": "usdt",
+        "price-precision": 2,
+        "amount-precision": 4,
+        "symbol-partition": "main",
+        "symbol": "btcusdt"
+    }
+    {
+        "base-currency": "eth",
+        "quote-currency": "usdt",
+        "price-precision": 2,
+        "amount-precision": 4,
+        "symbol-partition": "main",
+        "symbol": "ethusdt"
+    }
+  ]
+*/
+void TDEngineHuobi::getPriceVolumePrecision(AccountUnitHuobi& unit)
+{
+    Document json;
+    const auto response = Get("/v1/common/symbols","",unit);
+    json.Parse(response.text.c_str());
+    const static std::string strSuccesse = "ok";
+    if(json.HasMember("status") && json["status"].GetString() == strSuccesse)
+    {
+        auto& list=json["data"];
+        int n=json["data"].Size();
+        for(int i=0;i<n;i++){
+            PriceVolumePrecision stPriceVolumePrecision;
+            stPriceVolumePrecision.baseCurrency=list.GetArray()[i]["base-currency"].GetString();
+            stPriceVolumePrecision.quoteCurrency=list.GetArray()[i]["quote-currency"].GetString();
+            stPriceVolumePrecision.pricePrecision=list.GetArray()[i]["price-precision"].GetInt();
+            stPriceVolumePrecision.amountPrecision=list.GetArray()[i]["amount-precision"].GetInt();
+            stPriceVolumePrecision.symbolPartition=list.GetArray()[i]["symbol-partition"].GetString();
+            stPriceVolumePrecision.symbol=list.GetArray()[i]["symbol"].GetString();
+            unit.mapPriceVolumePrecision.insert(std::make_pair(stPriceVolumePrecision.symbol,stPriceVolumePrecision));
         }
+        KF_LOG_INFO(logger,"[getPriceVolumePrecision] (map size) "<<unit.mapPriceVolumePrecision.size());
     }
 }
 
@@ -743,9 +771,9 @@ std::string TDEngineHuobi::GetSide(const LfDirectionType& input) {
 }
 
 LfDirectionType TDEngineHuobi::GetDirection(std::string input) {
-    if ("buy" == input) {
+    if ("buy-limit" == input || "buy-market" == input) {
         return LF_CHAR_Buy;
-    } else if ("sell" == input) {
+    } else if ("sell-limit" == input || "sell-market" == input) {
         return LF_CHAR_Sell;
     } else {
         return LF_CHAR_Buy;
@@ -763,28 +791,29 @@ std::string TDEngineHuobi::GetType(const LfOrderPriceTypeType& input) {
 }
 
 LfOrderPriceTypeType TDEngineHuobi::GetPriceType(std::string input) {
-    if ("limit" == input) {
+    if ("buy-limit" == input||"sell-limit" == input) {
         return LF_CHAR_LimitPrice;
-    } else if ("market" == input) {
+    } else if ("buy-market" == input||"sell-market" == input) {
         return LF_CHAR_AnyPrice;
     } else {
         return '0';
     }
 }
-//订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-LfOrderStatusType TDEngineHuobi::GetOrderStatus(bool isCancel,int64_t nSize,int64_t nDealSize) {
+//订单状态，submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
+LfOrderStatusType TDEngineHuobi::GetOrderStatus(std::string state) {
 
-    if(isCancel)
-    {
+    if(state == "canceled"){
         return LF_CHAR_Canceled;
-    }
-    if(nDealSize == 0)
-    {
+    }else if(state == "submitting"){
         return LF_CHAR_NotTouched;
-    }
-    if(nSize > nDealSize)
-    {
+    }else if(state == "partial-filled "){
         return  LF_CHAR_PartTradedQueueing;
+    }else if(state == "submitted"){
+        return LF_CHAR_NotTouched;
+    }else if(state == "partial-canceled"){
+        return LF_CHAR_PartTradedNotQueueing;
+    }else if(state == "filled"){
+        return LF_CHAR_AllTraded;
     }
     return LF_CHAR_AllTraded;
 }
@@ -926,11 +955,11 @@ void TDEngineHuobi::req_qry_account(const LFQryAccountField *data, int account_i
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVolume)
+void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,double& nDealPrice,double& nDealVolume)
 {
     KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
-    auto it = unit.mapPriceIncrement.find(symbol);
-    if(it == unit.mapPriceIncrement.end())
+    auto it = unit.mapPriceVolumePrecision.find(symbol);
+    if(it == unit.mapPriceVolumePrecision.end())
     {
         KF_LOG_INFO(logger, "[dealPriceVolume] symbol not find :" << symbol);
         nDealVolume = 0;
@@ -938,14 +967,17 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
     }
     else
     {
-        if(it->second.nBaseMinSize > nVolume)
-        {
-            KF_LOG_INFO(logger, "[dealPriceVolume] (Volume) "  << nVolume  << " <  (BaseMinSize)  "  << it->second.nBaseMinSize << " (symbol)" << symbol);
-            nDealVolume = 0;
-            return ;
-        }
-        nDealVolume =  it->second.nQuoteIncrement  > 0 ? nVolume / it->second.nQuoteIncrement * it->second.nQuoteIncrement : nVolume;
-        nDealPrice = it->second.nPriceIncrement > 0 ? nPrice / it->second.nPriceIncrement * it->second.nPriceIncrement : nPrice;
+        KF_LOG_INFO(logger,"[dealPriceVolume] (deal price and volume precision)");
+        int pPrecision=it->second.pricePrecision;
+        int vPrecision=it->second.amountPrecision;
+        nDealPrice=nPrice*1.0/scale_offset;
+        nDealVolume=nVolume*1.0/scale_offset;
+        KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice <<" (nDealVolume) "<<nDealVolume);
+        long long lDealPrice=nDealPrice*pow(10,pPrecision);
+        nDealPrice=lDealPrece*1.0/pow(10,pPrecision);
+        long long lDealVolume=nDealVolume*pow(10,vPrecision);
+        nDealVolume=lDealVolume*1.0/pow(10,vPrecision);
+        KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice <<" (nDealVolume) "<<nDealVolume);
     }
     KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << symbol << " (Volume)" << nVolume << " (Price)" << nPrice
                                                       << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
@@ -976,11 +1008,9 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
-
-    double funds = 0;
     Document d;
-    /*int64_t fixedPrice = 0;
-    int64_t fixedVolume = 0;
+    double fixedPrice = 0;
+    double fixedVolume = 0;
     dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
     if(fixedVolume == 0)
     {
@@ -991,9 +1021,10 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HUOBI, 1, requestId, errorId, errorMsg.c_str());
         return;
-    }*/
+    }
+    KF_LOG_INFO(logger,"[req_order_insert] cys_ticker "<<ticker.c_str());
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
-            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, data->LimitPrice*1.0/scale_offset, funds, d);
+            GetType(data->OrderPriceType).c_str(), fixedVolume, fixedPrice, d);
     //not expected response
     if(!d.IsObject())
     {
@@ -1191,6 +1222,46 @@ void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit)
 
         Document d;
         query_order(unit, ticker,orderStatusIterator->remoteOrderId, d);
+        /*huobi查询订单详情
+字段名称	是否必须	数据类型	描述	取值范围
+account-id	true	long	账户 ID	
+amount	true	string	订单数量	
+canceled-at	false	long	订单撤销时间	
+created-at	true	long	订单创建时间	
+field-amount	true	string	已成交数量	
+field-cash-amount	true	string	已成交总金额	
+field-fees	true	string	已成交手续费（买入为币，卖出为钱）	
+finished-at	false	long	订单变为终结态的时间，不是成交时间，包含“已撤单”状态	
+id	true	long	订单ID	
+price	true	string	订单价格	
+source	true	string	订单来源	api
+state	true	string	订单状态	submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
+symbol	true	string	交易对	btcusdt, ethbtc, rcneth ...
+type	true	string	订单类型	buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖, buy-ioc：IOC买单, sell-ioc：IOC卖单
+
+{  
+  "data": 
+  {
+    "id": 59378,
+    "symbol": "ethusdt",
+    "account-id": 100009,
+    "amount": "10.1000000000",
+    "price": "100.1000000000",
+    "created-at": 1494901162595,
+    "type": "buy-limit",
+    "field-amount": "10.1000000000",
+    "field-cash-amount": "1011.0100000000",
+    "field-fees": "0.0202000000",
+    "finished-at": 1494901400468,
+    "user-id": 1000,
+    "source": "api",
+    "state": "filled",
+    "canceled-at": 0,
+    "exchange": "huobi",
+    "batch": ""
+  }
+}
+        */
         //parse order status
         //订单状态，submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
         if(d.HasParseError()) {
@@ -1200,26 +1271,28 @@ void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit)
                                                                                            << " (remoteOrderId) " << orderStatusIterator->remoteOrderId);
             continue;
         }
-        const std::string strSuccessCode = "200000";
+        const std::string strSuccessCode = "ok";
         KF_LOG_INFO(logger, "[retrieveOrderStatus] query_order:");
-        if(d.HasMember("code") && strSuccessCode ==  d["code"].GetString())
+        if(d.HasMember("status") && strSuccessCode ==  d["status"].GetString())
         {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
             rapidjson::Value &data = d["data"];
             ResponsedOrderStatus responsedOrderStatus;
             responsedOrderStatus.ticker = ticker;
-            double dDealFunds = std::stod(data["dealFunds"].GetString());
-            double dDealSize = std::stod(data["dealSize"].GetString());
+            //已成交总金额
+            double dDealFunds = std::stod(data["field-cash-amount"].GetString());
+            //已成交数量
+            double dDealSize = std::stod(data["field-amount"].GetString());
             responsedOrderStatus.averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
             responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
             //报单价格条件
             responsedOrderStatus.OrderPriceType = GetPriceType(data["type"].GetString());
             //买卖方向
-            responsedOrderStatus.Direction = GetDirection(data["side"].GetString());
+            responsedOrderStatus.Direction = GetDirection(data["type"].GetString());
             //报单状态
             int64_t nDealSize = std::round(dDealSize * scale_offset);
-            int64_t nSize = std::round(std::stod(data["size"].GetString()) * scale_offset);
-            responsedOrderStatus.OrderStatus = GetOrderStatus(data["cancelExist"].GetBool(),nSize,nDealSize);
+            int64_t nSize = std::round(std::stod(data["account"].GetString()) * scale_offset);
+            responsedOrderStatus.OrderStatus = GetOrderStatus(data["state"].GetString());
             responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
             responsedOrderStatus.volume = nSize;
             //今成交数量
@@ -1233,10 +1306,11 @@ void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit)
         } else {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
             std::string errorMsg;
-            std::string errorId = d["code"].GetString();
-            if(d.HasMember("msg") && d["msg"].IsString())
+            std::string errorId = "404";
+            if(d.HasMember("err-msg") && d["err-msg"].IsString())
             {
-                errorMsg = d["msg"].GetString();
+                std::string tab="\t";
+                errorMsg = d["err-code"].GetString()+tab+d["err-msg"].GetString();
             }
 
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
@@ -1503,9 +1577,10 @@ std::string TDEngineHuobi::createInsertOrdertring(const char *accountId,
     }
 */
 void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
-                                 const char *side, const char *type, double size, double price, double funds, Document& json)
+                                 const char *side, const char *type, double volume, double price, Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
+    KF_LOG_INFO(logger, "[send_order] (code) "<<code);
     std::string s=side,t=type;
     std::string st=s+"-"+t;
     int retry_times = 0;
@@ -1515,7 +1590,7 @@ void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
         should_retry = false;
         //火币下单post /v1/order/orders/place
         std::string requestPath = "/v1/order/orders/place";
-        response = Post(requestPath,createInsertOrdertring(unit.accountId.c_str(), std::to_string(size).c_str(), std::to_string(price).c_str(),
+        response = Post(requestPath,createInsertOrdertring(unit.accountId.c_str(), std::to_string(volume).c_str(), std::to_string(price).c_str(),
                         "api",code,st.c_str()),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
