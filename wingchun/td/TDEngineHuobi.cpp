@@ -971,7 +971,7 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
     if(it == unit.mapPriceVolumePrecision.end())
     {
         KF_LOG_INFO(logger, "[dealPriceVolume] symbol not find :" << ticker);
-        nDealVolume = 0;
+        nDealVolume = "0";
         return ;
     }
     else
@@ -1022,10 +1022,10 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
     Document d;
-    std::string fixedPrice = 0;
-    std::string fixedVolume = 0;
+    std::string fixedPrice;
+    std::string fixedVolume;
     dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
-    if(fixedVolume == 0)
+    if(fixedVolume == "0")
     {
         KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error (no ticker)" << ticker);
         errorId = 200;
