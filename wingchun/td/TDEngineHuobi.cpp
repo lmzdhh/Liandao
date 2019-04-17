@@ -558,7 +558,7 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     get_account(unit, json);
     printResponse(json);
     //cancel_order(unit,"code","1",json);
-    //cancel_all_orders(unit, "btc_usd", json);
+    cancel_all_orders(unit, "btc_usd", json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
     // set up
@@ -1668,7 +1668,7 @@ void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, 
     writer.Key("account-id");
     writer.String(accountId.c_str());
     writer.Key("symbol");
-    writer.String("btc");
+    writer.String("eosbtc");
     writer.Key("side");
     writer.String("buy");
     writer.Key("size");
