@@ -974,7 +974,7 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
         nDealVolume=nVolume*1.0/scale_offset;
         KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice <<" (nDealVolume) "<<nDealVolume);
         long long lDealPrice=nDealPrice*pow(10,pPrecision);
-        nDealPrice=lDealPrece*1.0/pow(10,pPrecision);
+        nDealPrice=lDealPrice*1.0/pow(10,pPrecision);
         long long lDealVolume=nDealVolume*pow(10,vPrecision);
         nDealVolume=lDealVolume*1.0/pow(10,vPrecision);
         KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice <<" (nDealVolume) "<<nDealVolume);
