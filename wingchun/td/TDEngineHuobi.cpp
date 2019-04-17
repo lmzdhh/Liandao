@@ -557,10 +557,10 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     printResponse(json);
-    cancel_order(unit,"code","1",json);
+    //cancel_order(unit,"code","1",json);
     //cancel_all_orders(unit, "btc_usd", json);
-    printResponse(json);
-    //getPriceVolumePrecision(unit);
+    //printResponse(json);
+    getPriceVolumePrecision(unit);
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -617,6 +617,7 @@ symbol-partition	string	交易区，可能值: [main，innovation，bifurcation]
 */
 void TDEngineHuobi::getPriceVolumePrecision(AccountUnitHuobi& unit)
 {
+    KF_LOG_INFO(logger,"[getPriceVolumePrecision]");
     Document json;
     const auto response = Get("/v1/common/symbols","",unit);
     json.Parse(response.text.c_str());
@@ -627,13 +628,19 @@ void TDEngineHuobi::getPriceVolumePrecision(AccountUnitHuobi& unit)
         int n=json["data"].Size();
         for(int i=0;i<n;i++){
             PriceVolumePrecision stPriceVolumePrecision;
+            stPriceVolumePrecision.symbol=list.GetArray()[i]["symbol"].GetString();
+            std::string ticker = unit.coinPairWhiteList.GetKeyByValue(stPriceVolumePrecision.symbol);
+            if(ticker.length()==0){
+                //KF_LOG_ERROR(logger,"[getPriceVolumePrecision] (No such symbol in whitelist) "<<stPriceVolumePrecision.symbol);
+                continue;
+            }
             stPriceVolumePrecision.baseCurrency=list.GetArray()[i]["base-currency"].GetString();
             stPriceVolumePrecision.quoteCurrency=list.GetArray()[i]["quote-currency"].GetString();
             stPriceVolumePrecision.pricePrecision=list.GetArray()[i]["price-precision"].GetInt();
             stPriceVolumePrecision.amountPrecision=list.GetArray()[i]["amount-precision"].GetInt();
             stPriceVolumePrecision.symbolPartition=list.GetArray()[i]["symbol-partition"].GetString();
-            stPriceVolumePrecision.symbol=list.GetArray()[i]["symbol"].GetString();
             unit.mapPriceVolumePrecision.insert(std::make_pair(stPriceVolumePrecision.symbol,stPriceVolumePrecision));
+            KF_LOG_INFO(logger,"[getPriceVolumePrecision] symbol "<<stPriceVolumePrecision.symbol);
         }
         KF_LOG_INFO(logger,"[getPriceVolumePrecision] (map size) "<<unit.mapPriceVolumePrecision.size());
     }
@@ -1016,7 +1023,7 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
     dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
     if(fixedVolume == 0)
     {
-        KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error" << ticker);
+        KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error (no ticker)" << ticker);
         errorId = 200;
         errorMsg = data->InstrumentID;
         errorMsg += " : no such ticker";
