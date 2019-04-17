@@ -928,6 +928,7 @@ GET /v1/account/accounts/{account-id}/balance
         for(size_t i = 0; i < len; i++)
         {
             std::string symbol = accounts.GetArray()[i]["currency"].GetString();
+            if(symbol != "btc"||symbol != "usdt" || symbol !="etc" || symbol != "eos")continue;
             KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol);
             pos.Position = std::round(std::stod(accounts.GetArray()[i]["balance"].GetString()) * scale_offset);
             tmp_vector.push_back(pos);
@@ -958,10 +959,11 @@ void TDEngineHuobi::req_qry_account(const LFQryAccountField *data, int account_i
 void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,double& nDealPrice,double& nDealVolume)
 {
     KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
-    auto it = unit.mapPriceVolumePrecision.find(symbol);
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(symbol);
+    auto it = unit.mapPriceVolumePrecision.find(ticker);
     if(it == unit.mapPriceVolumePrecision.end())
     {
-        KF_LOG_INFO(logger, "[dealPriceVolume] symbol not find :" << symbol);
+        KF_LOG_INFO(logger, "[dealPriceVolume] symbol not find :" << ticker);
         nDealVolume = 0;
         return ;
     }
@@ -979,7 +981,7 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
         nDealVolume=lDealVolume*1.0/pow(10,vPrecision);
         KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice <<" (nDealVolume) "<<nDealVolume);
     }
-    KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << symbol << " (Volume)" << nVolume << " (Price)" << nPrice
+    KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << ticker << " (Volume)" << nVolume << " (Price)" << nPrice
                                                       << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
 }
 
@@ -1017,7 +1019,7 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
         KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error" << ticker);
         errorId = 200;
         errorMsg = data->InstrumentID;
-        errorMsg += " : quote less than baseMinSize";
+        errorMsg += " : no such ticker";
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HUOBI, 1, requestId, errorId, errorMsg.c_str());
         return;
