@@ -963,7 +963,7 @@ void TDEngineHuobi::req_qry_account(const LFQryAccountField *data, int account_i
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,double& nDealPrice,double& nDealVolume)
+void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,std::string& nDealPrice,std::string& nDealVolume)
 {
     KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
     std::string ticker = unit.coinPairWhiteList.GetValueByKey(symbol);
@@ -979,13 +979,17 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
         KF_LOG_INFO(logger,"[dealPriceVolume] (deal price and volume precision)");
         int pPrecision=it->second.pricePrecision;
         int vPrecision=it->second.amountPrecision;
-        nDealPrice=nPrice*1.0/scale_offset;
-        nDealVolume=nVolume*1.0/scale_offset;
+        double tDealPrice=nPrice*1.0/scale_offset;
+        double tDealVolume=nVolume*1.0/scale_offset;
         KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice <<" (nDealVolume) "<<nDealVolume);
-        long long lDealPrice=nDealPrice*pow(10,pPrecision);
-        nDealPrice=lDealPrice*1.0/pow(10,pPrecision);
-        long long lDealVolume=nDealVolume*pow(10,vPrecision);
-        nDealVolume=lDealVolume*1.0/pow(10,vPrecision);
+        long long lDealPrice=tDealPrice*pow(10,pPrecision);
+        tDealPrice=lDealPrice*1.0/pow(10,pPrecision);
+        long long lDealVolume=tDealVolume*pow(10,vPrecision);
+        tDealVolume=lDealVolume*1.0/pow(10,vPrecision);
+        nDealPrice=std::to_string(tDealPrice);
+        nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+pPrecision);
+        nDealVolume=std::to_string(tDealVolume);
+        nDealVolume=nDealVolume.substr(0,nDealVolume.find(".")+vPrecision);
         KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice <<" (nDealVolume) "<<nDealVolume);
     }
     KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << ticker << " (Volume)" << nVolume << " (Price)" << nPrice
@@ -1018,8 +1022,8 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
     Document d;
-    double fixedPrice = 0;
-    double fixedVolume = 0;
+    std::string fixedPrice = 0;
+    std::string fixedVolume = 0;
     dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
     if(fixedVolume == 0)
     {
@@ -1586,7 +1590,7 @@ std::string TDEngineHuobi::createInsertOrdertring(const char *accountId,
     }
 */
 void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
-                                 const char *side, const char *type, double volume, double price, Document& json)
+                                 const char *side, const char *type, std::string volume, std::string price, Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
     KF_LOG_INFO(logger, "[send_order] (code) "<<code);
@@ -1599,7 +1603,7 @@ void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
         should_retry = false;
         //火币下单post /v1/order/orders/place
         std::string requestPath = "/v1/order/orders/place";
-        response = Post(requestPath,createInsertOrdertring(unit.accountId.c_str(), std::to_string(volume).c_str(), std::to_string(price).c_str(),
+        response = Post(requestPath,createInsertOrdertring(unit.accountId.c_str(), volume.c_str(), price.c_str(),
                         "api",code,st.c_str()),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 

@@ -168,7 +168,7 @@ private:
     void handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
     void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
     void getPriceVolumePrecision(AccountUnitHuobi& unit);
-    void dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,double& nDealPrice,double& nDealVome);
+    void dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,std::string& nDealPrice,std::string& nDealVome);
 
     std::string parseJsonToString(Document &d);
 
@@ -179,7 +179,7 @@ private:
 private:
     void get_account(AccountUnitHuobi& unit, Document& json);
     void send_order(AccountUnitHuobi& unit, const char *code,
-                            const char *side, const char *type, double volume, double price, Document& json);
+                            const char *side, const char *type, std::string volume, std::string price, Document& json);
     void cancel_all_orders(AccountUnitHuobi& unit, std::string code, Document& json);
     void cancel_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json);
     void query_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json);
