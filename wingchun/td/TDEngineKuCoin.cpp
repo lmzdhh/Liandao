@@ -1046,10 +1046,9 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
                                               << " (LimitPrice)" << data->LimitPrice
                                               << " (OrderRef)" << data->OrderRef);
     send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1/*ISLAST*/, requestId);
-
     int errorId = 0;
     std::string errorMsg = "";
-
+    on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
     std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
