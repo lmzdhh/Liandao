@@ -320,6 +320,28 @@ bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Documen
                                                                                                        <<" (tickSize)" << afilter.ticksize);
                         }
                     }
+                    if (strcmp("LOT_SIZE", filter["filterType"].GetString()) == 0) {
+                        std::string stepSizeStr =  filter["stepSize"].GetString();
+                        KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+
+  " (stepSizeStr)" << stepSizeStr);
+                        //0.0000100; 0.001;
+                        unsigned int locStart = stepSizeStr.find( ".", 0 );
+                        unsigned int locEnd = stepSizeStr.find( "1", 0 );
+                        if( locStart != string::npos  && locEnd != string::npos ){
+                            int num = locEnd - locStart;
+                            SendOrderFilter afilter;
+                            strncpy(afilter.InstrumentID, symbol.c_str(), 31);
+                            afilter.stepsize = num;
+                            unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
+                            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+
+      " (stepSizeStr)" << stepSizeStr
+
+      <<" (stepSize)" << afilter.stepsize);
+                        }
+                    }
+
                 }
             }
         }
@@ -579,6 +601,18 @@ int64_t TDEngineBinance::fixPriceTickSize(int keepPrecision, int64_t price, bool
     return new_price;
 }
 
+int64_t TDEngineBinance::fixVolumeStepSize(int keepPrecision, int64_t volume, bool isBuy)
+{
+    //the 8 is come from 1e8.
+    if(keepPrecision == 8) return volume;
+    int removePrecisions = (8 - keepPrecision);
+    double cutter =  pow(10, removePrecisions);
+    int64_t new_volume = 0;
+    new_volume = std::ceil(volume / cutter) * cutter;
+    return new_volume;
+}
+
+
 void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     AccountUnitBinance& unit = account_units[account_index];
@@ -610,14 +644,22 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     SendOrderFilter filter = getSendOrderFilter(unit, ticker.c_str());
 
     int64_t fixedPrice = fixPriceTickSize(filter.ticksize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
+    int64_t fixedVolume = fixVolumeStepSize(filter.stepsize, data->Volume, LF_CHAR_Buy == data->Direction);
+
 
     KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<
                                                                      " (LimitPrice)" << data->LimitPrice <<
                                                                      " (ticksize)" << filter.ticksize <<
                                                                      " (fixedPrice)" << fixedPrice);
 
+    KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<
+                                                                     " (Volume)" << data->Volume <<
+                                                                     " (stepsize)" << filter.stepsize <<
+                                                                     " (fixedVolume)" << fixedVolume);
+
+
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(), GetType(data->OrderPriceType).c_str(),
-        GetTimeInForce(data->TimeCondition).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef,
+        GetTimeInForce(data->TimeCondition).c_str(), fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef,
         stopPrice, icebergQty, d);
 //    KF_LOG_INFO(logger, "[req_order_insert] send_order");
 //    printResponse(d);

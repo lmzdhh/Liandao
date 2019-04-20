@@ -51,6 +51,7 @@ struct SendOrderFilter
 {
     char_31 InstrumentID;   //合约代码
     int ticksize; //for price round.
+    int stepsize;
     //...other
 };
 
@@ -150,6 +151,8 @@ private:
     bool removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId);
 
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
+    int64_t fixVolumeStepSize(int keepPrecision, int64_t volume, bool isBuy);
+
 
     inline int64_t getTimestamp();
     int64_t getTimeDiffOfExchange(AccountUnitBinance& unit);
