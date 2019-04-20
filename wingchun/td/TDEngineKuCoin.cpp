@@ -173,9 +173,9 @@ std::string TDEngineKuCoin::getId()
             rtn_order.TimeCondition = LF_CHAR_GTC;
             rtn_order.OrderPriceType = stPendingOrderStatus.OrderPriceType;
             strncpy(rtn_order.OrderRef, stPendingOrderStatus.OrderRef, sizeof(rtn_order.OrderRef));
-            rtn_order.VolumeTotalOriginal = stPendingOrderStatus.nVolume - rtn_order.VolumeTraded;
+            rtn_order.VolumeTotal = stPendingOrderStatus.nVolume - rtn_order.VolumeTraded;
             rtn_order.LimitPrice = stPendingOrderStatus.nPrice;
-            rtn_order.VolumeTotal = stPendingOrderStatus.nVolume;
+            rtn_order.VolumeTotalOriginal = stPendingOrderStatus.nVolume;
             strncpy(rtn_order.BusinessUnit,stPendingOrderStatus.remoteOrderId.c_str(),sizeof(rtn_order.BusinessUnit));
 
             on_rtn_order(&rtn_order);
