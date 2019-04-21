@@ -1561,21 +1561,29 @@ std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::s
     writer.String(type);
     writer.Key("stp");
     writer.String("CO");
-    if(strcmp("market",type) != 0)
-    {
-        writer.Key("price");
-        writer.Double(price);
-    }
-    writer.Key("size");
-    writer.Double(size);
+   
+     //writer.Key("price");
+     // writer.Double(price);
+    //writer.Key("size");
+    //writer.Double(size);
     if(isPostOnly)
     {
         writer.Key("postOnly");
         writer.Bool(isPostOnly);
     }
     writer.EndObject();
-    KF_LOG_INFO(logger, "[TDEngineKuCoin::createInsertOrdertring]:" << s.GetString());
-    return s.GetString();
+    std::stringstream ss;
+    std::string str = s.GetString();
+    str.pop_back();
+    ss << str;
+     if(strcmp("market",type) != 0)
+    {
+        ss << ",\"price\":" << price;
+    }
+    ss << ",\"size\":" << size << "}";
+    str = ss.str();
+    KF_LOG_INFO(logger, "[TDEngineKuCoin::createInsertOrdertring]:" << str);
+    return str;
 }
 
 void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,const std::string& strClientId,
