@@ -1546,6 +1546,7 @@ void TDEngineKuCoin::get_account(AccountUnitKuCoin& unit, Document& json)
 std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::string& strClientId,
                                                     const char *side, const char *type, double& size, double& price,const string& strOrderRef,bool isPostOnly)
 {
+    KF_LOG_INFO(logger, "[TDEngineKuCoin::createInsertOrdertring]:(price)"<<price << "(volume)" << size);
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
@@ -1573,6 +1574,7 @@ std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::s
         writer.Bool(isPostOnly);
     }
     writer.EndObject();
+    KF_LOG_INFO(logger, "[TDEngineKuCoin::createInsertOrdertring]:" << s.GetString());
     return s.GetString();
 }
 
