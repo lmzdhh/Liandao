@@ -1011,14 +1011,14 @@ void TDEngineKuCoin::req_qry_account(const LFQryAccountField *data, int account_
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,int64_t& nDealPrice,int64_t& nDealVolume)
+void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,double& dDealPrice,double& dDealVolume)
 {
         KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
         auto it = unit.mapPriceIncrement.find(symbol);
         if(it == unit.mapPriceIncrement.end())
         {
                   KF_LOG_INFO(logger, "[dealPriceVolume] symbol not find :" << symbol);
-                  nDealVolume = 0;
+                  dDealVolume = 0;
                   return ;
         }
         else
@@ -1026,14 +1026,22 @@ void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& 
             if(it->second.nBaseMinSize > nVolume)
             {
                 KF_LOG_INFO(logger, "[dealPriceVolume] (Volume) "  << nVolume  << " <  (BaseMinSize)  "  << it->second.nBaseMinSize << " (symbol)" << symbol);
-                nDealVolume = 0;
+                dDealVolume = 0;
                 return ;
             }
-            nDealVolume =  it->second.nQuoteIncrement  > 0 ? nVolume / it->second.nQuoteIncrement * it->second.nQuoteIncrement : nVolume;
-            nDealPrice = it->second.nPriceIncrement > 0 ? nPrice / it->second.nPriceIncrement * it->second.nPriceIncrement : nPrice;
+            int64_t nDealVolume =  it->second.nQuoteIncrement  > 0 ? nVolume / it->second.nQuoteIncrement * it->second.nQuoteIncrement : nVolume;
+            int64_t nDealPrice = it->second.nPriceIncrement > 0 ? nPrice / it->second.nPriceIncrement * it->second.nPriceIncrement : nPrice;
+            dDealVolume = nDealVolume * 1.0 / scale_offset;
+            dDealPrice = nDealPrice * 1.0 / scale_offset;
+            char strVolume[64];
+            char strPrice[64];
+            sprintf(strVolume,"%.8lf",dDealVolume + 0.0000000001);
+            sprintf(strPrice,"%.8lf",dDealPrice + 0.0000000001);
+            dDealVolume = std::stod(strVolume);
+            dDealPrice = std::stod(strPrice);
         }
          KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << symbol << " (Volume)" << nVolume << " (Price)" << nPrice 
-                << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
+                << " (FixedVolume)" << dDealVolume << " (FixedPrice)" << dDealPrice);
 }
 
 void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
@@ -1064,8 +1072,8 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     double funds = 0;
     Document d;
 
-    int64_t fixedPrice = 0;
-    int64_t fixedVolume = 0;
+    double fixedPrice = 0;
+    double fixedVolume = 0;
     dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
     
       if(fixedVolume == 0)
@@ -1081,7 +1089,7 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     std::string strClientId = genClinetid(data->OrderRef);
     std::lock_guard<std::mutex> lck(*m_mutexOrder);
     send_order(unit, ticker.c_str(),strClientId, GetSide(data->Direction).c_str(),
-               GetType(data->OrderPriceType).c_str(), fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, funds, data->OrderRef,is_post_only(data),d);
+               GetType(data->OrderPriceType).c_str(), fixedVolume, fixedPrice, funds, data->OrderRef,is_post_only(data),d);
     //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
     //not expected response
     if(!d.IsObject())
@@ -1536,7 +1544,7 @@ void TDEngineKuCoin::get_account(AccountUnitKuCoin& unit, Document& json)
 }
  * */
 std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::string& strClientId,
-                                                    const char *side, const char *type, double size, double price,const string& strOrderRef,bool isPostOnly)
+                                                    const char *side, const char *type, double& size, double& price,const string& strOrderRef,bool isPostOnly)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);
@@ -1569,7 +1577,7 @@ std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::s
 }
 
 void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,const std::string& strClientId,
-                                 const char *side, const char *type, double size, double price, double funds, const std::string& strOrderRef, bool isPostOnly,Document& json)
+                                 const char *side, const char *type, double& size, double& price, double funds, const std::string& strOrderRef, bool isPostOnly,Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
 
