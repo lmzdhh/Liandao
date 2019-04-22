@@ -135,8 +135,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
     {
         case LWS_CALLBACK_CLIENT_ESTABLISHED:
         {//lws callback client established
-            ss << "LWS_CALLBACK_CLIENT_ESTABLISHED.";
-            global_md->writeErrorLog(ss.str());
+            global_md->on_lws_open(wsi);
             //lws_callback_on_writable( wsi );
             break;
         }
@@ -192,7 +191,10 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 
     return 0;
 }
-
+void TDEngineHuobi::on_lws_open(struct lws* wsi){
+    KF_LOG_INFO(logger,"[on_lws_open] ");
+    huobiAuth(findAccountUnitHuobiByWebsocketConn(wsi));
+}
 std::string TDEngineHuobi::getId()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -743,7 +745,6 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
         return;
     }
     KF_LOG_INFO(logger, "[TDEngineHuobi::login] wsi create success.");
-    if(unit.webSocketConn != NULL)huobiAuth(unit);
 }
 void TDEngineHuobi::login(long timeout_nsec)
 {
