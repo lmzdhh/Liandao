@@ -152,10 +152,6 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             global_md->writeErrorLog(ss.str());
             if(global_md)
             {//统一接收，不同订阅返回数据不同解析
-                char buf[4096] = {0};
-                int l = 4096;
-                l = gzDecompress((char*) in, len, buf, l);
-                KF_LOG_INFO(logger, "[ws_service_cb] (data) " << (char *)in);
                 global_md->on_lws_data(wsi, buf, len);
             }
             break;
@@ -229,10 +225,14 @@ void TDEngineHuobi::Ping(struct lws* conn)
 
 void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
+    char buf[4096] = {0};
+    int l = 4096;
+    l = gzDecompress(data, len, buf, l);
+    KF_LOG_INFO(logger, "[on_lws_data] (buf) " << buf);
     KF_LOG_INFO(logger, "[on_lws_data] (data) " << data);
     //std::string strData = dealDataSprit(data);
     Document json;
-    json.Parse(data);
+    json.Parse(buf);
     if(!json.HasParseError()&& json.IsObject())KF_LOG_INFO(logger, "[TDEngineHuobi::on_lws_data] (json) " << json.GetString());
     if(!json.HasParseError() && json.IsObject() && json.HasMember("status"))
     {
