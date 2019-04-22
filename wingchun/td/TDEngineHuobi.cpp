@@ -61,7 +61,70 @@ TDEngineHuobi::~TDEngineHuobi()
     if(mutex_response_order_status != nullptr) delete mutex_response_order_status;
     if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
 }
-
+// gzCompress: do the compressing
+int TDEngineHuobi::gzCompress(const char *src, int srcLen, char *dest, int destLen){
+	z_stream c_stream;
+	int err = 0;
+	int windowBits = 15;
+	int GZIP_ENCODING = 16;
+ 
+	if(src && srcLen > 0)
+	{
+		c_stream.zalloc = (alloc_func)0;
+		c_stream.zfree = (free_func)0;
+		c_stream.opaque = (voidpf)0;
+		if(deflateInit2(&c_stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 
+                    windowBits | GZIP_ENCODING, 8, Z_DEFAULT_STRATEGY) != Z_OK) return -1;
+		c_stream.next_in  = (Bytef *)src;
+		c_stream.avail_in  = srcLen;
+		c_stream.next_out = (Bytef *)dest;
+		c_stream.avail_out  = destLen;
+		while (c_stream.avail_in != 0 && c_stream.total_out < destLen) 
+		{
+			if(deflate(&c_stream, Z_NO_FLUSH) != Z_OK) return -1;
+		}
+        	if(c_stream.avail_in != 0) return c_stream.avail_in;
+		for (;;) {
+			if((err = deflate(&c_stream, Z_FINISH)) == Z_STREAM_END) break;
+			if(err != Z_OK) return -1;
+		}
+		if(deflateEnd(&c_stream) != Z_OK) return -1;
+		return c_stream.total_out;
+	}
+	return -1;
+}
+ 
+// gzDecompress: do the decompressing
+int TDEngineHuobi::gzDecompress(const char *src, int srcLen, const char *dst, int dstLen){
+	z_stream strm;
+	strm.zalloc=NULL;
+	strm.zfree=NULL;
+	strm.opaque=NULL;
+	 
+	strm.avail_in = srcLen;
+	strm.avail_out = dstLen;
+	strm.next_in = (Bytef *)src;
+	strm.next_out = (Bytef *)dst;
+	 
+	int err=-1, ret=-1;
+	err = inflateInit2(&strm, MAX_WBITS+16);
+	if (err == Z_OK){
+	    err = inflate(&strm, Z_FINISH);
+	    if (err == Z_STREAM_END){
+	        ret = strm.total_out;
+	    }
+	    else{
+	        inflateEnd(&strm);
+	        return err;
+	    }
+	}
+	else{
+	    inflateEnd(&strm);
+	    return err;
+	}
+	inflateEnd(&strm);
+	return err;
+}
 static TDEngineHuobi* global_md = nullptr;
 //web socket代码
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
@@ -161,70 +224,6 @@ void TDEngineHuobi::Ping(struct lws* conn)
     KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_ping: " << strPing.c_str() << " ,len = " << length);
     strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
-}
-// gzCompress: do the compressing
-int TDEngineHuobi::gzCompress(const char *src, int srcLen, char *dest, int destLen){
-	z_stream c_stream;
-	int err = 0;
-	int windowBits = 15;
-	int GZIP_ENCODING = 16;
- 
-	if(src && srcLen > 0)
-	{
-		c_stream.zalloc = (alloc_func)0;
-		c_stream.zfree = (free_func)0;
-		c_stream.opaque = (voidpf)0;
-		if(deflateInit2(&c_stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 
-                    windowBits | GZIP_ENCODING, 8, Z_DEFAULT_STRATEGY) != Z_OK) return -1;
-		c_stream.next_in  = (Bytef *)src;
-		c_stream.avail_in  = srcLen;
-		c_stream.next_out = (Bytef *)dest;
-		c_stream.avail_out  = destLen;
-		while (c_stream.avail_in != 0 && c_stream.total_out < destLen) 
-		{
-			if(deflate(&c_stream, Z_NO_FLUSH) != Z_OK) return -1;
-		}
-        	if(c_stream.avail_in != 0) return c_stream.avail_in;
-		for (;;) {
-			if((err = deflate(&c_stream, Z_FINISH)) == Z_STREAM_END) break;
-			if(err != Z_OK) return -1;
-		}
-		if(deflateEnd(&c_stream) != Z_OK) return -1;
-		return c_stream.total_out;
-	}
-	return -1;
-}
- 
-// gzDecompress: do the decompressing
-int TDEngineHuobi::gzDecompress(const char *src, int srcLen, const char *dst, int dstLen){
-	z_stream strm;
-	strm.zalloc=NULL;
-	strm.zfree=NULL;
-	strm.opaque=NULL;
-	 
-	strm.avail_in = srcLen;
-	strm.avail_out = dstLen;
-	strm.next_in = (Bytef *)src;
-	strm.next_out = (Bytef *)dst;
-	 
-	int err=-1, ret=-1;
-	err = inflateInit2(&strm, MAX_WBITS+16);
-	if (err == Z_OK){
-	    err = inflate(&strm, Z_FINISH);
-	    if (err == Z_STREAM_END){
-	        ret = strm.total_out;
-	    }
-	    else{
-	        inflateEnd(&strm);
-	        return err;
-	    }
-	}
-	else{
-	    inflateEnd(&strm);
-	    return err;
-	}
-	inflateEnd(&strm);
-	return err;
 }
 
 void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
