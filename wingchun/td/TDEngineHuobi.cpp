@@ -197,7 +197,7 @@ std::string TDEngineHuobi::makeSubscribeAccountsUpdate(AccountUnitHuobi& unit){
     Writer<StringBuffer> writer(sbUpdate);
     writer.StartObject();
     writer.Key("AccessKeyId");
-    writer.String(unit.api_key);
+    writer.String(unit.api_key.c_str());
     writer.Key("SignatureMethod");
     writer.String("HmacSHA256");
     writer.Key("SignatureVersion");
@@ -222,7 +222,7 @@ std::string TDEngineHuobi::makeSubscribeAccountsUpdate(AccountUnitHuobi& unit){
 AccountUnitHuobi& TDEngineHuobi::findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn){
     for (size_t idx = 0; idx < account_units.size(); idx++) {
         AccountUnitHuobi &unit = account_units[idx];
-        if(unit.websocketConn == websocketConn) {
+        if(unit.webSocketConn == websocketConn) {
             return unit;
         }
     }
