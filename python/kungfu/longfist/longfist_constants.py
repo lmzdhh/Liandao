@@ -17,6 +17,7 @@ class SOURCE:
     PROBIT = 28
     BITHUMB = 29
     DAYBIT = 31
+    KRAKEN = 34
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
@@ -169,6 +170,14 @@ class MsgTypes:
     MSG_TYPE_LF_RTN_ORDER_DAYBIT 		= 31205
     MSG_TYPE_LF_RTN_TRADE_DAYBIT 		= 31206
     MSG_TYPE_LF_ORDER_ACTION_DAYBIT		= 31207
+
+    MSG_TYPE_LF_MD_KRAKEN        		= 34101
+    MSG_TYPE_LF_QRY_POS_KRAKEN   		= 34201
+    MSG_TYPE_LF_RSP_POS_KRAKEN   		= 34202
+    MSG_TYPE_LF_ORDER_KRAKEN     		= 34204
+    MSG_TYPE_LF_RTN_ORDER_KRAKEN 		= 34205
+    MSG_TYPE_LF_RTN_TRADE_KRAKEN 		= 34206
+    MSG_TYPE_LF_ORDER_ACTION_KRAKEN		= 34207
 
 ###################################
 # LfActionFlagType: 报单操作标志

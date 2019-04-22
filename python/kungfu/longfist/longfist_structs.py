@@ -903,6 +903,14 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_DAYBIT: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_DAYBIT: LFRtnTradeField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_DAYBIT: LFOrderActionField
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_KRAKEN: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_KRAKEN: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_KRAKEN: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_KRAKEN: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_KRAKEN: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_KRAKEN: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_KRAKEN: LFOrderActionField
 }
 
 MsgType2LFStruct.update(SnifferMsgType2Struct)

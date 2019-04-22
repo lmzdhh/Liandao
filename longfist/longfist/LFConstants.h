@@ -28,7 +28,8 @@ enum exchange_source_index : short
 	SOURCE_OCEANEXB = 27,
     SOURCE_PROBIT = 28,
     SOURCE_BITHUMB = 29,
-    SOURCE_DAYBIT = 31  
+    SOURCE_DAYBIT = 31,  
+    SOURCE_KRAKEN = 34
 };
 
 inline const char* get_str_from_source_index(exchange_source_index source)
@@ -69,6 +70,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "bithumb";
         case SOURCE_DAYBIT:
             return "daybit";
+        case SOURCE_KRAKEN：
+            return "kraken";
 		default:
 			return "unknown";
 	}
@@ -140,6 +143,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_DAYBIT;
     }
+    else if(exch_str == "kraken")
+    {
+        return SOURCE_KRAKEN;
+    }
     else if(exch_str == "bithumb")
     {
 		return SOURCE_BITHUMB;
@@ -173,6 +180,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_PROBIT "PROBIT"
 #define EXCHANGE_BITHUMB "BITHUMB"
 #define EXCHANGE_DAYBIT "DAYBIT"
+#define EXCHANGE_KRAKEN "KRAKEN"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -196,6 +204,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_PROBIT  28
 #define EXCHANGE_ID_BITHUMB  29
 #define EXCHANGE_ID_DAYBIT  31
+#define EXCHANGE_ID_KRAKEN  34
 // MsgTypes that used for LF data structure...
 const short MSG_TYPE_LF_MD            = 101;
 const short MSG_TYPE_LF_L2_MD         = 102;
@@ -346,13 +355,13 @@ const short MSG_TYPE_LF_RTN_TRADE_PROBIT 	= 28206;
 const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 28207;
 
 //BITHUMB, idx=29
-const short MSG_TYPE_LF_MD_BITHUMB             = 29101;
+const short MSG_TYPE_LF_MD_BITHUMB                = 29101;
 const short MSG_TYPE_LF_QRY_POS_BITHUMB           = 29201;
 const short MSG_TYPE_LF_RSP_POS_BITHUMB           = 29202;
 const short MSG_TYPE_LF_ORDER_BITHUMB             = 29204;
 const short MSG_TYPE_LF_RTN_ORDER_BITHUMB         = 29205;
 const short MSG_TYPE_LF_RTN_TRADE_BITHUMB         = 29206;
-const short MSG_TYPE_LF_ORDER_ACTION_BITHUMB     = 29207;
+const short MSG_TYPE_LF_ORDER_ACTION_BITHUMB      = 29207;
 
 
 
@@ -364,6 +373,18 @@ const short MSG_TYPE_LF_ORDER_DAYBIT     	= 31204;
 const short MSG_TYPE_LF_RTN_ORDER_DAYBIT 	= 31205;
 const short MSG_TYPE_LF_RTN_TRADE_DAYBIT 	= 31206;
 const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
+
+
+//KRAKEN, idx=34
+const short MSG_TYPE_LF_MD_KRAKEN        	= 34101;
+const short MSG_TYPE_LF_QRY_POS_KRAKEN   	= 34201;
+const short MSG_TYPE_LF_RSP_POS_KRAKEN   	= 34202;
+const short MSG_TYPE_LF_ORDER_KRAKEN     	= 34204;
+const short MSG_TYPE_LF_RTN_ORDER_KRAKEN 	= 34205;
+const short MSG_TYPE_LF_RTN_TRADE_KRAKEN 	= 34206;
+const short MSG_TYPE_LF_ORDER_ACTION_KRAKEN = 34207;
+
+
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
 ///////////////////////////////////

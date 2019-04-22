@@ -141,6 +141,20 @@
 				"btc_usdt": "USDT;BTC"
 			}
 		}
+		"kraken":
+		{
+			"baseUrl":	"ws.kraken.com",
+			"path": "/v1/user_api_socket/websocket?api_key=M0f-KWvkb1y28wv-nT-4vwPBnomZMNrt&api_secret=Hbj4zKZiwbXQB25Te39TwDuqbo9oiicY",
+			"book_depth_count": 20,
+			"trade_count": 10,
+			"whiteLists":
+			{
+				"strategy_coinpair(base_quote)": "quote;base",
+				"bch_eur": "EUR;BCH",
+				"ltc_btc": "BTC;LTC",
+				"btc_eur": "EUR;BTC"
+			}
+		}
 	},
 	"td": {
 		"daybit":
