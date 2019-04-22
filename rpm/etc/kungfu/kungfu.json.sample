@@ -723,11 +723,12 @@
           {
             "info":
             {
-              "APIKey": " YOU API KEY",
-              "SecretKey": "YOU SECRET KEY",
+              "APIKey": "IqtQhCapKGgRzYcex6SccIgPYvN5zmDZxPDDxzuL",
+              "SecretKey": "P97wUbP8PSBYqjG4xPW2GsVRy7YohApsqdvJBQ0j",
               "whiteLists":{
                 "krw_btc": "KRW-BTC",
-                "krw_eth": "KRW-ETH"
+                "krw_eth": "KRW-ETH",
+                "btc_eth": "BTC-ETH"
               },
               "positionWhiteLists":{
                               "krw_btc": "KRW-BTC",
@@ -737,8 +738,8 @@
               "order_insert_recvwindow_ms": 5000,
               "order_action_recvwindow_ms": 5000,
               "max_rest_retry_times":3,
-              "retry_interval_milliseconds": 1000,
-              "rest_get_interval_ms": 2000,
+              "retry_interval_milliseconds": 4500,
+              "rest_get_interval_ms": 4000,
               "sync_time_interval": 10000
             },
             "clients": ["YOUR_STRATEGY1","YOUR_STRATEGY2","YOUR_STRATEGY3"],

@@ -191,6 +191,7 @@ private:
 
     int max_rest_retry_times = 3;
     int retry_interval_milliseconds = 1000;
+    int wait=0;
 };
 
 WC_NAMESPACE_END

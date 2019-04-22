@@ -113,7 +113,11 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
         retry_interval_milliseconds = j_config["retry_interval_milliseconds"].get<int>();
     }
     KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
-
+    if(j_config.find("time_to_wait_before_cancel") != j_config.end()) {
+        wait = j_config["time_to_wait_before_cancel"].get<int>();
+    }
+    else wait=0;
+    KF_LOG_INFO(logger, "[load_account] (for test ,time to wait before cancel (s))" << wait);
 
     AccountUnitUpbit& unit = account_units[idx];
     unit.api_key = api_key;
@@ -140,55 +144,55 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
     //cancel all openning orders on TD startup
     if(unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().size() > 0)
     {
-            Document d;
-            //getAccountResponce(unit,d);
-            get_open_orders(unit, d);
-            KF_LOG_INFO(logger, "[load_account] print get_open_orders");
-            printResponse(d);
-            
-            if(!d.HasParseError() && d.IsArray()) { // expected success response is array
-                size_t len = d.Size();
-                KF_LOG_INFO(logger, "[load_account][get_open_orders] (length)" << len);
-                for (size_t i = 0; i < len; i++) {
-                    if(d.GetArray()[i].IsObject() && d.GetArray()[i].HasMember("market") && d.GetArray()[i].HasMember("uuid"))
+        Document d;
+        //getAccountResponce(unit,d);
+        get_open_orders(unit, d);
+        KF_LOG_INFO(logger, "[load_account] print get_open_orders");
+        printResponse(d);
+
+        if(!d.HasParseError() && d.IsArray()) { // expected success response is array
+            size_t len = d.Size();
+            KF_LOG_INFO(logger, "[load_account][get_open_orders] (length)" << len);
+            for (size_t i = 0; i < len; i++) {
+                if(d.GetArray()[i].IsObject() && d.GetArray()[i].HasMember("market") && d.GetArray()[i].HasMember("uuid"))
+                {
+                    if(d.GetArray()[i]["market"].IsString() && d.GetArray()[i]["uuid"].IsString())
                     {
-                        if(d.GetArray()[i]["market"].IsString() && d.GetArray()[i]["uuid"].IsString())
+                        std::string symbol = d.GetArray()[i]["market"].GetString();
+                        std::string strTicker  = unit.coinPairWhiteList.GetKeyByValue(symbol);
+                        if(strTicker.length() <= 0)
                         {
-                            std::string symbol = d.GetArray()[i]["market"].GetString();
-                            std::string strTicker  = unit.coinPairWhiteList.GetKeyByValue(symbol);
-                            if(strTicker.length() <= 0)
-                            {
-                                 KF_LOG_INFO(logger, "[load_account] " << symbol << "is not in coinPairWhiteList");
-                                continue;
-                            }
-                            std::string orderRef = d.GetArray()[i]["uuid"].GetString();
-                            Document cancelResponse;
-                            cancel_order(unit, symbol.c_str(), orderRef.c_str(), cancelResponse);
+                            KF_LOG_INFO(logger, "[load_account] " << symbol << "is not in coinPairWhiteList");
+                            continue;
+                        }
+                        std::string orderRef = d.GetArray()[i]["uuid"].GetString();
+                        Document cancelResponse;
+                        cancel_order(unit, symbol.c_str(), orderRef.c_str(), cancelResponse);
 
-                            KF_LOG_INFO(logger, "[load_account] cancel_order:(orderRef)" <<orderRef<< "(Ticker)" << strTicker);
-                            printResponse(cancelResponse);
-                            int errorId = 0;
-                            std::string errorMsg = "";
-                            if(d.HasParseError() )
+                        KF_LOG_INFO(logger, "[load_account] cancel_order:(orderRef)" <<orderRef<< "(Ticker)" << strTicker);
+                        printResponse(cancelResponse);
+                        int errorId = 0;
+                        std::string errorMsg = "";
+                        if(d.HasParseError() )
+                        {
+                            errorId = 100;
+                            errorMsg = "cancel_order http response has parse error. please check the log";
+                            KF_LOG_ERROR(logger, "[load_account] cancel_order error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+                        }
+                        if(!cancelResponse.HasParseError() && cancelResponse.IsObject() && cancelResponse.HasMember("code") && cancelResponse["code"].IsNumber())
+                        {
+                            errorId = cancelResponse["code"].GetInt();
+                            if(cancelResponse.HasMember("msg") && cancelResponse["msg"].IsString())
                             {
-                                errorId = 100;
-                                errorMsg = "cancel_order http response has parse error. please check the log";
-                                KF_LOG_ERROR(logger, "[load_account] cancel_order error! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+                                errorMsg = cancelResponse["msg"].GetString();
                             }
-                            if(!cancelResponse.HasParseError() && cancelResponse.IsObject() && cancelResponse.HasMember("code") && cancelResponse["code"].IsNumber())
-                            {
-                                errorId = cancelResponse["code"].GetInt();
-                                if(cancelResponse.HasMember("msg") && cancelResponse["msg"].IsString())
-                                {
-                                    errorMsg = cancelResponse["msg"].GetString();
-                                }
 
-                                KF_LOG_ERROR(logger, "[load_account] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
-                            }
+                            KF_LOG_ERROR(logger, "[load_account] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
                         }
                     }
                 }
             }
+        }
     }
 
     // set up
@@ -203,7 +207,7 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
 void TDEngineUpbit::connect(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "[connect]");
-      //sync time of exchange
+    //sync time of exchange
     timeDiffOfExchange = getTimeDiffOfExchange(account_units[0]);
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
@@ -212,9 +216,9 @@ void TDEngineUpbit::connect(long timeout_nsec)
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
-          std::vector<std::string> vstrMarkets;
-           getAllMarkets(vstrMarkets);
-           filterMarkets(vstrMarkets);
+            std::vector<std::string> vstrMarkets;
+            getAllMarkets(vstrMarkets);
+            filterMarkets(vstrMarkets);
             if( loadMarketsInfo(unit,vstrMarkets))
             {
                 unit.logged_in = true;
@@ -224,7 +228,7 @@ void TDEngineUpbit::connect(long timeout_nsec)
             debug_print(unit.sendOrderFilters);
         }
     }
-  
+
 }
 
 void TDEngineUpbit::debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters)
@@ -233,9 +237,9 @@ void TDEngineUpbit::debug_print(std::map<std::string, SendOrderFilter> &sendOrde
     while(map_itr != sendOrderFilters.end())
     {
         KF_LOG_INFO(logger, "[debug_print] sendOrderFilters (symbol)" << map_itr->first <<
-            "(AskCurrency)" << map_itr->second.strAskCurrency << " (AskMintotal)" << map_itr->second.nAskMinTotal << 
-            "(BidCurrency)" << map_itr->second.strBidCurrency << "(BidMinTotal)" << map_itr->second.nBidMinTotal << 
-            "(Maxtotal)" << map_itr->second.nMaxTotal << "(State)" << map_itr->second.strState );
+                "(AskCurrency)" << map_itr->second.strAskCurrency << " (AskMintotal)" << map_itr->second.nAskMinTotal << 
+                "(BidCurrency)" << map_itr->second.strBidCurrency << "(BidMinTotal)" << map_itr->second.nBidMinTotal << 
+                "(Maxtotal)" << map_itr->second.nMaxTotal << "(State)" << map_itr->second.strState );
         map_itr++;
     }
 }
@@ -253,7 +257,7 @@ SendOrderFilter TDEngineUpbit::getSendOrderFilter(AccountUnitUpbit& unit, const 
     }
     SendOrderFilter defaultFilter;
     defaultFilter.nBidTickSize = 8;
-     defaultFilter.nAskTickSize = 8;
+    defaultFilter.nAskTickSize = 8;
     strcpy(defaultFilter.InstrumentID, "notfound");
     return defaultFilter;
 }
@@ -303,7 +307,7 @@ std::string TDEngineUpbit::GetSide(const LfDirectionType& input) {
     }
 }
 
- LfDirectionType TDEngineUpbit::GetDirection(std::string input) {
+LfDirectionType TDEngineUpbit::GetDirection(std::string input) {
     if ("bid" == input) {
         return LF_CHAR_Buy;
     } else if ("ask" == input) {
@@ -332,45 +336,45 @@ LfOrderPriceTypeType TDEngineUpbit::GetPriceType(std::string input) {
 
 std::string TDEngineUpbit::GetTimeInForce(const LfTimeConditionType& input) {
     if (LF_CHAR_IOC == input) {
-      return "IOC";
+        return "IOC";
     } else if (LF_CHAR_GFD == input) {
-      return "GTC";
+        return "GTC";
     } else if (LF_CHAR_FOK == input) {
-      return "FOK";
+        return "FOK";
     } else {
-      return "UNKNOWN";
+        return "UNKNOWN";
     }
 }
 
 LfTimeConditionType TDEngineUpbit::GetTimeCondition(std::string input) {
     if ("IOC" == input) {
-      return LF_CHAR_IOC;
+        return LF_CHAR_IOC;
     } else if ("GTC" == input) {
-      return LF_CHAR_GFD;
+        return LF_CHAR_GFD;
     } else if ("FOK" == input) {
-      return LF_CHAR_FOK;
+        return LF_CHAR_FOK;
     } else {
-      return '0';
+        return '0';
     }
 }
 
 LfOrderStatusType TDEngineUpbit::GetOrderStatus(std::string input) {
     if ("NEW" == input) {
-      return LF_CHAR_NotTouched;
+        return LF_CHAR_NotTouched;
     } else if ("PARTIALLY_FILLED" == input) {
-      return LF_CHAR_PartTradedQueueing;
+        return LF_CHAR_PartTradedQueueing;
     } else if ("FILLED" == input) {
-      return LF_CHAR_AllTraded;
+        return LF_CHAR_AllTraded;
     } else if ("CANCELED" == input) {
-      return LF_CHAR_Canceled;
+        return LF_CHAR_Canceled;
     } else if ("PENDING_CANCEL" == input) {
-      return LF_CHAR_NotTouched;
+        return LF_CHAR_NotTouched;
     } else if ("REJECTED" == input) {
-      return LF_CHAR_Error;
+        return LF_CHAR_Error;
     } else if ("EXPIRED" == input) {
-      return LF_CHAR_Error;
+        return LF_CHAR_Error;
     } else {
-      return LF_CHAR_NotTouched;
+        return LF_CHAR_NotTouched;
     }
 }
 
@@ -378,7 +382,7 @@ std::int32_t TDEngineUpbit::getAccountResponce(const AccountUnitUpbit& unit,Docu
 {
     long recvWindow = 5000;
     std::string Method = "GET";
-     std::string strQueryString = "";
+    std::string strQueryString = "";
     std::string url = "https://api.upbit.com/v1/accounts";
     std::string body = "";
 
@@ -389,13 +393,13 @@ std::int32_t TDEngineUpbit::getAccountResponce(const AccountUnitUpbit& unit,Docu
     do {
         should_retry = false;
         std::string Authorization = getAuthorization(unit);
-        
+
         response = Get(Url{url},
-                            Header{{  "Authorization", Authorization}},
-                            Body{body}, Timeout{100000});
+                Header{{  "Authorization", Authorization}},
+                Body{body}, Timeout{100000});
         KF_LOG_INFO(logger, "[getAccountResponce] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                " (response.error.message) " << response.error.message <<
-                                                " (response.text) " << response.text.c_str());
+                " (response.error.message) " << response.error.message <<
+                " (response.text) " << response.text.c_str());
         if(response.status_code != 200) {
             should_retry = true;
             retry_times++;
@@ -416,7 +420,7 @@ void TDEngineUpbit::req_investor_position(const LFQryPositionField* data, int ac
 
     AccountUnitUpbit& unit = account_units[account_index];
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key);
-    
+
     // User Balance
     Document d;
     auto nResponseCode = getAccountResponce(unit,d);
@@ -464,8 +468,8 @@ void TDEngineUpbit::req_investor_position(const LFQryPositionField* data, int ac
                 pos.Position = std::round(stod(d.GetArray()[i]["balance"].GetString()) * scale_offset);
                 tmp_vector.push_back(pos);
                 KF_LOG_INFO(logger,  "[connect] (symbol)" << symbol << " (balance)" <<  d.GetArray()[i]["balance"].GetString()
-                                                          << " (locked)" << d.GetArray()[i]["locked"].GetString() 
-                                                          << "(avg_krw_buy_price)" << d.GetArray()[i]["avg_krw_buy_price"].GetString());
+                        << " (locked)" << d.GetArray()[i]["locked"].GetString() 
+                        << "(avg_krw_buy_price)" << d.GetArray()[i]["avg_krw_buy_price"].GetString());
                 KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol << " (position) " << pos.Position);
             }
         }
@@ -513,13 +517,13 @@ int64_t TDEngineUpbit::fixPriceTickSize(int keepPrecisionBid, int keepPrecisionA
     return new_price;
 }
 
-void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
+void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)//quest5v3 fxw
 {
     AccountUnitUpbit& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
-                                              << " (APIKey)" << unit.api_key
-                                              << " (Tid)" << data->InstrumentID
-                                              << " (OrderRef)" << data->OrderRef);
+            << " (APIKey)" << unit.api_key
+            << " (Tid)" << data->InstrumentID
+            << " (OrderRef)" << data->OrderRef);
     send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_UPBIT, 1/*ISLAST*/, requestId);
 
     int errorId = 0;
@@ -546,23 +550,23 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
     int64_t fixedPrice = fixPriceTickSize(filter.nBidTickSize,filter.nAskTickSize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
 
     KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<
-                                                                     " (LimitPrice)" << data->LimitPrice <<
-                                                                     " (bidticksize)" << filter.nBidTickSize <<
-                                                                      " (askticksize)" << filter.nAskTickSize <<
-                                                                     " (fixedPrice)" << fixedPrice);
+            " (LimitPrice)" << data->LimitPrice <<
+            " (bidticksize)" << filter.nBidTickSize <<
+            " (askticksize)" << filter.nAskTickSize <<
+            " (fixedPrice)" << fixedPrice);
 
     auto nRsponseCode = send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(), GetType(data->OrderPriceType).c_str(),
-        GetTimeInForce(data->TimeCondition).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef,
-        stopPrice, icebergQty, d);
-//    KF_LOG_INFO(logger, "[req_order_insert] send_order");
-//    printResponse(d);
+            GetTimeInForce(data->TimeCondition).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef,
+            stopPrice, icebergQty, d);
+    //    KF_LOG_INFO(logger, "[req_order_insert] send_order");
+    //    printResponse(d);
 
     if(d.HasParseError() )
     {
         errorId=100;
         errorMsg= "send_order http response has parse error. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error! (rid)" << requestId << " (errorId)" <<
-                                                                          errorId << " (errorMsg) " << errorMsg);
+                errorId << " (errorMsg) " << errorMsg);
     }
     if(!d.HasParseError() && d.IsObject() && d.HasMember("error"))
     {
@@ -577,8 +581,8 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_UPBIT, 1, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_UPBIT, 1, requestId, errorId, errorMsg.c_str());
 
     //paser the order/trade info in the response result
     if(!d.HasParseError() && d.IsObject() && !d.HasMember("error"))
@@ -590,25 +594,25 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
         std::string strStatus=d["state"].GetString();
         int64_t nTrades = d["trades_count"].GetInt64();
         auto cStatus = convertOrderStatus(strStatus,nTrades);
-         KF_LOG_INFO(logger, "[req_order_insert] (cStatus)" << cStatus);
+        KF_LOG_INFO(logger, "[req_order_insert] (cStatus)" << cStatus);
         if(cStatus == LF_CHAR_NotTouched)
         {//no status, it is ACK
             onRspNewOrderACK(data, unit, d, requestId);
-        } else {
-           // if(cStatus == LF_CHAR_AllTraded)
-            //{
-                // it is RESULT
+        } 
+        //else {
+            // if(cStatus == LF_CHAR_AllTraded) 
+            //{            
+            // it is RESULT            
             //    onRspNewOrderRESULT(data, unit, d, requestId);
             //} else {
-                // it is FULL
-                onRspNewOrderFULL(data, unit, d, requestId);
+            // it is FULL
+            // onRspNewOrderFULL(data, unit, d, requestId);//quest5v4 fxw
             //}
-        }
+        //}
         KF_LOG_INFO(logger, "[req_order_insert] success");
     }
     else{KF_LOG_INFO(logger, "[req_order_insert] failed");}
 }
-
 
 void TDEngineUpbit::onRspNewOrderACK(const LFInputOrderField* data, AccountUnitUpbit& unit, Document& result, int requestId)
 {
@@ -627,14 +631,14 @@ LfOrderStatusType TDEngineUpbit::convertOrderStatus(const std::string& strStatus
         }
         return LF_CHAR_NotTouched;
     }
-     if(strStatus == "done")
-     {
+    if(strStatus == "done")
+    {
         return  LF_CHAR_AllTraded;
-     }
-     if(strStatus == "cancel")
-     {
-         return LF_CHAR_Canceled;
-     }
+    }
+    if(strStatus == "cancel")
+    {
+        return LF_CHAR_Canceled;
+    }
 }
 
 void TDEngineUpbit::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitUpbit& unit, Document& result, int requestId)
@@ -660,10 +664,10 @@ void TDEngineUpbit::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUn
     rtn_order.OrderStatus =  convertOrderStatus(result["state"].GetString(),result["trades_count"].GetInt64());
     on_rtn_order(&rtn_order);
     KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_order (orderRef)" << rtn_order.OrderRef
-                                     << "(requestId)" << requestId << "(status)" << rtn_order.OrderStatus);
+            << "(requestId)" << requestId << "(status)" << rtn_order.OrderStatus);
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                            source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
-                            1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+            source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
+            1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
     //if All Traded, emit OnRtnTrade
     if(rtn_order.OrderStatus == LF_CHAR_AllTraded)
@@ -677,15 +681,15 @@ void TDEngineUpbit::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUn
         rtn_trade.Direction = data->Direction;
         rtn_trade.Volume = std::round(stod(result["executed_volume"].GetString()) * scale_offset);
         rtn_trade.Price = std::round(stod(result["price"].GetString()) * scale_offset);
-        
+
         on_rtn_trade(&rtn_trade);
-         KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_trade (orderRef)" << rtn_order.OrderRef
-                                     << "(requestId)" << requestId );
+        KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_trade (orderRef)" << rtn_order.OrderRef
+                << "(requestId)" << requestId );
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);
+                source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);
         //this response has no tradeId, so dont call unit.newSentTradeIds.push_back(tradeid)
 
-         KF_LOG_INFO(logger, "TDEngineUpbit::onRspNewOrderRESULT:AllTraded  (RequestID)" << rtn_order.RequestID);
+        KF_LOG_INFO(logger, "TDEngineUpbit::onRspNewOrderRESULT:AllTraded  (RequestID)" << rtn_order.RequestID);
     }else{ KF_LOG_ERROR(logger, "TDEngineUpbit::onRspNewOrderRESULT:ERROR  (RequestID)" << rtn_order.RequestID);}
 }
 
@@ -723,7 +727,7 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     strncpy(rtn_trade.OrderSysID,strRemoteUUID.c_str(),31);
     if(200 != get_order(unit,stOrderInfo.strRemoteUUID.c_str(),d))
     {
-         KF_LOG_DEBUG(logger, "TDEngineUpbit::onRspNewOrderFULL:order not found ");
+        KF_LOG_DEBUG(logger, "TDEngineUpbit::onRspNewOrderFULL:order not found ");
     }
     //we have strike price, emit OnRtnTrade
     int fills_size = atoi(d["trades"].GetString());
@@ -747,20 +751,20 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
         }
         on_rtn_order(&rtn_order);
         KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_order (orderRef)" << rtn_order.OrderRef
-                                    << "(requestId)" << requestId << "(status)" << rtn_order.OrderStatus);
+                << "(requestId)" << requestId << "(status)" << rtn_order.OrderStatus);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
-                                1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+                source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
+                1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
         rtn_trade.Volume = volume;
         rtn_trade.Price = price;
         strncpy(rtn_trade.TradeID,result["trades"].GetArray()[i]["uuid"].GetString(),21);
-         strncpy(rtn_trade.OrderSysID,strRemoteUUID.c_str(),31);
+        strncpy(rtn_trade.OrderSysID,strRemoteUUID.c_str(),31);
         on_rtn_trade(&rtn_trade);
         KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_trade (orderRef)" << rtn_order.OrderRef
-                                    << "(requestId)" << requestId );
+                << "(requestId)" << requestId );
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);
+                source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);
     }
 
     if(rtn_order.OrderStatus == LF_CHAR_PartTradedQueueing)
@@ -769,9 +773,9 @@ void TDEngineUpbit::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnit
     }  
 }
 
-
 void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
 {
+    int64_t start = getTimestamp();
     AccountUnitUpbit& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
@@ -780,7 +784,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
 
     send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_UPBIT, 1, requestId);
 
-    int errorId = 200;
+    int errorId = 0;
     std::string errorMsg = "";
 
     std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
@@ -797,7 +801,7 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
 
     Document d;
     auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,data->OrderRef);
-	auto nResponseCode =  cancel_order(unit, ticker.c_str(), stOrderInfo.strRemoteUUID.c_str() ,  d);
+    auto nResponseCode =  cancel_order(unit, ticker.c_str(), stOrderInfo.strRemoteUUID.c_str() ,  d);
 //    KF_LOG_INFO(logger, "[req_order_action] cancel_order");
 //    printResponse(d);
 
@@ -816,12 +820,12 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
         }
         KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
-    if(errorId != 200)
+    if(errorId != 0)
     {
-        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
         KF_LOG_INFO(logger, "[req_order_action] error (reeorId)  while retry after" <<  errorId);
+        //raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_UPBIT, 1, requestId, errorId, errorMsg.c_str());
     }
-    raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_UPBIT, 1, requestId, errorId, errorMsg.c_str());
+    on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
 
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
     unit.mapNewCancelOrders[data->OrderRef] = stOrderInfo; 
@@ -829,61 +833,61 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
     
 }
 
-    void TDEngineUpbit::retrieveOrderAndTradesStatus(AccountUnitUpbit& unit)
+void TDEngineUpbit::retrieveOrderAndTradesStatus(AccountUnitUpbit& unit)
+{
+    // KF_LOG_INFO(logger, "[retrieveOrderAndTradesStatus]: (Account))" << unit.api_key);
+    for(auto orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
     {
-         // KF_LOG_INFO(logger, "[retrieveOrderAndTradesStatus]: (Account))" << unit.api_key);
-        for(auto orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
+        KF_LOG_INFO(logger, "[retrieveOrderAndTradesStatus] get_order " << "account.api_key:"<< unit.api_key
+                << "  account.pendingOrderStatus.InstrumentID: "<< orderStatusIterator->InstrumentID
+                <<"  account.pendingOrderStatus.OrderRef: " << orderStatusIterator->OrderRef
+                <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
+                );
+
+        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
+        if(ticker.length() == 0) {
+            KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
+            ++orderStatusIterator;
+            continue;
+        }
+
+        Document orderResult;
+        auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,orderStatusIterator->OrderRef);
+        auto nCode =  get_order(unit, stOrderInfo.strRemoteUUID.c_str(), orderResult);
+        if(200 != nCode)
         {
-            KF_LOG_INFO(logger, "[retrieveOrderAndTradesStatus] get_order " << "account.api_key:"<< unit.api_key
-                                                                            << "  account.pendingOrderStatus.InstrumentID: "<< orderStatusIterator->InstrumentID
-                                                                            <<"  account.pendingOrderStatus.OrderRef: " << orderStatusIterator->OrderRef
-                                                                            <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
-            );
-
-            std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
-            if(ticker.length() == 0) {
-                KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
-               ++orderStatusIterator;
-                continue;
-            }
-
-            Document orderResult;
-           auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,orderStatusIterator->OrderRef);
-            auto nCode =  get_order(unit, stOrderInfo.strRemoteUUID.c_str(), orderResult);
-            if(200 != nCode)
+            if(nCode == 404)
             {
-                if(nCode == 404)
-                {
-                    KF_LOG_ERROR(logger, "[retrieveOrderStatus] Order not found ,erase order (orderRef)" << orderStatusIterator->OrderRef);
-                    orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
-                }
-                else
-                {
-                    ++orderStatusIterator;
-                }
-                continue;
-            }
-            //KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
-             //                                                               << " (orderId)" << orderStatusIterator->OrderRef);
-            //printResponse(orderResult);
-            if(orderResult.HasParseError()) {
-                KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order HasParseError, call continue");
-               ++orderStatusIterator;
-                continue;
-            }
-            //parse order status
-            bool isAllTradeOrCancel = retrieveOrderStatus(unit,orderResult,*orderStatusIterator);
-             retrieveTradeStatus(unit,orderResult,orderStatusIterator->sentTradeIds);
-            if(isAllTradeOrCancel)
-            {
-                orderStatusIterator =  unit.pendingOrderStatus.erase(orderStatusIterator);
+                KF_LOG_ERROR(logger, "[retrieveOrderStatus] Order not found ,erase order (orderRef)" << orderStatusIterator->OrderRef);
+                orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
             }
             else
             {
                 ++orderStatusIterator;
             }
+            continue;
+        }
+        //KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
+        //                                                               << " (orderId)" << orderStatusIterator->OrderRef);
+        //printResponse(orderResult);
+        if(orderResult.HasParseError()) {
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order HasParseError, call continue");
+            ++orderStatusIterator;
+            continue;
+        }
+        //parse order status
+        bool isAllTradeOrCancel = retrieveOrderStatus(unit,orderResult,*orderStatusIterator);
+        retrieveTradeStatus(unit,orderResult,orderStatusIterator->sentTradeIds);
+        if(isAllTradeOrCancel)
+        {
+            orderStatusIterator =  unit.pendingOrderStatus.erase(orderStatusIterator);
+        }
+        else
+        {
+            ++orderStatusIterator;
         }
     }
+}
 
 void TDEngineUpbit::GetAndHandleOrderTradeResponse()
 {
@@ -902,7 +906,7 @@ void TDEngineUpbit::GetAndHandleOrderTradeResponse()
             Document d;
             cancel_order(unit,nullptr,it->second.strRemoteUUID.c_str(),d);
             KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (req_order_action) (nRequestID)" << it->second.nRequestID
-                <<"(OrderRef)"<<it->second.nRequestID);
+                    <<"(OrderRef)"<<it->second.nRequestID);
         }
 
         moveNewtoPending(unit);
@@ -917,7 +921,7 @@ void TDEngineUpbit::GetAndHandleOrderTradeResponse()
         KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
     }
 
-  //  KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
+    //  KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
 }
 
 
@@ -927,7 +931,7 @@ void TDEngineUpbit::moveNewtoPending(AccountUnitUpbit& unit)
 
     for(auto it = unit.mapNewCancelOrders.begin() ; it != unit.mapNewCancelOrders.end();++it)
     {
-         unit.mapCancelOrders.insert(*it);
+        unit.mapCancelOrders.insert(*it);
     }
     unit.mapNewCancelOrders.clear();
 
@@ -935,84 +939,84 @@ void TDEngineUpbit::moveNewtoPending(AccountUnitUpbit& unit)
     for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
     {
         unit.pendingOrderStatus.push_back(*newOrderStatusIterator);
-         KF_LOG_INFO(logger,"[moveNewtoPending] add order (ordrRef)" << newOrderStatusIterator->OrderRef);
+        KF_LOG_INFO(logger,"[moveNewtoPending] add order (ordrRef)" << newOrderStatusIterator->OrderRef);
         newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
     }
 }
 
 bool TDEngineUpbit::retrieveOrderStatus(AccountUnitUpbit& unit,Document& orderResult,PendingUpbitOrderStatus& pendingOrderStatus)
 {
-      char_21 strOrderRef;
-      std::string uuid = orderResult["uuid"].GetString();
-      strncpy(strOrderRef, findKey(unit.mapOrderRef2OrderInfo,uuid).c_str(), 21); 
-      auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,strOrderRef); 
+    char_21 strOrderRef;
+    std::string uuid = orderResult["uuid"].GetString();
+    strncpy(strOrderRef, findKey(unit.mapOrderRef2OrderInfo,uuid).c_str(), 21); 
+    auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,strOrderRef); 
 
-      KF_LOG_INFO(logger,"[retrieveOrderStatus] (orderRef)" << strOrderRef << "(requestId)" << stOrderInfo.nRequestID);
+    KF_LOG_INFO(logger,"[retrieveOrderStatus] (orderRef)" << strOrderRef << "(requestId)" << stOrderInfo.nRequestID);
 
-        //parse order status
-        if(orderResult.IsObject())
-        {
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.OrderStatus = convertOrderStatus(orderResult["state"].GetString(),orderResult["trades_count"].GetInt64());
-            rtn_order.VolumeTraded = std::round(stod(orderResult["executed_volume"].GetString()) * scale_offset);
-            strncpy(rtn_order.OrderRef, strOrderRef, 21);
-          
-            //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
-            if(pendingOrderStatus.OrderStatus != rtn_order.OrderStatus ||
-               (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-                && rtn_order.VolumeTraded != pendingOrderStatus.VolumeTraded))
-            {
-                strcpy(rtn_order.ExchangeID, "upbit");
-                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);       
-                rtn_order.Direction = GetDirection(orderResult["side"].GetString());
-                rtn_order.TimeCondition = LF_CHAR_GTC;
-                rtn_order.OrderPriceType = GetPriceType(orderResult["ord_type"].GetString());
-                strncpy(rtn_order.InstrumentID, pendingOrderStatus.InstrumentID, 31);
-                rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["volume"].GetString()) * scale_offset);
-                rtn_order.LimitPrice = std::round(stod(orderResult["price"].GetString()) * scale_offset);
-                rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-                rtn_order.RequestID  = stOrderInfo.nRequestID;
-                 strncpy(rtn_order.BusinessUnit,uuid.c_str(),21);
-                on_rtn_order(&rtn_order);
-                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                        source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
-                                        1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-                //update last status
-               pendingOrderStatus.OrderStatus = rtn_order.OrderStatus;
-                pendingOrderStatus.VolumeTraded = rtn_order.VolumeTraded;
-                KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_order (orderRef)" << rtn_order.OrderRef
-                                     << "(requestId)" << stOrderInfo.nRequestID << "(status)" << rtn_order.OrderStatus);
-            }
-        } else 
-        {
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << pendingOrderStatus.InstrumentID
-                                                                                    << " (OrderRef)" << pendingOrderStatus.OrderRef);
-        }
+    //parse order status
+    if(orderResult.IsObject())
+    {
+        LFRtnOrderField rtn_order;
+        memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+        rtn_order.OrderStatus = convertOrderStatus(orderResult["state"].GetString(),orderResult["trades_count"].GetInt64());
+        rtn_order.VolumeTraded = std::round(stod(orderResult["executed_volume"].GetString()) * scale_offset);
+        strncpy(rtn_order.OrderRef, strOrderRef, 21);
 
-        if(pendingOrderStatus.OrderStatus == LF_CHAR_Canceled)
+        //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
+        if(pendingOrderStatus.OrderStatus != rtn_order.OrderStatus ||
+                (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
+                 && rtn_order.VolumeTraded != pendingOrderStatus.VolumeTraded))
         {
-            unit.mapCancelOrders.erase(strOrderRef);
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] erase cancel order (OrderRef)" << pendingOrderStatus.OrderRef
-                             << "(status)" << pendingOrderStatus.OrderStatus);
+            strcpy(rtn_order.ExchangeID, "upbit");
+            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);       
+            rtn_order.Direction = GetDirection(orderResult["side"].GetString());
+            rtn_order.TimeCondition = LF_CHAR_GTC;
+            rtn_order.OrderPriceType = GetPriceType(orderResult["ord_type"].GetString());
+            strncpy(rtn_order.InstrumentID, pendingOrderStatus.InstrumentID, 31);
+            rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["volume"].GetString()) * scale_offset);
+            rtn_order.LimitPrice = std::round(stod(orderResult["price"].GetString()) * scale_offset);
+            rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
+            rtn_order.RequestID  = stOrderInfo.nRequestID;
+            strncpy(rtn_order.BusinessUnit,uuid.c_str(),21);
+            on_rtn_order(&rtn_order);
+            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                    source_id, MSG_TYPE_LF_RTN_ORDER_UPBIT,
+                    1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+            //update last status
+            pendingOrderStatus.OrderStatus = rtn_order.OrderStatus;
+            pendingOrderStatus.VolumeTraded = rtn_order.VolumeTraded;
+            KF_LOG_INFO(logger, "[TDEngineUpbit::onRspNewOrderFULL]:on_rtn_order (orderRef)" << rtn_order.OrderRef
+                    << "(requestId)" << stOrderInfo.nRequestID << "(status)" << rtn_order.OrderStatus);
         }
-        //remove order when finish
-        if(pendingOrderStatus.OrderStatus == LF_CHAR_AllTraded  || pendingOrderStatus.OrderStatus == LF_CHAR_Canceled
-           || pendingOrderStatus.OrderStatus == LF_CHAR_Error)
-        {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] order all traded  or cancel. (OrderRef)" << pendingOrderStatus.OrderRef
-                             << "(status)" << pendingOrderStatus.OrderStatus);
-            return true;
-        }
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get status end. (OrderRef)" << pendingOrderStatus.OrderRef
-                        << "(status)" << pendingOrderStatus.OrderStatus);
-        return false;
+    } else 
+    {
+        KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << pendingOrderStatus.InstrumentID
+                << " (OrderRef)" << pendingOrderStatus.OrderRef);
+    }
+
+    if(pendingOrderStatus.OrderStatus == LF_CHAR_Canceled)
+    {
+        unit.mapCancelOrders.erase(strOrderRef);
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] erase cancel order (OrderRef)" << pendingOrderStatus.OrderRef
+                << "(status)" << pendingOrderStatus.OrderStatus);
+    }
+    //remove order when finish
+    if(pendingOrderStatus.OrderStatus == LF_CHAR_AllTraded  || pendingOrderStatus.OrderStatus == LF_CHAR_Canceled
+            || pendingOrderStatus.OrderStatus == LF_CHAR_Error)
+    {
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] order all traded  or cancel. (OrderRef)" << pendingOrderStatus.OrderRef
+                << "(status)" << pendingOrderStatus.OrderStatus);
+        return true;
+    }
+    KF_LOG_INFO(logger, "[retrieveOrderStatus] get status end. (OrderRef)" << pendingOrderStatus.OrderRef
+            << "(status)" << pendingOrderStatus.OrderStatus);
+    return false;
 }
 
 void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultTrade,std::vector<std::string>& sentTradeIds)
 {
     KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())"
-                        << unit.pendingOrderStatus.size() /*<< " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size()*/);
+            << unit.pendingOrderStatus.size() /*<< " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size()*/);
     //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
     if(unit.pendingOrderStatus.size() == 0 /*&& unit.pendingOnRtnTrades.size() == 0*/) return;
 
@@ -1031,7 +1035,7 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
     //must be Array
     int len = resultTrade["trades"].Size();
 
-    
+
     for(int i = 0 ; i < len; i++)
     {
         std::string newtradeId = resultTrade["trades"].GetArray()[i]["uuid"].GetString();
@@ -1049,21 +1053,21 @@ void TDEngineUpbit::retrieveTradeStatus(AccountUnitUpbit& unit,Document& resultT
         }
         strncpy(rtn_trade.TradeID,newtradeId.c_str(),21);
         strncpy(rtn_trade.OrderSysID,uuid.c_str(),31);
-       // KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
+        // KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
         rtn_trade.Volume = std::round(stod(resultTrade["trades"].GetArray()[i]["volume"].GetString()) * scale_offset);
         rtn_trade.Price = std::round(stod(resultTrade["trades"].GetArray()[i]["price"].GetString()) * scale_offset);
 
         on_rtn_trade(&rtn_trade);
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);  
+                source_id, MSG_TYPE_LF_RTN_TRADE_UPBIT, 1/*islast*/, -1/*invalidRid*/);  
         sentTradeIds.push_back(newtradeId);
         KF_LOG_INFO(logger, "[retrieveTradeStatus]  on_rtn_trade (orderRef)" << rtn_trade.OrderRef);
     }
 }
 
 void TDEngineUpbit::addNewQueryOrdersAndTrades(AccountUnitUpbit& unit, const char_31 InstrumentID,
-                                                     const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                 const uint64_t VolumeTraded, LfDirectionType Direction, int64_t UpbitOrderId)
+        const char_21 OrderRef, const LfOrderStatusType OrderStatus,
+        const uint64_t VolumeTraded, LfDirectionType Direction, int64_t UpbitOrderId)
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
@@ -1084,11 +1088,11 @@ void TDEngineUpbit::addNewQueryOrdersAndTrades(AccountUnitUpbit& unit, const cha
 
 //    for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
 //    {
- //       if(strcmp(tradeStatusIterator->InstrumentID, InstrumentID) == 0)
+//       if(strcmp(tradeStatusIterator->InstrumentID, InstrumentID) == 0)
 //        {
- //           return true;
+//           return true;
 ////        }
- //   }
+//   }
 //    return false;
 //}
 
@@ -1126,7 +1130,7 @@ void TDEngineUpbit::loop()
         }
 
         last_rest_get_ts = current_ms;
-        GetAndHandleOrderTradeResponse();
+        //GetAndHandleOrderTradeResponse();
     }
 }
 
@@ -1158,7 +1162,7 @@ int32_t TDEngineUpbit::send_order(AccountUnitUpbit& unit, const char *symbol,
                 const char *newClientOrderId,
                 double stopPrice,
                 double icebergQty,
-                Document& json)
+                Document& json)//quest5v3 fxw 
 {
     KF_LOG_INFO(logger, "[send_order]");
 
@@ -1216,31 +1220,33 @@ int32_t TDEngineUpbit::send_order(AccountUnitUpbit& unit, const char *symbol,
                                                          " (response.text) " << response.text.c_str());
 
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
-            should_retry = true;
+            should_retry = true;//quest5v3  不做重新发单，只尝试一次
             retry_times++;
-            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
+            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));//失败等待一秒不变
         }
     } while(should_retry && retry_times < max_rest_retry_times);
 
     KF_LOG_INFO(logger, "[send_order] out_retry (response.status_code) " << response.status_code <<
                                                                          " (response.error.message) " << response.error.message <<
                                                                          " (response.text) " << response.text.c_str() );
-
+    
     getResponse(response.status_code, response.text, response.error.message, json);
     return response.status_code;
 }
 
 /*
  * https://github.com/Upbit-exchange/Upbit-official-api-docs/blob/master/errors.md
--1021 INVALID_TIMESTAMP
-Timestamp for this request is outside of the recvWindow.
-Timestamp for this request was 1000ms ahead of the server's time.
+ -1021 INVALID_TIMESTAMP
+ Timestamp for this request is outside of the recvWindow.
+ Timestamp for this request was 1000ms ahead of the server's time.
 
 
  *  (response.status_code) 400 (response.error.message)  (response.text) {"code":-1021,"msg":"Timestamp for this request is outside of the recvWindow."}
  * */
-bool TDEngineUpbit::shouldRetry(int http_status_code, std::string errorMsg, std::string text)
+
+bool TDEngineUpbit::shouldRetry(int http_status_code, std::string errorMsg, std::string text)//quest5v3 fxw
 {
+    /*
     if( http_status_code == 201)
     {
         return false;
@@ -1250,8 +1256,19 @@ bool TDEngineUpbit::shouldRetry(int http_status_code, std::string errorMsg, std:
         
         return true;
     }
-}
+    */
+    if (http_status_code > 299 || http_status_code < 200)
+    {
+        KF_LOG_DEBUG(logger, "[shouldRetry] (errorMsg) " << errorMsg);
+        return true;
+    }
+    else
+    {
+        KF_LOG_DEBUG(logger, "[shouldRetry] (text) " << text);
+        return false;
+    }
 
+}
 
 std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *uuid, Document& json)
 {
@@ -1267,20 +1284,20 @@ std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *uuid, 
     queryString  = getEncode(queryString);
     string url = requestPath + queryString;
 
-     int retry_times = 0;
+    int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
     do {
         should_retry = false;
         std::string strAuthorization = getAuthorization(unit,queryString);
         response = Get(Url{url},
-                              Header{{"Authorization", strAuthorization}},
-                              Body{body}, Timeout{100000});
+                Header{{"Authorization", strAuthorization}},
+                Body{body}, Timeout{100000});
 
         KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
-                                              " (response.error.message) " << response.error.message <<
-                                              " (response.text) " << response.text.c_str());
-         if(response.status_code != 200) {
+                " (response.error.message) " << response.error.message <<
+                " (response.text) " << response.text.c_str());
+        if(response.status_code != 200) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
@@ -1293,14 +1310,20 @@ std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *uuid, 
 
 std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *symbol,
                   const char *uuid,  Document &json)
-{
+{ 
+    int64_t start = getTimestamp(); 
+    if(wait>0)
+    {
+        KF_LOG_INFO(logger,"(cancel after "<<wait<<"s)");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000*wait));
+    }
     KF_LOG_INFO(logger, "[cancel_order]");
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
     do {
         should_retry = false;
-
+        
         long recvWindow = order_action_recvwindow_ms;
         std::string Method = "DELETE";
         std::string requestPath = "https://api.upbit.com/v1/order?";
@@ -1317,22 +1340,47 @@ std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *sy
                                   Header{{"Authorization", strAuthorization}},
                                   Body{body}, Timeout{100000});
 
-        KF_LOG_INFO(logger, "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
+        KF_LOG_INFO(logger,"(retry_times)"<<retry_times<< "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
                                                  " (response.error.message) " << response.error.message <<
-                                                 " (response.text) " << response.text.c_str());
+                                                 " (response.text) " << response.text.c_str()<<
+                                                 "(timeConsumed)"<<(getTimestamp()-start)<<
+                                                 "ms");
 
 
-        if(response.status_code != 200 && response.status_code != 404) {
+        getResponse(response.status_code, response.text, response.error.message, json);
+        if(response.status_code != 200 && response.status_code != 404) {//撤单操作没有成功
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
         }
-    } while(should_retry && retry_times < max_rest_retry_times);
-
-    KF_LOG_INFO(logger, "[cancel_order] out_retry (response.status_code) " << response.status_code <<
-                                                                         " (response.error.message) " << response.error.message <<
-                                                                         " (response.text) " << response.text.c_str() );
-    getResponse(response.status_code, response.text, response.error.message, json);
+        else if(response.status_code==404)
+        {
+            break;
+        }
+        else if(strcmp(json["state"].GetString(),"cancel")&&strcmp(json["state"].GetString(),"done"))//撤单动作未起效
+        {
+            should_retry = true;
+            retry_times++;
+            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds/2));
+            KF_LOG_INFO(logger,"(retry_times)"<<retry_times<<"(timeConsumed)"<<(getTimestamp()-start)<<"ms");
+            get_order(unit,uuid,json);
+            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds/2));
+        }
+        if (retry_times > 15) break;
+    } while(should_retry);
+    if(response.status_code!=404)
+    {
+        KF_LOG_INFO(logger, "[cancel_order] out_retry (response.status_code) " << response.status_code <<
+                " (response.error.message) " << response.error.message <<
+                " (response.text) " << response.text.c_str()<<
+                "(timeConsumed)"<<(getTimestamp()-start)<<
+                "ms");
+    }
+    else
+    {
+        KF_LOG_INFO(logger,"(retry_times)"<<retry_times<<"(timeConsumed)"<<(getTimestamp()-start)<<"ms");
+        get_order(unit,uuid,json);
+    }
     return response.status_code;
 }
 
@@ -1344,7 +1392,7 @@ void TDEngineUpbit::get_open_orders(AccountUnitUpbit& unit, Document &json)
     std::string requestPath = "https://api.upbit.com/v1/orders?";
     std::string queryString("");
     std::string body = "";
-    
+
     queryString = "state=wait&page=1";
     queryString  = getEncode(queryString);
 
@@ -1355,16 +1403,16 @@ void TDEngineUpbit::get_open_orders(AccountUnitUpbit& unit, Document &json)
         should_retry = false;
         std::string strAuthorization = getAuthorization(unit,queryString);
 
-         string url = requestPath + queryString;
+        string url = requestPath + queryString;
 
         response = Get(Url{url},
-                                 Header{{"Authorization", strAuthorization}},
-                                 Body{body}, Timeout{100000});
+                Header{{"Authorization", strAuthorization}},
+                Body{body}, Timeout{100000});
 
         KF_LOG_INFO(logger, "[get_open_orders] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                 " (response.error.message) " << response.error.message <<
-                                                 " (response.text) " << response.text.c_str());
-     if(response.status_code != 200) {
+                " (response.error.message) " << response.error.message <<
+                " (response.text) " << response.text.c_str());
+        if(response.status_code != 200) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
@@ -1387,44 +1435,44 @@ void TDEngineUpbit::get_exchange_time(AccountUnitUpbit& unit, Document &json)
     string url = requestPath + queryString;
 
     const auto response = Get(Url{url},
-                              Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
+            Header{{"X-MBX-APIKEY", unit.api_key}},
+            Body{body}, Timeout{100000});
 
     KF_LOG_INFO(logger, "[get_exchange_time] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                      " (response.error.message) " << response.error.message <<
-                                                      " (response.text) " << response.text.c_str());
+            " (response.error.message) " << response.error.message <<
+            " (response.text) " << response.text.c_str());
     return getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-   OrderInfo TDEngineUpbit::findValue(const std::map<std::string,OrderInfo>& mapSrc,const std::string& strKey)
+OrderInfo TDEngineUpbit::findValue(const std::map<std::string,OrderInfo>& mapSrc,const std::string& strKey)
+{
+    auto it =mapSrc.find(strKey);
+    if(it != mapSrc.end())
     {
-            auto it =mapSrc.find(strKey);
-            if(it != mapSrc.end())
-            {
-                return it->second;
-            }
-            else{
-                return OrderInfo();
-            }
+        return it->second;
     }
+    else{
+        return OrderInfo();
+    }
+}
 
-    std::string TDEngineUpbit::findKey(const std::map<std::string,OrderInfo>& mapSrc,const std::string& strValue)
+std::string TDEngineUpbit::findKey(const std::map<std::string,OrderInfo>& mapSrc,const std::string& strValue)
+{
+    for(auto it = mapSrc.begin();it!=mapSrc.end();++it)
     {
-            for(auto it = mapSrc.begin();it!=mapSrc.end();++it)
-            {
-                if(it->second.strRemoteUUID == strValue)
-                {
-                    return it->first;
-                }
-            }
-            return "";
+        if(it->second.strRemoteUUID == strValue)
+        {
+            return it->first;
+        }
     }
+    return "";
+}
 
 void TDEngineUpbit::filterMarkets(std::vector<std::string>& vstrMarkets)
 {
     for(auto it = vstrMarkets.begin(); it != vstrMarkets.end(); )
     {
-         bool inWhiteList = false;
+        bool inWhiteList = false;
 
         for (size_t idx = 0; idx < account_units.size(); idx++)
         {
@@ -1441,10 +1489,10 @@ void TDEngineUpbit::filterMarkets(std::vector<std::string>& vstrMarkets)
         {
             ++it;
         }
-         else
-         {
+        else
+        {
             it = vstrMarkets.erase(it);
-         }
+        }
     }
 }
 
@@ -1462,8 +1510,8 @@ void TDEngineUpbit::getAllMarkets(std::vector<std::string>& vstrMarkets)
 
     const auto response = cpr::Get(Url{url});
     KF_LOG_INFO(logger, "[getAllMarkets] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                   " (response.error.message) " << response.error.message <<
-                                                   " (response.text) " << response.text.c_str());
+            " (response.error.message) " << response.error.message <<
+            " (response.text) " << response.text.c_str());
     Document json;
     json.Parse(response.text.c_str());
     if(json.IsArray())
@@ -1478,60 +1526,60 @@ void TDEngineUpbit::getAllMarkets(std::vector<std::string>& vstrMarkets)
             }  else {  KF_LOG_INFO(logger, "[getAllMarkets] respon not member market");}
         } 
     }
-     else {  KF_LOG_INFO(logger, "[getAllMarkets] respon not a array");}
+    else {  KF_LOG_INFO(logger, "[getAllMarkets] respon not a array");}
 }
 
 std::string TDEngineUpbit::getEncode(const std::string& str)
 {
     return str;
-   //return  base64_encode((unsigned char const*)str.c_str(),str.size());
+    //return  base64_encode((unsigned char const*)str.c_str(),str.size());
 }
 
 std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery)
 {
-         std::string strPayLoad;
-         if(strQuery == "")
-         {
-             strPayLoad = R"({"access_key": ")" + unit.api_key + R"(","nonce": ")" +getTimestampString() + R"("})";
-         }
-         else
-         {    
-            strPayLoad = R"({"access_key":")" + unit.api_key + R"(","nonce":")" +getTimestampString() + R"(","query":")" + strQuery  + R"("})";
-         }
-         std::string strJWT = utils::crypto::jwt_hs256_create(strPayLoad,unit.secret_key);
-        std::string strAuthorization = "Bearer ";
-        strAuthorization += strJWT;
+    std::string strPayLoad;
+    if(strQuery == "")
+    {
+        strPayLoad = R"({"access_key": ")" + unit.api_key + R"(","nonce": ")" +getTimestampString() + R"("})";
+    }
+    else
+    {    
+        strPayLoad = R"({"access_key":")" + unit.api_key + R"(","nonce":")" +getTimestampString() + R"(","query":")" + strQuery  + R"("})";
+    }
+    std::string strJWT = utils::crypto::jwt_hs256_create(strPayLoad,unit.secret_key);
+    std::string strAuthorization = "Bearer ";
+    strAuthorization += strJWT;
 
-        KF_LOG_INFO(logger, "[getAuthorization] strPayLoad:" << strPayLoad);
+    KF_LOG_INFO(logger, "[getAuthorization] strPayLoad:" << strPayLoad);
 
-        return strAuthorization;
+    return strAuthorization;
 }
 
 void TDEngineUpbit::getChanceResponce(const AccountUnitUpbit& unit, const std::string& strMarket,Document& d)
 {
     long recvWindow = 5000;
     std::string Method = "GET";
-     std::string strQueryString = "market=";
+    std::string strQueryString = "market=";
     std::string requestPath = "https://api.upbit.com/v1/orders/chance?";
     std::string body = "";
 
     std::string strParamEncode = getEncode(strQueryString + strMarket);
     std::string url = requestPath + strParamEncode;
 
-     int retry_times = 0;
+    int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
     do {
         should_retry = false;
         std::string Authorization = getAuthorization(unit,strParamEncode);
-        
-         response = Get(Url{url},
-                            Header{{  "Authorization", Authorization}},
-                            Body{body}, Timeout{100000});
-         KF_LOG_INFO(logger, "[getChanceResponce] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                " (response.error.message) " << response.error.message <<
-                                                " (response.text) " << response.text.c_str());
-     if(response.status_code != 200) {
+
+        response = Get(Url{url},
+                Header{{  "Authorization", Authorization}},
+                Body{body}, Timeout{100000});
+        KF_LOG_INFO(logger, "[getChanceResponce] (url) " << url << " (response.status_code) " << response.status_code <<
+                " (response.error.message) " << response.error.message <<
+                " (response.text) " << response.text.c_str());
+        if(response.status_code != 200) {
             should_retry = true;
             retry_times++;
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
@@ -1546,9 +1594,9 @@ bool TDEngineUpbit::loadMarketsInfo(AccountUnitUpbit& unit, const std::vector<st
 {
     for(auto& strMarket : vstrMarkets)
     {
-         Document doc;
+        Document doc;
         getChanceResponce(unit,strMarket,doc);
-       
+
         KF_LOG_INFO(logger, "[loadExchangeOrderFilters]");
         if(doc.HasParseError() || !doc.IsObject())
         {
@@ -1567,28 +1615,28 @@ bool TDEngineUpbit::loadMarketsInfo(AccountUnitUpbit& unit, const std::vector<st
             }
             if(doc.HasMember("bid") && doc["bid"].HasMember("price_unit") )
             {
-                    std::string strBidUnit = doc["bid"]["price_unit"].GetString();
-                    auto nBegin = strBidUnit.find(".",0);
-                    auto nEnd = strBidUnit.find("1",0);
-                    if(nBegin != std::string::npos && nEnd != std::string::npos)
-                    {
-                        it->second.nBidTickSize = nEnd - nBegin;
-                    }
+                std::string strBidUnit = doc["bid"]["price_unit"].GetString();
+                auto nBegin = strBidUnit.find(".",0);
+                auto nEnd = strBidUnit.find("1",0);
+                if(nBegin != std::string::npos && nEnd != std::string::npos)
+                {
+                    it->second.nBidTickSize = nEnd - nBegin;
+                }
             }
             if(doc.HasMember("ask") && doc["ask"].HasMember("currency") && doc["ask"].HasMember("min_total"))
             {
                 it->second.strAskCurrency = doc["ask"]["currency"].GetString();
                 it->second.nAskMinTotal =  atoi(doc["ask"]["min_total"].GetString());
             }
-             if(doc.HasMember("ask") && doc["ask"].HasMember("price_unit") )
+            if(doc.HasMember("ask") && doc["ask"].HasMember("price_unit") )
             {
                 std::string strAskUnit = doc["ask"]["price_unit"].GetString();
-                    auto nBegin = strAskUnit.find(".",0);
-                    auto nEnd = strAskUnit.find("1",0);
-                    if(nBegin != std::string::npos && nEnd != std::string::npos)
-                    {
-                        it->second.nAskTickSize = nEnd - nBegin;
-                    }
+                auto nBegin = strAskUnit.find(".",0);
+                auto nEnd = strAskUnit.find("1",0);
+                if(nBegin != std::string::npos && nEnd != std::string::npos)
+                {
+                    it->second.nAskTickSize = nEnd - nBegin;
+                }
             }
             if(doc.HasMember("max_total"))
             {
@@ -1645,35 +1693,35 @@ int64_t TDEngineUpbit::getTimeDiffOfExchange(AccountUnitUpbit& unit)
     KF_LOG_INFO(logger, "[getTimeDiffOfExchange] ");
     //reset to 0
     int64_t timeDiffOfExchange = 0;
-//
-//    int calculateTimes = 3;
-//    int64_t accumulationDiffTime = 0;
-//    bool hasResponse = false;
-//    for(int i = 0 ; i < calculateTimes; i++)
-//    {
-//        Document d;
-//        int64_t start_time = getTimestamp();
-//        int64_t exchangeTime = start_time;
-//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
-//        get_exchange_time(unit, d);
-//        if(!d.HasParseError() && d.HasMember("serverTime")) {//Upbit serverTime
-//            exchangeTime = d["serverTime"].GetInt64();
-//            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
-//            hasResponse = true;
-//        }
-//        int64_t finish_time = getTimestamp();
-//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
-//        int64_t tripTime = (finish_time - start_time) / 2;
-//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
-//        accumulationDiffTime += start_time + tripTime - exchangeTime;
-//        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
-//    }
-//    //set the diff
-//    if(hasResponse)
-//    {
-//        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
-//    }
-//    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
+    //
+    //    int calculateTimes = 3;
+    //    int64_t accumulationDiffTime = 0;
+    //    bool hasResponse = false;
+    //    for(int i = 0 ; i < calculateTimes; i++)
+    //    {
+    //        Document d;
+    //        int64_t start_time = getTimestamp();
+    //        int64_t exchangeTime = start_time;
+    //        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (start_time) " << start_time);
+    //        get_exchange_time(unit, d);
+    //        if(!d.HasParseError() && d.HasMember("serverTime")) {//Upbit serverTime
+    //            exchangeTime = d["serverTime"].GetInt64();
+    //            KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (exchangeTime) " << exchangeTime);
+    //            hasResponse = true;
+    //        }
+    //        int64_t finish_time = getTimestamp();
+    //        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (finish_time) " << finish_time);
+    //        int64_t tripTime = (finish_time - start_time) / 2;
+    //        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (tripTime) " << tripTime);
+    //        accumulationDiffTime += start_time + tripTime - exchangeTime;
+    //        KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (i) " << i << " (accumulationDiffTime) " << accumulationDiffTime);
+    //    }
+    //    //set the diff
+    //    if(hasResponse)
+    //    {
+    //        timeDiffOfExchange = accumulationDiffTime / calculateTimes;
+    //    }
+    //    KF_LOG_INFO(logger, "[getTimeDiffOfExchange] (timeDiffOfExchange) " << timeDiffOfExchange);
     return timeDiffOfExchange;
 }
 
@@ -1683,10 +1731,10 @@ BOOST_PYTHON_MODULE(libupbittd)
 {
     using namespace boost::python;
     class_<TDEngineUpbit, boost::shared_ptr<TDEngineUpbit> >("Engine")
-    .def(init<>())
-    .def("init", &TDEngineUpbit::initialize)
-    .def("start", &TDEngineUpbit::start)
-    .def("stop", &TDEngineUpbit::stop)
-    .def("logout", &TDEngineUpbit::logout)
-    .def("wait_for_stop", &TDEngineUpbit::wait_for_stop);
+        .def(init<>())
+        .def("init", &TDEngineUpbit::initialize)
+        .def("start", &TDEngineUpbit::start)
+        .def("stop", &TDEngineUpbit::stop)
+        .def("logout", &TDEngineUpbit::logout)
+        .def("wait_for_stop", &TDEngineUpbit::wait_for_stop);
 }

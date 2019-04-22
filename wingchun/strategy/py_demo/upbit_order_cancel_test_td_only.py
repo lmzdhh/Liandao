@@ -44,29 +44,26 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.print_pos(pos_handler)
             #context.stop()
             print '----will test buy cancel----'
-            context.buy_price = 3741000 #market_data.LowerLimitPrice
+            context.buy_price = 3202372 #market_data.LowerLimitPrice
             context.sell_price = 3741000 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
                 context.order_rid = context.insert_limit_order(source=SOURCE.UPBIT,
                                                                ticker=context.ticker,
-                                                               price=context.sell_price,
-                                                               exchange_id=context.exchange_id,
-                                                               volume=160000000,
-                                                               direction=DIRECTION.Sell,
-                                                               offset=OFFSET.Open)
-		print("context.order_rid:", context.order_rid)
-		context.order_rid = context.insert_limit_order(source=SOURCE.UPBIT,
-                                                               ticker=context.ticker,
                                                                price=context.buy_price,
                                                                exchange_id=context.exchange_id,
-                                                               volume=10000000,
+                                                               volume=5000000,
                                                                direction=DIRECTION.Buy,
                                                                offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
                 #print('will cancel it')
                 #context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
                 #print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
+                #quest5 fxw starts here
+                print('will cancel it')
+                context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
+                print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
+                #quest5 fxw ends here
 
     else:
         print '-- got pos requested --'
