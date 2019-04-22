@@ -223,7 +223,7 @@ void TDEngineHuobi::Ping(struct lws* conn)
     strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 }
-void Pong(struct lws* conn,long ping){
+void TDEngineHuobi::Pong(struct lws* conn,long ping){
     KF_LOG_INFO(logger,"[Pong] pong the ping of websocket")
     StringBuffer sbPing;
     Writer<StringBuffer> writer(sbPing);
