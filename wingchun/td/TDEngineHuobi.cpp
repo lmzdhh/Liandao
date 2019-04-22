@@ -656,8 +656,8 @@ void TDEngineHuobi::huobiAuth(AccountUnitHuobi& unit){
     KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_subscribe: " << strSubscribe.c_str() << " ,len = " << length);
     strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
     //请求
-    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
-    lws_callback_on_writable(conn);
+    int ret = lws_write(unit.webSocketConn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+    lws_callback_on_writable(unit.webSocketConn);
 }
 void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     KF_LOG_INFO(logger, "[TDEngineHuobi::lws_login]");
