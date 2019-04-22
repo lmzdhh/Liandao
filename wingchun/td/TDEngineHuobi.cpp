@@ -241,7 +241,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
     {
         if ((json.HasMember("status") && json["status"].GetString()!="ok")||      
               (json.HasMember("err-code")&&json["err-code"].GetInt()!=0) ) {
-            std::string errorCode = json["err-code"].GetString();
+            int errorCode = json["err-code"].GetInt();
             std::string errorMsg = json["err-msg"].GetString();
             KF_LOG_ERROR(logger, "[on_lws_data] (err-code) "<<errorCode<<" (errMsg) " << errorMsg);
         } else if (json.HasMember("op")) {
