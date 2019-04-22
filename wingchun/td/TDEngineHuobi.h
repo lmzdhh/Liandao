@@ -192,6 +192,7 @@ private:
     std::string genClinetid(const std::string& orderRef);
 
 public:
+    void on_lws_open(struct lws* wsi);
     //zip 压缩和解压
     int gzCompress(const char *src, int srcLen, char *dest, int destLen);
     int gzDecompress(const char *src, int srcLen, const char *dst, int dstLen);
