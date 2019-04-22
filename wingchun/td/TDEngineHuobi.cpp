@@ -586,6 +586,7 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     struct lws_context_creation_info ctxCreationInfo;
     struct lws_client_connect_info clientConnectInfo;
     //struct lws *wsi = NULL;
+    struct lws_protocols protocol;
 
     memset(&ctxCreationInfo, 0, sizeof(ctxCreationInfo));
     memset(&clientConnectInfo, 0, sizeof(clientConnectInfo));
@@ -605,6 +606,13 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     ctxCreationInfo.ka_time = 10;
     ctxCreationInfo.ka_probes = 10;
     ctxCreationInfo.ka_interval = 10;
+
+    protocol.name  = protocols[PROTOCOL_TEST].name;
+    protocol.callback = &ws_service_cb;
+    protocol.per_session_data_size = sizeof(struct session_data);
+    protocol.rx_buffer_size = 0;
+    protocol.id = 0;
+    protocol.user = NULL;
 
     context = lws_create_context(&ctxCreationInfo);
     KF_LOG_INFO(logger, "[TDEngineHuobi::lws_login] context created.");
@@ -627,7 +635,7 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     clientConnectInfo.host = host.c_str();
     clientConnectInfo.origin = host.c_str();
     clientConnectInfo.ietf_version_or_minus_one = -1;
-    clientConnectInfo.protocol = protocols[0].name;
+    clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
     clientConnectInfo.pwsi = &unit.webSocketConn;
 
     KF_LOG_INFO(logger, "[TDEngineHuobi::login] address = " << clientConnectInfo.address << ",path = " << clientConnectInfo.path);
