@@ -250,11 +250,11 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
             } else if (op == "auth") {
 
             }
-        } else if (json.containKey("ch")) {
+        } else if (json.HasMember("ch")) {
 
-        } else if (json.containKey("ping")) {
+        } else if (json.HasMember("ping")) {
 
-        } else if (json.containKey("subbed")) {
+        } else if (json.HasMember("subbed")) {
 
         }
     } else
