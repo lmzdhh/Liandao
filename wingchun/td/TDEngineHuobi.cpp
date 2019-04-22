@@ -65,7 +65,7 @@ static TDEngineHuobi* global_md = nullptr;
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
     std::stringstream ss;
-    ss << "lws_callback,reason=" << reason << ",";
+    ss << "[ws_service_cb] lws_callback,reason=" << reason << ",";
     switch( reason )
     {
         case LWS_CALLBACK_CLIENT_ESTABLISHED:
