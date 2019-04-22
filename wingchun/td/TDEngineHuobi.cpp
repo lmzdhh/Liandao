@@ -104,14 +104,14 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         }
         case LWS_CALLBACK_CLOSED:
         {//lws callback close
-            // ss << "LWS_CALLBACK_CLOSED.";
-            // global_md->writeErrorLog(ss.str());
-            // break;
+            ss << "LWS_CALLBACK_CLOSED.";
+            global_md->writeErrorLog(ss.str());
+            break;
         }
         case LWS_CALLBACK_WSI_DESTROY:
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {//lws callback client connection error
-            // ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
+            ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
             global_md->writeErrorLog(ss.str());
             if(global_md)
             {
@@ -140,7 +140,7 @@ void TDEngineHuobi::onPong(struct lws* conn)
 //cys websocket connect
 void TDEngineHuobi::Ping(struct lws* conn)
 {
-    m_shouldPing = false;
+    //m_shouldPing = false;
     StringBuffer sbPing;
     Writer<StringBuffer> writer(sbPing);
     writer.StartObject();
@@ -228,14 +228,12 @@ AccountUnitHuobi& TDEngineHuobi::findAccountUnitHuobiByWebsocketConn(struct lws 
     }
     return account_units[0];
 }
-int TDEngineHuobi::lws_write_subscribe(struct lws* conn)
-{
+int TDEngineHuobi::lws_write_subscribe(struct lws* conn){
     KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_subscribe:" );
 
     int ret = 0;
 
-    if(wsStatus == nothing)
-    {
+    if(wsStatus == nothing){
         wsStatus = accounts_topic;
         AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
         std::string strSubscribe = makeSubscribeAccountsUpdate(unit);
@@ -248,28 +246,19 @@ int TDEngineHuobi::lws_write_subscribe(struct lws* conn)
         ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
         lws_callback_on_writable(conn);
     }
-    else
-    {
-        if(m_shouldPing)
-        {
-            m_isPong = false;
-            Ping(conn);
-        }
-    }
 
     return ret;
 }
 
-void TDEngineHuobi::on_lws_connection_error(struct lws* conn)
-{
+void TDEngineHuobi::on_lws_connection_error(struct lws* conn){
     KF_LOG_ERROR(logger, "TDEngineHuobi::on_lws_connection_error. login again.");
     //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
     m_isPong = false;
-    m_shouldPing = true;
+    //m_shouldPing = true;
     //no use it
     long timeout_nsec = 0;
     //reset sub
-    m_isSubL3 = false;
+    //m_isSubL3 = false;
     wsStatus = nothing;
     AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
     lws_login(unit,0);
@@ -1319,7 +1308,7 @@ void TDEngineHuobi::loopwebsocket()
             m_isPong = false;
             nLastTime = nNowTime;
             KF_LOG_INFO(logger, "TDEngineHuobi::loop: last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
-            m_shouldPing = true;
+            //m_shouldPing = true;
             lws_callback_on_writable(m_conn);
         }
         //KF_LOG_INFO(logger, "TDEngineHuobi::loop:lws_service");
