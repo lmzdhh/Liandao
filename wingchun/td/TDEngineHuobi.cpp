@@ -152,7 +152,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             global_md->writeErrorLog(ss.str());
             if(global_md)
             {//统一接收，不同订阅返回数据不同解析
-                global_md->on_lws_data(wsi, buf, len);
+                global_md->on_lws_data(wsi, (char *)in, len);
             }
             break;
         }
