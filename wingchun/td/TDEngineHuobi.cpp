@@ -227,36 +227,35 @@ int TDEngineHuobi::gzDecompress(const char *src, int srcLen, const char *dst, in
 void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     char decompressData[strlen(data)+1];
-    int ret=gzDecompress(data,strlen(data),decompressData,strlen(data)+1);
-    if(ret<=0){
-        KF_LOG_INFO(logger, "[on_lws_data] (Decompress data error) " << data);
-        KF_LOG_INFO(logger, "[on_lws_data] (Decompress error data:) " << decompressData);
-        return;
-    }
+    gzDecompress(data,strlen(data),decompressData,strlen(data)+1);
     KF_LOG_INFO(logger, "[on_lws_data] (data) " << data);
-    KF_LOG_INFO(logger, "[on_lws_data] (data) " << decompressData);
+    KF_LOG_INFO(logger, "[on_lws_data] (decompressData) " << decompressData);
     //std::string strData = dealDataSprit(data);
     Document json;
     json.Parse(decompressData);
     if(!json.HasParseError()&& json.IsObject())KF_LOG_INFO(logger, "[TDEngineHuobi::on_lws_data] (json) " << json.GetString());
-    if(!json.HasParseError() && json.IsObject() && json.HasMember("type") && json["type"].IsString())
+    if(!json.HasParseError() && json.IsObject() && json.HasMember("status"))
     {
-        if(strcmp(json["type"].GetString(), "welcome") == 0)
-        {
-            KF_LOG_INFO(logger, "MDEngineHuobi::on_lws_data: welcome");
-            lws_callback_on_writable(conn);
-        }
-        if(strcmp(json["type"].GetString(), "pong") == 0)
-        {
-            KF_LOG_INFO(logger, "MDEngineHuobi::on_lws_data: pong");
-            m_isPong = true;
-            m_conn = conn;
-        }
-        if(strcmp(json["type"].GetString(), "message") == 0)
-        {
-            if(strcmp(json["subject"].GetString(), "trade.l2update") == 0)
-            {
+        if ((json.HasMember("status") && json["status"].GetString()!="ok")||      
+              json.HasMember("err-code") ) {
+            std::string errorCode = json["err-code"].GetString();
+            std::string errorMsg = json["err-msg"].GetString();
+            KF_LOG_ERROR(logger, "[on_lws_data] (err-code) "<<errorCode<<" (errMsg) " << errorMsg);
+        } else if (json.HasMember("op")) {
+            std::string op = json["op"].GetString();
+            if (op == "notify") {
+
+            } else if (op == "ping") {
+
+            } else if (op == "auth") {
+
             }
+        } else if (json.containKey("ch")) {
+
+        } else if (json.containKey("ping")) {
+
+        } else if (json.containKey("subbed")) {
+
         }
     } else
     {
@@ -341,7 +340,7 @@ void TDEngineHuobi::on_lws_connection_error(struct lws* conn){
 static struct lws_protocols protocols[] =
         {
                 {
-                        "md-protocol",
+                        "ws",
                         ws_service_cb,
                               0,
                                  65536,
@@ -696,7 +695,7 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     clientConnectInfo.port = 443;
     clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
     clientConnectInfo.host = host.c_str();
-    clientConnectInfo.origin = host.c_str();
+    clientConnectInfo.origin = "origin";
     clientConnectInfo.ietf_version_or_minus_one = -1;
     clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
     clientConnectInfo.pwsi = &unit.webSocketConn;
@@ -727,8 +726,7 @@ void TDEngineHuobi::release_api()
     KF_LOG_INFO(logger, "[release_api]");
 }
 
-bool TDEngineHuobi::is_logged_in() const
-{
+bool TDEngineHuobi::is_logged_in() const{
     KF_LOG_INFO(logger, "[is_logged_in]");
     for (auto& unit: account_units)
     {
@@ -738,8 +736,7 @@ bool TDEngineHuobi::is_logged_in() const
     return true;
 }
 
-bool TDEngineHuobi::is_connected() const
-{
+bool TDEngineHuobi::is_connected() const{
     KF_LOG_INFO(logger, "[is_connected]");
     return is_logged_in();
 }
