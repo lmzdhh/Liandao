@@ -624,7 +624,7 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     }
 
     // Set up the client creation info
-    static std::string host  = "wss://api.huobi.pro/ws/v1";
+    static std::string host  = "api.huobi.pro";
     static std::string path = "/ws/v1";
     clientConnectInfo.address = host.c_str();
     clientConnectInfo.path = path.c_str(); // Set the info's path to the fixed up url path
