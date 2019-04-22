@@ -559,7 +559,7 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     //test
     Document json;
     get_account(unit, json);
-    printResponse(json);
+    //printResponse(json);
     //cancel_order(unit,"code","1",json);
     cancel_all_orders(unit, "btc_usd", json);
     //printResponse(json);
@@ -1530,7 +1530,7 @@ void TDEngineHuobi::get_account(AccountUnitHuobi& unit, Document& json)
     std::string requestPath = getPath+unit.accountId+"/balance";
     const auto response = Get(requestPath,"{}",unit);
     json.Parse(response.text.c_str());
-    KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
+    //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
 }
 std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
