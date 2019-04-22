@@ -223,7 +223,22 @@ void TDEngineHuobi::Ping(struct lws* conn)
     strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 }
-
+void Pong(struct lws* conn,long ping){
+    KF_LOG_INFO(logger,"[Pong] pong the ping of websocket")
+    StringBuffer sbPing;
+    Writer<StringBuffer> writer(sbPing);
+    writer.StartObject();
+    writer.Key("pong");
+    writer.Long(ping);
+    writer.EndObject();
+    std::string strPing = sbPing.GetString();
+    unsigned char msg[512];
+    memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
+    int length = strPing.length();
+    KF_LOG_INFO(logger, "[Pong] data " << strPing.c_str() << " ,len = " << length);
+    strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
+    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+}
 void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     char buf[4096] = {0};
@@ -259,7 +274,8 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
         } else if (json.HasMember("ch")) {
 
         } else if (json.HasMember("ping")) {
-
+            long ping=(long)(json["ping"].GetInt());
+            Pong(conn,ping);
         } else if (json.HasMember("subbed")) {
 
         }
@@ -300,8 +316,8 @@ int TDEngineHuobi::lws_write_subscribe(struct lws* conn){
     int ret = 0;
 
     //if(wsStatus == nothing){
-        //AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
-        //huobiAuth(unit);
+        AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
+        huobiAuth(unit);
     //}else if(wsStatus == huobi_auth){
         wsStatus = accounts_topic;
         AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
@@ -728,7 +744,7 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
         return;
     }
     KF_LOG_INFO(logger, "[TDEngineHuobi::login] wsi create success.");
-    if(unit.webSocketConn != NULL)huobiAuth(unit);
+    //if(unit.webSocketConn != NULL)huobiAuth(unit);
 }
 void TDEngineHuobi::login(long timeout_nsec)
 {

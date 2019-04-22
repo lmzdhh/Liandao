@@ -211,6 +211,7 @@ public:
 private:
     void onPong(struct lws* conn);
     void Ping(struct lws* conn);
+    void Pong(struct lws* conn,long ping);
     AccountUnitHuobi& findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn);
     std::string makeSubscribeAccountsUpdate(AccountUnitHuobi& unit);
     std::string getId();
