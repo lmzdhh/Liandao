@@ -194,6 +194,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 void TDEngineHuobi::on_lws_open(struct lws* wsi){
     KF_LOG_INFO(logger,"[on_lws_open] ");
     huobiAuth(findAccountUnitHuobiByWebsocketConn(wsi));
+    KF_LOG_INFO(logger,"[on_lws_open] finished ");
 }
 std::string TDEngineHuobi::getId()
 {
@@ -453,9 +454,11 @@ cpr::Response TDEngineHuobi::Get(const std::string& method_url,const std::string
     const auto response = cpr::Get(Url{url},
                                    Header{{"Content-Type", "application/json"}}, Timeout{10000} );
     lock.unlock();
-    KF_LOG_INFO(logger, "[Get] (url) " << url << " (response.status_code) " << response.status_code <<
+    if(response.text.length()<500){
+        KF_LOG_INFO(logger, "[Get] (url) " << url << " (response.status_code) " << response.status_code <<
                                        " (response.error.message) " << response.error.message <<
                                        " (response.text) " << response.text.c_str());
+    }
     return response;
 }
 //cys edit
@@ -472,9 +475,11 @@ cpr::Response TDEngineHuobi::Post(const std::string& method_url,const std::strin
     auto response = cpr::Post(Url{url}, Header{{"Content-Type", "application/json"}},
                               Body{body},Timeout{30000});
     lock.unlock();
-    KF_LOG_INFO(logger, "[POST] (url) " << url <<"(body) "<< body<< " (response.status_code) " << response.status_code <<
+    if(response.text.length()<500){
+        KF_LOG_INFO(logger, "[POST] (url) " << url <<"(body) "<< body<< " (response.status_code) " << response.status_code <<
                                         " (response.error.message) " << response.error.message <<
                                         " (response.text) " << response.text.c_str());
+    }
     return response;
 }
 void TDEngineHuobi::init()
