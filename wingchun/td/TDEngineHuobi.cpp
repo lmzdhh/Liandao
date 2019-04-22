@@ -233,11 +233,14 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
     //std::string strData = dealDataSprit(data);
     Document json;
     json.Parse(buf);
-    if(!json.HasParseError()&& json.IsObject())KF_LOG_INFO(logger, "[TDEngineHuobi::on_lws_data] (json) " << json.GetString());
-    if(!json.HasParseError() && json.IsObject() && json.HasMember("status"))
+    if(json.HasParseError()||!json.IsObject()){
+        KF_LOG_ERROR(logger, "[TDEngineHuobi::on_lws_data] parse to json error ");
+        return;
+    }
+    if(json.HasMember("op"))
     {
         if ((json.HasMember("status") && json["status"].GetString()!="ok")||      
-              json.HasMember("err-code") ) {
+              (json.HasMember("err-code")&&json["err-code"].GetInt()!=0) ) {
             std::string errorCode = json["err-code"].GetString();
             std::string errorMsg = json["err-msg"].GetString();
             KF_LOG_ERROR(logger, "[on_lws_data] (err-code) "<<errorCode<<" (errMsg) " << errorMsg);
@@ -284,7 +287,7 @@ std::string TDEngineHuobi::makeSubscribeAccountsUpdate(AccountUnitHuobi& unit){
     writer.Key("cid");
     writer.String(unit.accountId.c_str());
     writer.Key("topic");
-    writer.String("accounts");
+    writer.String("orders.htusdt");
     writer.Key("model");
     writer.String("0");
     writer.EndObject();
