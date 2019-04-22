@@ -153,8 +153,9 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             if(global_md)
             {//统一接收，不同订阅返回数据不同解析
                 char buf[4096] = {0};
-                unsigned int l = 4096;
+                int l = 4096;
                 l = gzDecompress((char*) in, len, buf, l);
+                KF_LOG_INFO(logger, "[ws_service_cb] (data) " << (char *)in);
                 global_md->on_lws_data(wsi, buf, len);
             }
             break;
@@ -258,7 +259,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
         }
     } else
     {
-        KF_LOG_ERROR(logger, "[on_lws_data] . parse json error(data): " << decompressData);
+        KF_LOG_ERROR(logger, "[on_lws_data] . parse json error(data): " << data);
     }
 
 }
