@@ -161,7 +161,7 @@ void TDEngineHuobi::Ping(struct lws* conn)
 void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
-    KF_LOG_INFO(logger, "TDEngineHuobi::on_lws_data: " << data);
+    KF_LOG_INFO(logger, "[TDEngineHuobi::on_lws_data] " << data);
     Document json;
     json.Parse(data);
 
@@ -186,7 +186,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
         }
     } else
     {
-        KF_LOG_ERROR(logger, "MDEngineHuobi::on_lws_data . parse json error: " << data);
+        KF_LOG_ERROR(logger, "[MDEngineHuobi::on_lws_data] . parse json error: " << data);
     }
 
 }
@@ -624,7 +624,7 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     }
 
     // Set up the client creation info
-    static std::string host  = "wss://api.huobi.pro";
+    static std::string host  = "wss://api.huobi.pro/ws/v1";
     static std::string path = "/ws/v1";
     clientConnectInfo.address = host.c_str();
     clientConnectInfo.path = path.c_str(); // Set the info's path to the fixed up url path
