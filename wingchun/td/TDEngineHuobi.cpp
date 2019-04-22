@@ -230,6 +230,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
     int ret=gzDecompress(data,strlen(data),decompressData,strlen(data)+1);
     if(ret<=0){
         KF_LOG_INFO(logger, "[on_lws_data] (Decompress data error) " << data);
+        KF_LOG_INFO(logger, "[on_lws_data] (Decompress error data:) " << decompressData);
         return;
     }
     KF_LOG_INFO(logger, "[on_lws_data] (data) " << data);
