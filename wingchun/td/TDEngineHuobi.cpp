@@ -244,7 +244,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
     char buf[4096] = {0};
     int l = 4096;
     l = gzDecompress(data, len, buf, l);
-    KF_LOG_INFO(logger, "[on_lws_data] (buf) " << buf);
+    KF_LOG_INFO(logger, "[on_lws_data] (cys_buf) " << buf);
     KF_LOG_INFO(logger, "[on_lws_data] (data) " << data);
     //std::string strData = dealDataSprit(data);
     Document json;
@@ -315,9 +315,8 @@ int TDEngineHuobi::lws_write_subscribe(struct lws* conn){
 
     int ret = 0;
 
-    //if(wsStatus == nothing){
+    if(wsStatus != accounts_topic){
         AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
-        huobiAuth(unit);
     //}else if(wsStatus == huobi_auth){
         wsStatus = accounts_topic;
         //AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
@@ -330,7 +329,7 @@ int TDEngineHuobi::lws_write_subscribe(struct lws* conn){
         //请求
         ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
         lws_callback_on_writable(conn);
-    //}
+    }
 
     return ret;
 }
@@ -673,7 +672,7 @@ void TDEngineHuobi::huobiAuth(AccountUnitHuobi& unit){
     unsigned char msg[1024];
     memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
     int length = strSubscribe.length();
-    KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_subscribe: " << strSubscribe.c_str() << " ,len = " << length);
+    KF_LOG_INFO(logger, "[huobiAuth] auth data " << strSubscribe.c_str() << " ,len = " << length);
     strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
     //请求
     int ret = lws_write(unit.webSocketConn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
@@ -744,7 +743,7 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
         return;
     }
     KF_LOG_INFO(logger, "[TDEngineHuobi::login] wsi create success.");
-    //if(unit.webSocketConn != NULL)huobiAuth(unit);
+    if(unit.webSocketConn != NULL)huobiAuth(unit);
 }
 void TDEngineHuobi::login(long timeout_nsec)
 {
