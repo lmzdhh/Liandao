@@ -252,6 +252,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
             } else if (op == "ping") {
 
             } else if (op == "auth") {
+                wsStatus=huobi_auth;
                 int userId=json["data"]["user-id"].GetInt();
                 KF_LOG_INFO(logger,"[on_lws_data] huobiAuth success. authed user-id "<<userId);
             }
@@ -299,6 +300,9 @@ int TDEngineHuobi::lws_write_subscribe(struct lws* conn){
     int ret = 0;
 
     if(wsStatus == nothing){
+        AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
+        huobiAuth(unit);
+    }else if(wsStatus == huobi_auth){
         wsStatus = accounts_topic;
         AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
         std::string strSubscribe = makeSubscribeAccountsUpdate(unit);
@@ -658,6 +662,7 @@ void TDEngineHuobi::huobiAuth(AccountUnitHuobi& unit){
     //请求
     int ret = lws_write(unit.webSocketConn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
     lws_callback_on_writable(unit.webSocketConn);
+    KF_LOG_INFO(logger, "[huobiAuth] auth ...");
 }
 void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     KF_LOG_INFO(logger, "[TDEngineHuobi::lws_login]");
@@ -722,8 +727,8 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
         KF_LOG_ERROR(logger, "[TDEngineHuobi::lws_login] wsi create error.");
         return;
     }
-    huobiAuth(unit);
     KF_LOG_INFO(logger, "[TDEngineHuobi::login] wsi create success.");
+    if(unit.webSocketConn != NULL)huobiAuth(unit);
 }
 void TDEngineHuobi::login(long timeout_nsec)
 {
