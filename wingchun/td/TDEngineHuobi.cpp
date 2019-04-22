@@ -320,7 +320,7 @@ int TDEngineHuobi::lws_write_subscribe(struct lws* conn){
         huobiAuth(unit);
     //}else if(wsStatus == huobi_auth){
         wsStatus = accounts_topic;
-        AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
+        //AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
         std::string strSubscribe = makeSubscribeAccountsUpdate(unit);
         unsigned char msg[1024];
         memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
