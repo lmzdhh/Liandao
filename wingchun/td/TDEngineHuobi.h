@@ -84,6 +84,7 @@ struct PriceVolumePrecision
 };
 enum HuobiWsStatus{
     nothing,
+    huobi_auth,
     accounts_topic,
     orders_topic
 };
@@ -201,6 +202,7 @@ public:
     std::string getHuobiTime();
     std::string getHuobiSignatrue(std::string parameters[],int psize,std::string timestamp,std::string method_url,std::string reqType,AccountUnitHuobi& unit);
 public:
+    void huobiAuth(AccountUnitHuobi& unit);
     void lws_login(AccountUnitHuobi& unit, long timeout_nsec);
     void writeErrorLog(std::string strError);
     void on_lws_data(struct lws* conn, const char* data, size_t len);

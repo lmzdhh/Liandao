@@ -185,6 +185,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             break;
         }
         default:
+            ss << "default error.";
             global_md->writeErrorLog(ss.str());
             break;
     }
@@ -251,7 +252,8 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
             } else if (op == "ping") {
 
             } else if (op == "auth") {
-
+                int userId=json["data"]["user-id"].GetInt();
+                KF_LOG_INFO(logger,"[on_lws_data] huobiAuth success. authed user-id "<<userId);
             }
         } else if (json.HasMember("ch")) {
 
@@ -267,21 +269,9 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
 
 }
 std::string TDEngineHuobi::makeSubscribeAccountsUpdate(AccountUnitHuobi& unit){
-    std::string strTimestamp = getHuobiTime();
-    string strSignatrue=getHuobiSignatrue(NULL,0,strTimestamp,"/ws/v1","GET\n",unit);
     StringBuffer sbUpdate;
     Writer<StringBuffer> writer(sbUpdate);
     writer.StartObject();
-    writer.Key("AccessKeyId");
-    writer.String(unit.api_key.c_str());
-    writer.Key("SignatureMethod");
-    writer.String("HmacSHA256");
-    writer.Key("SignatureVersion");
-    writer.String("2");
-    writer.Key("Timestamp");
-    writer.String(strTimestamp.c_str());
-    writer.Key("Signature");
-    writer.String(strSignatrue.c_str());
     writer.Key("op");
     writer.String("sub");
     writer.Key("cid");
@@ -292,7 +282,6 @@ std::string TDEngineHuobi::makeSubscribeAccountsUpdate(AccountUnitHuobi& unit){
     writer.String("0");
     writer.EndObject();
     std::string strUpdate = sbUpdate.GetString();
-
     return strUpdate;
 }
 AccountUnitHuobi& TDEngineHuobi::findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn){
@@ -639,6 +628,37 @@ void TDEngineHuobi::getPriceVolumePrecision(AccountUnitHuobi& unit)
         KF_LOG_INFO(logger,"[getPriceVolumePrecision] (map size) "<<unit.mapPriceVolumePrecision.size());
     }
 }
+void TDEngineHuobi::huobiAuth(AccountUnitHuobi& unit){
+    KF_LOG_INFO(logger, "[huobiAuth] auth");
+    std::string strTimestamp = getHuobiTime();
+    string strSignatrue=getHuobiSignatrue(NULL,0,strTimestamp,"/ws/v1","GET\n",unit);
+    StringBuffer sbUpdate;
+    Writer<StringBuffer> writer(sbUpdate);
+    writer.StartObject();
+    writer.Key("AccessKeyId");
+    writer.String(unit.api_key.c_str());
+    writer.Key("SignatureMethod");
+    writer.String("HmacSHA256");
+    writer.Key("SignatureVersion");
+    writer.String("2");
+    writer.Key("Timestamp");
+    writer.String(strTimestamp.c_str());
+    writer.Key("Signature");
+    writer.String(strSignatrue.c_str());
+    writer.Key("op");
+    writer.String("auth");
+    writer.EndObject();
+    std::string strSubscribe = sbUpdate.GetString();
+    wsStatus = huobi_auth;
+    unsigned char msg[1024];
+    memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
+    int length = strSubscribe.length();
+    KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_subscribe: " << strSubscribe.c_str() << " ,len = " << length);
+    strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
+    //请求
+    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+    lws_callback_on_writable(conn);
+}
 void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     KF_LOG_INFO(logger, "[TDEngineHuobi::lws_login]");
     global_md = this;
@@ -702,6 +722,7 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
         KF_LOG_ERROR(logger, "[TDEngineHuobi::lws_login] wsi create error.");
         return;
     }
+    huobiAuth(unit);
     KF_LOG_INFO(logger, "[TDEngineHuobi::login] wsi create success.");
 }
 void TDEngineHuobi::login(long timeout_nsec)
