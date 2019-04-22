@@ -235,7 +235,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
     Document json;
     json.Parse(buf);
     if(json.HasParseError()||!json.IsObject()){
-        KF_LOG_ERROR(logger, "[TDEngineHuobi::on_lws_data] parse to json error ");
+        KF_LOG_ERROR(logger, "[cys_on_lws_data] parse to json error ");
         return;
     }
     if(json.HasMember("op"))
@@ -254,7 +254,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
             } else if (op == "auth") {
                 wsStatus=huobi_auth;
                 int userId=json["data"]["user-id"].GetInt();
-                KF_LOG_INFO(logger,"[on_lws_data] huobiAuth success. authed user-id "<<userId);
+                KF_LOG_INFO(logger,"[on_lws_data] cys_huobiAuth success. authed user-id "<<userId);
             }
         } else if (json.HasMember("ch")) {
 
