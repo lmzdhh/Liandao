@@ -298,6 +298,7 @@ bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Documen
         for (int i = 0; i < symbolsCount; i++) {
             const rapidjson::Value& sym = doc["symbols"].GetArray()[i];
             std::string symbol = sym["symbol"].GetString();
+	/*    std::string symbol1 = sym["symbol"].GetString();*/
             if(sym.IsObject() && sym.HasMember("filters") && sym["filters"].IsArray()) {
                 int filtersCount = sym["filters"].Size();
                 for (int j = 0; j < filtersCount; j++) {
@@ -319,7 +320,7 @@ bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Documen
                                                                                                        " (tickSizeStr)" << tickSizeStr
                                                                                                        <<" (tickSize)" << afilter.ticksize);
                         }
-                    }
+                    } 
                     if (strcmp("LOT_SIZE", filter["filterType"].GetString()) == 0) {
                         std::string stepSizeStr =  filter["stepSize"].GetString();
                         KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
@@ -334,6 +335,14 @@ bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Documen
                             strncpy(afilter.InstrumentID, symbol.c_str(), 31);
                             afilter.stepsize = num;
                             unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
+                   	    std::map<std::string, SendOrderFilter> sendOrderFilters;
+                            auto iter = unit.sendOrderFilters.find(symbol);
+                            if(iter == unit.sendOrderFilters.end()){
+                                unit.sendOrderFilters.insert(std::make_pair(symbol,afilter));
+                            }
+                            else{
+                                unit.sendOrderFilters[symbol] = afilter;
+                            }
                             KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
 
       " (stepSizeStr)" << stepSizeStr
@@ -608,7 +617,7 @@ int64_t TDEngineBinance::fixVolumeStepSize(int keepPrecision, int64_t volume, bo
     int removePrecisions = (8 - keepPrecision);
     double cutter =  pow(10, removePrecisions);
     int64_t new_volume = 0;
-    new_volume = std::ceil(volume / cutter) * cutter;
+    new_volume = std::floor(volume / cutter) * cutter;
     return new_volume;
 }
 
