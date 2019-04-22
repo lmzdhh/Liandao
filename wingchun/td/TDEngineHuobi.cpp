@@ -495,6 +495,8 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     //partly copy this fields
     strncpy(account.UserID, api_key.c_str(), 16);
     strncpy(account.Password, secret_key.c_str(), 21);
+    //web socket登陆
+    login(0);
     return account;
 }
 
@@ -508,6 +510,7 @@ void TDEngineHuobi::connect(long timeout_nsec)
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
+            KF_LOG_INFO(logger, "[connect] (account id) "<<unit.accountId<<" login.");
             lws_login(unit, 0);
             //set true to for let the kungfuctl think td is running.
             unit.logged_in = true;
@@ -572,7 +575,7 @@ void TDEngineHuobi::getPriceVolumePrecision(AccountUnitHuobi& unit)
     }
 }
 void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
-    KF_LOG_INFO(logger, "TDEngineHuobi::lws_login:");
+    KF_LOG_INFO(logger, "[TDEngineHuobi::lws_login]");
     global_md = this;
     m_isSubL3 = false;
     wsStatus = nothing;
@@ -612,11 +615,11 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     protocol.user = NULL;
 
     context = lws_create_context(&ctxCreationInfo);
-    KF_LOG_INFO(logger, "TDEngineHuobi::login: context created.");
+    KF_LOG_INFO(logger, "[TDEngineHuobi::lws_login] context created.");
 
 
     if (context == NULL) {
-        KF_LOG_ERROR(logger, "TDEngineHuobi::login: context is NULL. return");
+        KF_LOG_ERROR(logger, "[TDEngineHuobi::lws_login] context is NULL. return");
         return;
     }
 
@@ -639,14 +642,14 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     //建立websocket连接
     unit.webSocketConn = lws_client_connect_via_info(&clientConnectInfo);
     if (unit.webSocketConn == NULL) {
-        KF_LOG_ERROR(logger, "TDEngineHuobi::login: wsi create error.");
+        KF_LOG_ERROR(logger, "[TDEngineHuobi::lws_login] wsi create error.");
         return;
     }
-    KF_LOG_INFO(logger, "TDEngineHuobi::login: wsi create success.");
+    KF_LOG_INFO(logger, "[TDEngineHuobi::login] wsi create success.");
 }
 void TDEngineHuobi::login(long timeout_nsec)
 {
-    KF_LOG_INFO(logger, "TDEngineHuobi::login:");
+    KF_LOG_INFO(logger, "[TDEngineHuobi::login]");
 
     connect(timeout_nsec);
 }
