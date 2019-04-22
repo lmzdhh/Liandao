@@ -223,13 +223,13 @@ void TDEngineHuobi::Ping(struct lws* conn)
     strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 }
-void TDEngineHuobi::Pong(struct lws* conn,long ping){
+void TDEngineHuobi::Pong(struct lws* conn,int ping){
     KF_LOG_INFO(logger,"[Pong] pong the ping of websocket");
     StringBuffer sbPing;
     Writer<StringBuffer> writer(sbPing);
     writer.StartObject();
     writer.Key("pong");
-    writer.Long(ping);
+    writer.Int(ping);
     writer.EndObject();
     std::string strPing = sbPing.GetString();
     unsigned char msg[512];
@@ -274,7 +274,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
         } else if (json.HasMember("ch")) {
 
         } else if (json.HasMember("ping")) {
-            long ping=(long)(json["ping"].GetInt());
+            int ping=json["ping"].GetInt();
             Pong(conn,ping);
         } else if (json.HasMember("subbed")) {
 
