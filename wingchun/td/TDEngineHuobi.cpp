@@ -61,7 +61,7 @@ TDEngineHuobi::~TDEngineHuobi()
 }
 
 static TDEngineHuobi* global_md = nullptr;
-
+//web socket代码
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
     std::stringstream ss;
@@ -82,7 +82,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             break;
         }
         case LWS_CALLBACK_CLIENT_RECEIVE:
-        {//
+        {//lws callback client receive
             ss << "LWS_CALLBACK_CLIENT_RECEIVE.";
             global_md->writeErrorLog(ss.str());
             if(global_md)
@@ -92,7 +92,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             break;
         }
         case LWS_CALLBACK_CLIENT_WRITEABLE:
-        {
+        {//lws callback client writeable
             ss << "LWS_CALLBACK_CLIENT_WRITEABLE.";
             global_md->writeErrorLog(ss.str());
             int ret = 0;
@@ -103,14 +103,14 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             break;
         }
         case LWS_CALLBACK_CLOSED:
-        {
+        {//lws callback close
             // ss << "LWS_CALLBACK_CLOSED.";
             // global_md->writeErrorLog(ss.str());
             // break;
         }
         case LWS_CALLBACK_WSI_DESTROY:
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-        {
+        {//lws callback client connection error
             // ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
             global_md->writeErrorLog(ss.str());
             if(global_md)
@@ -663,7 +663,7 @@ void TDEngineHuobi::login(long timeout_nsec)
     }
     m_isSubL3 = false;
     global_md = this;
-    int inputPort = 8443;
+    int inputPort = 443;
     int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
 
     struct lws_context_creation_info ctxCreationInfo;
@@ -718,6 +718,7 @@ void TDEngineHuobi::login(long timeout_nsec)
     strAddress = strAddress.substr(strAddress.find_last_of('/') + 1);
     clientConnectInfo.address = strAddress.c_str();
     clientConnectInfo.path = strPath.c_str(); // Set the info's path to the fixed up url path
+    
     clientConnectInfo.context = context;
     clientConnectInfo.port = 443;
     clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
@@ -728,7 +729,7 @@ void TDEngineHuobi::login(long timeout_nsec)
     clientConnectInfo.pwsi = &wsi;
 
     KF_LOG_INFO(logger, "TDEngineHuobi::login: address = " << clientConnectInfo.address << ",path = " << clientConnectInfo.path);
-
+    //建立websocket连接
     wsi = lws_client_connect_via_info(&clientConnectInfo);
     if (wsi == NULL) {
         KF_LOG_ERROR(logger, "TDEngineHuobi::login: wsi create error.");
