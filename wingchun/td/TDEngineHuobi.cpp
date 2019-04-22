@@ -89,7 +89,10 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             global_md->writeErrorLog(ss.str());
             if(global_md)
             {//统一接收，不同订阅返回数据不同解析
-                global_md->on_lws_data(wsi, (const char*)in, len);
+                char buf[4096] = {0};
+                unsigned int l = 4096;
+                l = gzDecompress((char*) in, len, buf, l);
+                global_md->on_lws_data(wsi, buf, len);
             }
             break;
         }
@@ -226,10 +229,7 @@ int TDEngineHuobi::gzDecompress(const char *src, int srcLen, const char *dst, in
 
 void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
-    char decompressData[strlen(data)*2];
-    gzDecompress(data,strlen(data),decompressData,strlen(data)*2);
     KF_LOG_INFO(logger, "[on_lws_data] (data) " << data);
-    KF_LOG_INFO(logger, "[on_lws_data] (decompressData) " << decompressData);
     //std::string strData = dealDataSprit(data);
     Document json;
     json.Parse(data);
