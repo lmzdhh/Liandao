@@ -86,7 +86,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             ss << "LWS_CALLBACK_CLIENT_RECEIVE.";
             global_md->writeErrorLog(ss.str());
             if(global_md)
-            {
+            {//统一接收，不同订阅返回数据不同解析
                 global_md->on_lws_data(wsi, (const char*)in, len);
             }
             break;
@@ -97,7 +97,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             global_md->writeErrorLog(ss.str());
             int ret = 0;
             if(global_md)
-            {
+            {//统一发送，不同订阅不同请求
                 ret = global_md->lws_write_subscribe(wsi);
             }
             break;
@@ -137,7 +137,7 @@ void TDEngineHuobi::onPong(struct lws* conn)
 {
     Ping(conn);
 }
-
+//cys websocket connect
 void TDEngineHuobi::Ping(struct lws* conn)
 {
     m_shouldPing = false;
@@ -190,59 +190,61 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
     }
 
 }
-
-std::string TDEngineHuobi::makeSubscribeL3Update(const std::map<std::string,int>& mapAllSymbols)
-{
+std::string TDEngineHuobi::makeSubscribeAccountsUpdate(AccountUnitHuobi& unit){
+    std::string strTimestamp = getHuobiTime();
+    string strSignatrue=getHuobiSignatrue(NULL,0,strTimestamp,"/ws/v1","GET\n",unit);
     StringBuffer sbUpdate;
     Writer<StringBuffer> writer(sbUpdate);
     writer.StartObject();
-    writer.Key("id");
-    writer.String(getId().c_str());
-    writer.Key("type");
-    writer.String("subscribe");
+    writer.Key("AccessKeyId");
+    writer.String(unit.api_key);
+    writer.Key("SignatureMethod");
+    writer.String("HmacSHA256");
+    writer.Key("SignatureVersion");
+    writer.String("2");
+    writer.Key("Timestamp");
+    writer.String(strTimestamp.c_str());
+    writer.Key("Signature");
+    writer.String(strSignatrue.c_str());
+    writer.Key("op");
+    writer.String("sub");
+    writer.Key("cid");
+    writer.String(unit.accountId.c_str());
     writer.Key("topic");
-    std::string strTopic = "/market/level2:";
-    for(const auto&  pair : mapAllSymbols)
-    {
-        strTopic += pair.first + ",";
-    }
-    strTopic.pop_back();
-    writer.String(strTopic.c_str());
-    writer.Key("privateChannel");
-    writer.String("false");
-    writer.Key("response");
-    writer.String("true");
+    writer.String("accounts");
+    writer.Key("model");
+    writer.String("0");
     writer.EndObject();
     std::string strUpdate = sbUpdate.GetString();
 
     return strUpdate;
 }
-
+AccountUnitHuobi& TDEngineHuobi::findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn){
+    for (size_t idx = 0; idx < account_units.size(); idx++) {
+        AccountUnitHuobi &unit = account_units[idx];
+        if(unit.websocketConn == websocketConn) {
+            return unit;
+        }
+    }
+    return account_units[0];
+}
 int TDEngineHuobi::lws_write_subscribe(struct lws* conn)
 {
     KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_subscribe:" );
 
     int ret = 0;
 
-    if(!m_isSubL3)
+    if(wsStatus == nothing)
     {
-        m_isSubL3 = true;
-
-        std::map<std::string,int> mapAllSymbols;
-        for(auto& unit : account_units)
-        {
-            for(auto& pair :  unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList())
-            {
-                mapAllSymbols[pair.second] = 0;
-            }
-        }
-
-        std::string strSubscribe = makeSubscribeL3Update(mapAllSymbols);
+        wsStatus = accounts_topic;
+        AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
+        std::string strSubscribe = makeSubscribeAccountsUpdate(unit);
         unsigned char msg[1024];
         memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
         int length = strSubscribe.length();
         KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_subscribe: " << strSubscribe.c_str() << " ,len = " << length);
         strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
+        //请求
         ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
         lws_callback_on_writable(conn);
     }
@@ -268,8 +270,9 @@ void TDEngineHuobi::on_lws_connection_error(struct lws* conn)
     long timeout_nsec = 0;
     //reset sub
     m_isSubL3 = false;
-
-    login(timeout_nsec);
+    wsStatus = nothing;
+    AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
+    lws_login(unit,0);
 }
 
 static struct lws_protocols protocols[] =
@@ -298,79 +301,6 @@ struct session_data {
 void TDEngineHuobi::writeErrorLog(std::string strError)
 {
     KF_LOG_ERROR(logger, strError);
-}
-
-bool TDEngineHuobi::getToken(Document& d)
-{
-    int nTryCount = 0;
-    cpr::Response response;
-    do{
-        std::string url = "https://api.kucoin.com/api/v1/bullet-public";
-        response = cpr::Post(Url{url.c_str()}, Parameters{});
-
-    }while(++nTryCount < max_rest_retry_times && response.status_code != 200);
-
-    if(response.status_code != 200)
-    {
-        KF_LOG_ERROR(logger, "TDEngineHuobi::login::getToken Error");
-        return false;
-    }
-
-    KF_LOG_INFO(logger, "TDEngineHuobi::getToken: " << response.text.c_str());
-
-    d.Parse(response.text.c_str());
-    return true;
-}
-
-
-bool TDEngineHuobi::getServers(Document& d)
-{
-    m_vstServerInfos.clear();
-    m_strToken = "";
-    if(d.HasMember("data"))
-    {
-        auto& data = d["data"];
-        if(data.HasMember("token"))
-        {
-            m_strToken = data["token"].GetString();
-            if(data.HasMember("instanceServers"))
-            {
-                int nSize = data["instanceServers"].Size();
-                for(int nPos = 0;nPos<nSize;++nPos)
-                {
-                    ServerInfo stServerInfo;
-                    auto& server = data["instanceServers"].GetArray()[nPos];
-                    if(server.HasMember("pingInterval"))
-                    {
-                        stServerInfo.nPingInterval = server["pingInterval"].GetInt();
-                    }
-                    if(server.HasMember("pingTimeOut"))
-                    {
-                        stServerInfo.nPingTimeOut = server["pingTimeOut"].GetInt();
-                    }
-                    if(server.HasMember("endpoint"))
-                    {
-                        stServerInfo.strEndpoint = server["endpoint"].GetString();
-                    }
-                    if(server.HasMember("protocol"))
-                    {
-                        stServerInfo.strProtocol = server["protocol"].GetString();
-                    }
-                    if(server.HasMember("encrypt"))
-                    {
-                        stServerInfo.bEncrypt = server["encrypt"].GetBool();
-                    }
-                    m_vstServerInfos.push_back(stServerInfo);
-                }
-            }
-        }
-    }
-    if(m_strToken == "" || m_vstServerInfos.empty())
-    {
-        KF_LOG_ERROR(logger, "TDEngineHuobi::login::getServers Error");
-        return false;
-    }
-    return true;
 }
 
 int64_t TDEngineHuobi::getMSTime()
@@ -406,8 +336,7 @@ char TDEngineHuobi::dec2hexChar(short int n) {
 		return char(0);
 	}
 }
-std::string TDEngineHuobi::escapeURL(const string &URL)
-{
+std::string TDEngineHuobi::escapeURL(const string &URL){
 	string result = "";
 	for (unsigned int i = 0; i < URL.size(); i++) {
 		char c = URL[i];
@@ -575,17 +504,14 @@ void TDEngineHuobi::connect(long timeout_nsec)
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
         AccountUnitHuobi& unit = account_units[idx];
-        unit.logged_in = true;
+        //unit.logged_in = true;
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
-        // Document doc;
-        //std::string requestPath = "/key";
-        // const auto response = Get(requestPath,"{}",unit);
-        //  getResponse(response.status_code, response.text, response.error.message, doc);
-        // if ( !unit.logged_in && doc.HasMember("code"))
-        //{
-        //   int code = doc["code"].GetInt();
-        //   unit.logged_in = (code == 0);
-        //}
+        if (!unit.logged_in)
+        {
+            lws_login(unit, 0);
+            //set true to for let the kungfuctl think td is running.
+            unit.logged_in = true;
+        }
     }
 }
 //火币
@@ -645,30 +571,18 @@ void TDEngineHuobi::getPriceVolumePrecision(AccountUnitHuobi& unit)
         KF_LOG_INFO(logger,"[getPriceVolumePrecision] (map size) "<<unit.mapPriceVolumePrecision.size());
     }
 }
-
-void TDEngineHuobi::login(long timeout_nsec)
-{
-    KF_LOG_INFO(logger, "TDEngineHuobi::login:");
-
+void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
+    KF_LOG_INFO(logger, "TDEngineHuobi::lws_login:");
     global_md = this;
-
-    Document d;
-    if(!getToken(d))
-    {
-        return;
-    }
-    if(!getServers(d))
-    {
-        return;
-    }
     m_isSubL3 = false;
+    wsStatus = nothing;
     global_md = this;
     int inputPort = 443;
     int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
 
     struct lws_context_creation_info ctxCreationInfo;
     struct lws_client_connect_info clientConnectInfo;
-    struct lws *wsi = NULL;
+    //struct lws *wsi = NULL;
     struct lws_protocols protocol;
 
     memset(&ctxCreationInfo, 0, sizeof(ctxCreationInfo));
@@ -707,35 +621,32 @@ void TDEngineHuobi::login(long timeout_nsec)
     }
 
     // Set up the client creation info
-    auto& stServerInfo = m_vstServerInfos.front();
-    std::string strAddress = stServerInfo.strEndpoint;
-    size_t nAddressEndPos = strAddress.find_last_of('/');
-    std::string strPath = strAddress.substr(nAddressEndPos);
-    strPath += "?token=";
-    strPath += m_strToken;
-    strPath += "&[connectId=" +  getId() +"]";
-    strAddress = strAddress.substr(0,nAddressEndPos);
-    strAddress = strAddress.substr(strAddress.find_last_of('/') + 1);
-    clientConnectInfo.address = strAddress.c_str();
-    clientConnectInfo.path = strPath.c_str(); // Set the info's path to the fixed up url path
+    static std::string host  = "wss://api.huobi.pro";
+    static std::string path = "/ws/v1";
+    clientConnectInfo.address = host.c_str();
+    clientConnectInfo.path = path.c_str(); // Set the info's path to the fixed up url path
     
     clientConnectInfo.context = context;
     clientConnectInfo.port = 443;
     clientConnectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-    clientConnectInfo.host =strAddress.c_str();
-    clientConnectInfo.origin = strAddress.c_str();
+    clientConnectInfo.host = host.c_str();
+    clientConnectInfo.origin = host.c_str();
     clientConnectInfo.ietf_version_or_minus_one = -1;
     clientConnectInfo.protocol = protocols[PROTOCOL_TEST].name;
-    clientConnectInfo.pwsi = &wsi;
+    clientConnectInfo.pwsi = &unit.webSocketConn;
 
     KF_LOG_INFO(logger, "TDEngineHuobi::login: address = " << clientConnectInfo.address << ",path = " << clientConnectInfo.path);
     //建立websocket连接
-    wsi = lws_client_connect_via_info(&clientConnectInfo);
-    if (wsi == NULL) {
+    unit.webSocketConn = lws_client_connect_via_info(&clientConnectInfo);
+    if (unit.webSocketConn == NULL) {
         KF_LOG_ERROR(logger, "TDEngineHuobi::login: wsi create error.");
         return;
     }
     KF_LOG_INFO(logger, "TDEngineHuobi::login: wsi create success.");
+}
+void TDEngineHuobi::login(long timeout_nsec)
+{
+    KF_LOG_INFO(logger, "TDEngineHuobi::login:");
 
     connect(timeout_nsec);
 }
@@ -830,8 +741,7 @@ LfOrderStatusType TDEngineHuobi::GetOrderStatus(std::string state) {
  * req functions
  * 查询账户持仓
  */
-void TDEngineHuobi::req_investor_position(const LFQryPositionField* data, int account_index, int requestId)
-{
+void TDEngineHuobi::req_investor_position(const LFQryPositionField* data, int account_index, int requestId){
     KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId);
 
     AccountUnitHuobi& unit = account_units[account_index];

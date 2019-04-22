@@ -82,7 +82,11 @@ struct PriceVolumePrecision
     std::string symbolPartition;
     std::string symbol;
 };
-
+emu HuobiWsStatus{
+    nothing,
+    accounts_topic,
+    orders_topic
+};
 struct AccountUnitHuobi
 {
     string api_key;//uid
@@ -98,18 +102,8 @@ struct AccountUnitHuobi
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
     std::string accountId;
-
+    struct lws* webSocketConn;
 };
-
-struct ServerInfo
-{
-    int nPingInterval = 0;
-    int nPingTimeOut = 0;
-    std::string strEndpoint ;
-    std::string strProtocol ;
-    bool bEncrypt = true;
-};
-
 /**
  * CTP trade engine
  */
@@ -204,6 +198,7 @@ public:
     std::string getHuobiTime();
     std::string getHuobiSignatrue(std::string parameters[],int psize,std::string timestamp,std::string method_url,std::string reqType,AccountUnitHuobi& unit);
 public:
+    void lws_login(AccountUnitHuobi& unit, long timeout_nsec);
     void writeErrorLog(std::string strError);
     void on_lws_data(struct lws* conn, const char* data, size_t len);
     int lws_write_subscribe(struct lws* conn);
@@ -211,9 +206,8 @@ public:
 private:
     void onPong(struct lws* conn);
     void Ping(struct lws* conn);
-    std::string makeSubscribeL3Update(const std::map<std::string,int>& mapAllSymbols);
-    bool getToken(Document& d) ;
-    bool getServers(Document& d);
+    AccountUnitHuobi& findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn);
+    std::string makeSubscribeAccountsUpdate(AccountUnitHuobi& unit);
     std::string getId();
     int64_t getMSTime();
     void loopwebsocket();
@@ -221,8 +215,8 @@ private:
     bool m_shouldPing = true;
     bool m_isPong = false;
     bool m_isSubL3 = false;
+    HuobiWsStatus wsStatus = nothing;
     struct lws_context *context = nullptr;
-    std::vector<ServerInfo> m_vstServerInfos;
     std::string m_strToken;
     struct lws* m_conn;
 private:
