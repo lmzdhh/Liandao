@@ -82,7 +82,7 @@ struct PriceVolumePrecision
     std::string symbolPartition;
     std::string symbol;
 };
-emu HuobiWsStatus{
+enum HuobiWsStatus{
     nothing,
     accounts_topic,
     orders_topic
