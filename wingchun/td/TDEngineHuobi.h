@@ -191,6 +191,9 @@ private:
     std::string genClinetid(const std::string& orderRef);
 
 public:
+    //zip 压缩和解压
+    int gzCompress(const char *src, int srcLen, char *dest, int destLen);
+    int gzDecompress(const char *src, int srcLen, const char *dst, int dstLen);
     //cys add
     char dec2hexChar(short int n);
     std::string escapeURL(const string &URL);
