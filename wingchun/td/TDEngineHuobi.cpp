@@ -721,7 +721,19 @@ void TDEngineHuobi::getPriceVolumePrecision(AccountUnitHuobi& unit)
 void TDEngineHuobi::huobiAuth(AccountUnitHuobi& unit){
     KF_LOG_INFO(logger, "[huobiAuth] auth");
     std::string strTimestamp = getHuobiTime();
-    string strSignatrue=getHuobiSignatrue(NULL,0,strTimestamp,"/ws/v1","GET\n",unit);
+    std::string strAccessKeyId=unit.api_key;
+    std::string strSignatureMethod="HmacSHA256";
+    std::string strSignatureVersion="2";
+    std::string strSign = "GET\n"+"api.huobi.pro\n" + "/ws/v1\n"+
+                            "AccessKeyId="+strAccessKeyId+"&"+
+                            "SignatureMethod="+strSignatureMethod+"&"+
+                            "SignatureVersion="+strSignatureVersion+"&"+
+                            "Timestamp="+strTimestamp;
+    KF_LOG_INFO(logger, "[huobiAuth] strSign = " << strSign );
+    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    KF_LOG_INFO(logger, "[huobiAuth] strHmac = " << strHmac );
+    std::string strSignatrue = base64_encode(strHmac,32);
+    KF_LOG_INFO(logger, "[huobiAuth] Signatrue = " << strSignatrue );
     StringBuffer sbUpdate;
     Writer<StringBuffer> writer(sbUpdate);
     writer.StartObject();

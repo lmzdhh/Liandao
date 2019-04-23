@@ -192,6 +192,10 @@ private:
     std::string genClinetid(const std::string& orderRef);
 
 public:
+    //cys add huobi status
+    HuobiWsStatus wsStatus = nothing;
+    HuobiWsStatus isAuth = nothing,isAccounts=nothing,isOrders=nothing;
+    HuobiWsStatus isAccountsList = nothing,isOrderList=nothing,isOrderDetail=nothing;
     void on_lws_open(struct lws* wsi);
     //zip 压缩和解压
     int gzCompress(const char *src, int srcLen, char *dest, int destLen);
@@ -226,7 +230,6 @@ private:
     bool m_shouldPing = true;
     bool m_isPong = false;
     bool m_isSubL3 = false;
-    HuobiWsStatus wsStatus = nothing;
     struct lws_context *context = nullptr;
     std::string m_strToken;
     struct lws* m_conn;
