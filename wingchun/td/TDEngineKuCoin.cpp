@@ -1519,7 +1519,7 @@ void TDEngineKuCoin::getResponse(int http_status_code, std::string responseText,
         }
         else
         {
-            val.SetString("unknown error")
+            val.SetString("unknown error");
         }
         
         json.AddMember("msg", val, allocator);
