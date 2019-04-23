@@ -304,6 +304,70 @@ std::string TDEngineHuobi::makeSubscribeAccountsUpdate(AccountUnitHuobi& unit){
     std::string strUpdate = sbUpdate.GetString();
     return strUpdate;
 }
+std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit){
+    StringBuffer sbUpdate;
+    Writer<StringBuffer> writer(sbUpdate);
+    writer.StartObject();
+    writer.Key("op");
+    writer.String("sub");
+    writer.Key("cid");
+    writer.String(unit.accountId.c_str());
+    writer.Key("topic");
+    writer.String("accounts");
+    writer.Key("model");
+    writer.String("0");
+    writer.EndObject();
+    std::string strUpdate = sbUpdate.GetString();
+    return strUpdate;
+}
+std::string TDEngineHuobi::makeSubscribeAccountsListUpdate(AccountUnitHuobi& unit){
+    StringBuffer sbUpdate;
+    Writer<StringBuffer> writer(sbUpdate);
+    writer.StartObject();
+    writer.Key("op");
+    writer.String("sub");
+    writer.Key("cid");
+    writer.String(unit.accountId.c_str());
+    writer.Key("topic");
+    writer.String("orders.htusdt");
+    writer.Key("model");
+    writer.String("0");
+    writer.EndObject();
+    std::string strUpdate = sbUpdate.GetString();
+    return strUpdate;
+}
+std::string TDEngineHuobi::makeSubscribeOrderListUpdate(AccountUnitHuobi& unit){
+    StringBuffer sbUpdate;
+    Writer<StringBuffer> writer(sbUpdate);
+    writer.StartObject();
+    writer.Key("op");
+    writer.String("sub");
+    writer.Key("cid");
+    writer.String(unit.accountId.c_str());
+    writer.Key("topic");
+    writer.String("orders.htusdt");
+    writer.Key("model");
+    writer.String("0");
+    writer.EndObject();
+    std::string strUpdate = sbUpdate.GetString();
+    return strUpdate;
+}
+std::string TDEngineHuobi::makeSubscribeOrderDetailUpdate(AccountUnitHuobi& unit){
+    StringBuffer sbUpdate;
+    Writer<StringBuffer> writer(sbUpdate);
+    writer.StartObject();
+    writer.Key("op");
+    writer.String("sub");
+    writer.Key("cid");
+    writer.String(unit.accountId.c_str());
+    writer.Key("topic");
+    writer.String("orders.htusdt");
+    writer.Key("model");
+    writer.String("0");
+    writer.EndObject();
+    std::string strUpdate = sbUpdate.GetString();
+    return strUpdate;
+}
 AccountUnitHuobi& TDEngineHuobi::findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn){
     for (size_t idx = 0; idx < account_units.size(); idx++) {
         AccountUnitHuobi &unit = account_units[idx];
@@ -323,7 +387,7 @@ int TDEngineHuobi::lws_write_subscribe(struct lws* conn){
     //}else if(wsStatus == huobi_auth){
         wsStatus = accounts_topic;
         //AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
-        std::string strSubscribe = makeSubscribeAccountsUpdate(unit);
+        std::string strSubscribe = makeSubscribeOrdersUpdate(unit);
         unsigned char msg[1024];
         memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
         int length = strSubscribe.length();
@@ -675,7 +739,6 @@ void TDEngineHuobi::huobiAuth(AccountUnitHuobi& unit){
     writer.String("auth");
     writer.EndObject();
     std::string strSubscribe = sbUpdate.GetString();
-    wsStatus = huobi_auth;
     unsigned char msg[1024];
     memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
     int length = strSubscribe.length();
@@ -1557,11 +1620,17 @@ std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     return accountId;
 }
 std::string TDEngineHuobi::getHuobiTime(){
-    time_t timep;
-    time (&timep);
-    char tmp[64];
-    strftime(tmp, sizeof(tmp), "%Y-%m-%dT%H%%3A%M%%3A%S",gmtime(&timep) );
-    std::string huobiTime=tmp;
+    time_t t = time(NULL);
+    struct tm *local = gmtime(&t);
+    char timeBuf[100] = {0};
+    sprintf(timeBuf, "%04d-%02d-%02dT%02d%%3A%02d%%3A%02d",
+            local->tm_year + 1900,
+            local->tm_mon + 1,
+            local->tm_mday,
+            local->tm_hour,
+            local->tm_min,
+            local->tm_sec);
+    std::string huobiTime=timeBuf;
     return huobiTime;
 }
 /*

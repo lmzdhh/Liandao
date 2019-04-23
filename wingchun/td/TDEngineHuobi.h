@@ -215,6 +215,10 @@ private:
     void Pong(struct lws* conn,int ping);
     AccountUnitHuobi& findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn);
     std::string makeSubscribeAccountsUpdate(AccountUnitHuobi& unit);
+    std::string makeSubscribeOrdersUpdate(AccountUnitHuobi& unit);
+    std::string makeSubscribeAccountsListUpdate(AccountUnitHuobi& unit);
+    std::string makeSubscribeOrderListUpdate(AccountUnitHuobi& unit);
+    std::string makeSubscribeOrderDetailUpdate(AccountUnitHuobi& unit);
     std::string getId();
     int64_t getMSTime();
     void loopwebsocket();
