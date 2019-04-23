@@ -263,7 +263,8 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
                     on_lws_receive_orders(conn,json);
                 }
             } else if (op == "ping") {
-
+                int ping=json["ping"].GetInt();
+                Pong(conn,ping);
             } else if (op == "auth") {
                 isAuth=huobi_auth;
                 int userId=json["data"]["user-id"].GetInt();
