@@ -258,7 +258,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
         } else if (json.HasMember("op")) {
             std::string op = json["op"].GetString();
             if (op == "notify") {
-                string topic=j["topic"].GetString();
+                string topic=json["topic"].GetString();
                 if(topic.substr(0,topic.find("."))=="orders"){
                     on_lws_receive_orders(conn,json);
                 }
