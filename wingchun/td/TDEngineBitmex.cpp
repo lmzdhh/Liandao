@@ -1269,7 +1269,7 @@ void TDEngineBitmex::lws_login(AccountUnitBitmex& unit, long timeout_nsec) {
 
     struct lws_client_connect_info ccinfo = {0};
 
-    static std::string host  = "www.bitmex.com";
+    static std::string host  = unit.baseUrl;
     static std::string path = "/realtime";
     static int port = 443;
 
