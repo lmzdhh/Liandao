@@ -169,8 +169,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         case LWS_CALLBACK_CLOSED:
         {//lws callback close
             ss << "LWS_CALLBACK_CLOSED.";
-            isAuth=nothing;isOrders=nothing;
-            global_md->writeInfoLog(ss.str());
+            global_md->on_lws_close(wsi);
             break;
         }
         case LWS_CALLBACK_WSI_DESTROY:
@@ -339,7 +338,10 @@ void TDEngineHuobi::on_lws_connection_error(struct lws* conn){
     AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
     lws_login(unit,0);
 }
-
+void TDEngineHuobi::on_lws_close(struct lws* conn){
+    isAuth=nothing;isOrders=nothing;
+    KF_LOG_INFO(logger,"[websocket close]");
+}
 static struct lws_protocols protocols[] =
         {
                 {

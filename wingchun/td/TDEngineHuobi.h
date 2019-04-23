@@ -220,6 +220,7 @@ public:
     int subscribeTopic(struct lws* conn,string strSubscribe);
     int on_lws_write_subscribe(struct lws* conn);
     void on_lws_connection_error(struct lws* conn);
+    void on_lws_close(struct lws* conn);
 private:
     void Ping(struct lws* conn);
     void Pong(struct lws* conn,int ping);
