@@ -194,7 +194,7 @@ private:
     std::string parseJsonToString(Document &d);
     void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId);
     void Ping(struct lws* conn);
-    void Pong(struct lws* conn,int ping);
+    void Pong(struct lws* conn,long long ping);
     AccountUnitHuobi& findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn);
     std::string makeSubscribeOrdersUpdate(AccountUnitHuobi& unit);
     int64_t getMSTime();
