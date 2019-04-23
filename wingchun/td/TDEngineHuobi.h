@@ -206,6 +206,7 @@ public:
     std::string escapeURL(const string &URL);
     std::string getAccountId(AccountUnitHuobi& unit);
     std::string getHuobiTime();
+    std::string getHuobiNormalTime();
     std::string getHuobiSignatrue(std::string parameters[],int psize,std::string timestamp,std::string method_url,std::string reqType,AccountUnitHuobi& unit);
 public:
     void huobiAuth(AccountUnitHuobi& unit);

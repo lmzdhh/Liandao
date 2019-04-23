@@ -723,6 +723,7 @@ void TDEngineHuobi::getPriceVolumePrecision(AccountUnitHuobi& unit)
 void TDEngineHuobi::huobiAuth(AccountUnitHuobi& unit){
     KF_LOG_INFO(logger, "[huobiAuth] auth");
     std::string strTimestamp = getHuobiTime();
+    std::string timestamp = getHuobiNormalTime();
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
@@ -747,7 +748,7 @@ void TDEngineHuobi::huobiAuth(AccountUnitHuobi& unit){
     writer.Key("SignatureVersion");
     writer.String("2");
     writer.Key("Timestamp");
-    writer.String(strTimestamp.c_str());
+    writer.String(timestamp.c_str());
     writer.Key("Signature");
     writer.String(strSignatrue.c_str());
     writer.Key("op");
@@ -1639,6 +1640,20 @@ std::string TDEngineHuobi::getHuobiTime(){
     struct tm *local = gmtime(&t);
     char timeBuf[100] = {0};
     sprintf(timeBuf, "%04d-%02d-%02dT%02d%%3A%02d%%3A%02d",
+            local->tm_year + 1900,
+            local->tm_mon + 1,
+            local->tm_mday,
+            local->tm_hour,
+            local->tm_min,
+            local->tm_sec);
+    std::string huobiTime=timeBuf;
+    return huobiTime;
+}
+std::string TDEngineHuobi::getHuobiNormalTime(){
+    time_t t = time(NULL);
+    struct tm *local = gmtime(&t);
+    char timeBuf[100] = {0};
+    sprintf(timeBuf, "%04d-%02d-%02dT%02d:%02d:%02d",
             local->tm_year + 1900,
             local->tm_mon + 1,
             local->tm_mday,
