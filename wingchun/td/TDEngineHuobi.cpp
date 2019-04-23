@@ -263,7 +263,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
                     on_lws_receive_orders(conn,json);
                 }
             } else if (op == "ping") {
-                int ping=json["ping"].GetInt();
+                int ping=json["ts"].GetInt();
                 Pong(conn,ping);
             } else if (op == "auth") {
                 isAuth=huobi_auth;
@@ -273,7 +273,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
         } else if (json.HasMember("ch")) {
 
         } else if (json.HasMember("ping")) {
-            int ping=json["ping"].GetInt();
+            int ping=json["ts"].GetInt();
             Pong(conn,ping);
         } else if (json.HasMember("subbed")) {
 
