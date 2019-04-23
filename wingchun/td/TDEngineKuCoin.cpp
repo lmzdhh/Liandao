@@ -1487,14 +1487,19 @@ void TDEngineKuCoin::getResponse(int http_status_code, std::string responseText,
     {
         json.SetObject();
         Document::AllocatorType& allocator = json.GetAllocator();
-        int errorId = 1;
-        json.AddMember("code", errorId, allocator);
+        //int errorId = 1;
+        json.AddMember("code", Document::StringRefType("1"), allocator);
         KF_LOG_INFO(logger, "[getResponse] (errorMsg)" << errorMsg);
         rapidjson::Value val;
         val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
         json.AddMember("msg", val, allocator);
     } else
     {
+        /*
+        {"code":"503000","msg":"Service unavailable"}
+        */
+        json.Parse(responseText.c_str());
+        /*
         Document d;
         d.Parse(responseText.c_str());
         KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
@@ -1503,8 +1508,16 @@ void TDEngineKuCoin::getResponse(int http_status_code, std::string responseText,
         json.AddMember("code", http_status_code, allocator);
 
         rapidjson::Value val;
-        val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
+        if(errorMsg.size() > 0)
+        {
+            val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
+        }
+        else if(responseText.size() > 0)
+        {
+            val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
+        }
         json.AddMember("msg", val, allocator);
+        */
     }
 }
 
