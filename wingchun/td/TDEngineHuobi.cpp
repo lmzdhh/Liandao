@@ -726,7 +726,8 @@ void TDEngineHuobi::huobiAuth(AccountUnitHuobi& unit){
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
-    std::string strSign = "GET\n"+"api.huobi.pro\n" + "/ws/v1\n"+
+    string reqType="GET\n";
+    std::string strSign = reqType+"api.huobi.pro\n" + "/ws/v1\n"+
                             "AccessKeyId="+strAccessKeyId+"&"+
                             "SignatureMethod="+strSignatureMethod+"&"+
                             "SignatureVersion="+strSignatureVersion+"&"+
