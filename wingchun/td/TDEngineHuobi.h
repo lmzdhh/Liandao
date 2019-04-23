@@ -107,6 +107,8 @@ struct AccountUnitHuobi
     CoinPairWhiteList positionWhiteList;
     std::string accountId;
     struct lws* webSocketConn;
+    std::map<std::string,PendingOrderStatus> newOrderStatusMap;
+    std::map<std::string,PendingOrderStatus> pendingOrderStatusMap;
 };
 /**
  * CTP trade engine
@@ -155,25 +157,17 @@ private:
 
     virtual void set_reader_thread() override;
     void loop();
-    std::vector<std::string> split(std::string str, std::string token);
     void GetAndHandleOrderTradeResponse();
     void addNewQueryOrdersAndTrades(AccountUnitHuobi& unit, const char_31 InstrumentID,
                                     const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                     const uint64_t VolumeTraded, const std::string& remoteOrderId);
     void retrieveOrderStatus(AccountUnitHuobi& unit);
     void moveNewOrderStatusToPending(AccountUnitHuobi& unit);
-
-    void handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
-    void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
-    void getPriceVolumePrecision(AccountUnitHuobi& unit);
-    void dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,std::string& nDealPrice,std::string& nDealVome);
-
-    std::string parseJsonToString(Document &d);
-
-    void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId);
-
+    void handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, 
+                                        ResponsedOrderStatus& responsedOrderStatus);
     void loopOrderActionNoResponseTimeOut();
     void orderActionNoResponseTimeOut();
+    void loopwebsocket();
 private:
     void get_account(AccountUnitHuobi& unit, Document& json);
     void send_order(AccountUnitHuobi& unit, const char *code,
@@ -193,7 +187,17 @@ private:
     cpr::Response Post(const std::string& url,const std::string& body, AccountUnitHuobi& unit);
     void genUniqueKey();
     std::string genClinetid(const std::string& orderRef);
+    //火币精度处理
+    void getPriceVolumePrecision(AccountUnitHuobi& unit);
+    void dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,std::string& nDealPrice,std::string& nDealVome);
 
+    std::string parseJsonToString(Document &d);
+    void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId);
+    void Ping(struct lws* conn);
+    void Pong(struct lws* conn,int ping);
+    AccountUnitHuobi& findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn);
+    std::string makeSubscribeOrdersUpdate(AccountUnitHuobi& unit);
+    int64_t getMSTime();
 public:
     //cys add huobi websocket status
     HuobiWsStatus wsStatus = nothing;
@@ -211,6 +215,7 @@ public:
     std::string getHuobiNormalTime();
     std::string getHuobiSignatrue(std::string parameters[],int psize,std::string timestamp,std::string method_url,std::string reqType,AccountUnitHuobi& unit);
 public:
+    //websocket
     void huobiAuth(AccountUnitHuobi& unit);
     void lws_login(AccountUnitHuobi& unit, long timeout_nsec);
     void writeInfoLog(std::string strInfo);
@@ -221,13 +226,9 @@ public:
     int on_lws_write_subscribe(struct lws* conn);
     void on_lws_connection_error(struct lws* conn);
     void on_lws_close(struct lws* conn);
-private:
-    void Ping(struct lws* conn);
-    void Pong(struct lws* conn,int ping);
-    AccountUnitHuobi& findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn);
-    std::string makeSubscribeOrdersUpdate(AccountUnitHuobi& unit);
-    int64_t getMSTime();
-    void loopwebsocket();
+    void on_lws_receive_orders(struct lws* conn,Document& json);
+    //websocket deal order status
+
 private:
     bool m_shouldPing = true;
     bool m_isPong = false;
@@ -254,9 +255,6 @@ private:
 
     //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
     std::map<std::string, OrderActionSentTime> remoteOrderIdOrderActionSentTime;
-
-
-    std::vector<ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
     int max_rest_retry_times = 3;
     int retry_interval_milliseconds = 1000;
     int orderaction_max_waiting_seconds = 30;

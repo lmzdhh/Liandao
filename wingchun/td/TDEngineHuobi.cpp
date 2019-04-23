@@ -230,6 +230,10 @@ void TDEngineHuobi::Pong(struct lws* conn,int ping){
     strncpy((char *)msg+LWS_PRE, strPong.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 }
+void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
+    KF_LOG_INFO(logger,"[on_lws_receive_orders]");
+
+}
 void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     char buf[4096] = {0};
@@ -254,7 +258,10 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
         } else if (json.HasMember("op")) {
             std::string op = json["op"].GetString();
             if (op == "notify") {
-
+                string topic=j["topic"].GetString();
+                if(topic.substr(0,topic.find("."))=="orders"){
+                    on_lws_receive_orders(conn,json);
+                }
             } else if (op == "ping") {
 
             } else if (op == "auth") {
@@ -334,7 +341,6 @@ void TDEngineHuobi::on_lws_connection_error(struct lws* conn){
     long timeout_nsec = 0;
     //reset sub
     //m_isSubL3 = false;
-    wsStatus = nothing;
     AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
     lws_login(unit,0);
 }
@@ -688,7 +694,8 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
     KF_LOG_INFO(logger, "[TDEngineHuobi::lws_login]");
     global_md = this;
     m_isSubL3 = false;
-    wsStatus = nothing;
+    isAuth=nothing;
+    isOrders=nothing;
     global_md = this;
     int inputPort = 443;
     int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
@@ -1007,7 +1014,7 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
     KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << ticker << " (Volume)" << nVolume << " (Price)" << nPrice
                                                       << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
 }
-
+//发单
 void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time){
     AccountUnitHuobi& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
@@ -1036,8 +1043,7 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
     std::string fixedPrice;
     std::string fixedVolume;
     dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
-    if(fixedVolume == "0")
-    {
+    if(fixedVolume == "0"){
         KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error (no ticker)" << ticker);
         errorId = 200;
         errorMsg = data->InstrumentID;
@@ -1047,17 +1053,16 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
         return;
     }
     KF_LOG_INFO(logger,"[req_order_insert] cys_ticker "<<ticker.c_str());
+    //lock
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
             GetType(data->OrderPriceType).c_str(), fixedVolume, fixedPrice, d);
     //not expected response
-    if(!d.IsObject())
-    {
+    if(!d.IsObject()){
         errorId = 100;
         errorMsg = "send_order http response has parse error or is not json. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                            errorId << " (errorMsg) " << errorMsg);
-    } else  if(d.HasMember("status"))
-    {
+    } else  if(d.HasMember("status")){//发单成功
         std::string status =d["status"].GetString();
         if(status == "ok") {
             //if send successful and the exchange has received ok, then add to  pending query order list
@@ -1095,6 +1100,7 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
 
             KF_LOG_DEBUG(logger, "[req_order_insert] (addNewQueryOrdersAndTrades)" );
             char noneStatus = LF_CHAR_NotTouched;
+            //存放order id
             addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
 
             //success, only record raw data
@@ -1106,8 +1112,7 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
         }else {
             //errorId = std::round(std::stod(d["id"].GetString()));
             errorId=404;
-            if(d.HasMember("err-msg") && d["err-msg"].IsString())
-            {
+            if(d.HasMember("err-msg") && d["err-msg"].IsString()){
                 std::string tab="\t";
                 errorMsg = d["err-code"].GetString()+tab+d["err-msg"].GetString();
             }
@@ -1115,6 +1120,7 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
                                                                                errorId << " (errorMsg) " << errorMsg);
         }
     }
+    //unlock
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
@@ -1200,7 +1206,7 @@ void TDEngineHuobi::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField
     memcpy(&newOrderActionSent.data, data, sizeof(LFOrderActionField));
     remoteOrderIdOrderActionSentTime[remoteOrderId] = newOrderActionSent;
 }
-
+//cys no use
 void TDEngineHuobi::GetAndHandleOrderTradeResponse(){
     // KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse]" );
     //every account
@@ -1211,19 +1217,19 @@ void TDEngineHuobi::GetAndHandleOrderTradeResponse(){
         {
             continue;
         }
+        //将新订单放到提交缓存中
         moveNewOrderStatusToPending(unit);
         retrieveOrderStatus(unit);
     }//end every account
 }
 
-//订单状态
+//订单状态cys not use
 void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit){
     //KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
     std::vector<PendingOrderStatus>::iterator orderStatusIterator;
-
     for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
     {
 
@@ -1243,22 +1249,22 @@ void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit){
         Document d;
         query_order(unit, ticker,orderStatusIterator->remoteOrderId, d);
         /*huobi查询订单详情
-        字段名称	是否必须	数据类型	描述	取值范围
-        account-id	true	long	账户 ID	
-        amount	true	string	订单数量	
-        canceled-at	false	long	订单撤销时间	
-        created-at	true	long	订单创建时间	
-        field-amount	true	string	已成交数量	
-        field-cash-amount	true	string	已成交总金额	
-        field-fees	true	string	已成交手续费（买入为币，卖出为钱）	
-        finished-at	false	long	订单变为终结态的时间，不是成交时间，包含“已撤单”状态	
-        id	true	long	订单ID	
-        price	true	string	订单价格	
-        source	true	string	订单来源	api
-        state	true	string	订单状态	submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
-        symbol	true	string	交易对	btcusdt, ethbtc, rcneth ...
-        type	true	string	订单类型	buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖, buy-ioc：IOC买单, sell-ioc：IOC卖单
-        {    
+            字段名称	是否必须	数据类型	描述	取值范围
+            account-id	true	long	账户 ID	
+            amount	true	string	订单数量	
+            canceled-at	false	long	订单撤销时间	
+            created-at	true	long	订单创建时间	
+            field-amount	true	string	已成交数量	
+            field-cash-amount	true	string	已成交总金额	
+            field-fees	true	string	已成交手续费（买入为币，卖出为钱）	
+            finished-at	false	long	订单变为终结态的时间，不是成交时间，包含“已撤单”状态	
+            id	true	long	订单ID	
+            price	true	string	订单价格	
+            source	true	string	订单来源	api
+            state	true	string	订单状态	submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
+            symbol	true	string	交易对	btcusdt, ethbtc, rcneth ...
+            type	true	string	订单类型	buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖, buy-ioc：IOC买单, sell-ioc：IOC卖单
+            {    
             "data": 
             {
                 "id": 59378,
@@ -1279,7 +1285,7 @@ void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit){
                 "exchange": "huobi",
                 "batch": ""
             }
-        }
+            }
         */
         //parse order status
         //订单状态，submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
@@ -1386,7 +1392,7 @@ void TDEngineHuobi::moveNewOrderStatusToPending(AccountUnitHuobi& unit)
         newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
     }
 }
-
+//cys no use
 void TDEngineHuobi::set_reader_thread()
 {
     ITDEngine::set_reader_thread();
@@ -1397,7 +1403,7 @@ void TDEngineHuobi::set_reader_thread()
     KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineHuobi::loopOrderActionNoResponseTimeOut");
     orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineHuobi::loopOrderActionNoResponseTimeOut, this)));
 }
-
+//cys no use
 void TDEngineHuobi::loopwebsocket()
 {
     time_t nLastTime = time(0);
@@ -1417,7 +1423,7 @@ void TDEngineHuobi::loopwebsocket()
         lws_service( context, rest_get_interval_ms );
     }
 }
-
+//cys no use
 void TDEngineHuobi::loop()
 {
     KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
@@ -1626,6 +1632,7 @@ void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
         should_retry = false;
         //火币下单post /v1/order/orders/place
         std::string requestPath = "/v1/order/orders/place";
+        //lock
         response = Post(requestPath,createInsertOrdertring(unit.accountId.c_str(), volume.c_str(), price.c_str(),
                         "api",code,st.c_str()),unit);
 
