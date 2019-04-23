@@ -142,13 +142,13 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         case LWS_CALLBACK_PROTOCOL_INIT:
         {//lws callback protocol init
             ss << "LWS_CALLBACK_PROTOCOL_INIT.";
-            global_md->writeErrorLog(ss.str());
+            global_md->writeInfoLog(ss.str());
             break;
         }
         case LWS_CALLBACK_CLIENT_RECEIVE:
         {//lws callback client receive
             ss << "LWS_CALLBACK_CLIENT_RECEIVE.";
-            global_md->writeErrorLog(ss.str());
+            global_md->writeInfoLog(ss.str());
             if(global_md)
             {//统一接收，不同订阅返回数据不同解析
                 global_md->on_lws_data(wsi, (char *)in, len);
@@ -158,7 +158,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         case LWS_CALLBACK_CLIENT_WRITEABLE:
         {//lws callback client writeable
             ss << "LWS_CALLBACK_CLIENT_WRITEABLE.";
-            global_md->writeErrorLog(ss.str());
+            global_md->writeInfoLog(ss.str());
             int ret = 0;
             if(global_md)
             {//统一发送，不同订阅不同请求
@@ -169,14 +169,14 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         case LWS_CALLBACK_CLOSED:
         {//lws callback close
             ss << "LWS_CALLBACK_CLOSED.";
-            global_md->writeErrorLog(ss.str());
+            global_md->writeInfoLog(ss.str());
             break;
         }
         case LWS_CALLBACK_WSI_DESTROY:
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {//lws callback client connection error
             ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
-            global_md->writeErrorLog(ss.str());
+            global_md->writeInfoLog(ss.str());
             if(global_md)
             {
                 global_md->on_lws_connection_error(wsi);
@@ -184,8 +184,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             break;
         }
         default:
-            ss << "default error.";
-            global_md->writeErrorLog(ss.str());
+            ss << "default Info.";
+            global_md->writeInfoLog(ss.str());
             break;
     }
 
@@ -437,7 +437,9 @@ enum protocolList {
 struct session_data {
     int fd;
 };
-
+void TDEngineHuobi::writeInfoLog(std::string strInfo){
+    KF_LOG_INFO(logger,strInfo);
+}
 void TDEngineHuobi::writeErrorLog(std::string strError)
 {
     KF_LOG_ERROR(logger, strError);

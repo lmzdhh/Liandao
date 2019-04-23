@@ -192,10 +192,11 @@ private:
     std::string genClinetid(const std::string& orderRef);
 
 public:
-    //cys add huobi status
+    //cys add huobi websocket status
     HuobiWsStatus wsStatus = nothing;
     HuobiWsStatus isAuth = nothing,isAccounts=nothing,isOrders=nothing;
     HuobiWsStatus isAccountsList = nothing,isOrderList=nothing,isOrderDetail=nothing;
+    //当webSocket建立时
     void on_lws_open(struct lws* wsi);
     //zip 压缩和解压
     int gzCompress(const char *src, int srcLen, char *dest, int destLen);
@@ -209,6 +210,7 @@ public:
 public:
     void huobiAuth(AccountUnitHuobi& unit);
     void lws_login(AccountUnitHuobi& unit, long timeout_nsec);
+    void writeInfoLog(std::string strInfo);
     void writeErrorLog(std::string strError);
     void on_lws_data(struct lws* conn, const char* data, size_t len);
     int lws_write_subscribe(struct lws* conn);
