@@ -246,7 +246,7 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
                         std::string strTradeId = data["tradeId"].GetString();
                         std::string strTime = data["time"].GetString();
                         it->second.VolumeTraded += nSize;
-                        it->second.OrderStatus =  it->second.VolumeTraded ==  it->second.nVolume ? LF_CHAR_AllTraded : LF_CHAR_PartTradedNotQueueing;
+                        it->second.OrderStatus =  it->second.VolumeTraded ==  it->second.nVolume ? LF_CHAR_AllTraded : LF_CHAR_PartTradedQueueing;
                         onOrder( it->second);
                         onTrade(it->second,nSize,nPrice,strTradeId,strTime);
                        if( it->second.OrderStatus == LF_CHAR_AllTraded)
@@ -264,7 +264,7 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
                         std::string strTradeId = data["tradeId"].GetString();
                         std::string strTime = data["time"].GetString();
                         it->second.VolumeTraded += nSize;
-                        it->second.OrderStatus =  it->second.VolumeTraded ==  it->second.nVolume ? LF_CHAR_AllTraded : LF_CHAR_PartTradedNotQueueing;
+                        it->second.OrderStatus =  it->second.VolumeTraded ==  it->second.nVolume ? LF_CHAR_AllTraded : LF_CHAR_PartTradedQueueing;
                         onOrder( it->second);
                        onTrade(it->second,nSize,nPrice,strTradeId,strTime);
                        if( it->second.OrderStatus == LF_CHAR_AllTraded)
@@ -1726,7 +1726,7 @@ void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::ve
             std::string strOrderID = orderStatusIterator->remoteOrderId;
             strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
 
-            rtn_order.OrderStatus = LF_CHAR_PartTradedNotQueueing;
+            rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
             rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
             //first send onRtnOrder about the status change or VolumeTraded change
             strcpy(rtn_order.ExchangeID, "kucoin");
