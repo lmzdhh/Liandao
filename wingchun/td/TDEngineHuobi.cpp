@@ -219,7 +219,9 @@ void TDEngineHuobi::Pong(struct lws* conn,long long ping){
     StringBuffer sbPing;
     Writer<StringBuffer> writer(sbPing);
     writer.StartObject();
-    writer.Key("pong");
+    writer.Key("op");
+    writer.String("pong");
+    writer.Key("ts");
     writer.Int64(ping);
     writer.EndObject();
     std::string strPong = sbPing.GetString();
