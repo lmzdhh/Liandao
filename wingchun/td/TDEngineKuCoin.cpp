@@ -1498,14 +1498,15 @@ void TDEngineKuCoin::getResponse(int http_status_code, std::string responseText,
         /*
         {"code":"503000","msg":"Service unavailable"}
         */
-        json.Parse(responseText.c_str());
-        /*
+        //json.Parse(responseText.c_str());
+        
         Document d;
         d.Parse(responseText.c_str());
         KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
         json.SetObject();
         Document::AllocatorType& allocator = json.GetAllocator();
-        json.AddMember("code", http_status_code, allocator);
+        std::string strErrorID = std::to_string(http_status_code);
+        json.AddMember("code", Document::StringRefType(strErrorID.c_str()), allocator);
 
         rapidjson::Value val;
         if(errorMsg.size() > 0)
@@ -1516,8 +1517,13 @@ void TDEngineKuCoin::getResponse(int http_status_code, std::string responseText,
         {
             val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
         }
+        else
+        {
+            val.SetString("unknown error")
+        }
+        
         json.AddMember("msg", val, allocator);
-        */
+        
     }
 }
 
