@@ -1215,9 +1215,12 @@ int32_t TDEngineUpbit::send_order(AccountUnitUpbit& unit, const char *symbol,
                                   Header{{"Authorization", strAuthorization}},
                                   Body{body}, Timeout{100000});
 
-        KF_LOG_INFO(logger, "[send_order] (url) " << url << " (response.status_code) " << response.status_code <<
-                                                         " (response.error.message) " << response.error.message <<
-                                                         " (response.text) " << response.text.c_str());
+        KF_LOG_INFO(logger, "[send_order] (url) " << url << 
+                " (strAuthorization) "<<strAuthorization<<
+                " (body) "<<body<<
+                " (response.status_code) " << response.status_code <<
+                " (response.error.message) " << response.error.message <<
+                " (response.text) " << response.text.c_str());
 
         if(shouldRetry(response.status_code, response.error.message, response.text)) {
             should_retry = true;//quest5v3  不做重新发单，只尝试一次
@@ -1340,7 +1343,10 @@ std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *sy
                                   Header{{"Authorization", strAuthorization}},
                                   Body{body}, Timeout{100000});
 
-        KF_LOG_INFO(logger,"(retry_times)"<<retry_times<< "[cancel_order] (url) " << url << " (response.status_code) " << response.status_code <<
+        KF_LOG_INFO(logger,"(retry_times)"<<retry_times<< "[cancel_order] (url) " << url <<
+                                                 " (strAuthorization) "<<strAuthorization<<
+                                                 " (body) "<<body<<
+                                                 " (response.status_code) " << response.status_code <<
                                                  " (response.error.message) " << response.error.message <<
                                                  " (response.text) " << response.text.c_str()<<
                                                  "(timeConsumed)"<<(getTimestamp()-start)<<
