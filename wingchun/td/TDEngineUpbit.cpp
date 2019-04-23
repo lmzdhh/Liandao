@@ -113,11 +113,11 @@ TradeAccount TDEngineUpbit::load_account(int idx, const json& j_config)
         retry_interval_milliseconds = j_config["retry_interval_milliseconds"].get<int>();
     }
     KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
-    if(j_config.find("time_to_wait_before_cancel") != j_config.end()) {
-        wait = j_config["time_to_wait_before_cancel"].get<int>();
+    if(j_config.find("time_to_wait_before_cancel_ms") != j_config.end()) {
+        time_to_wait_before_cancel_ms = j_config["time_to_wait_before_cancel_ms"].get<int>();
     }
-    else wait=0;
-    KF_LOG_INFO(logger, "[load_account] (for test ,time to wait before cancel (s))" << wait);
+    else time_to_wait_before_cancel_ms=0;
+    KF_LOG_INFO(logger, "[load_account] (for test ,time to wait before cancel (s))" << time_to_wait_before_cancel_ms);
 
     AccountUnitUpbit& unit = account_units[idx];
     unit.api_key = api_key;
@@ -590,6 +590,7 @@ void TDEngineUpbit::req_order_insert(const LFInputOrderField* data, int account_
         OrderInfo stOrderInfo;
         stOrderInfo.strRemoteUUID = d["uuid"].GetString();
         stOrderInfo.nRequestID = requestId;
+        stOrderInfo.timestamp=getTimestamp();//quest5v5
         unit.mapOrderRef2OrderInfo[data->OrderRef] = stOrderInfo;
         std::string strStatus=d["state"].GetString();
         int64_t nTrades = d["trades_count"].GetInt64();
@@ -801,6 +802,15 @@ void TDEngineUpbit::req_order_action(const LFOrderActionField* data, int account
 
     Document d;
     auto stOrderInfo = findValue(unit.mapOrderRef2OrderInfo,data->OrderRef);
+    /*quest5v5 fxw starts here*/
+    int64_t between = getTimestamp() - stOrderInfo.timestamp;
+    if (between < time_to_wait_before_cancel_ms)
+    {
+        between = time_to_wait_before_cancel_ms - between;
+        KF_LOG_DEBUG(logger, "[req_order_action] (cancel will work after) " << between<<"ms");
+        std::this_thread::sleep_for(std::chrono::milliseconds(between));
+    }
+    /*quest5v5 fxw ends here*/
     auto nResponseCode =  cancel_order(unit, ticker.c_str(), stOrderInfo.strRemoteUUID.c_str() ,  d);
 //    KF_LOG_INFO(logger, "[req_order_action] cancel_order");
 //    printResponse(d);
@@ -1313,13 +1323,8 @@ std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *uuid, 
 
 std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *symbol,
                   const char *uuid,  Document &json)
-{ 
-    int64_t start = getTimestamp(); 
-    if(wait>0)
-    {
-        KF_LOG_INFO(logger,"(cancel after "<<wait<<"s)");
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000*wait));
-    }
+{
+    int64_t start=getTimestamp();
     KF_LOG_INFO(logger, "[cancel_order]");
     int retry_times = 0;
     cpr::Response response;

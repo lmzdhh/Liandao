@@ -51,6 +51,7 @@ struct OrderInfo
 {
     int64_t nRequestID = -1;
     std::string strRemoteUUID = "";
+    int64_t timestamp;//quest5v5
 };
 
 struct AccountUnitUpbit
@@ -191,7 +192,7 @@ private:
 
     int max_rest_retry_times = 3;
     int retry_interval_milliseconds = 1000;
-    int wait=0;
+    int time_to_wait_before_cancel_ms=0;
 };
 
 WC_NAMESPACE_END
