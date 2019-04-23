@@ -85,8 +85,11 @@ struct PriceVolumePrecision
 enum HuobiWsStatus{
     nothing,
     huobi_auth,
-    accounts_topic,
-    orders_topic
+    accounts_sub,
+    orders_sub,
+    accounts_list_req,
+    order_list_req,
+    order_detail_req
 };
 struct AccountUnitHuobi
 {
@@ -194,8 +197,7 @@ private:
 public:
     //cys add huobi websocket status
     HuobiWsStatus wsStatus = nothing;
-    HuobiWsStatus isAuth = nothing,isAccounts=nothing,isOrders=nothing;
-    HuobiWsStatus isAccountsList = nothing,isOrderList=nothing,isOrderDetail=nothing;
+    HuobiWsStatus isAuth = nothing,isOrders=nothing;
     //当webSocket建立时
     void on_lws_open(struct lws* wsi);
     //zip 压缩和解压
@@ -213,20 +215,16 @@ public:
     void lws_login(AccountUnitHuobi& unit, long timeout_nsec);
     void writeInfoLog(std::string strInfo);
     void writeErrorLog(std::string strError);
+    //ws_service_cb回调函数
     void on_lws_data(struct lws* conn, const char* data, size_t len);
-    int lws_write_subscribe(struct lws* conn);
+    int subscribeTopic(struct lws* conn,string strSubscribe);
+    int on_lws_write_subscribe(struct lws* conn);
     void on_lws_connection_error(struct lws* conn);
 private:
-    void onPong(struct lws* conn);
     void Ping(struct lws* conn);
     void Pong(struct lws* conn,int ping);
     AccountUnitHuobi& findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn);
-    std::string makeSubscribeAccountsUpdate(AccountUnitHuobi& unit);
     std::string makeSubscribeOrdersUpdate(AccountUnitHuobi& unit);
-    std::string makeSubscribeAccountsListUpdate(AccountUnitHuobi& unit);
-    std::string makeSubscribeOrderListUpdate(AccountUnitHuobi& unit);
-    std::string makeSubscribeOrderDetailUpdate(AccountUnitHuobi& unit);
-    std::string getId();
     int64_t getMSTime();
     void loopwebsocket();
 private:

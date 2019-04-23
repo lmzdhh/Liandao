@@ -162,13 +162,14 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
             int ret = 0;
             if(global_md)
             {//统一发送，不同订阅不同请求
-                ret = global_md->lws_write_subscribe(wsi);
+                ret = global_md->on_lws_write_subscribe(wsi);
             }
             break;
         }
         case LWS_CALLBACK_CLOSED:
         {//lws callback close
             ss << "LWS_CALLBACK_CLOSED.";
+            isAuth=nothing;isOrders=nothing;
             global_md->writeInfoLog(ss.str());
             break;
         }
@@ -196,16 +197,6 @@ void TDEngineHuobi::on_lws_open(struct lws* wsi){
     huobiAuth(findAccountUnitHuobiByWebsocketConn(wsi));
     KF_LOG_INFO(logger,"[on_lws_open] finished ");
 }
-std::string TDEngineHuobi::getId()
-{
-    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    return  std::to_string(timestamp);
-}
-
-void TDEngineHuobi::onPong(struct lws* conn)
-{
-    Ping(conn);
-}
 //cys websocket connect
 void TDEngineHuobi::Ping(struct lws* conn)
 {
@@ -213,8 +204,6 @@ void TDEngineHuobi::Ping(struct lws* conn)
     StringBuffer sbPing;
     Writer<StringBuffer> writer(sbPing);
     writer.StartObject();
-    writer.Key("id");
-    writer.String(getId().c_str());
     writer.Key("type");
     writer.String("ping");
     writer.EndObject();
@@ -234,12 +223,12 @@ void TDEngineHuobi::Pong(struct lws* conn,int ping){
     writer.Key("pong");
     writer.Int(ping);
     writer.EndObject();
-    std::string strPing = sbPing.GetString();
+    std::string strPong = sbPing.GetString();
     unsigned char msg[512];
     memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
-    int length = strPing.length();
-    KF_LOG_INFO(logger, "[Pong] data " << strPing.c_str() << " ,len = " << length);
-    strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
+    int length = strPong.length();
+    KF_LOG_INFO(logger, "[Pong] data " << strPong.c_str() << " ,len = " << length);
+    strncpy((char *)msg+LWS_PRE, strPong.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 }
 void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
@@ -256,7 +245,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
         KF_LOG_ERROR(logger, "[cys_on_lws_data] parse to json error ");
         return;
     }
-    if(json.HasMember("op"))
+    if(json.HasMember("op")||json.HasMember("ping"))
     {
         if ((json.HasMember("status") && json["status"].GetString()!="ok")||      
               (json.HasMember("err-code")&&json["err-code"].GetInt()!=0) ) {
@@ -270,7 +259,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
             } else if (op == "ping") {
 
             } else if (op == "auth") {
-                wsStatus=huobi_auth;
+                isAuth=huobi_auth;
                 int userId=json["data"]["user-id"].GetInt();
                 KF_LOG_INFO(logger,"[on_lws_data] cys_huobiAuth success. authed user-id "<<userId);
             }
@@ -288,22 +277,6 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
     }
 
 }
-std::string TDEngineHuobi::makeSubscribeAccountsUpdate(AccountUnitHuobi& unit){
-    StringBuffer sbUpdate;
-    Writer<StringBuffer> writer(sbUpdate);
-    writer.StartObject();
-    writer.Key("op");
-    writer.String("sub");
-    writer.Key("cid");
-    writer.String(unit.accountId.c_str());
-    writer.Key("topic");
-    writer.String("orders.htusdt");
-    writer.Key("model");
-    writer.String("0");
-    writer.EndObject();
-    std::string strUpdate = sbUpdate.GetString();
-    return strUpdate;
-}
 std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit){
     StringBuffer sbUpdate;
     Writer<StringBuffer> writer(sbUpdate);
@@ -313,55 +286,7 @@ std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit){
     writer.Key("cid");
     writer.String(unit.accountId.c_str());
     writer.Key("topic");
-    writer.String("accounts");
-    writer.Key("model");
-    writer.String("0");
-    writer.EndObject();
-    std::string strUpdate = sbUpdate.GetString();
-    return strUpdate;
-}
-std::string TDEngineHuobi::makeSubscribeAccountsListUpdate(AccountUnitHuobi& unit){
-    StringBuffer sbUpdate;
-    Writer<StringBuffer> writer(sbUpdate);
-    writer.StartObject();
-    writer.Key("op");
-    writer.String("sub");
-    writer.Key("cid");
-    writer.String(unit.accountId.c_str());
-    writer.Key("topic");
-    writer.String("orders.htusdt");
-    writer.Key("model");
-    writer.String("0");
-    writer.EndObject();
-    std::string strUpdate = sbUpdate.GetString();
-    return strUpdate;
-}
-std::string TDEngineHuobi::makeSubscribeOrderListUpdate(AccountUnitHuobi& unit){
-    StringBuffer sbUpdate;
-    Writer<StringBuffer> writer(sbUpdate);
-    writer.StartObject();
-    writer.Key("op");
-    writer.String("sub");
-    writer.Key("cid");
-    writer.String(unit.accountId.c_str());
-    writer.Key("topic");
-    writer.String("orders.htusdt");
-    writer.Key("model");
-    writer.String("0");
-    writer.EndObject();
-    std::string strUpdate = sbUpdate.GetString();
-    return strUpdate;
-}
-std::string TDEngineHuobi::makeSubscribeOrderDetailUpdate(AccountUnitHuobi& unit){
-    StringBuffer sbUpdate;
-    Writer<StringBuffer> writer(sbUpdate);
-    writer.StartObject();
-    writer.Key("op");
-    writer.String("sub");
-    writer.Key("cid");
-    writer.String(unit.accountId.c_str());
-    writer.Key("topic");
-    writer.String("orders.htusdt");
+    writer.String("orders.eosbtc");
     writer.Key("model");
     writer.String("0");
     writer.EndObject();
@@ -377,27 +302,26 @@ AccountUnitHuobi& TDEngineHuobi::findAccountUnitHuobiByWebsocketConn(struct lws 
     }
     return account_units[0];
 }
-int TDEngineHuobi::lws_write_subscribe(struct lws* conn){
-    KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_subscribe:" );
-
+int TDEngineHuobi::subscribeTopic(struct lws* conn,string strSubscribe){
+    unsigned char msg[1024];
+    memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
+    int length = strSubscribe.length();
+    KF_LOG_INFO(logger, "[on_lws_write_subscribe] " << strSubscribe.c_str() << " ,len = " << length);
+    strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
+    //请求
+    int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
+    lws_callback_on_writable(conn);
+    return ret;
+}
+int TDEngineHuobi::on_lws_write_subscribe(struct lws* conn){
+    KF_LOG_INFO(logger, "[on_lws_write_subscribe]" );
     int ret = 0;
-
-    if(wsStatus != accounts_topic){
-        AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
-    //}else if(wsStatus == huobi_auth){
-        wsStatus = accounts_topic;
-        //AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
-        std::string strSubscribe = makeSubscribeOrdersUpdate(unit);
-        unsigned char msg[1024];
-        memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
-        int length = strSubscribe.length();
-        KF_LOG_INFO(logger, "TDEngineHuobi::lws_write_subscribe: " << strSubscribe.c_str() << " ,len = " << length);
-        strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
-        //请求
-        ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
-        lws_callback_on_writable(conn);
+    AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
+    if(isAuth==huobi_auth&&isOrders != orders_sub){
+        isOrders=orders_sub;
+        string strSubscribe = makeSubscribeOrdersUpdate(unit);
+        ret=subscribeTopic(conn,strSubscribe);
     }
-
     return ret;
 }
 
@@ -406,6 +330,7 @@ void TDEngineHuobi::on_lws_connection_error(struct lws* conn){
     //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
     m_isPong = false;
     //m_shouldPing = true;
+    isAuth = nothing;isOrders=nothing;
     //no use it
     long timeout_nsec = 0;
     //reset sub
@@ -425,14 +350,8 @@ static struct lws_protocols protocols[] =
                 },
                 { NULL, NULL, 0, 0 } /* terminator */
         };
-int lws_write_subscribe(struct lws* conn);
+int on_lws_write_subscribe(struct lws* conn);
 void on_lws_connection_error(struct lws* conn);
-
-enum protocolList {
-    PROTOCOL_TEST,
-
-    PROTOCOL_LIST_COUNT
-};
 
 struct session_data {
     int fd;
@@ -445,8 +364,7 @@ void TDEngineHuobi::writeErrorLog(std::string strError)
     KF_LOG_ERROR(logger, strError);
 }
 
-int64_t TDEngineHuobi::getMSTime()
-{
+int64_t TDEngineHuobi::getMSTime(){
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return  timestamp;
 }
@@ -603,7 +521,7 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl << " (accountId)"<<unit.accountId);
 
-//test rs256
+    //test rs256
     //  std::string data ="{}";
     //  std::string signature =utils::crypto::rsa256_private_sign(data, g_private_key);
     // std::string sign = base64_encode((unsigned char*)signature.c_str(), signature.size());
@@ -690,8 +608,7 @@ symbol-partition	string	交易区，可能值: [main，innovation，bifurcation]
     }
   ]
 */
-void TDEngineHuobi::getPriceVolumePrecision(AccountUnitHuobi& unit)
-{
+void TDEngineHuobi::getPriceVolumePrecision(AccountUnitHuobi& unit){
     KF_LOG_INFO(logger,"[getPriceVolumePrecision]");
     Document json;
     const auto response = Get("/v1/common/symbols","",unit);
@@ -833,7 +750,6 @@ void TDEngineHuobi::lws_login(AccountUnitHuobi& unit, long timeout_nsec){
 void TDEngineHuobi::login(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "[TDEngineHuobi::login]");
-
     connect(timeout_nsec);
 }
 
@@ -946,37 +862,37 @@ void TDEngineHuobi::req_investor_position(const LFQryPositionField* data, int ac
     std::string errorMsg = "";
     Document d;
     //调用get函数获取用户信息，保存在d中https://api.huobi.pro/v1/accout/accouts
-/*
-{
-  "data": {
-    "id": 100009,
-    "type": "spot",
-    "state": "working",
-    "list": [
-      {
+    /*
+    {
+        "data": {
+        "id": 100009,
+        "type": "spot",
+        "state": "working",
+        "list": [
+        {
         "currency": "usdt",
         "type": "trade",
         "balance": "5007.4362872650"
-      },
-      {
+        },
+        {
         "currency": "usdt",
         "type": "frozen",
         "balance": "348.1199920000"
-      }
-    ],
-    "user-id": 10000
-  }
-}
-错误码
-错误信息返回格式
-{
-  "id": "id generate by client",
-  "status": "error",
-  "err-code": "err-code",
-  "err-msg": "err-message",
-  "ts": 1487152091345
-}
-*/
+        }
+        ],
+        "user-id": 10000
+        }
+    }
+    错误码
+    错误信息返回格式
+    {
+        "id": "id generate by client",
+        "status": "error",
+        "err-code": "err-code",
+        "err-msg": "err-message",
+        "ts": 1487152091345
+    }
+    */
     get_account(unit, d);
     KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
     if(d.IsObject() && d.HasMember("status"))
@@ -998,29 +914,29 @@ void TDEngineHuobi::req_investor_position(const LFQryPositionField* data, int ac
         }
     }
     send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_HUOBI, 1, requestId);
-/*账户余额
-GET /v1/account/accounts/{account-id}/balance
-{
-  "data": {
-    "id": 100009,
-    "type": "spot",
-    "state": "working",
-    "list": [
-      {
-        "currency": "usdt",
-        "type": "trade",
-        "balance": "5007.4362872650"
-      },
-      {
-        "currency": "usdt",
-        "type": "frozen",
-        "balance": "348.1199920000"
-      }
-    ],
-    "user-id": 10000
-  }
-}
-*/
+    /*账户余额
+    GET /v1/account/accounts/{account-id}/balance
+    {
+        "data": {
+            "id": 100009,
+            "type": "spot",
+            "state": "working",
+            "list": [
+                {
+                    "currency": "usdt",
+                "type": "trade",
+                "balance": "5007.4362872650"
+                },
+                {
+                "currency": "usdt",
+                "type": "frozen",
+                "balance": "348.1199920000"
+                }
+            ],
+            "user-id": 10000
+        }
+    }
+    */
     std::vector<LFRspPositionField> tmp_vector;
     if(!d.HasParseError() && d.HasMember("data"))
     {
@@ -1058,8 +974,7 @@ void TDEngineHuobi::req_qry_account(const LFQryAccountField *data, int account_i
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,std::string& nDealPrice,std::string& nDealVolume)
-{
+void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,std::string& nDealPrice,std::string& nDealVolume){
     KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
     std::string ticker = unit.coinPairWhiteList.GetValueByKey(symbol);
     auto it = unit.mapPriceVolumePrecision.find(ticker);
@@ -1091,8 +1006,7 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
                                                       << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
 }
 
-void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
-{
+void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time){
     AccountUnitHuobi& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
@@ -1206,8 +1120,7 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
     }
 }
 
-void TDEngineHuobi::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
-{
+void TDEngineHuobi::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time){
     AccountUnitHuobi& unit = account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
@@ -1276,8 +1189,7 @@ void TDEngineHuobi::req_order_action(const LFOrderActionField* data, int account
     }
 }
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
-void TDEngineHuobi::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId)
-{
+void TDEngineHuobi::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId){
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
     OrderActionSentTime newOrderActionSent;
@@ -1287,8 +1199,7 @@ void TDEngineHuobi::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField
     remoteOrderIdOrderActionSentTime[remoteOrderId] = newOrderActionSent;
 }
 
-void TDEngineHuobi::GetAndHandleOrderTradeResponse()
-{
+void TDEngineHuobi::GetAndHandleOrderTradeResponse(){
     // KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse]" );
     //every account
     for (size_t idx = 0; idx < account_units.size(); idx++)
@@ -1304,8 +1215,7 @@ void TDEngineHuobi::GetAndHandleOrderTradeResponse()
 }
 
 //订单状态
-void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit)
-{
+void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit){
     //KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
@@ -1331,44 +1241,43 @@ void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit)
         Document d;
         query_order(unit, ticker,orderStatusIterator->remoteOrderId, d);
         /*huobi查询订单详情
-字段名称	是否必须	数据类型	描述	取值范围
-account-id	true	long	账户 ID	
-amount	true	string	订单数量	
-canceled-at	false	long	订单撤销时间	
-created-at	true	long	订单创建时间	
-field-amount	true	string	已成交数量	
-field-cash-amount	true	string	已成交总金额	
-field-fees	true	string	已成交手续费（买入为币，卖出为钱）	
-finished-at	false	long	订单变为终结态的时间，不是成交时间，包含“已撤单”状态	
-id	true	long	订单ID	
-price	true	string	订单价格	
-source	true	string	订单来源	api
-state	true	string	订单状态	submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
-symbol	true	string	交易对	btcusdt, ethbtc, rcneth ...
-type	true	string	订单类型	buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖, buy-ioc：IOC买单, sell-ioc：IOC卖单
-
-{  
-  "data": 
-  {
-    "id": 59378,
-    "symbol": "ethusdt",
-    "account-id": 100009,
-    "amount": "10.1000000000",
-    "price": "100.1000000000",
-    "created-at": 1494901162595,
-    "type": "buy-limit",
-    "field-amount": "10.1000000000",
-    "field-cash-amount": "1011.0100000000",
-    "field-fees": "0.0202000000",
-    "finished-at": 1494901400468,
-    "user-id": 1000,
-    "source": "api",
-    "state": "filled",
-    "canceled-at": 0,
-    "exchange": "huobi",
-    "batch": ""
-  }
-}
+        字段名称	是否必须	数据类型	描述	取值范围
+        account-id	true	long	账户 ID	
+        amount	true	string	订单数量	
+        canceled-at	false	long	订单撤销时间	
+        created-at	true	long	订单创建时间	
+        field-amount	true	string	已成交数量	
+        field-cash-amount	true	string	已成交总金额	
+        field-fees	true	string	已成交手续费（买入为币，卖出为钱）	
+        finished-at	false	long	订单变为终结态的时间，不是成交时间，包含“已撤单”状态	
+        id	true	long	订单ID	
+        price	true	string	订单价格	
+        source	true	string	订单来源	api
+        state	true	string	订单状态	submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
+        symbol	true	string	交易对	btcusdt, ethbtc, rcneth ...
+        type	true	string	订单类型	buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖, buy-ioc：IOC买单, sell-ioc：IOC卖单
+        {    
+            "data": 
+            {
+                "id": 59378,
+                "symbol": "ethusdt",
+                "account-id": 100009,
+                "amount": "10.1000000000",
+                "price": "100.1000000000",
+                "created-at": 1494901162595,
+                "type": "buy-limit",
+                "field-amount": "10.1000000000",
+                "field-cash-amount": "1011.0100000000",
+                "field-fees": "0.0202000000",
+                "finished-at": 1494901400468,
+                "user-id": 1000,
+                "source": "api",
+                "state": "filled",
+                "canceled-at": 0,
+                "exchange": "huobi",
+                "batch": ""
+            }
+        }
         */
         //parse order status
         //订单状态，submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
@@ -1442,8 +1351,7 @@ type	true	string	订单类型	buy-market：市价买, sell-market：市价卖, b
 
 void TDEngineHuobi::addNewQueryOrdersAndTrades(AccountUnitHuobi& unit, const char_31 InstrumentID,
                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                const uint64_t VolumeTraded, const std::string& remoteOrderId)
-{
+                                                const uint64_t VolumeTraded, const std::string& remoteOrderId){
     KF_LOG_DEBUG(logger, "[addNewQueryOrdersAndTrades]" );
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
@@ -1499,7 +1407,7 @@ void TDEngineHuobi::loopwebsocket()
         {
             m_isPong = false;
             nLastTime = nNowTime;
-            KF_LOG_INFO(logger, "TDEngineHuobi::loop: last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
+            KF_LOG_INFO(logger, "[loop] last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
             //m_shouldPing = true;
             lws_callback_on_writable(m_conn);
         }
@@ -1538,7 +1446,7 @@ void TDEngineHuobi::loopOrderActionNoResponseTimeOut()
 
 void TDEngineHuobi::orderActionNoResponseTimeOut()
 {
-//    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut]");
+    //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut]");
     int errorId = 100;
     std::string errorMsg = "OrderAction has none response for a long time(" + std::to_string(orderaction_max_waiting_seconds) + " s), please send OrderAction again";
 
@@ -1546,7 +1454,7 @@ void TDEngineHuobi::orderActionNoResponseTimeOut()
 
     int64_t currentNano = getTimestamp();
     int64_t timeBeforeNano = currentNano - orderaction_max_waiting_seconds * 1000;
-//    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (currentNano)" << currentNano << " (timeBeforeNano)" << timeBeforeNano);
+    //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (currentNano)" << currentNano << " (timeBeforeNano)" << timeBeforeNano);
     std::map<std::string, OrderActionSentTime>::iterator itr;
     for(itr = remoteOrderIdOrderActionSentTime.begin(); itr != remoteOrderIdOrderActionSentTime.end();)
     {
@@ -1559,7 +1467,7 @@ void TDEngineHuobi::orderActionNoResponseTimeOut()
             ++itr;
         }
     }
-//    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (remoteOrderIdOrderActionSentTime.size)" << remoteOrderIdOrderActionSentTime.size());
+    //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (remoteOrderIdOrderActionSentTime.size)" << remoteOrderIdOrderActionSentTime.size());
 }
 
 void TDEngineHuobi::printResponse(const Document& d)
@@ -1664,18 +1572,17 @@ std::string TDEngineHuobi::getHuobiNormalTime(){
     return huobiTime;
 }
 /*
-{
+    {
   "account-id": "100009",
   "amount": "10.1",
   "price": "100.1",
   "source": "api",
   "symbol": "ethusdt",
   "type": "buy-limit"
-}
+
  * */
 std::string TDEngineHuobi::createInsertOrdertring(const char *accountId,
-        const char *amount, const char *price, const char *source, const char *symbol,const char *type)
-{
+        const char *amount, const char *price, const char *source, const char *symbol,const char *type){
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
@@ -1705,8 +1612,7 @@ std::string TDEngineHuobi::createInsertOrdertring(const char *accountId,
     }
 */
 void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
-                                 const char *side, const char *type, std::string volume, std::string price, Document& json)
-{
+                                 const char *side, const char *type, std::string volume, std::string price, Document& json){
     KF_LOG_INFO(logger, "[send_order]");
     KF_LOG_INFO(logger, "[send_order] (code) "<<code);
     std::string s=side,t=type;
@@ -1741,12 +1647,12 @@ void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
 /*火币返回数据格式
-{
+    {
   "status": "ok",
   "ch": "market.btcusdt.kline.1day",
   "ts": 1499223904680,
   "data": // per API response data in nested JSON object
-}
+    }
 */
 bool TDEngineHuobi::shouldRetry(Document& doc)
 {
@@ -1765,12 +1671,12 @@ bool TDEngineHuobi::shouldRetry(Document& doc)
     return ret;
 }
 /*
-响应数据
-参数名称	是否必须	数据类型	描述	取值范围
-success-count	true	int	成功取消的订单数	
-failed-count	true	int	取消失败的订单数	
-next-id	true	long	下一个符合取消条件的订单号	
-*/
+ 响应数据
+ 参数名称	是否必须	数据类型	描述	取值范围
+ success-count	true	int	成功取消的订单数	
+ failed-count	true	int	取消失败的订单数	
+ next-id	true	long	下一个符合取消条件的订单号	
+ */
 void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
@@ -2063,27 +1969,21 @@ inline int64_t TDEngineHuobi::getTimestamp()
     return timestamp;
 }
 
-void TDEngineHuobi::genUniqueKey()
-{
+void TDEngineHuobi::genUniqueKey(){
     struct tm cur_time = getCurLocalTime();
     //SSMMHHDDN
     char key[11]{0};
     snprintf((char*)key, 11, "%02d%02d%02d%02d%1s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
     m_uniqueKey = key;
 }
-
 //clientid =  m_uniqueKey+orderRef
-std::string TDEngineHuobi::genClinetid(const std::string &orderRef)
-{
+std::string TDEngineHuobi::genClinetid(const std::string &orderRef){
     static int nIndex = 0;
     return m_uniqueKey + orderRef + std::to_string(nIndex++);
 }
 
-
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
-
-BOOST_PYTHON_MODULE(libhuobitd)
-{
+BOOST_PYTHON_MODULE(libhuobitd){
     using namespace boost::python;
     class_<TDEngineHuobi, boost::shared_ptr<TDEngineHuobi> >("Engine")
      .def(init<>())
