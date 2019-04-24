@@ -1394,7 +1394,7 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, LFRtnOrderField& rt
     if(websocketOrderStatus==unit.websocketOrderStatusMap.end()){
         KF_LOG_INFO(logger,"[addNewOrderToMap]websocket has not received order status.");
     }else{
-        Document &json;
+        Document json;
         json.Parse(websocketOrderStatus->second.c_str());
         handleResponseOrderStatus(unit, rtn_order,json);
         //remove order when finish
