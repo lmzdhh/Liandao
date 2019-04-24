@@ -172,7 +172,7 @@ void MDEngineKraken::makeWebsocketSubscribeJsonString()
         std::string jsonTradeString = createTradeJsonString(map_itr->second);
         websocketSubscribeJsonString.push_back(jsonTradeString);
 
-        std::string jsonTradeString = createOhlcJsonString(map_itr->second);
+        std::string jsonOhlcString = createOhlcJsonString(map_itr->second);
         websocketSubscribeJsonString.push_back(jsonOhlcString);
 
         map_itr++;
@@ -242,7 +242,7 @@ void MDEngineKraken::login(long timeout_nsec) {
     ccinfo.context 	= context;
     ccinfo.address 	= host.c_str();
     ccinfo.port 	= port;
-    ccinfo.path 	= path.c_str();
+    //ccinfo.path 	= path.c_str();
     ccinfo.host 	= host.c_str();
     ccinfo.origin 	= host.c_str();
     ccinfo.ietf_version_or_minus_one = -1;
@@ -623,7 +623,7 @@ void MDEngineKraken::onOhlc(SubscribeChannel &channel, Document& json)
 		market.Low = std::round(json.GetArray()[last_element].GetArray()[4].GetFloat() * scale_offset);
 		market.High = std::round(json.GetArray()[last_element].GetArray()[3].GetFloat() * scale_offset);		
 		market.Volume = std::round(json.GetArray()[last_element].GetArray()[7].GetFloat() * scale_offset);
-		auto itPrice = priceBook.find(symbol);
+		auto itPrice = priceBook.find(channel.exchange_coinpair);
 		if(itPrice != priceBook.end())
 		{
 			market.BestBidPrice = itPrice->second.BidLevels[0].price;
@@ -652,9 +652,9 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
     {
 
         if(json.GetArray()[last_element].HasMember("as") && 
-            json.GetArray()[last_elemrnt]["as"].IsArray() && 
+            json.GetArray()[last_element]["as"].IsArray() && 
             json.GetArray()[last_element].HasMember("bs") &&
-            json.GetArray()[last_elemrnt]["bs"].IsArray() )
+            json.GetArray()[last_element]["bs"].IsArray() )
         {
             /* snapshot
                 [
@@ -716,9 +716,9 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
            }
         } 
         else if( (json.GetArray()[last_element].HasMember("a") && 
-            json.GetArray()[last_elemrnt]["a"].IsArray() ) || 
+            json.GetArray()[last_element]["a"].IsArray() ) || 
             (json.GetArray()[last_element].HasMember("b") &&
-            json.GetArray()[last_elemrnt]["b"].IsArray() ) )
+            json.GetArray()[last_element]["b"].IsArray() ) )
         {
             /*  update
                 [
@@ -789,6 +789,7 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
     if(priceBook20Assembler.Assembler(ticker, md)) {
         strcpy(md.ExchangeID, "kraken");
 
+        priceBook[ticker] = md;
         KF_LOG_INFO(logger, "MDEngineKraken::onDepth: on_price_book_update");
         on_price_book_update(&md);
     }

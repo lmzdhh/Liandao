@@ -96,6 +96,7 @@ private:
     std::string ohlc_channel = "ohlc";
 
     PriceBook20Assembler priceBook20Assembler;
+    std::map<std::string,LFPriceBook20Field> priceBook;
 
     std::vector<std::string> websocketSubscribeJsonString;
 
