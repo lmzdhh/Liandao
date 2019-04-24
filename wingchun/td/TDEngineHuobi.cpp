@@ -239,7 +239,7 @@ void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
     AccountUnitHuobi& unit = findAccountUnitHuobiByWebsocketConn(conn);
     rapidjson::Value &data=json["data"];
     KF_LOG_INFO(logger, "[on_lws_receive_orders] receive_order:");
-    if(d.HasMember("order-id")){
+    if(data.HasMember("order-id")){
         KF_LOG_INFO(logger, "[on_lws_receive_orders] (receive success)");
         ResponsedOrderStatus responsedOrderStatus;
         string ticker="";
@@ -267,13 +267,13 @@ void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
         map<string,PendingOrderStatus>::iterator restOrderStatus=unit.restOrderStatusMap.find(remoteOrderId);
         if(restOrderStatus==unit.restOrderStatusMap.end()){
             KF_LOG_ERROR(logger,"[on_lws_receive_orders] rest receive no order id, save int websocketOrderStatusMap");
-            unit.websocketOrderStatusMap.insert(make_pair(remoteOrderId,ResponsedOrderStatus));
+            unit.websocketOrderStatusMap.insert(make_pair(remoteOrderId,responsedOrderStatus));
         }else{
             ticker = unit.coinPairWhiteList.GetValueByKey(std::string(restOrderStatus->second.InstrumentID));
             responsedOrderStatus.ticker = ticker;
             handleResponseOrderStatus(unit, restOrderStatus->second, responsedOrderStatus);
-            if(websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_AllTraded  || websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_Canceled
-                || websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_Error){
+            if(responsedOrderStatus->second.OrderStatus == LF_CHAR_AllTraded  || responsedOrderStatus->second.OrderStatus == LF_CHAR_Canceled
+                || responsedOrderStatus->second.OrderStatus == LF_CHAR_Error){
                 KF_LOG_INFO(logger, "[rest addNewOrderToMap] remove a pendingOrderStatus.");
                 unit.restOrderStatusMap.erase(remoteOrderId);
             }
@@ -1434,12 +1434,12 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, const char_31 Instr
     if(websocketOrderStatus==unit.websocketOrderStatusMap.end()){
         KF_LOG_INFO(logger,"[rest addNewOrderToMap]websocket has not received order status.");
     }else{
-        ticker = unit.coinPairWhiteList.GetValueByKey(std::string(websocketOrderStatus->second.InstrumentID));
+        string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(websocketOrderStatus->second.InstrumentID));
         websocketOrderStatus->seclnd.ticker = ticker;
         handleResponseOrderStatus(unit, status,websocketOrderStatus->second);
          //remove order when finish
-        if(websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_AllTraded  || websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_Canceled
-           || websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_Error)
+        if(websocketOrderStatus->second.OrderStatus == LF_CHAR_AllTraded  || websocketOrderStatus->second.OrderStatus == LF_CHAR_Canceled
+           || websocketOrderStatus->second.OrderStatus == LF_CHAR_Error)
         {
             KF_LOG_INFO(logger, "[rest addNewOrderToMap] remove a pendingOrderStatus.");
             unit.restOrderStatusMap.erase(remoteOrderId);
@@ -2048,7 +2048,7 @@ void TDEngineHuobi::handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vect
         orderStatusIterator->averagePrice = newAveragePrice;
     }
 }
-void handleResponseOrderStatus(AccountUnitHuobi& unit, PendingOrderStatus& orderStatusIterator, 
+void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, PendingOrderStatus& orderStatusIterator, 
                                         ResponsedOrderStatus& responsedOrderStatus){
     KF_LOG_INFO(logger, "[handleResponseOrderStatus]");
 
