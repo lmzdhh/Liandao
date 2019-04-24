@@ -1994,7 +1994,7 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
         KF_LOG_ERROR(logger,"[handleResponseOrderStatus] no data segment");
         return;
     }
-    rapidjson::Value &data=json["data"];
+    auto& data=json["data"];
     if(!data.HasMember("filled-cash-amount")||!data.HasMember("filled-amount")||!data.HasMember("unfilled-amount")
         ||!data.HasMember("order-type")||!data.HasMember("order-amount")||!data.HasMember("order-state")
         ||!data.HasMember("order-price")||!data.HasMember("price")){
