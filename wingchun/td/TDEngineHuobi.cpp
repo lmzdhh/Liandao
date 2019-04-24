@@ -1036,9 +1036,10 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
         KF_LOG_INFO(logger,"[dealPriceVolume] (pricePrecision) "<<pPrecision<<" (amountPrecision) "<<vPrecision);
         double tDealPrice=nPrice*1.0/scale_offset;
         double tDealVolume=nVolume*1.0/scale_offset;
+        KF_LOG_INFO(logger,"[dealPriceVolume] (tDealPrice) "<<tDealPrice<<" (tDealVolume) "<<tDealVolume);
         char chP[16],chV[16];
-        sprintf(chP,"%.8llf",nPrice*1.0/scale_offset);
-        sprintf(chV,"%.8llf",nVolume*1.0/scale_offset);
+        sprintf(chP,"%.8lf",nPrice*1.0/scale_offset);
+        sprintf(chV,"%.8lf",nVolume*1.0/scale_offset);
         nDealPrice=chP;
         KF_LOG_INFO(logger,"[dealPriceVolume] (chP) "<<chP<<" (nDealPrice) "<<nDealPrice);
         nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+pPrecision+1);
