@@ -1399,7 +1399,7 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, LFRtnOrderField& rt
         handleResponseOrderStatus(unit, rtn_order,json);
         //remove order when finish
         KF_LOG_INFO(logger,"[addNewOrderToMap] remove order when finish");
-        LfOrderStatusType orderStatus=GetOrderStatus(websocketOrderStatus->second["data"]["order-state"].GetString());
+        LfOrderStatusType orderStatus=GetOrderStatus(json["data"]["order-state"].GetString());
         if(orderStatus == LF_CHAR_AllTraded  || orderStatus == LF_CHAR_Canceled|| orderStatus == LF_CHAR_Error){
             KF_LOG_INFO(logger, "[addNewOrderToMap] remove a pendingOrderStatus.");
             unit.restOrderStatusMap.erase(remoteOrderId);
