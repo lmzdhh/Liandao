@@ -124,7 +124,7 @@ struct session_data {
     int fd;
 };
 
-MDEngineKraken::MDEngineKraken(): IMDEngine(SOURCE_Kraken)
+MDEngineKraken::MDEngineKraken(): IMDEngine(SOURCE_KRAKEN)
 {
     logger = yijinjing::KfLog::getLogger("MdEngine.Kraken");
 }

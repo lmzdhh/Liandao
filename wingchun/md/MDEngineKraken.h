@@ -93,7 +93,7 @@ private:
 
     std::string trade_channel = "trade";
     std::string book_channel = "book";
-    std::string ohlc_channel = "ohlc"
+    std::string ohlc_channel = "ohlc";
 
     PriceBook20Assembler priceBook20Assembler;
 
