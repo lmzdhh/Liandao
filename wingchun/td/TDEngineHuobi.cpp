@@ -324,7 +324,7 @@ std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit){
     writer.Key("cid");
     writer.String(unit.accountId.c_str());
     writer.Key("topic");
-    writer.String("orders.eosbtc");
+    writer.String("orders.*");
     writer.Key("model");
     writer.String("0");
     writer.EndObject();
