@@ -816,16 +816,16 @@ std::string MDEngineKraken::createBookJsonString(std::string exchange_coinpair)
     writer.Key("event");
     writer.String("subscribe");
 
-    writer.key("pair");
+    writer.Key("pair");
     writer.StartArray();
     writer.String(exchange_coinpair.c_str());
     writer.EndArray();
 
-    writer.key("subscription");
+    writer.Key("subscription");
     writer.StartObject();
-    writer.key("name");
+    writer.Key("name");
     writer.String("book");
-    writer.key("depth");
+    writer.Key("depth");
     writer.Int(book_depth_count);
     writer.EndObject();
 
@@ -843,16 +843,16 @@ std::string MDEngineKraken::createTradeJsonString(std::string exchange_coinpair)
     writer.Key("event");
     writer.String("subscribe");
 
-    writer.key("pair");
+    writer.Key("pair");
     writer.StartArray();
     writer.String(exchange_coinpair.c_str());
     writer.EndArray();
 
-    writer.key("subscription");
+    writer.Key("subscription");
     writer.StartObject();
-    writer.key("name");
+    writer.Key("name");
     writer.String("trade");
-    // writer.key("depth");
+    // writer.Key("depth");
     // writer.Int(25);
     writer.EndObject();
 
@@ -870,16 +870,16 @@ std::string MDEngineKraken::createOhlcJsonString(std::string exchange_coinpair)
     writer.Key("event");
     writer.String("subscribe");
 
-    writer.key("pair");
+    writer.Key("pair");
     writer.StartArray();
     writer.String(exchange_coinpair.c_str());
     writer.EndArray();
 
-    writer.key("subscription");
+    writer.Key("subscription");
     writer.StartObject();
-    writer.key("name");
+    writer.Key("name");
     writer.String("ohlc");
-    // writer.key("depth");
+    // writer.Key("depth");
     // writer.Int(25);
     writer.EndObject();
 

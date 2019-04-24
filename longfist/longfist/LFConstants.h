@@ -70,7 +70,7 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "bithumb";
         case SOURCE_DAYBIT:
             return "daybit";
-        case SOURCE_KRAKEN：
+        case SOURCE_KRAKEN:
             return "kraken";
 		default:
 			return "unknown";
