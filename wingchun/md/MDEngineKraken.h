@@ -48,7 +48,7 @@ public:
 private:
     inline int64_t getTimestamp();
 
-    void onPing(struct lws* conn, Document& json);
+ //   void onPing(struct lws* conn, Document& json);
     void onInfo(Document& json);
     void onSubscribed(Document& json);
 

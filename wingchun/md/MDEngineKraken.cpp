@@ -355,7 +355,7 @@ void MDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
             onInfo(json);
         } else if (strcmp(json["event"].GetString(), "ping") == 0) {
             KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: is ping");
-            onPing(conn, json);
+        //    onPing(conn, json);
         } else if (strcmp(json["event"].GetString(), "subscribed") == 0) {
             KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: is subscribed");
             onSubscribed(json);
