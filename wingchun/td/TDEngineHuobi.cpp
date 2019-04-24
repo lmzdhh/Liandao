@@ -247,11 +247,10 @@ void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
             KF_LOG_ERROR(logger,"[on_lws_receive_orders] rest receive no order id, save int websocketOrderStatusMap");
             unit.websocketOrderStatusMap.insert(make_pair(remoteOrderId,json));
         }else{
-            ticker = unit.coinPairWhiteList.GetValueByKey(std::string(restOrderStatus->second.InstrumentID));
-            responsedOrderStatus.ticker = ticker;
-            handleResponseOrderStatus(unit, restOrderStatus->second, responsedOrderStatus);
-            if(responsedOrderStatus.OrderStatus == LF_CHAR_AllTraded  || responsedOrderStatus.OrderStatus == LF_CHAR_Canceled
-                || responsedOrderStatus.OrderStatus == LF_CHAR_Error){
+            handleResponseOrderStatus(unit, restOrderStatus->second, json);
+            LfOrderStatusType orderStatus=GetOrderStatus(json["data"]["order-state"].GetString());
+            if(orderStatus == LF_CHAR_AllTraded  || orderStatus == LF_CHAR_Canceled
+                || orderStatus == LF_CHAR_Error){
                 KF_LOG_INFO(logger, "[rest addNewOrderToMap] remove a pendingOrderStatus.");
                 unit.restOrderStatusMap.erase(remoteOrderId);
             }
