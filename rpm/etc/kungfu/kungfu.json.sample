@@ -632,6 +632,7 @@
 						"btc_usd": "btcusdt",
 				    "eth_usd": "etcusdt",
 						"eos_btc": "eosbtc"
+						"hit_btc": "hitbtc"
 					},
 					"rest_get_interval_ms": 2000
 				},
