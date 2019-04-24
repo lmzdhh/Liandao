@@ -242,7 +242,7 @@ void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
     if(data.HasMember("order-id")){
         KF_LOG_INFO(logger, "[on_lws_receive_orders] (receive success)");
         string remoteOrderId=std::to_string(data["order-id"].GetInt64());
-        map<string,LFRtnOrderField>::iterator restOrderStatus=unit.restOrderStatusMap.find(remoteOrderId);
+        std::map<std::string,LFRtnOrderField>::iterator restOrderStatus=unit.restOrderStatusMap.find(remoteOrderId);
         if(restOrderStatus==unit.restOrderStatusMap.end()){
             KF_LOG_ERROR(logger,"[on_lws_receive_orders] rest receive no order id, save int websocketOrderStatusMap");
             unit.websocketOrderStatusMap.insert(std::make_pair(remoteOrderId,json));
@@ -1390,13 +1390,13 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, LFRtnOrderField& rt
                                                                        << " (OrderRef) " << rtn_order.OrderRef
                                                                        << " (remoteOrderId) " << rtn_order.BusinessUnit
                                                                        << "(VolumeTraded)" << rtn_order.VolumeTraded);
-    map<string,Document>::iterator websocketOrderStatus=unit.websocketOrderStatusMap.find(remoteOrderId);
+    std::map<std::string,Document>::iterator websocketOrderStatus=unit.websocketOrderStatusMap.find(remoteOrderId);
     if(websocketOrderStatus==unit.websocketOrderStatusMap.end()){
         KF_LOG_INFO(logger,"[addNewOrderToMap]websocket has not received order status.");
     }else{
         handleResponseOrderStatus(unit, rtn_order,websocketOrderStatus->second);
         //remove order when finish
-        KF_LOG_INFO(logger,"[addNewOrderToMap] remove order when finish")
+        KF_LOG_INFO(logger,"[addNewOrderToMap] remove order when finish");
         LfOrderStatusType orderStatus=GetOrderStatus(websocketOrderStatus->second["data"]["order-state"].GetString());
         if(orderStatus == LF_CHAR_AllTraded  || orderStatus == LF_CHAR_Canceled|| orderStatus == LF_CHAR_Error){
             KF_LOG_INFO(logger, "[addNewOrderToMap] remove a pendingOrderStatus.");
@@ -1986,7 +1986,7 @@ void TDEngineHuobi::handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vect
         orderStatusIterator->averagePrice = newAveragePrice;
     }
 }
-void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrderField& restOrderStatus, 
+void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrderField& rtn_order, 
                                         Document& json){
     KF_LOG_INFO(logger, "[handleResponseOrderStatus]");
     if(!json.HasMember("data")){
@@ -2023,8 +2023,8 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     int64_t price = std::round(std::stod(data["order-price"].GetString()) * scale_offset);
     int64_t volumeTraded = nVolume-nUnfilledAmount;
     if( (orderStatus == LF_CHAR_NotTouched && LF_CHAR_PartTradedQueueing == orderStatus || 
-            orderStatus == restOrderStatus.OrderStatus) && 
-            volumeTraded == restOrderStatus.VolumeTraded){//no change
+            orderStatus == rtn_order.OrderStatus) && 
+            volumeTraded == rtn_order.VolumeTraded){//no change
         return;
     }
     rtn_order.OrderStatus = orderStatus;
@@ -2041,13 +2041,13 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
     strcpy(rtn_trade.ExchangeID, "huobi");
     strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_trade.InstrumentID, restOrderStatus.InstrumentID, 31);
-    strncpy(rtn_trade.OrderRef, restOrderStatus.OrderRef, 13);
+    strncpy(rtn_trade.InstrumentID, rtn_order.InstrumentID, 31);
+    strncpy(rtn_trade.OrderRef, rtn_order.OrderRef, 13);
     rtn_trade.Direction = rtn_order.Direction;
     //单次成交数量
     rtn_trade.Volume = nDealSize;
     rtn_trade.Price =std::round(std::stod(data["price"].GetString())*scale_offset);//(newAmount - oldAmount)/(rtn_trade.Volume);
-    strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
+    strncpy(rtn_trade.OrderSysID,rtn_order.BusinessUnit,31);
     on_rtn_trade(&rtn_trade);
 
     raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),

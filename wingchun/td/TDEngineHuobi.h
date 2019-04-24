@@ -107,8 +107,8 @@ struct AccountUnitHuobi
     CoinPairWhiteList positionWhiteList;
     std::string accountId;
     struct lws* webSocketConn;
-    map<string,LFRtnOrderField> restOrderStatusMap;
-    map<string,Document> websocketOrderStatusMap;
+    std::map<std::string,LFRtnOrderField> restOrderStatusMap;
+    std::map<std::string,Document> websocketOrderStatusMap;
 };
 /**
  * CTP trade engine
@@ -166,7 +166,7 @@ private:
     void moveNewOrderStatusToPending(AccountUnitHuobi& unit);
     void handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, 
                                         ResponsedOrderStatus& responsedOrderStatus);
-    void handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrderField& restOrderStatus, 
+    void handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrderField& rtn_order, 
                                         Document& json);
     void loopOrderActionNoResponseTimeOut();
     void orderActionNoResponseTimeOut();
