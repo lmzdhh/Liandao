@@ -224,14 +224,16 @@ void MDEngineKraken::login(long timeout_nsec) {
         KF_LOG_INFO(logger, "MDEngineKraken::login: context created.");
     }
 
+    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #1 " );
     if (context == NULL) {
         KF_LOG_ERROR(logger, "MDEngineKraken::login: context is NULL. return");
         return;
     }
-
+    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #2 " );
     int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
+    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #3 logs:" << logs);
     lws_set_log_level(logs, NULL);
-
+    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #4 " );
     struct lws_client_connect_info ccinfo = {0};
 
     static std::string host  = "ws.kraken.com";
@@ -250,12 +252,14 @@ void MDEngineKraken::login(long timeout_nsec) {
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
 
     struct lws* wsi = lws_client_connect_via_info(&ccinfo);
+    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #6 " );
     KF_LOG_INFO(logger, "MDEngineKraken::login: Connecting to " <<  ccinfo.host << ":" << ccinfo.port << ":" << ccinfo.path);
 
     if (wsi == NULL) {
         KF_LOG_ERROR(logger, "MDEngineKraken::login: wsi create error.");
         return;
     }
+    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #7 " );
     KF_LOG_INFO(logger, "MDEngineKraken::login: wsi create success.");
 
     logged_in = true;
