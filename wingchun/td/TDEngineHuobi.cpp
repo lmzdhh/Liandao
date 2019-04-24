@@ -177,10 +177,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         {//lws callback client connection error
             ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
             //global_md->writeInfoLog(ss.str());
-            if(global_md)
-            {
-                global_md->on_lws_connection_error(wsi);
-            }
+            
             break;
         }
         default:
