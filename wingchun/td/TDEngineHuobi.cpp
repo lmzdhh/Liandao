@@ -1036,12 +1036,15 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
         KF_LOG_INFO(logger,"[dealPriceVolume] (pricePrecision) "<<pPrecision<<" (amountPrecision) "<<vPrecision);
         double tDealPrice=nPrice*1.0/scale_offset;
         double tDealVolume=nVolume*1.0/scale_offset;
-        nDealPrice=std::to_string(tDealPrice);
+        char chP[16],chV[16];
+        sprintf(chP,"%.8llf",tDealPrice);
+        sprintf(chV,"%.8llf",tDealVolume);
+        nDealPrice=chP;
+        KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice);
         nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+pPrecision+1);
-        nDealVolume=std::to_string(tDealVolume);
+        nDealVolume=chV;
+         KF_LOG_INFO(logger,"[dealPriceVolume] (nDealVolume) "<<nDealVolume);
         nDealVolume=nDealVolume.substr(0,nDealVolume.find(".")+vPrecision+1);
-        KF_LOG_INFO(logger,"[dealPriceVolume] (tDealPrice) "<<tDealPrice <<" (tDealVolume) "<<tDealVolume);
-        KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice <<" (nDealVolume) "<<nDealVolume);
     }
     KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << ticker << " (Volume)" << nVolume << " (Price)" << nPrice
                                                       << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
