@@ -1040,6 +1040,7 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
         nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+pPrecision+1);
         nDealVolume=std::to_string(tDealVolume);
         nDealVolume=nDealVolume.substr(0,nDealVolume.find(".")+vPrecision+1);
+        KF_LOG_INFO(logger,"[dealPriceVolume] (tDealPrice) "<<tDealPrice <<" (tDealVolume) "<<tDealVolume);
         KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice <<" (nDealVolume) "<<nDealVolume);
     }
     KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << ticker << " (Volume)" << nVolume << " (Price)" << nPrice
