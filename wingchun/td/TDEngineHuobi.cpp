@@ -282,7 +282,7 @@ void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
         KF_LOG_INFO(logger, "[on_lws_receive_orders] (reveive failed)");
         std::string errorMsg;
         int errorId = json["err-code"].GetInt();
-        if(d.HasMember("err-msg") && d["err-msg"].IsString()){
+        if(json.HasMember("err-msg") && json["err-msg"].IsString()){
             errorMsg = json["err-msg"].GetString();
         }
         KF_LOG_ERROR(logger, "[on_lws_receive_orders] get_order fail."<< " (errorId)" << errorId<< " (errorMsg)" << errorMsg);
@@ -1434,7 +1434,7 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, const char_31 Instr
     if(websocketOrderStatus==unit.websocketOrderStatusMap.end()){
         KF_LOG_INFO(logger,"[rest addNewOrderToMap]websocket has not received order status.");
     }else{
-        string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(status->second.InstrumentID));
+        string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(status.InstrumentID));
         websocketOrderStatus->second.ticker = ticker;
         handleResponseOrderStatus(unit, status,websocketOrderStatus->second);
          //remove order when finish
