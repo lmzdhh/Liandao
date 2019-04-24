@@ -234,7 +234,59 @@ void TDEngineHuobi::Pong(struct lws* conn,long long ping){
 }
 void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
     KF_LOG_INFO(logger,"[on_lws_receive_orders]");
-
+    std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
+    std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
+    AccountUnitHuobi& unit = findAccountUnitHuobiByWebsocketConn(conn);
+    rapidjson::Value &data=json["data"];
+    KF_LOG_INFO(logger, "[on_lws_receive_orders] receive_order:");
+    if(d.HasMember("order-id")){
+        KF_LOG_INFO(logger, "[on_lws_receive_orders] (receive success)");
+        ResponsedOrderStatus responsedOrderStatus;
+        string ticker="";
+        string remoteOrderId=std::to_string(data["order-id"].GetInt64());
+        responsedOrderStatus.ticker = ticker;
+        //单次成交总金额
+        double dDealFunds = std::stod(data["filled-cash-amount"].GetString());
+        //单次成交数量
+        double dDealSize = std::stod(data["filled-amount"].GetString());
+        responsedOrderStatus.averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
+        responsedOrderStatus.orderId = remoteOrderId;
+        //报单价格条件
+        responsedOrderStatus.OrderPriceType = GetPriceType(data["order-type"].GetString());
+        //买卖方向
+        responsedOrderStatus.Direction = GetDirection(data["type"].GetString());
+        //报单状态
+        int64_t nDealSize = std::round(dDealSize * scale_offset);
+        int64_t nSize = std::round(std::stod(data["order-amount"].GetString()) * scale_offset);
+        responsedOrderStatus.OrderStatus = GetOrderStatus(data["order-state"].GetString());
+        responsedOrderStatus.price = std::round(std::stod(data["order-price"].GetString()) * scale_offset);
+        responsedOrderStatus.volume = nSize;
+        //今成交数量
+        responsedOrderStatus.VolumeTraded = nDealSize;
+        responsedOrderStatus.openVolume =  nSize - nDealSize;
+        map<string,PendingOrderStatus>::iterator restOrderStatus=unit.restOrderStatusMap.find(remoteOrderId);
+        if(restOrderStatus==unit.restOrderStatusMap.end()){
+            KF_LOG_ERROR(logger,"[on_lws_receive_orders] rest receive no order id, save int websocketOrderStatusMap");
+            unit.websocketOrderStatusMap.insert(make_pair(remoteOrderId,ResponsedOrderStatus));
+        }else{
+            ticker = unit.coinPairWhiteList.GetValueByKey(std::string(restOrderStatus->second.InstrumentID));
+            responsedOrderStatus.ticker = ticker;
+            handleResponseOrderStatus(unit, restOrderStatus->second, responsedOrderStatus);
+            if(websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_AllTraded  || websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_Canceled
+                || websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_Error){
+                KF_LOG_INFO(logger, "[rest addNewOrderToMap] remove a pendingOrderStatus.");
+                unit.restOrderStatusMap.erase(remoteOrderId);
+            }
+        }
+    } else {
+        KF_LOG_INFO(logger, "[on_lws_receive_orders] (reveive failed)");
+        std::string errorMsg;
+        int errorId = d["err-code"].GetInt();
+        if(d.HasMember("err-msg") && d["err-msg"].IsString()){
+            errorMsg = d["err-msg"].GetString();
+        }
+        KF_LOG_ERROR(logger, "[on_lws_receive_orders] get_order fail."<< " (errorId)" << errorId<< " (errorMsg)" << errorMsg);
+    }
 }
 void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
@@ -1101,11 +1153,11 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
                                     source_id, MSG_TYPE_LF_RTN_ORDER_HUOBI,
                                     1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
 
-            KF_LOG_DEBUG(logger, "[req_order_insert] (addNewQueryOrdersAndTrades)" );
+            KF_LOG_DEBUG(logger, "[req_order_insert] (addNewOrderToMap)" );
             char noneStatus = LF_CHAR_NotTouched;
             //存放order id
-            addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
-
+            //addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
+            addNewOrderToMap(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
             //success, only record raw data
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_HUOBI, 1,
                                           requestId, errorId, errorMsg.c_str());
@@ -1359,7 +1411,41 @@ void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit){
         //KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
     }
 }
+void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, const char_31 InstrumentID,
+                        const char_21 OrderRef, const LfOrderStatusType OrderStatus,
+                        const uint64_t VolumeTraded, const std::string& remoteOrderId){
+    KF_LOG_DEBUG(logger, "[rest addNewOrderToMap]" );
+    //add new orderId for GetAndHandleOrderTradeResponse
+    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
+    PendingOrderStatus status;
+    strncpy(status.InstrumentID, InstrumentID, 31);
+    strncpy(status.OrderRef, OrderRef, 21);
+    status.OrderStatus = OrderStatus;
+    status.VolumeTraded = VolumeTraded;
+    status.averagePrice = 0.0;
+    status.remoteOrderId = remoteOrderId;
+    unit.restOrderStatusMap.insert(make_pair(remoteOrderId,status));
+    KF_LOG_INFO(logger, "[rest addNewOrderToMap] (InstrumentID) " << status.InstrumentID
+                                                                       << " (OrderRef) " << status.OrderRef
+                                                                       << " (remoteOrderId) " << status.remoteOrderId
+                                                                       << "(VolumeTraded)" << VolumeTraded);
+    map<string,ResponsedOrderStatus>::iterator websocketOrderStatus=unit.websocketOrderStatusMap.find(remoteOrderId);
+    if(websocketOrderStatus==unit.websocketOrderStatusMap.end()){
+        KF_LOG_INFO(logger,"[rest addNewOrderToMap]websocket has not received order status.");
+    }else{
+        ticker = unit.coinPairWhiteList.GetValueByKey(std::string(websocketOrderStatus->second.InstrumentID));
+        websocketOrderStatus->seclnd.ticker = ticker;
+        handleResponseOrderStatus(unit, status,websocketOrderStatus->second);
+         //remove order when finish
+        if(websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_AllTraded  || websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_Canceled
+           || websocketOrderStatus->seclnd.OrderStatus == LF_CHAR_Error)
+        {
+            KF_LOG_INFO(logger, "[rest addNewOrderToMap] remove a pendingOrderStatus.");
+            unit.restOrderStatusMap.erase(remoteOrderId);
+        }
+    }
+}
 void TDEngineHuobi::addNewQueryOrdersAndTrades(AccountUnitHuobi& unit, const char_31 InstrumentID,
                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                                 const uint64_t VolumeTraded, const std::string& remoteOrderId){
@@ -1774,13 +1860,13 @@ void TDEngineHuobi::query_order(AccountUnitHuobi& unit, std::string code, std::s
 }
 
 
-
 void TDEngineHuobi::handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
 {
     KF_LOG_INFO(logger, "[handlerResponseOrderStatus]");
 
-    if( (responsedOrderStatus.OrderStatus == 'b' && '1' == orderStatusIterator-> OrderStatus || responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus) && responsedOrderStatus.VolumeTraded == orderStatusIterator->VolumeTraded)
-    {//no change
+    if( (responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched && LF_CHAR_PartTradedQueueing == orderStatusIterator-> OrderStatus || 
+            responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus) && 
+            responsedOrderStatus.VolumeTraded == orderStatusIterator->VolumeTraded){//no change
         return;
     }
     int64_t newAveragePrice = responsedOrderStatus.averagePrice;
@@ -1788,11 +1874,11 @@ void TDEngineHuobi::handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vect
     if(LF_CHAR_Canceled == responsedOrderStatus.OrderStatus)  {
         /*
          * 因为restful查询有间隔时间，订单可能会先经历过部分成交，然后才达到的cancnel，所以得到cancel不能只认为是cancel，还需要判断有没有部分成交过。
-        这时候需要补状态，补一个on rtn order，一个on rtn trade。
-        这种情况仅cancel才有, 部分成交和全成交没有此问题。
-        当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
-         //2018-09-12.  不清楚websocket会不会有这个问题，先做同样的处理
-        */
+         * 这时候需要补状态，补一个on rtn order，一个on rtn trade。
+         * 这种情况仅cancel才有, 部分成交和全成交没有此问题。
+         * 当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
+         * 不清楚websocket会不会有这个问题，先做同样的处理
+         */
         //虽然是撤单状态，但是已经成交的数量和上一次记录的数量不一样，期间一定发生了部分成交. 要补发 LF_CHAR_PartTradedQueueing
         if(responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded) {
             //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
@@ -1889,9 +1975,7 @@ void TDEngineHuobi::handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vect
         orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
         orderStatusIterator->averagePrice = newAveragePrice;
 
-    }
-    else
-    {
+    }else{
         //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
         LFRtnOrderField rtn_order;
         memset(&rtn_order, 0, sizeof(LFRtnOrderField));
@@ -1964,7 +2048,194 @@ void TDEngineHuobi::handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vect
         orderStatusIterator->averagePrice = newAveragePrice;
     }
 }
+void handleResponseOrderStatus(AccountUnitHuobi& unit, PendingOrderStatus& orderStatusIterator, 
+                                        ResponsedOrderStatus& responsedOrderStatus){
+    KF_LOG_INFO(logger, "[handleResponseOrderStatus]");
 
+    if( (responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched && LF_CHAR_PartTradedQueueing == orderStatusIterator.OrderStatus || 
+            responsedOrderStatus.OrderStatus == orderStatusIterator.OrderStatus) && 
+            responsedOrderStatus.VolumeTraded == orderStatusIterator.VolumeTraded){//no change
+        return;
+    }
+    int64_t newAveragePrice = responsedOrderStatus.averagePrice;
+    //cancel 需要特殊处理
+    if(LF_CHAR_Canceled == responsedOrderStatus.OrderStatus)  {
+        /*
+         * 因为restful查询有间隔时间，订单可能会先经历过部分成交，然后才达到的cancnel，所以得到cancel不能只认为是cancel，还需要判断有没有部分成交过。
+         * 这时候需要补状态，补一个on rtn order，一个on rtn trade。
+         * 这种情况仅cancel才有, 部分成交和全成交没有此问题。
+         * 当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
+         * 不清楚websocket会不会有这个问题，先做同样的处理
+         */
+        //虽然是撤单状态，但是已经成交的数量和上一次记录的数量不一样，期间一定发生了部分成交. 要补发 LF_CHAR_PartTradedQueueing
+        if(responsedOrderStatus.VolumeTraded != orderStatusIterator.VolumeTraded) {
+            //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
+            LFRtnOrderField rtn_order;
+            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+
+            std::string strOrderID = orderStatusIterator.remoteOrderId;
+            strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
+
+            rtn_order.OrderStatus = LF_CHAR_PartTradedNotQueueing;
+            rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
+            //first send onRtnOrder about the status change or VolumeTraded change
+            strcpy(rtn_order.ExchangeID, "huobi");
+            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_order.InstrumentID, orderStatusIterator.InstrumentID, 31);
+            rtn_order.Direction = responsedOrderStatus.Direction;
+            //No this setting on Huobi
+            rtn_order.TimeCondition = LF_CHAR_GTC;
+            rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
+            strncpy(rtn_order.OrderRef, orderStatusIterator.OrderRef, 13);
+            rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
+            rtn_order.LimitPrice = responsedOrderStatus.price;
+            //剩余数量
+            rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
+
+            //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
+            //on_rtn_order(&rtn_order);
+            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                    source_id, MSG_TYPE_LF_RTN_ORDER_HUOBI,
+                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+
+            //send OnRtnTrade
+            LFRtnTradeField rtn_trade;
+            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+            strcpy(rtn_trade.ExchangeID, "huobi");
+            strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_trade.InstrumentID, orderStatusIterator.InstrumentID, 31);
+            strncpy(rtn_trade.OrderRef, orderStatusIterator.OrderRef, 13);
+            rtn_trade.Direction = rtn_order.Direction;
+            double oldAmount = (double)orderStatusIterator.VolumeTraded/scale_offset * orderStatusIterator.averagePrice/scale_offset*1.0;
+            double newAmount = (double)rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
+
+            //calculate the volumn and price (it is average too)
+            rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator.VolumeTraded;
+            double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
+            rtn_trade.Price =(price + 0.000000001)*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
+            strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
+            on_rtn_trade(&rtn_trade);
+            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_HUOBI, 1, -1);
+
+            KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
+                                                                  << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+
+
+        }
+
+        //emit the LF_CHAR_Canceled status
+        LFRtnOrderField rtn_order;
+        memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+
+        std::string strOrderID = orderStatusIterator.remoteOrderId;
+        strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
+
+        rtn_order.OrderStatus = LF_CHAR_Canceled;
+        rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
+
+        //first send onRtnOrder about the status change or VolumeTraded change
+        strcpy(rtn_order.ExchangeID, "huobi");
+        strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+        strncpy(rtn_order.InstrumentID, orderStatusIterator.InstrumentID, 31);
+        rtn_order.Direction = responsedOrderStatus.Direction;
+        //Huobi has no this setting
+        rtn_order.TimeCondition = LF_CHAR_GTC;
+        rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
+        strncpy(rtn_order.OrderRef, orderStatusIterator.OrderRef, 13);
+        rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
+        rtn_order.LimitPrice = responsedOrderStatus.price;
+        //剩余数量
+        rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
+
+        on_rtn_order(&rtn_order);
+        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                source_id, MSG_TYPE_LF_RTN_ORDER_HUOBI,
+                                1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+        KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
+                                                            << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
+
+
+        //third, update last status for next query_order
+        orderStatusIterator.OrderStatus = rtn_order.OrderStatus;
+        orderStatusIterator.VolumeTraded = rtn_order.VolumeTraded;
+        orderStatusIterator.averagePrice = newAveragePrice;
+
+    }else{
+        //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
+        LFRtnOrderField rtn_order;
+        memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+
+        std::string strOrderID = orderStatusIterator.remoteOrderId;
+        strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
+
+        KF_LOG_INFO(logger, "[handleResponseOrderStatus] VolumeTraded Change  LastOrderPsp:" << orderStatusIterator.VolumeTraded << ", NewOrderRsp: " << responsedOrderStatus.VolumeTraded  <<
+                                                                                              " NewOrderRsp.Status " << responsedOrderStatus.OrderStatus);
+        if(responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched && responsedOrderStatus.VolumeTraded != orderStatusIterator.VolumeTraded) {
+            rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
+        } else{
+            rtn_order.OrderStatus = responsedOrderStatus.OrderStatus;
+        }
+        rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
+
+        //first send onRtnOrder about the status change or VolumeTraded change
+        strcpy(rtn_order.ExchangeID, "huobi");
+        strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+        strncpy(rtn_order.InstrumentID, orderStatusIterator.InstrumentID, 31);
+        rtn_order.Direction = responsedOrderStatus.Direction;
+        //No this setting on Huobi
+        rtn_order.TimeCondition = LF_CHAR_GTC;
+        rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
+        strncpy(rtn_order.OrderRef, orderStatusIterator.OrderRef, 13);
+        rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
+        rtn_order.LimitPrice = responsedOrderStatus.price;
+        rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
+
+        on_rtn_order(&rtn_order);
+        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
+                                source_id, MSG_TYPE_LF_RTN_ORDER_HUOBI,
+                                1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+        KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
+                                                            << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
+
+        int64_t newAveragePrice = responsedOrderStatus.averagePrice;
+        //second, if the status is PartTraded/AllTraded, send OnRtnTrade
+        if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
+           (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
+            && rtn_order.VolumeTraded != orderStatusIterator.VolumeTraded))
+        {
+            LFRtnTradeField rtn_trade;
+            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+            strcpy(rtn_trade.ExchangeID, "huobi");
+            strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+            strncpy(rtn_trade.InstrumentID, orderStatusIterator.InstrumentID, 31);
+            strncpy(rtn_trade.OrderRef, orderStatusIterator.OrderRef, 13);
+            rtn_trade.Direction = rtn_order.Direction;
+            double oldAmount = (double)orderStatusIterator.VolumeTraded/scale_offset * orderStatusIterator.averagePrice/scale_offset*1.0;
+            double newAmount = (double)rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
+
+            //calculate the volumn and price (it is average too)
+            rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator.VolumeTraded;
+            double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
+            rtn_trade.Price = (price + 0.000000001)*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
+            strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
+            on_rtn_trade(&rtn_trade);
+            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_HUOBI, 1, -1);
+
+            KF_LOG_INFO(logger, "[on_rtn_trade] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
+                                                                << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+
+        }
+        //third, update last status for next query_order
+        orderStatusIterator.OrderStatus = rtn_order.OrderStatus;
+        orderStatusIterator.VolumeTraded = rtn_order.VolumeTraded;
+        orderStatusIterator.averagePrice = newAveragePrice;
+    }
+}
 std::string TDEngineHuobi::parseJsonToString(Document &d)
 {
     StringBuffer buffer;
