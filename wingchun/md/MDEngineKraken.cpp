@@ -153,6 +153,8 @@ void MDEngineKraken::load(const json& j_config)
         KF_LOG_ERROR(logger, "},");
     }
 
+    priceBook20Assembler.SetLevel(book_depth_count);
+
     KF_LOG_INFO(logger, "MDEngineKraken::load:  book_depth_count: "
             << book_depth_count << " trade_count: " << trade_count );
 }
@@ -824,7 +826,7 @@ std::string MDEngineKraken::createBookJsonString(std::string exchange_coinpair)
     writer.key("name");
     writer.String("book");
     writer.key("depth");
-    writer.Int(25);
+    writer.Int(book_depth_count);
     writer.EndObject();
 
     writer.EndObject();
@@ -850,8 +852,8 @@ std::string MDEngineKraken::createTradeJsonString(std::string exchange_coinpair)
     writer.StartObject();
     writer.key("name");
     writer.String("trade");
-    writer.key("depth");
-    writer.Int(25);
+    // writer.key("depth");
+    // writer.Int(25);
     writer.EndObject();
 
     writer.EndObject();
@@ -877,8 +879,8 @@ std::string MDEngineKraken::createOhlcJsonString(std::string exchange_coinpair)
     writer.StartObject();
     writer.key("name");
     writer.String("ohlc");
-    writer.key("depth");
-    writer.Int(25);
+    // writer.key("depth");
+    // writer.Int(25);
     writer.EndObject();
 
     writer.EndObject();

@@ -144,8 +144,8 @@
 		"kraken":
 		{
 			"baseUrl":	"ws.kraken.com",
-			"path": "/v1/user_api_socket",
-			"book_depth_count": 10,
+			
+			"book_depth_count": 25,
 			"trade_count": 10,
 			"whiteLists":
 			{
