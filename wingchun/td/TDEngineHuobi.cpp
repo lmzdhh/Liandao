@@ -245,7 +245,7 @@ void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
         map<string,LFRtnOrderField>::iterator restOrderStatus=unit.restOrderStatusMap.find(remoteOrderId);
         if(restOrderStatus==unit.restOrderStatusMap.end()){
             KF_LOG_ERROR(logger,"[on_lws_receive_orders] rest receive no order id, save int websocketOrderStatusMap");
-            unit.websocketOrderStatusMap.insert(make_pair(remoteOrderId,json));
+            unit.websocketOrderStatusMap.insert(std::make_pair(remoteOrderId,json));
         }else{
             handleResponseOrderStatus(unit, restOrderStatus->second, json);
             LfOrderStatusType orderStatus=GetOrderStatus(json["data"]["order-state"].GetString());
@@ -1385,7 +1385,7 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, LFRtnOrderField& rt
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
     string remoteOrderId=rtn_order.BusinessUnit;
-    unit.restOrderStatusMap.insert(make_pair(remoteOrderId,rtn_order));
+    unit.restOrderStatusMap.insert(std::make_pair(remoteOrderId,rtn_order));
     KF_LOG_INFO(logger, "[addNewOrderToMap] (InstrumentID) " << rtn_order.InstrumentID
                                                                        << " (OrderRef) " << rtn_order.OrderRef
                                                                        << " (remoteOrderId) " << rtn_order.BusinessUnit
