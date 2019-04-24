@@ -140,7 +140,7 @@
 				"ltc_btc": "BTC;LTC",
 				"btc_usdt": "USDT;BTC"
 			}
-		}
+		},
 		"kraken":
 		{
 			"baseUrl":	"ws.kraken.com",
