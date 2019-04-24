@@ -150,9 +150,9 @@
 			"whiteLists":
 			{
 				"strategy_coinpair(base_quote)": "quote/base",
-				"eth_eur": "EUR/ETH",
-				"btc_eur": "EUR/BTC",
-				"bch_usd": "USD/BCH"
+				"eur_eth": "ETH/EUR",
+				"eur_btc": "BTC/EUR",
+				"usd_bch": "BCH/USD"
 			}
 		}
 	},
