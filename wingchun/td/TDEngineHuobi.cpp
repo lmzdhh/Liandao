@@ -135,7 +135,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
     {
         case LWS_CALLBACK_CLIENT_ESTABLISHED:
         {//lws callback client established
-            //global_md->on_lws_open(wsi);
+            global_md->on_lws_open(wsi);
             //lws_callback_on_writable( wsi );
             break;
         }
@@ -169,7 +169,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         case LWS_CALLBACK_CLOSED:
         {//lws callback close
             ss << "LWS_CALLBACK_CLOSED.";
-            //global_md->on_lws_close(wsi);
+            global_md->on_lws_close(wsi);
             break;
         }
         case LWS_CALLBACK_WSI_DESTROY:
@@ -177,7 +177,10 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         {//lws callback client connection error
             ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR.";
             //global_md->writeInfoLog(ss.str());
-            
+            if(global_md)
+            {
+                global_md->on_lws_connection_error(wsi);
+            }
             break;
         }
         default:
@@ -1391,8 +1394,8 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, LFRtnOrderField& rt
     if(websocketOrderStatus==unit.websocketOrderStatusMap.end()){
         KF_LOG_INFO(logger,"[addNewOrderToMap]websocket has not received order status.");
     }else{
-        Document json;
         json.Parse(websocketOrderStatus->second.c_str());
+        Document json;
         handleResponseOrderStatus(unit, rtn_order,json);
         //remove order when finish
         KF_LOG_INFO(logger,"[addNewOrderToMap] remove order when finish");
