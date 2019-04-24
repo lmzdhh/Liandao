@@ -352,7 +352,7 @@ int TDEngineHuobi::subscribeTopic(struct lws* conn,string strSubscribe){
     return ret;
 }
 int TDEngineHuobi::on_lws_write_subscribe(struct lws* conn){
-    KF_LOG_INFO(logger, "[on_lws_write_subscribe]" );
+    //KF_LOG_INFO(logger, "[on_lws_write_subscribe]" );
     int ret = 0;
     AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
     if(isAuth==huobi_auth&&isOrders != orders_sub){
@@ -1015,8 +1015,11 @@ void TDEngineHuobi::req_qry_account(const LFQryAccountField *data, int account_i
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,std::string& nDealPrice,std::string& nDealVolume){
+void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,
+            std::string& nDealPrice,std::string& nDealVolume){
     KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
+    KF_LOG_DEBUG(logger, "[dealPriceVolume] (price)" << nPrice);
+    KF_LOG_DEBUG(logger, "[dealPriceVolume] (volume)" << nVolume);
     std::string ticker = unit.coinPairWhiteList.GetValueByKey(symbol);
     auto it = unit.mapPriceVolumePrecision.find(ticker);
     if(it == unit.mapPriceVolumePrecision.end())
@@ -1030,13 +1033,9 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
         KF_LOG_INFO(logger,"[dealPriceVolume] (deal price and volume precision)");
         int pPrecision=it->second.pricePrecision;
         int vPrecision=it->second.amountPrecision;
+        KF_LOG_INFO(logger,"[dealPriceVolume] (pricePrecision) "<<pPrecision<<" (amountPrecision) "<<vPrecision);
         double tDealPrice=nPrice*1.0/scale_offset;
         double tDealVolume=nVolume*1.0/scale_offset;
-        KF_LOG_INFO(logger,"[dealPriceVolume] (nDealPrice) "<<nDealPrice <<" (nDealVolume) "<<nDealVolume);
-        long long lDealPrice=tDealPrice*pow(10,pPrecision);
-        tDealPrice=lDealPrice*1.0/pow(10,pPrecision);
-        long long lDealVolume=tDealVolume*pow(10,vPrecision);
-        tDealVolume=lDealVolume*1.0/pow(10,vPrecision);
         nDealPrice=std::to_string(tDealPrice);
         nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+pPrecision+1);
         nDealVolume=std::to_string(tDealVolume);
