@@ -272,8 +272,8 @@ void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
             ticker = unit.coinPairWhiteList.GetValueByKey(std::string(restOrderStatus->second.InstrumentID));
             responsedOrderStatus.ticker = ticker;
             handleResponseOrderStatus(unit, restOrderStatus->second, responsedOrderStatus);
-            if(responsedOrderStatus->second.OrderStatus == LF_CHAR_AllTraded  || responsedOrderStatus->second.OrderStatus == LF_CHAR_Canceled
-                || responsedOrderStatus->second.OrderStatus == LF_CHAR_Error){
+            if(responsedOrderStatus.OrderStatus == LF_CHAR_AllTraded  || responsedOrderStatus.OrderStatus == LF_CHAR_Canceled
+                || responsedOrderStatus.OrderStatus == LF_CHAR_Error){
                 KF_LOG_INFO(logger, "[rest addNewOrderToMap] remove a pendingOrderStatus.");
                 unit.restOrderStatusMap.erase(remoteOrderId);
             }
@@ -281,9 +281,9 @@ void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
     } else {
         KF_LOG_INFO(logger, "[on_lws_receive_orders] (reveive failed)");
         std::string errorMsg;
-        int errorId = d["err-code"].GetInt();
+        int errorId = json["err-code"].GetInt();
         if(d.HasMember("err-msg") && d["err-msg"].IsString()){
-            errorMsg = d["err-msg"].GetString();
+            errorMsg = json["err-msg"].GetString();
         }
         KF_LOG_ERROR(logger, "[on_lws_receive_orders] get_order fail."<< " (errorId)" << errorId<< " (errorMsg)" << errorMsg);
     }
@@ -1434,8 +1434,8 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, const char_31 Instr
     if(websocketOrderStatus==unit.websocketOrderStatusMap.end()){
         KF_LOG_INFO(logger,"[rest addNewOrderToMap]websocket has not received order status.");
     }else{
-        string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(websocketOrderStatus->second.InstrumentID));
-        websocketOrderStatus->seclnd.ticker = ticker;
+        string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(status->second.InstrumentID));
+        websocketOrderStatus->second.ticker = ticker;
         handleResponseOrderStatus(unit, status,websocketOrderStatus->second);
          //remove order when finish
         if(websocketOrderStatus->second.OrderStatus == LF_CHAR_AllTraded  || websocketOrderStatus->second.OrderStatus == LF_CHAR_Canceled
