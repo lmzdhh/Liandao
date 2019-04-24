@@ -195,8 +195,8 @@ TradeAccount TDEngineBitmex::load_account(int idx, const json& j_config)
     AccountUnitBitmex& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
-    unit.baseUrl = baseUrl;
-
+    unit.baseUrl = "https://" + baseUrl;
+    unit.wsUrl = baseUrl;
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
@@ -1269,7 +1269,7 @@ void TDEngineBitmex::lws_login(AccountUnitBitmex& unit, long timeout_nsec) {
 
     struct lws_client_connect_info ccinfo = {0};
 
-    static std::string host  = unit.baseUrl;
+    static std::string host  = unit.wsUrl;
     static std::string path = "/realtime";
     static int port = 443;
 

@@ -58,6 +58,7 @@ struct AccountUnitBitmex
     string api_key;
     string secret_key;
     string baseUrl;
+    string wsUrl;
     // internal flags
     bool    logged_in;
     std::vector<PendingBitmexOrderStatus> newOrderStatus;
