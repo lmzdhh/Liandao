@@ -107,8 +107,8 @@ struct AccountUnitHuobi
     CoinPairWhiteList positionWhiteList;
     std::string accountId;
     struct lws* webSocketConn;
-    std::map<std::string,LFRtnOrderField> restOrderStatusMap;
-    std::map<std::string,Document> websocketOrderStatusMap;
+    map<string,LFRtnOrderField> restOrderStatusMap;
+    map<string,string> websocketOrderStatusMap;
 };
 /**
  * CTP trade engine

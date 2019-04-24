@@ -245,7 +245,7 @@ void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
         std::map<std::string,LFRtnOrderField>::iterator restOrderStatus=unit.restOrderStatusMap.find(remoteOrderId);
         if(restOrderStatus==unit.restOrderStatusMap.end()){
             KF_LOG_ERROR(logger,"[on_lws_receive_orders] rest receive no order id, save int websocketOrderStatusMap");
-            unit.websocketOrderStatusMap.insert(std::make_pair(remoteOrderId,json));
+            unit.websocketOrderStatusMap.insert(std::make_pair(remoteOrderId,parseJsonToString(json)));
         }else{
             handleResponseOrderStatus(unit, restOrderStatus->second, json);
             LfOrderStatusType orderStatus=GetOrderStatus(json["data"]["order-state"].GetString());
@@ -1390,11 +1390,13 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, LFRtnOrderField& rt
                                                                        << " (OrderRef) " << rtn_order.OrderRef
                                                                        << " (remoteOrderId) " << rtn_order.BusinessUnit
                                                                        << "(VolumeTraded)" << rtn_order.VolumeTraded);
-    std::map<std::string,Document>::iterator websocketOrderStatus=unit.websocketOrderStatusMap.find(remoteOrderId);
+    map<string,string>::iterator websocketOrderStatus=unit.websocketOrderStatusMap.find(remoteOrderId);
     if(websocketOrderStatus==unit.websocketOrderStatusMap.end()){
         KF_LOG_INFO(logger,"[addNewOrderToMap]websocket has not received order status.");
     }else{
-        handleResponseOrderStatus(unit, rtn_order,websocketOrderStatus->second);
+        Document &json;
+        json.Parse(websocketOrderStatus->second);
+        handleResponseOrderStatus(unit, rtn_order,json);
         //remove order when finish
         KF_LOG_INFO(logger,"[addNewOrderToMap] remove order when finish");
         LfOrderStatusType orderStatus=GetOrderStatus(websocketOrderStatus->second["data"]["order-state"].GetString());
