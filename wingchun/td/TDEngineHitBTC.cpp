@@ -1467,10 +1467,7 @@ inline int64_t TDEngineHitBTC::getTimestamp()
 
 std::string TDEngineHitBTC::createAuthJsonString(AccountUnitHitBTC& unit )
 {
-    //std::string authNonce = std::to_string(getTimestamp());
-    //std::string secret_key = unit.secret_key;
-    //std::string payload = "AUTH" + authNonce;
-    //std::string signature =  hmac_sha256( secret_key.c_str(), payload.c_str());
+
 
     StringBuffer s;
     Writer<StringBuffer> writer(s);
@@ -1479,20 +1476,31 @@ std::string TDEngineHitBTC::createAuthJsonString(AccountUnitHitBTC& unit )
     writer.String("login");
 
     writer.Key("params");
-    
-    writer.StartObject();
+
+    //BASIC login, does not work now
+    /*writer.StartObject();
     writer.Key("algo");
     writer.String("BASIC");
     writer.Key("pKey");
     writer.String(unit.api_key.c_str());
 
     writer.Key("sKey");
-    writer.String(unit.secret_key.c_str());
+    writer.String(unit.secret_key.c_str());*/
 
+    std::string authNonce = std::to_string(getTimestamp());
+    std::string secret_key = unit.secret_key;
+    std::string payload = authNonce;
+    std::string signature =  hmac_sha256( secret_key.c_str(), payload.c_str());
+    writer.StartObject();
+    writer.Key("algo");
+    writer.String("HS256");
+    writer.Key("pKey");
+    writer.String(unit.api_key.c_str());
+    writer.Key("nonce");
+    writer.String(payload.c_str());
+    writer.Key("signature");
+    writer.String(signature.c_str());
 
-
-    //writer.Key("dms");
-    //writer.Int(4);
     writer.EndObject();
     writer.EndObject();
     return s.GetString();
