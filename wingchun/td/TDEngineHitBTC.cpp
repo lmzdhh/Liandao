@@ -185,7 +185,7 @@ TradeAccount TDEngineHitBTC::load_account(int idx, const json& j_config)
     //unit.passphrase = passphrase;
     unit.baseUrl = baseUrl;
 
-    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
+    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl<<" (rest_interval)"<<rest_get_interval_ms);
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
 
@@ -238,7 +238,7 @@ void TDEngineHitBTC::connect(long timeout_nsec)
 
             lws_login(unit, 0);
             //set true to for let the kungfuctl think td is running.
-            //unit.logged_in = true;
+            unit.logged_in = true;
         }
 
     }
