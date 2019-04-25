@@ -1422,6 +1422,27 @@ void TDEngineHitBTC::moveNewtoPending(AccountUnitHitBTC& unit)
         newMsgIterator = unit.newPendingSendMsg.erase(newMsgIterator);
     }
 }
+
+void TDEngineHitBTC::set_reader_thread()
+{
+    ITDEngine::set_reader_thread();
+
+    KF_LOG_INFO(logger, "[set_reader_thread] ws_thread start on TDEngineBitmex::wsloop");
+    ws_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineHitBTC::wsloop, this)));
+
+}
+
+
+void TDEngineHitBTC::wsloop()
+{
+    KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
+    while(isRunning)
+    {
+        int n = lws_service( context, rest_get_interval_ms );
+        //std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
+    }
+}
+
 //void TDEngineHitBTC::loop()
 //{
 //    while(isRunning)
