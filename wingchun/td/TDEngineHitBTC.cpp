@@ -1443,38 +1443,39 @@ inline int64_t TDEngineHitBTC::getTimestamp()
     return timestamp;
 }
 
+
 std::string TDEngineHitBTC::createAuthJsonString(AccountUnitHitBTC& unit )
 {
-    std::string authNonce = std::to_string(getTimestamp());
-    std::string secret_key = unit.secret_key;
-    std::string payload = "AUTH" + authNonce;
-    std::string signature =  hmac_sha256( secret_key.c_str(), payload.c_str());
+    //std::string authNonce = std::to_string(getTimestamp());
+    //std::string secret_key = unit.secret_key;
+    //std::string payload = "AUTH" + authNonce;
+    //std::string signature =  hmac_sha256( secret_key.c_str(), payload.c_str());
 
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
-    writer.Key("event");
-    writer.String("auth");
+    writer.Key("method");
+    writer.String("login");
 
-    writer.Key("apiKey");
+    writer.Key("params");
+    
+    writer.StartObject();
+    writer.Key("algo");
+    writer.String("BASIC");
+    writer.Key("pKey");
     writer.String(unit.api_key.c_str());
 
-    writer.Key("authSig");
-    writer.String(signature.c_str());
+    writer.Key("sKey");
+    writer.String(unit.secret_key.c_str());
 
-    writer.Key("authPayload");
-    writer.String(payload.c_str());
 
-    writer.Key("authNonce");
-    writer.String(authNonce.c_str());
 
-    writer.Key("dms");
-    writer.Int(4);
-    //dms: 4 -> when socket is closed, cancel all account orders
+    //writer.Key("dms");
+    //writer.Int(4);
+    writer.EndObject();
     writer.EndObject();
     return s.GetString();
 }
-
 
 
 /*
