@@ -22,7 +22,7 @@ wingchun strategy -n YOUR_STRATEGY1 -p hitbtc_order_cancel_test.py
 
 def initialize(context):
     #context.add_md(source=SOURCE.HITBTC)
-    context.ticker = 'ETHBTC'
+    context.ticker = 'eth_btc'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
@@ -44,7 +44,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.print_pos(pos_handler)
             #context.stop()
             print '----will test buy cancel----'
-            context.buy_price = 861470 #market_data.LowerLimitPrice
+            context.buy_price = 161470 #market_data.LowerLimitPrice
             context.sell_price = 999999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
@@ -52,15 +52,15 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                                ticker=context.ticker,
                                                                price=context.buy_price,
                                                                exchange_id=context.exchange_id,
-                                                               volume=20010000,
+                                                               volume=200100,
                                                                direction=DIRECTION.Buy,
                                                                offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
                 print('will cancel it in 2 seconds')
                 import time
                 time.sleep(2)
-                context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
-                print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
+                #context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
+                #print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
     else:
         print '-- got pos requested --'
         context.print_pos(pos_handler)
