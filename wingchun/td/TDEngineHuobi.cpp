@@ -563,8 +563,8 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     unit.baseUrl = baseUrl;
 
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl 
-                                                   << " (spotAccountId) "<<unit.spotAccountId)
-                                                   << " (marginAccountId) "<<unit.marginAccountId;
+                                                   << " (spotAccountId) "<<unit.spotAccountId
+                                                   << " (marginAccountId) "<<unit.marginAccountId);
 
     //test rs256
     //  std::string data ="{}";
@@ -1577,7 +1577,7 @@ void TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     bool isSpot=false,isMyMargin=false;
     for(int i=0;i<n;i++){
         if((!isSpot)&&(type==j["data"].GetArray()[i]["type"].GetString())){
-            unit.accountId=std::to_string(j["data"].GetArray()[i]["id"].GetInt());
+            unit.spotAccountId=std::to_string(j["data"].GetArray()[i]["id"].GetInt());
             isSpot=true;
         }
         if((!isMyMargin)&&(marginType==j["data"].GetArray()[i]["type"].GetString())){
