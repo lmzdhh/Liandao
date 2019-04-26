@@ -276,7 +276,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
 
     
     // internal load
-    auto iter = j_config.find("accounts");
+    auto iter = j_config.find("users");
     if (iter != j_config.end() && iter.value().size() > 0)
     { 
         for (auto& j_account: iter.value())
@@ -366,8 +366,8 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     // set up
     TradeAccount account = {};
     //partly copy this fields
-    strncpy(account.UserID, "", 16);
-    strncpy(account.Password, "", 21);
+    strncpy(account.UserID, account_units[0].api_key.c_str(), 16);
+    strncpy(account.Password, account_units[0].seceret_key.c_str(), 21);
     return account;
 }
 
