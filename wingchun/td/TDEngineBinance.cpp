@@ -367,7 +367,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     TradeAccount account = {};
     //partly copy this fields
     strncpy(account.UserID, account_units[0].api_key.c_str(), 16);
-    strncpy(account.Password, account_units[0].seceret_key.c_str(), 21);
+    strncpy(account.Password, account_units[0].secret_key.c_str(), 21);
     return account;
 }
 
