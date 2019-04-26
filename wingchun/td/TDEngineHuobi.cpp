@@ -1666,7 +1666,7 @@ void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
             source="margin-api";
         }
         response = Post(requestPath,createInsertOrdertring(unit.accountId.c_str(), volume.c_str(), price.c_str(),
-                        source,code,st.c_str()),unit);
+                        source.c_str(),code,st.c_str()),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
                                                   << " (response.error.message) " << response.error.message 
