@@ -1573,14 +1573,17 @@ void TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     int n=j["data"].Size();
     std::string type="spot";//现货账户
     std::string marginType="margin";//现货账户
+    string state="working";
     std::string accountId;
     bool isSpot=false,isMyMargin=false;
     for(int i=0;i<n;i++){
-        if((!isSpot)&&(type==j["data"].GetArray()[i]["type"].GetString())){
+        if((!isSpot)&&(type==j["data"].GetArray()[i]["type"].GetString())
+            &&(state==j["data"].GetArray()[i]["state"].GetString())){
             unit.spotAccountId=std::to_string(j["data"].GetArray()[i]["id"].GetInt());
             isSpot=true;
         }
-        if((!isMyMargin)&&(marginType==j["data"].GetArray()[i]["type"].GetString())){
+        if((!isMyMargin)&&(marginType==j["data"].GetArray()[i]["type"].GetString())
+            &&(state==j["data"].GetArray()[i]["state"].GetString())){
             unit.marginAccountId=std::to_string(j["data"].GetArray()[i]["id"].GetInt());
             isMyMargin=true;
         }
