@@ -108,7 +108,7 @@ struct AccountUnitHuobi
     std::string accountId;
     struct lws* webSocketConn;
     map<string,LFRtnOrderField> restOrderStatusMap;
-    map<string,string> websocketOrderStatusMap;
+    vector<string> websocketOrderStatusMap;
 };
 /**
  * CTP trade engine
@@ -153,7 +153,6 @@ private:
     LfOrderPriceTypeType GetPriceType(std::string input);
     LfOrderStatusType GetOrderStatus(std::string state);
     inline int64_t getTimestamp();
-
 
     virtual void set_reader_thread() override;
     void loop();
