@@ -632,8 +632,10 @@
 						"btc_usd": "btcusdt",
 				    "eth_usd": "etcusdt",
 						"eos_btc": "eosbtc",
-						"hit_btc": "hitbtc"
+						"hit_btc": "hitbtc",
+						"edu_btc": "edubtc"
 					},
+					"is_margin": false,
 					"rest_get_interval_ms": 2000
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],

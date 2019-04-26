@@ -232,6 +232,7 @@ public:
     //websocket deal order status
 
 private:
+    bool isMargin=false;
     bool m_shouldPing = true;
     bool m_isPong = false;
     bool m_isSubL3 = false;

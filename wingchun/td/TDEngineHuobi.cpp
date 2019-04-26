@@ -533,6 +533,9 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
     string passphrase = j_config["passphrase"].get<string>();
+    if(j_config.find("is_margin") != j_config.end()) {
+        isMargin = j_config["is_margin"].get<bool>();
+    }
     //https://api.huobi.pro
     string baseUrl = j_config["baseUrl"].get<string>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
@@ -902,38 +905,6 @@ void TDEngineHuobi::req_investor_position(const LFQryPositionField* data, int ac
     int errorId = 0;
     std::string errorMsg = "";
     Document d;
-    //调用get函数获取用户信息，保存在d中https://api.huobi.pro/v1/accout/accouts
-    /*
-    {
-        "data": {
-        "id": 100009,
-        "type": "spot",
-        "state": "working",
-        "list": [
-        {
-        "currency": "usdt",
-        "type": "trade",
-        "balance": "5007.4362872650"
-        },
-        {
-        "currency": "usdt",
-        "type": "frozen",
-        "balance": "348.1199920000"
-        }
-        ],
-        "user-id": 10000
-        }
-    }
-    错误码
-    错误信息返回格式
-    {
-        "id": "id generate by client",
-        "status": "error",
-        "err-code": "err-code",
-        "err-msg": "err-message",
-        "ts": 1487152091345
-    }
-    */
     get_account(unit, d);
     KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
     if(d.IsObject() && d.HasMember("status"))
@@ -941,10 +912,11 @@ void TDEngineHuobi::req_investor_position(const LFQryPositionField* data, int ac
         std::string status=d["status"].GetString();
         KF_LOG_INFO(logger, "[req_investor_position] (get status)" );
         //errorId =  std::round(std::stod(d["id"].GetString()));
-        errorId = 404;
+        errorId = 0;
         KF_LOG_INFO(logger, "[req_investor_position] (status)" << status);
         KF_LOG_INFO(logger, "[req_investor_position] (errorId)" << errorId);
         if(status != "ok") {
+            errorId=520;
             if (d.HasMember("err-msg") && d["err-msg"].IsString()) {
                 std::string tab="\t";
                 errorMsg = d["err-code"].GetString()+tab+d["err-msg"].GetString();
@@ -1688,9 +1660,13 @@ void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
         should_retry = false;
         //火币下单post /v1/order/orders/place
         std::string requestPath = "/v1/order/orders/place";
+        string source="api";
         //lock
+        if(isMargin){
+            source="margin-api";
+        }
         response = Post(requestPath,createInsertOrdertring(unit.accountId.c_str(), volume.c_str(), price.c_str(),
-                        "api",code,st.c_str()),unit);
+                        source,code,st.c_str()),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
                                                   << " (response.error.message) " << response.error.message 
