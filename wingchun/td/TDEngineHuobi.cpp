@@ -1398,7 +1398,7 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, LFRtnOrderField& rt
     for(wsOrderStatus=unit.websocketOrderStatusMap.begin();wsOrderStatus!=unit.websocketOrderStatusMap.end();){
         Document json;
         json.Parse((*wsOrderStatus).c_str());
-        if(json.HasParseError()||json.isEmpty())continue;
+        if(json.HasParseError())continue;
         if(json.HasMember("data")&&json["data"].HasMember("order-id")){
             string orderId=std::to_string(json["data"]["order-id"].GetInt64());
             if(remoteOrderId==orderId){
