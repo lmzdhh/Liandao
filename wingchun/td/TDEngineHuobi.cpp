@@ -322,7 +322,7 @@ std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit){
     writer.Key("op");
     writer.String("sub");
     writer.Key("cid");
-    writer.String(unit.accountId.c_str());
+    writer.String(unit.spotAccountId.c_str());
     writer.Key("topic");
     writer.String("orders.*");
     writer.Key("model");
@@ -562,7 +562,9 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
     unit.passphrase = passphrase;
     unit.baseUrl = baseUrl;
 
-    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl << " (accountId)"<<unit.accountId);
+    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl 
+                                                   << " (spotAccountId) "<<unit.spotAccountId)
+                                                   << " (marginAccountId) "<<unit.marginAccountId;
 
     //test rs256
     //  std::string data ="{}";
@@ -588,7 +590,7 @@ TradeAccount TDEngineHuobi::load_account(int idx, const json& j_config)
         KF_LOG_ERROR(logger, "     \"etc_eth\": \"etceth\"");
         KF_LOG_ERROR(logger, "},");
     }
-    unit.accountId=getAccountId(unit);
+    getAccountId(unit);
     //test
     Document json;
     get_account(unit, json);
@@ -617,7 +619,7 @@ void TDEngineHuobi::connect(long timeout_nsec)
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
         {
-            KF_LOG_INFO(logger, "[connect] (account id) "<<unit.accountId<<" login.");
+            KF_LOG_INFO(logger, "[connect] (account id) "<<unit.spotAccountId<<" login.");
             lws_login(unit, 0);
             //set true to for let the kungfuctl think td is running.
             unit.logged_in = true;
@@ -1548,20 +1550,21 @@ void TDEngineHuobi::get_account(AccountUnitHuobi& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
     /*
-    账户余额
-    查询指定账户的余额，支持以下账户：
-    spot：现货账户， margin：杠杆账户，otc：OTC 账户，point：点卡账户
-    HTTP 请求
-    GET /v1/account/accounts/{account-id}/balance
+      账户余额
+      查询指定账户的余额，支持以下账户：
+      spot：现货账户， margin：杠杆账户，otc：OTC 账户，point：点卡账户
+      HTTP 请求
+      GET /v1/account/accounts/{account-id}/balance
     */
-   std::string getPath="/v1/account/accounts/";
-    std::string requestPath = getPath+unit.accountId+"/balance";
+    std::string getPath="/v1/account/accounts/";
+    string accountId=isMargin?unit.marginAccountId:unit.spotAccountId;
+    std::string requestPath = getPath+accountId+"/balance";
     const auto response = Get(requestPath,"{}",unit);
     json.Parse(response.text.c_str());
     //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
 }
-std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
+void TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     KF_LOG_DEBUG(logger,"[getAccountID] ");
     std::string getPath="/v1/account/accounts/";
     const auto resp = Get("/v1/account/accounts","{}",unit);
@@ -1569,15 +1572,21 @@ std::string TDEngineHuobi::getAccountId(AccountUnitHuobi& unit){
     j.Parse(resp.text.c_str());
     int n=j["data"].Size();
     std::string type="spot";//现货账户
+    std::string marginType="margin";//现货账户
     std::string accountId;
+    bool isSpot=false,isMyMargin=false;
     for(int i=0;i<n;i++){
-        if(type==j["data"].GetArray()[i]["type"].GetString()){
-            accountId=std::to_string(j["data"].GetArray()[i]["id"].GetInt());
-            break;
+        if((!isSpot)&&(type==j["data"].GetArray()[i]["type"].GetString())){
+            unit.accountId=std::to_string(j["data"].GetArray()[i]["id"].GetInt());
+            isSpot=true;
         }
+        if((!isMyMargin)&&(marginType==j["data"].GetArray()[i]["type"].GetString())){
+            unit.marginAccountId=std::to_string(j["data"].GetArray()[i]["id"].GetInt());
+            isMyMargin=true;
+        }
+        if(isSpot&&isMyMargin)break;
     }
     KF_LOG_DEBUG(logger,"[getAccountID] (accountId) "<<accountId);
-    return accountId;
 }
 std::string TDEngineHuobi::getHuobiTime(){
     time_t t = time(NULL);
@@ -1661,12 +1670,14 @@ void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
         //火币下单post /v1/order/orders/place
         std::string requestPath = "/v1/order/orders/place";
         string source="api";
+        string accountId=unit.spotAccountId;
         //lock
         if(isMargin){
             source="margin-api";
+            accountId=unit.marginAccountId;
         }
         KF_LOG_INFO(logger,"[send_order] (isMargin) "<<isMargin<<" (source) "<<source);
-        response = Post(requestPath,createInsertOrdertring(unit.accountId.c_str(), volume.c_str(), price.c_str(),
+        response = Post(requestPath,createInsertOrdertring(accountId.c_str(), volume.c_str(), price.c_str(),
                         source.c_str(),code,st.c_str()),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
@@ -1722,7 +1733,8 @@ bool TDEngineHuobi::shouldRetry(Document& doc)
 void TDEngineHuobi::cancel_all_orders(AccountUnitHuobi& unit, std::string code, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
-    std::string accountId = unit.accountId;
+    std::string accountId = unit.spotAccountId;
+    if(isMargin)accountId=unit.marginAccountId;
     //火币post批量撤销订单
     std::string requestPath = "/v1/order/orders/batchCancelOpenOrders";
     StringBuffer s;

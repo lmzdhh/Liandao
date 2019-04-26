@@ -105,7 +105,8 @@ struct AccountUnitHuobi
     std::map<std::string,PriceVolumePrecision> mapPriceVolumePrecision;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
-    std::string accountId;
+    std::string spotAccountId;
+    std::string marginAccountId;
     struct lws* webSocketConn;
     map<string,LFRtnOrderField> restOrderStatusMap;
     vector<string> websocketOrderStatusMap;
@@ -212,7 +213,7 @@ public:
     //cys add
     char dec2hexChar(short int n);
     std::string escapeURL(const string &URL);
-    std::string getAccountId(AccountUnitHuobi& unit);
+    void getAccountId(AccountUnitHuobi& unit);
     std::string getHuobiTime();
     std::string getHuobiNormalTime();
     std::string getHuobiSignatrue(std::string parameters[],int psize,std::string timestamp,std::string method_url,std::string reqType,AccountUnitHuobi& unit);
