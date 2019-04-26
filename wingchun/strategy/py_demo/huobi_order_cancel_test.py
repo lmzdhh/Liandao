@@ -22,7 +22,7 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 
 def initialize(context):
     context.add_md(source=SOURCE.HUOBI)
-    context.ticker = 'eos_btc'
+    context.ticker = 'bkbt_btc'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
@@ -44,16 +44,16 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.print_pos(pos_handler)
             #context.stop()
             print '----will test buy cancel----'
-            context.buy_price = 10470 #market_data.LowerLimitPrice
-            context.sell_price = 999999999 #market_data.UpperLimitPrice
+            context.buy_price = 20 #market_data.LowerLimitPrice
+            context.sell_price = 20 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
                 context.order_rid = context.insert_limit_order(source=SOURCE.HUOBI,
                                                                ticker=context.ticker,
                                                                price=context.buy_price,
                                                                exchange_id=context.exchange_id,
-                                                               volume=20010000,
-                                                               direction=DIRECTION.Buy,
+                                                               volume=2000000000,
+                                                               direction=DIRECTION.Sell,
                                                                offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
                 print('will cancel it in 2 seconds')
@@ -88,7 +88,7 @@ def on_tick(context, market_data, source, rcv_time):
 def on_rtn_order(context, rtn_order, order_id, source, rcv_time):
     print('---on_rtn_order',  rtn_order, order_id, source, rcv_time)
     if order_id == context.order_rid and context.cancel_id < 0 and rtn_order.OrderStatus != 'a':
-        context.cancel_id = context.cancel_order(source=source, order_id=order_id)
+        #context.cancel_id = context.cancel_order(source=source, order_id=order_id)
         print 'cancel (order_id)', order_id, ' (request_id)', context.cancel_id
     if order_id == context.order_rid and rtn_order.OrderStatus == '5':
         print 'cancel successfully!'
