@@ -1665,6 +1665,7 @@ void TDEngineHuobi::send_order(AccountUnitHuobi& unit, const char *code,
         if(isMargin){
             source="margin-api";
         }
+        KF_LOG_INFO(logger,"[send_order] (isMargin) "<<isMargin<<" (source) "<<source);
         response = Post(requestPath,createInsertOrdertring(unit.accountId.c_str(), volume.c_str(), price.c_str(),
                         source.c_str(),code,st.c_str()),unit);
 
