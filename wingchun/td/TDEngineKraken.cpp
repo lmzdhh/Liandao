@@ -429,8 +429,8 @@ std::mutex g_httpMutex;
 cpr::Response TDEngineKraken::Get(const std::string& method_url,const std::string& body, std::string postData,AccountUnitKraken& unit)
 {
     string s2="/";
-    string path=s2 + version + "/public/" + method;
-    string postdata=s1+nonce+"&"+postData;
+    string path=s2 + version + "/public/" + method_url;
+    string postdata=postData;
     string url = unit.baseUrl + path+"?"+postData;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Get(Url{url},
@@ -449,10 +449,10 @@ cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::stri
     string nonce = create_nonce();
     string s1="nonce=";
     string s2="/";
-    string path=s2 + version + "/private/" + method;
+    string path=s2 + version + "/private/" + method_url;
     string postdata = s1 + nonce+"&"+postData;
     string signature=signature(path,nonce,postdata,unit);
-    string url = unit.baseUrl + method_url+"?"+postData;
+    string url = unit.baseUrl + path+"?"+postData;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{
                                 {"API-Key", unit.api_key},
