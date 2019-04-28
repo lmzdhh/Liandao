@@ -303,7 +303,7 @@ private:
 
     
     int SYNC_TIME_DEFAULT_INTERVAL = 10000;
-    int sync_time_interval;
+    int sync_time_interval = 10000;
     int64_t timeDiffOfExchange = 0;
     int exchange_shift_ms = 0;
 

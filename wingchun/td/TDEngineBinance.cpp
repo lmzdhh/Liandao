@@ -27,6 +27,7 @@ using cpr::Payload;
 using cpr::Post;
 using cpr::Timeout;
 using cpr::Interface;
+using cpr::Put;
 
 using rapidjson::StringRef;
 using rapidjson::Writer;
@@ -259,9 +260,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     if(j_config.find("sync_time_interval") != j_config.end()) {
         SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
     }
-    if(j_config.find("sync_time_interval") != j_config.end()) {
-        SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
-    }
+   
     KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
 
     if(j_config.find("exchange_shift_ms") != j_config.end()) {
@@ -1590,7 +1589,7 @@ void TDEngineBinance::loop()
         for (size_t idx = 0; idx < account_units.size(); idx++)
         {
             AccountUnitBinance& unit = account_units[idx];
-            if(current_ms - last_put_time > 1800000)
+            if(last_put_time != 0 && current_ms - last_put_time > 1800000)
             {
                 Document json;
                 put_listen_key(unit,json);
@@ -2440,11 +2439,11 @@ void TDEngineBinance::put_listen_key(AccountUnitBinance& unit, Document &json)
     std::string Method = "PUT";
     std::string requestPath = restBaseUrl +"/api/v1/userDataStream";
     std::string queryString("");
-    std::string body = "{ \"listenKey\":"+ unit.listenKey + "}";
+    std::string body ="{ \"listenKey\":"+ unit.listenKey + "}";
 
     string url = requestPath + queryString;
     std::unique_lock<std::mutex> lck(http_mutex);
-    const auto response = Post(Url{url},
+    const auto response = Put(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
                               Body{body}, Timeout{100000});
 
