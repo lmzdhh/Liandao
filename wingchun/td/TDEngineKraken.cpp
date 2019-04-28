@@ -18,7 +18,9 @@
 #include <math.h>
 #include <zlib.h>
 #include <string.h>
-#include "stdafx.h"
+#include <openssl/sha.h>
+#include <openssl/hmac.h>
+#include <openssl/bio.h>
 #include "../../utils/crypto/openssl_util.h"
 
 using cpr::Post;
@@ -884,29 +886,7 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
         }
     }
     send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_KRASOURCE_KRAKEN, 1, requestId);
-    /*账户余额
-    GET /v1/account/accounts/{account-id}/balance
-    {
-        "data": {
-            "id": 100009,
-            "type": "spot",
-            "state": "working",
-            "list": [
-                {
-                    "currency": "usdt",
-                "type": "trade",
-                "balance": "5007.4362872650"
-                },
-                {
-                "currency": "usdt",
-                "type": "frozen",
-                "balance": "348.1199920000"
-                }
-            ],
-            "user-id": 10000
-        }
-    }
-    */
+
     std::vector<LFRspPositionField> tmp_vector;
     if(!d.HasParseError() && d.HasMember("data"))
     {
