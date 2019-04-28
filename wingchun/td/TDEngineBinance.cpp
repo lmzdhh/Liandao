@@ -158,7 +158,7 @@ AccountUnitBinance::AccountUnitBinance(const AccountUnitBinance& source)
     secret_key = source.secret_key;
     listenKey= source.listenKey;
     // internal flags
-    logged_in== source.logged_in;
+    logged_in = source.logged_in;
     newOrderStatus = source.newOrderStatus;
     pendingOrderStatus= source.pendingOrderStatus;
     newTradeStatus= source.newTradeStatus;
@@ -1609,7 +1609,7 @@ void TDEngineBinance::loop()
             
             */
         }
-        if( last_rest_get_ts < current_ms || last_rest_get_ts - current_ms > SYNC_TIME_DEFAULT_INTERVAL) {
+        if( current_ms - last_rest_get_ts > SYNC_TIME_DEFAULT_INTERVAL) {
             //reset
             //sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
             getTimeDiffOfExchange(account_units[0]);
