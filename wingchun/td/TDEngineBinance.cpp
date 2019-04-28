@@ -152,7 +152,7 @@ AccountUnitBinance::~AccountUnitBinance()
     if(nullptr != mutex_handle_429)
         delete mutex_order_and_trade;
 }
-AccountUnitBinance::AccountUnitBinance(AccountUnitBinance& source)
+AccountUnitBinance::AccountUnitBinance(const AccountUnitBinance& source)
 {
     api_key =source.api_key;
     secret_key = source.secret_key;
