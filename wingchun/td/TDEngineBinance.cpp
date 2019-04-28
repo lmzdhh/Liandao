@@ -144,11 +144,52 @@ AccountUnitBinance::AccountUnitBinance()
 }
 AccountUnitBinance::~AccountUnitBinance()
 {
-    delete mutex_handle_429;
-    delete mutex_weight;
-    delete mutex_order_and_trade;
+    if(nullptr != mutex_handle_429)
+        delete mutex_handle_429;
+    if(nullptr != mutex_handle_429)
+        delete mutex_weight;
+    if(nullptr != mutex_handle_429)
+        delete mutex_order_and_trade;
 }
+AccountUnitBinance::AccountUnitBinance(AccountUnitBinance& source)
+{
+    api_key =source.api_key;
+    secret_key = source.secret_key;
+    listenKey= source.listenKey;
+    // internal flags
+    logged_in== source.logged_in;
+    newOrderStatus = source.newOrderStatus;
+    pendingOrderStatus= source.pendingOrderStatus;
+    newTradeStatus= source.newTradeStatus;
+    pendingTradeStatus= source.pendingTradeStatus;
 
+    newOnRtnTrades= source.newOnRtnTrades;
+    pendingOnRtnTrades= source.pendingOnRtnTrades;
+    whiteListInstrumentIDs= source.whiteListInstrumentIDs;
+    sendOrderFilters= source.sendOrderFilters;
+    ordersMap= source.ordersMap;
+    // the trade id that has been called on_rtn_trade. Do not send it again.
+    newSentTradeIds= source.newSentTradeIds;
+    sentTradeIds= source.sentTradeIds;
+
+    coinPairWhiteList= source.coinPairWhiteList;
+    positionWhiteList= source.positionWhiteList;
+
+    
+    order_total_count = source.order_total_count;
+
+    weight_count = source.weight_count;
+    mutex_weight = new std::mutex();
+    weight_data_queue = source.weight_data_queue;
+
+    time_queue= source.time_queue;
+    bHandle_429 = source.bHandle_429;
+    std::mutex* mutex_handle_429 = new std::mutex();
+    startTime_429 = source.startTime_429;
+    std::mutex* mutex_order_and_trade = new std::mutex();
+    context = source.context;
+    websocketConn= source.websocketConn;
+}
 std::mutex http_mutex;
 std::mutex account_mutex;
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
@@ -366,8 +407,9 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     // set up
     TradeAccount account = {};
     //partly copy this fields
-    strncpy(account.UserID, account_units[0].api_key.c_str(), 16);
-    strncpy(account.Password, account_units[0].secret_key.c_str(), 21);
+    strncpy(account.UserID, account_units[0].api_key.c_str(), 15);
+    strncpy(account.Password, account_units[0].secret_key.c_str(), 20);
+    KF_LOG_INFO(logger, "[load_account] SUCCESS !");
     return account;
 }
 

@@ -139,6 +139,7 @@ struct AccountUnitBinance
     std::mutex* mutex_order_and_trade = nullptr;
     struct lws_context *context = nullptr;
     struct lws * websocketConn;
+    AccountUnitBinance(AccountUnitBinance& source);
     AccountUnitBinance();
     ~AccountUnitBinance();
 };
