@@ -451,12 +451,12 @@ cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::stri
     string s2="/";
     string path=s2 + version + "/private/" + method_url;
     string postdata = s1 + nonce+"&"+postData;
-    string signature=signature(path,nonce,postdata,unit);
+    string strSignature=signature(path,nonce,postdata,unit);
     string url = unit.baseUrl + path+"?"+postData;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{
                                 {"API-Key", unit.api_key},
-                                {"API-Sign",signature}},Body{body},Timeout{30000});
+                                {"API-Sign",strSignature}},Body{body},Timeout{30000});
     lock.unlock();
     if(response.text.length()<500){
         KF_LOG_INFO(logger, "[POST] (url) " << url <<"(body) "<< body<< " (response.status_code) " << response.status_code
