@@ -634,6 +634,42 @@
 				},
 				"future_exotic": null
 			}
+		},
+		"kraken": {
+			"accounts": [{
+				"info": {
+					"APIKey": "5NOiUluG8MrVkuHrE1QUjp3bdvQ1pxsJRQeJXxlz6gYVzqnzSsAtyvFG",
+					"SecretKey": "PCZfRihwQSPXghLro9hYpbxJdFumTMW/CSQ9Hi4vdfHQ+m5lCLMQF074PNVfQBg4Y321crfMkhIqDvdMgDGzrQ==",
+					"passphrase": "your-passphrase",
+					"baseUrl": "https://api.kraken.com",
+					"whiteLists": {
+						"strategy_coinpair(base_quote)": "exchange_coinpair",
+						"btc_usd": "btcusdt",
+				    "eth_usd": "etcusdt",
+						"eos_btc": "eosbtc",
+						"hit_btc": "hitbtc",
+						"edu_btc": "edubtc"
+					},
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
 		}
 	}
 }

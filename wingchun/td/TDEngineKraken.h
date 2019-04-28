@@ -1,6 +1,6 @@
 
-#ifndef PROJECT_TDENGINEOCEANEX_H
-#define PROJECT_TDENGINEOCEANEX_H
+#ifndef PROJECT_TDENGINEKRAKEN_H
+#define PROJECT_TDENGINEKRAKEN_H
 
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
@@ -14,200 +14,252 @@
 #include <document.h>
 #include <libwebsockets.h>
 #include <cpr/cpr.h>
+#include <stringbuffer.h>
 using rapidjson::Document;
-
+using rapidjson::StringBuffer;
 WC_NAMESPACE_START
 
 /**
  * account information unit extra is here.
  */
 
-        struct PendingOrderStatus
-        {
-            char_31 InstrumentID;   //合约代码
-            char_21 OrderRef;       //报单引用
-            LfOrderStatusType OrderStatus;  //报单状态
-            uint64_t VolumeTraded;  //今成交数量
-            int64_t averagePrice;// given averagePrice on response of query_order
-            int64_t remoteOrderId;// sender_order response order id://{"orderId":19319936159776,"result":true}
-        };
+struct PendingOrderStatus
+{
+    char_31 InstrumentID = {0};   //合约代码
+    char_21 OrderRef = {0};       //报单引用
+    LfOrderStatusType OrderStatus = LF_CHAR_NotTouched;  //报单状态
+    uint64_t VolumeTraded = 0;  //今成交数量
+    int64_t averagePrice = 0;// given averagePrice on response of query_order
+    std::string remoteOrderId;// sender_order response order id://{"orderId":19319936159776,"result":true}
+};
+struct OrderActionSentTime
+{
+    LFOrderActionField data;
+    int requestId;
+    int64_t sentNameTime;
+};
+struct ResponsedOrderStatus
+{
+    int64_t averagePrice = 0;
+    std::string ticker;
+    int64_t createdDate = 0;
+    //今成交数量
+    uint64_t VolumeTraded;
+    int id = 0;
+    uint64_t openVolume = 0;
+    std::string orderId;
+    std::string orderType;
+    //报单价格条件
+    LfOrderPriceTypeType OrderPriceType;
+    int64_t price = 0;
+    //买卖方向
+    LfDirectionType Direction;
 
-        struct OrderActionSentTime
-        {
-            LFOrderActionField data;
-            int requestId;
-            int64_t sentNameTime;
-        };
+    //报单状态
+    LfOrderStatusType OrderStatus;
+    uint64_t trunoverVolume = 0;
+    uint64_t volume = 0;
+};
+//价格和数量精度
+/*
+字段名称	数据类型	描述
+base-currency	string	交易对中的基础币种
+quote-currency	string	交易对中的报价币种
+price-precision	integer	交易对报价的精度（小数点后位数）
+amount-precision	integer	交易对基础币种计数精度（小数点后位数）
+symbol-partition	string	交易区，可能值: [main，innovation，bifurcation]
+*/
+struct PriceVolumePrecision
+{
+    std::string baseCurrency;
+    std::string quoteCurrency;
+    int pricePrecision=0;
+    int amountPrecision=0;
+    std::string symbolPartition;
+    std::string symbol;
+};
+enum KrakenWsStatus{
+    nothing,
+    kraken_auth,
+    accounts_sub,
+    orders_sub,
+    accounts_list_req,
+    order_list_req,
+    order_detail_req
+};
+struct AccountUnitKraken
+{
+    string api_key;//uid
+    string secret_key;
+    string passphrase;
 
-        struct ResponsedOrderStatus
-        {
-            int64_t averagePrice = 0;
-            std::string ticker;
-            int64_t createdDate = 0;
-
-
-            //今成交数量
-            uint64_t VolumeTraded;
-            int id = 0;
-            uint64_t openVolume = 0;
-            int64_t orderId = 0;
-            std::string orderType;
-            //报单价格条件
-            LfOrderPriceTypeType OrderPriceType;
-            int64_t price = 0;
-            //买卖方向
-            LfDirectionType Direction;
-
-            //报单状态
-            LfOrderStatusType OrderStatus;
-            uint64_t trunoverVolume = 0;
-            uint64_t volume = 0;
-        };
-
-
-        struct AccountUnitOceanEx
-        {
-            string api_key;//uid
-            string secret_key;
-            string passphrase;
-
-            string baseUrl;
-            // internal flags
-            bool    logged_in;
-            std::vector<PendingOrderStatus> newOrderStatus;
-            std::vector<PendingOrderStatus> pendingOrderStatus;
-
-            CoinPairWhiteList coinPairWhiteList;
-            CoinPairWhiteList positionWhiteList;
-
-            std::vector<std::string> newPendingSendMsg;
-            std::vector<std::string> pendingSendMsg;
-        };
-
-
+    string baseUrl;
+    // internal flags
+    bool    logged_in;
+    std::vector<PendingOrderStatus> newOrderStatus;
+    std::vector<PendingOrderStatus> pendingOrderStatus;
+    std::map<std::string,PriceVolumePrecision> mapPriceVolumePrecision;
+    CoinPairWhiteList coinPairWhiteList;
+    CoinPairWhiteList positionWhiteList;
+    std::string spotAccountId;
+    std::string marginAccountId;
+    struct lws* webSocketConn;
+    map<string,LFRtnOrderField> restOrderStatusMap;
+    vector<string> websocketOrderStatusMap;
+};
 /**
  * CTP trade engine
  */
-        class TDEngineOceanEx: public ITDEngine
-        {
-        public:
-            /** init internal journal writer (both raw and send) */
-            virtual void init();
-            /** for settleconfirm and authenticate setting */
-            virtual void pre_load(const json& j_config);
-            virtual TradeAccount load_account(int idx, const json& j_account);
-            virtual void resize_accounts(int account_num);
-            /** connect && login related */
-            virtual void connect(long timeout_nsec);
-            virtual void login(long timeout_nsec);
-            virtual void logout();
-            virtual void release_api();
-            virtual bool is_connected() const;
-            virtual bool is_logged_in() const;
-            virtual string name() const { return "TDEngineOceanEx"; };
+class TDEngineKraken: public ITDEngine
+{
+public:
+    /** init internal journal writer (both raw and send) */
+    virtual void init();
+    /** for settleconfirm and authenticate setting */
+    virtual void pre_load(const json& j_config);
+    virtual TradeAccount load_account(int idx, const json& j_account);
+    virtual void resize_accounts(int account_num);
+    /** connect && login related */
+    virtual void connect(long timeout_nsec);
+    virtual void login(long timeout_nsec);
+    virtual void logout();
+    virtual void release_api();
+    virtual bool is_connected() const;
+    virtual bool is_logged_in() const;
+    virtual string name() const { return "TDEngineKraken"; };
 
-            // req functions
-            virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
-            virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId);
-            virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
-            virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
-
-
-        public:
-            TDEngineOceanEx();
-            ~TDEngineOceanEx();
-
-        private:
-            // journal writers
-            yijinjing::JournalWriterPtr raw_writer;
-            vector<AccountUnitOceanEx> account_units;
-
-            std::string GetSide(const LfDirectionType& input);
-            LfDirectionType GetDirection(std::string input);
-            std::string GetType(const LfOrderPriceTypeType& input);
-            LfOrderPriceTypeType GetPriceType(std::string input);
-            LfOrderStatusType GetOrderStatus(std::string input);
-            inline int64_t getTimestamp();
+    // req functions
+    virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
+    virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId);
+    virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
+    virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
 
 
-            virtual void set_reader_thread() override;
-            void loop();
-            std::vector<std::string> split(std::string str, std::string token);
-            void GetAndHandleOrderTradeResponse();
-            void addNewQueryOrdersAndTrades(AccountUnitOceanEx& unit, const char_31 InstrumentID,
-                                            const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                            const uint64_t VolumeTraded, int64_t remoteOrderId);
-            void retrieveOrderStatus(AccountUnitOceanEx& unit);
-            void moveNewOrderStatusToPending(AccountUnitOceanEx& unit);
+public:
+    TDEngineKraken();
+    ~TDEngineKraken();
 
-            void handlerResponseOrderStatus(AccountUnitOceanEx& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
-            void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
+private:
+    // journal writers
+    yijinjing::JournalWriterPtr raw_writer;
+    vector<AccountUnitKraken> account_units;
 
+    std::string GetSide(const LfDirectionType& input);
+    LfDirectionType GetDirection(std::string input);
+    std::string GetType(const LfOrderPriceTypeType& input);
+    LfOrderPriceTypeType GetPriceType(std::string input);
+    LfOrderStatusType GetOrderStatus(std::string state);
+    inline int64_t getTimestamp();
 
+    virtual void set_reader_thread() override;
+    void loop();
+    void GetAndHandleOrderTradeResponse();
+    void addNewQueryOrdersAndTrades(AccountUnitKraken& unit, const char_31 InstrumentID,
+                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus,
+                                    const uint64_t VolumeTraded, const std::string& remoteOrderId);
+    void addNewOrderToMap(AccountUnitKraken& unit, LFRtnOrderField& rtn_order);
+    void retrieveOrderStatus(AccountUnitKraken& unit);
+    void moveNewOrderStatusToPending(AccountUnitKraken& unit);
+    void handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, 
+                                        ResponsedOrderStatus& responsedOrderStatus);
+    void handleResponseOrderStatus(AccountUnitKraken& unit, LFRtnOrderField& rtn_order, 
+                                        Document& json);
+    void loopOrderActionNoResponseTimeOut();
+    void orderActionNoResponseTimeOut();
+    void loopwebsocket();
+private:
+    void get_account(AccountUnitKraken& unit, Document& json);
+    void send_order(AccountUnitKraken& unit, const char *code,
+                            const char *side, const char *type, std::string volume, std::string price, Document& json);
+    void cancel_all_orders(AccountUnitKraken& unit, std::string code, Document& json);
+    void cancel_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json);
+    void query_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json);
+    void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
+    void printResponse(const Document& d);
 
-            std::string parseJsonToString(Document &d);
+    bool shouldRetry(Document& d);
+    
+    std::string createInsertOrdertring(const char *accountId,
+                    const char *amount, const char *price, const char *source, const char *symbol,const char *type);
 
-            void handlerResponsedOrderStatus(AccountUnitOceanEx& unit);
+    cpr::Response Get(const std::string& url,const std::string& body, std::string postData,AccountUnitKraken& unit);
+    cpr::Response Post(const std::string& url,const std::string& body, std::string postData,AccountUnitKraken& unit);
+    void genUniqueKey();
+    std::string genClinetid(const std::string& orderRef);
+    //精度处理
+    void getPriceVolumePrecision(AccountUnitKraken& unit);
+    void dealPriceVolume(AccountUnitKraken& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,std::string& nDealPrice,std::string& nDealVome);
 
-            void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, int64_t remoteOrderId);
+    std::string parseJsonToString(Document &d);
+    void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId);
+    void Ping(struct lws* conn);
+    void Pong(struct lws* conn,long long ping);
+    AccountUnitKraken& findAccountUnitKrakenByWebsocketConn(struct lws * websocketConn);
+    std::string makeSubscribeOrdersUpdate(AccountUnitKraken& unit);
+    int64_t getMSTime();
+    std::string create_nonce();
+public:
+    //cys add kraken websocket status
+    KrakenWsStatus wsStatus = nothing;
+    KrakenWsStatus isAuth = nothing,isOrders=nothing;
+    //当webSocket建立时
+    void on_lws_open(struct lws* wsi);
+    std::string getKrakenTime();
+    std::string getKrakenNormalTime();
+    std::string signature(std::string& path,std::string& nonce, std::string& postdata,AccountUnitKraken& unit);
+    std::vector<unsigned char> sha256(string& data);
+    vector<unsigned char> hmac_sha512_kraken(vector<unsigned char>& data,vector<unsigned char>& key);
+    std::string b64_encode(const std::vector<unsigned char>& data);
+    std::vector<unsigned char> b64_decode(const std::string& data) ;
+public:
+    //websocket
+    void krakenAuth(AccountUnitKraken& unit);
+    void lws_login(AccountUnitKraken& unit, long timeout_nsec);
+    void writeInfoLog(std::string strInfo);
+    void writeErrorLog(std::string strError);
+    //ws_service_cb回调函数
+    void on_lws_data(struct lws* conn, const char* data, size_t len);
+    int subscribeTopic(struct lws* conn,string strSubscribe);
+    int on_lws_write_subscribe(struct lws* conn);
+    void on_lws_connection_error(struct lws* conn);
+    void on_lws_close(struct lws* conn);
+    void on_lws_receive_orders(struct lws* conn,Document& json);
+    //websocket deal order status
 
-            void loopOrderActionNoResponseTimeOut();
-            void orderActionNoResponseTimeOut();
-        private:
-            void get_account(AccountUnitOceanEx& unit, Document& json);
-            void send_order(AccountUnitOceanEx& unit, const char *code,
-                            const char *side, const char *type, double size, double price, double funds, Document& json);
+private:
+    bool isMargin=false;
+    bool m_isPong = false;
+    string version="0";
+    struct lws_context *context = nullptr;
+    struct lws* m_conn;
+private:
+    std::string m_uniqueKey;
+    int HTTP_RESPONSE_OK = 200;
+    static constexpr int scale_offset = 1e8;
 
-            void cancel_all_orders(AccountUnitOceanEx& unit, std::string code, Document& json);
-            void cancel_order(AccountUnitOceanEx& unit, std::string code, std::string orderId, Document& json);
-            void query_order(AccountUnitOceanEx& unit, std::string code, std::string orderId, Document& json);
-            void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
-            void printResponse(const Document& d);
+    ThreadPtr rest_thread;
+    ThreadPtr orderaction_timeout_thread;
 
-            bool shouldRetry(Document& d);
+    uint64_t last_rest_get_ts = 0;
+    uint64_t rest_get_interval_ms = 500;
 
-            std::string construct_request_body(const AccountUnitOceanEx& unit,const  std::string& data,bool isget = true);
-            std::string createInsertOrdertring(const char *code,
-                                               const char *side, const char *type, double size, double price);
+    std::mutex* mutex_order_and_trade = nullptr;
+    std::mutex* mutex_response_order_status = nullptr;
+    std::mutex* mutex_orderaction_waiting_response = nullptr;
 
-            cpr::Response Get(const std::string& url,const std::string& body, AccountUnitOceanEx& unit);
-            cpr::Response Post(const std::string& url,const std::string& body, AccountUnitOceanEx& unit);
-            int64_t checkPrice(int64_t price,std::string coinPair);
-        private:
+    std::map<std::string, std::string> localOrderRefRemoteOrderId;
 
-            struct lws_context *context = nullptr;
+    //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
+    std::map<std::string, OrderActionSentTime> remoteOrderIdOrderActionSentTime;
+    int max_rest_retry_times = 3;
+    int retry_interval_milliseconds = 1000;
+    int orderaction_max_waiting_seconds = 30;
 
-            int HTTP_RESPONSE_OK = 200;
-            static constexpr int scale_offset = 1e8;
-
-            ThreadPtr rest_thread;
-            ThreadPtr orderaction_timeout_thread;
-
-            uint64_t last_rest_get_ts = 0;
-            uint64_t rest_get_interval_ms = 500;
-
-            std::mutex* mutex_order_and_trade = nullptr;
-            std::mutex* mutex_response_order_status = nullptr;
-            std::mutex* mutex_orderaction_waiting_response = nullptr;
-
-            std::map<std::string, int64_t> localOrderRefRemoteOrderId;
-
-            //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
-            std::map<int64_t, OrderActionSentTime> remoteOrderIdOrderActionSentTime;
-
-
-            std::vector<ResponsedOrderStatus> responsedOrderStatusNoOrderRef;
-
-            int max_rest_retry_times = 3;
-            int retry_interval_milliseconds = 1000;
-            int orderaction_max_waiting_seconds = 30;
-
-            std::map<std::string,int> mapPricePrecision;
-        };
+};
 
 WC_NAMESPACE_END
 
-#endif //PROJECT_TDENGINEOCEANEX_H
+#endif //PROJECT_TDENGINEHuoTDEngineKraken_H
 
 
 
