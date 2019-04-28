@@ -205,14 +205,10 @@ void TDEngineKraken::on_lws_receive_orders(struct lws* conn,Document& json){
 }
 void TDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
-    char buf[4096] = {0};
-    int l = 4096;
-    l = gzDecompress(data, len, buf, l);
-    KF_LOG_INFO(logger, "[on_lws_data] (cys_buf) " << buf);
     KF_LOG_INFO(logger, "[on_lws_data] (data) " << data);
     //std::string strData = dealDataSprit(data);
     Document json;
-    json.Parse(buf);
+    json.Parse(data);
     if(json.HasParseError()||!json.IsObject()){
         KF_LOG_ERROR(logger, "[cys_on_lws_data] parse to json error ");
         return;
@@ -1772,7 +1768,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_KRASOURCE_KRAKEN, 1, -1);
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
 
             KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
                                                                   << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
@@ -1879,7 +1875,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
             strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
             on_rtn_trade(&rtn_trade);
             raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_KRASOURCE_KRAKEN, 1, -1);
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
 
             KF_LOG_INFO(logger, "[on_rtn_trade] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
                                                                 << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
@@ -1956,7 +1952,7 @@ void TDEngineKraken::handleResponseOrderStatus(AccountUnitKraken& unit, LFRtnOrd
     on_rtn_trade(&rtn_trade);
 
     raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-        source_id, MSG_TYPE_LF_RTN_TRADE_KRASOURCE_KRAKEN, 1, -1);
+        source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
 
     KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
                 << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
