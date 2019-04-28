@@ -1033,7 +1033,7 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
 
             on_rtn_order(&rtn_order);
             raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_KRASOURCE_KRAKEN,
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
                                     1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
 
             KF_LOG_DEBUG(logger, "[req_order_insert] (addNewOrderToMap)" );
@@ -1746,7 +1746,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
             //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
             //on_rtn_order(&rtn_order);
             raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_KRASOURCE_KRAKEN,
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
                                     1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
 
@@ -1802,7 +1802,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
 
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_KRASOURCE_KRAKEN,
+                                source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
                                 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
         KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
@@ -1846,7 +1846,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
 
         on_rtn_order(&rtn_order);
         raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_KRASOURCE_KRAKEN,
+                                source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
                                 1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
         KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
@@ -1934,7 +1934,7 @@ void TDEngineKraken::handleResponseOrderStatus(AccountUnitKraken& unit, LFRtnOrd
     //剩余数量
     rtn_order.VolumeTotal = nUnfilledAmount;
     on_rtn_order(&rtn_order);
-    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_ORDER_KRASOURCE_KRAKEN,
+    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
         1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
     //send OnRtnTrade
