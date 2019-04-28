@@ -610,7 +610,7 @@ symbol-partition	string	交易区，可能值: [main，innovation，bifurcation]
 void TDEngineKraken::getPriceVolumePrecision(AccountUnitKraken& unit){
     KF_LOG_INFO(logger,"[getPriceVolumePrecision]");
     Document json;
-    const auto response = Get("/v1/common/symbols","",unit);
+    const auto response = Get("/v1/common/symbols","","",unit);
     json.Parse(response.text.c_str());
     const static std::string strSuccesse = "ok";
     if(json.HasMember("status") && json["status"].GetString() == strSuccesse)
@@ -1579,7 +1579,7 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, const char *code,
         }
         KF_LOG_INFO(logger,"[send_order] (isMargin) "<<isMargin<<" (source) "<<source);
         response = Post(requestPath,createInsertOrdertring(accountId.c_str(), volume.c_str(), price.c_str(),
-                        source.c_str(),code,st.c_str()),unit);
+                        source.c_str(),code,st.c_str()),"",unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
                                                   << " (response.error.message) " << response.error.message 
@@ -1651,7 +1651,7 @@ void TDEngineKraken::cancel_all_orders(AccountUnitKraken& unit, std::string code
     writer.Int(100);
     //write Signature
     writer.EndObject();
-    auto response = Post(requestPath,s.GetString(),unit);
+    auto response = Post(requestPath,s.GetString(),"",unit);
     getResponse(response.status_code, response.text, response.error.message, json);
 }
 
@@ -1667,7 +1667,7 @@ void TDEngineKraken::cancel_order(AccountUnitKraken& unit, std::string code, std
         //火币post撤单请求
         std::string postPath="/v1/order/orders/";
         std::string requestPath = postPath+ orderId + "/submitcancel";
-        response = Post(requestPath,"",unit);
+        response = Post(requestPath,"","",unit);
 
         //json.Clear();
         getResponse(response.status_code, response.text, response.error.message, json);
@@ -1692,7 +1692,7 @@ void TDEngineKraken::query_order(AccountUnitKraken& unit, std::string code, std:
     //火币get查询订单详情
     std::string getPath = "/v1/order/orders/";
     std::string requestPath = getPath + orderId;
-    auto response = Get(requestPath,"",unit);
+    auto response = Get(requestPath,"","",unit);
     json.Parse(response.text.c_str());
     KF_LOG_DEBUG(logger,"[query_order] response "<<response.text.c_str());
     //getResponse(response.status_code, response.text, response.error.message, json);
