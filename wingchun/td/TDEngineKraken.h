@@ -208,7 +208,7 @@ public:
     std::string getKrakenNormalTime();
     std::string signature(std::string& path,std::string& nonce, std::string& postdata,AccountUnitKraken& unit);
     std::vector<unsigned char> sha256(string& data);
-    vector<unsigned char> hmac_sha512_kraken(vector<unsigned char>& data,vector<unsigned char>& key);
+    vector<unsigned char> hmac_sha512_kraken(vector<unsigned char>& data,vector<unsigned char> key);
     std::string b64_encode(const std::vector<unsigned char>& data);
     std::vector<unsigned char> b64_decode(const std::string& data) ;
 public:

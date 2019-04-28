@@ -362,7 +362,7 @@ std::vector<unsigned char> TDEngineKraken::sha256(string& data){
 
    return digest;
 }
-vector<unsigned char> TDEngineKraken::hmac_sha512_kraken(vector<unsigned char>& data,vector<unsigned char>& key){   
+vector<unsigned char> TDEngineKraken::hmac_sha512_kraken(vector<unsigned char>& data,vector<unsigned char> key){   
    unsigned int len = EVP_MAX_MD_SIZE;
    std::vector<unsigned char> digest(len);
 
@@ -416,7 +416,8 @@ std::string TDEngineKraken::signature(std::string& path,std::string& nonce, std:
    std::vector<unsigned char> data(path.begin(), path.end());
 
    // concatenate nonce and postdata and compute SHA256
-   std::vector<unsigned char> nonce_postdata = sha256(nonce + postdata);
+   string np=nonce + postdata;
+   std::vector<unsigned char> nonce_postdata = sha256(np);
 
    // concatenate path and nonce_postdata (path + sha256(nonce + postdata))
    data.insert(data.end(), nonce_postdata.begin(), nonce_postdata.end());
