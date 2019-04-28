@@ -118,7 +118,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 static struct lws_protocols protocols[] =
         {
                 {
-                        "md-protocol",
+                        "td-protocol",
                         ws_service_cb,
                               0,
                                  65536,
@@ -461,8 +461,8 @@ bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Documen
                     const rapidjson::Value& filter = sym["filters"].GetArray()[j];
                     if (strcmp("PRICE_FILTER", filter["filterType"].GetString()) == 0) {
                         std::string tickSizeStr =  filter["tickSize"].GetString();
-                        KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
-                                                                                                   " (tickSizeStr)" << tickSizeStr);
+                        //KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+                        //                                                                           " (tickSizeStr)" << tickSizeStr);
                         //0.0000100; 0.001;
                         unsigned int locStart = tickSizeStr.find( ".", 0 );
                         unsigned int locEnd = tickSizeStr.find( "1", 0 );
@@ -472,9 +472,9 @@ bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Documen
                             strncpy(afilter.InstrumentID, symbol.c_str(), 31);
                             afilter.ticksize = num;
                             unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
-                            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
-                                                                                                       " (tickSizeStr)" << tickSizeStr
-                                                                                                       <<" (tickSize)" << afilter.ticksize);
+                            //KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+                            //                                                                          " (tickSizeStr)" << tickSizeStr
+                            //                                                                           <<" (tickSize)" << afilter.ticksize);
                         }
                     }
                 }
@@ -1584,7 +1584,7 @@ void TDEngineBinance::loop()
     {
         
         auto current_ms = getTimestamp();
-        uint64_t tmp_rest_get_interval_ms = rest_get_interval_ms;
+        //uint64_t tmp_rest_get_interval_ms = rest_get_interval_ms;
         
         for (size_t idx = 0; idx < account_units.size(); idx++)
         {
@@ -1609,14 +1609,14 @@ void TDEngineBinance::loop()
             
             */
         }
-        sync_time_interval--;
-        if(sync_time_interval <= 0) {
+        if( last_rest_get_ts < current_ms || last_rest_get_ts - current_ms > SYNC_TIME_DEFAULT_INTERVAL) {
             //reset
-            sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
+            //sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
             getTimeDiffOfExchange(account_units[0]);
-            KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
+            //KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
+            last_rest_get_ts = current_ms;
         }
-        //last_rest_get_ts = current_ms;
+        
         
     }
 }

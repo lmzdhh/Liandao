@@ -280,7 +280,7 @@ private:
     uint64_t last_rest_get_ts = 0;
     uint64_t rest_get_interval_ms = 500;
     std::string restBaseUrl = "https://api.binance.com";
-    std::string wsBaseUrl = "wss://stream.binance.com";
+    std::string wsBaseUrl = "stream.binance.com";
     uint64_t order_insert_recvwindow_ms = 5000;
     uint64_t order_action_recvwindow_ms = 5000;
 
@@ -303,7 +303,7 @@ private:
 
     
     int SYNC_TIME_DEFAULT_INTERVAL = 10000;
-    int sync_time_interval = 10000;
+    //int sync_time_interval = 10000;
     int64_t timeDiffOfExchange = 0;
     int exchange_shift_ms = 0;
 
