@@ -2024,17 +2024,17 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     LfDirectionType direction = GetDirection(data["order-type"].GetString());
     //总量
     int64_t nVolume = std::round(std::stod(data["order-amount"].GetString()) * scale_offset);
-    //报单状态
+    //报单状态  部分成交2
     LfOrderStatusType orderStatus=GetOrderStatus(data["order-state"].GetString());
     //总价
     int64_t price = std::round(std::stod(data["order-price"].GetString()) * scale_offset);
     int64_t volumeTraded = nVolume-nUnfilledAmount;
-    if( (orderStatus == LF_CHAR_NotTouched && LF_CHAR_PartTradedQueueing == orderStatus || 
-            orderStatus == rtn_order.OrderStatus) && 
-            volumeTraded == rtn_order.VolumeTraded){//no change
+    if(orderStatus == LF_CHAR_NotTouched && volumeTraded == rtn_order.VolumeTraded){//no change
+        KF_LOG_INFO(logger, "[handleResponseOrderStatus] status is not changed");
         return;
     }
     rtn_order.OrderStatus = orderStatus;
+    KF_LOG_INFO(logger, "[handleResponseOrderStatus] (orderStatus) "<<rtn_order.OrderStatus);
     //累计成交数量
     rtn_order.VolumeTraded = volumeTraded;
     //剩余数量
