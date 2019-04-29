@@ -815,7 +815,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         mapInsertOrders.insert(std::make_pair(data->OrderRef,&unit));
         lck.unlock();
         std::string orderId=std::to_string(d["orderId"].GetInt64());
-        char *p=const_cast<char *>(orderId.c_str())
+        char *p=const_cast<char *>(orderId.c_str());
         strcpy(data->BusinessUnit,p);
         //order insert success,on_rtn_order with NotTouched status first
         onRtnNewOrder(data, unit, requestId);
