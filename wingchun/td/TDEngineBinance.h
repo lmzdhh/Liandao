@@ -118,6 +118,7 @@ struct AccountUnitBinance
     std::vector<std::string> whiteListInstrumentIDs;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
     std::map<std::string, LFRtnOrderField> ordersMap;
+    std::vector<std::string> wsOrderStatus;
     // the trade id that has been called on_rtn_trade. Do not send it again.
     std::vector<int64_t> newSentTradeIds;
     std::vector<int64_t> sentTradeIds;
@@ -224,7 +225,7 @@ private:
 
     inline int64_t getTimestamp();
     int64_t getTimeDiffOfExchange(AccountUnitBinance& unit);
-
+    std::string parseJsonToString(Document &d);
 private:
     int HTTP_RESPONSE_OK = 200;
     void send_order(AccountUnitBinance& unit, const char *symbol,
@@ -268,7 +269,7 @@ private:
   
 
     AccountUnitBinance& findAccountUnitByWebsocketConn(struct lws * websocketConn);
-    void onOrder(struct lws * websocketConn, Document& json);
+    void onOrder(AccountUnitBinance& unit, Document& json);
     void onTrade(struct lws * websocketConn, Document& json);
     void wsloop();
 

@@ -768,12 +768,13 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 
     //paser the order/trade info in the response result
-    if(!d.HasParseError() && d.IsObject() && !d.HasMember("code"))
+    if(!d.HasParseError() && d.IsObject() && !d.HasMember("code")&&d.HasMember("orderId"))
     {
         std::unique_lock<std::mutex> lck(account_mutex);
         mapInsertOrders.insert(std::make_pair(data->OrderRef,&unit));
         lck.unlock();
-
+        string orderId=std::to_string(d["orderId"].GetInt64());
+        strcpy(data->BusinessUnit,orderId.c_str());
         //order insert success,on_rtn_order with NotTouched status first
         onRtnNewOrder(data, unit, requestId);
         /*
@@ -815,8 +816,23 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
                             source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
                             1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-    std::lock_guard<std::mutex> lck(*unit.mutex_order_and_trade);
-    unit.ordersMap.insert(std::make_pair(data->OrderRef,rtn_order));
+    std::unique_lock<std::mutex> lck(*unit.mutex_order_and_trade);
+    unit.ordersMap.insert(std::make_pair(data->BusinessUnit,rtn_order));
+    lck.unlock();
+    std::vector<std::string>::iterator it;
+    for(it=unit.wsOrderStatus.begin();it!=unit.wsOrderStatus.end();it++){
+        Document json;
+        json.Parse(*it);
+        string remoteOrderId=data->BusinessUnit;
+        if(json.HasMember("i")){
+            string wsOrderId=std::to_string(json["i"].GetInt64());
+            if(remoteOrderId==wsOrderId){
+                onOrder(unit,json);
+                unit.wsOrderStatus.erase(it);
+                it--;
+            }
+        }
+    }
 }
 void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId)
 {
@@ -2471,8 +2487,33 @@ void TDEngineBinance::on_lws_connection_error(struct lws* conn)
 {
     KF_LOG_ERROR(logger, "TDEngineBinance::on_lws_connection_error.");
     AccountUnitBinance& unit = findAccountUnitByWebsocketConn(conn);
-    KF_LOG_ERROR(logger, "TDEngineBinance::on_lws_connection_error. login again.");
-
+    std::map<std::string, LFRtnOrderField>::iterator it;
+    for(it=unit.ordersMap.begin();it!=unit.ordersMap.end();it++){
+        int errorId;string errorMsg;
+        string remoteOrderId=it->first;
+        LFRtnOrderField data=it->second;
+        Document json;
+        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data.InstrumentID));
+	    cancel_order(unit, ticker.c_str(), 0, data.OrderRef, "", json);
+        if(json.HasParseError() ){
+            errorId=100;
+            errorMsg= "cancel_order http response has parse error. please check the log";
+            KF_LOG_ERROR(logger, "[req_order_action] cancel_order error! (remoteOrderId)" << remoteOrderId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        }
+        if(!json.HasParseError() && json.IsObject() && json.HasMember("code") && json["code"].IsNumber()){
+            errorId = json["code"].GetInt();
+            if(json.HasMember("msg") && json["msg"].IsString()){
+                errorMsg = json["msg"].GetString();
+            }
+            KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed! (rid)  -1 (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        }else if(json.HasMember("status")){
+            string status=json["status"].GetString();
+            data.OrderStatus=GetOrderStatus(status);
+            on_rtn_order(&data);
+        }
+    }
+    unit.ordersMap.clear();
+    unit.wsOrderStatus.clear();
     long timeout_nsec = 0;
     lws_login(unit, timeout_nsec);
 }
@@ -2589,7 +2630,8 @@ void TDEngineBinance::on_lws_data(struct lws* conn, const char* data, size_t len
         if(eventType == "executionReport")
         {
             KF_LOG_INFO(logger, "TDEngineBinance::on_lws_data. Order Update ");
-            onOrder(conn,json);
+            AccountUnitBinance& unit= findAccountUnitByWebsocketConn(conn);
+            onOrder(unit,json);
         }
         else if(eventType == "outboundAccountInfo")
         {
@@ -2613,18 +2655,26 @@ AccountUnitBinance& TDEngineBinance::findAccountUnitByWebsocketConn(struct lws *
     return account_units[0];
 }
 
+//cys add
+std::string TDEngineBinance::parseJsonToString(Document &d){
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    d.Accept(writer);
 
-void TDEngineBinance::onOrder(struct lws* conn, Document& json) {
+    return buffer.GetString();
+}
+void TDEngineBinance::onOrder(AccountUnitBinance& unit, Document& json) {
 	KF_LOG_INFO(logger, "TDEngineBinance::onOrder");
-    AccountUnitBinance &unit = findAccountUnitByWebsocketConn(conn);
     if (json.HasMember("c")&& json.HasMember("i") && json.HasMember("X")&& json.HasMember("l")&& json.HasMember("L")&& json.HasMember("z")&& json.HasMember("t")) {
 		
 		std::lock_guard<std::mutex> lck(*unit.mutex_order_and_trade);		
-		std::string OrderRef= json["c"].GetString();      
-		auto it = unit.ordersMap.find(OrderRef);
+		std::string remoteOrderId= json["i"].GetString();      
+		auto it = unit.ordersMap.find(remoteOrderId);
 		if (it == unit.ordersMap.end())
 		{ 
-			KF_LOG_ERROR(logger, "TDEngineBinance::onOrder,no order match");
+			KF_LOG_ERROR(logger, "TDEngineBinance::onOrder,no order match,save wsOrderStatus");
+            string strJson=parseJsonToString(json);
+            unit.wsOrderStatus.push_back(strJson.c_str());
 			return;
 		}
 		LFRtnOrderField& rtn_order = it->second;
