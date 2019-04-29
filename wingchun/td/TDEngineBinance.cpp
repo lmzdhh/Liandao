@@ -815,9 +815,8 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         mapInsertOrders.insert(std::make_pair(data->OrderRef,&unit));
         lck.unlock();
         std::string orderId=std::to_string(d["orderId"].GetInt64());
-        strcpy(data->BusinessUnit,const_cast<char *>(orderId.c_str()));
         //order insert success,on_rtn_order with NotTouched status first
-        onRtnNewOrder(data, unit, requestId);
+        onRtnNewOrder(data, unit, requestId,orderId);
         /*
         if(!d.HasMember("status"))
         {//no status, it is ACK
@@ -836,8 +835,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     }
 }
 
-void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBinance& unit, int requestId)
-{
+void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBinance& unit, int requestId,string remoteOrderId){
     LFRtnOrderField rtn_order;
     memset(&rtn_order, 0, sizeof(LFRtnOrderField));
     strcpy(rtn_order.ExchangeID, "binance");
@@ -858,13 +856,12 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
                             source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
                             1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
     std::unique_lock<std::mutex> lck(*unit.mutex_order_and_trade);
-    unit.ordersMap.insert(std::make_pair(data->BusinessUnit,rtn_order));
+    unit.ordersMap.insert(std::make_pair(remoteOrderId,rtn_order));
     lck.unlock();
     std::vector<std::string>::iterator it;
     for(it=unit.wsOrderStatus.begin();it!=unit.wsOrderStatus.end();it++){
         Document json;
         json.Parse((*it).c_str());
-        string remoteOrderId=data->BusinessUnit;
         if(json.HasMember("i")){
             string wsOrderId=std::to_string(json["i"].GetInt64());
             if(remoteOrderId==wsOrderId){
