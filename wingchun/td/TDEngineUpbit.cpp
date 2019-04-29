@@ -16,6 +16,7 @@
 #include <chrono>
 #include "../../utils/crypto/openssl_util.h"
 #include "sstream"
+#include<cstdlib>
 
 using cpr::Delete;
 using cpr::Get;
@@ -1546,16 +1547,58 @@ std::string TDEngineUpbit::getEncode(const std::string& str)
     //return  base64_encode((unsigned char const*)str.c_str(),str.size());
 }
 
+std::string TDEngineUpbit::getUUID()
+{
+    /*uuid_t uuid;
+    //The UUID is 16 bytes (128 bits) long
+    uuid_generate(uuid);
+    return string((char*)uuid);
+    */
+    const std::string CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    std::string uuid = std::string(36,' ');
+    int rnd = 0;
+    int r = 0;
+
+    uuid[8] = '-';
+    uuid[13] = '-';
+    uuid[18] = '-';
+    uuid[23] = '-';
+
+    uuid[14] = '4';
+
+    for(int i=0;i<36;i++){
+        if (i != 8 && i != 13 && i != 18 && i != 14 && i != 23) {
+            if (rnd <= 0x02) {
+                rnd = 0x2000000 + (std::rand() * 0x1000000) | 0;
+            }
+            rnd >>= 4;
+            uuid[i] = CHARS[(i == 19) ? ((rnd & 0xf) & 0x3) | 0x8 : rnd & 0xf];
+        }
+    }
+    return uuid;
+}
+
 std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery)
 {
+    KF_LOG_INFO(logger, "[getAuthorization] strQuery:" << strQuery);
     std::string strPayLoad;
+    std::string str;
+    //str=utils::crypto::base64_encode((const unsigned char*)strQuery.c_str(),strQuery.length());
+    str =utils::crypto::jwt_hash_sha512(strQuery);
     if(strQuery == "")
     {
-        strPayLoad = R"({"access_key": ")" + unit.api_key + R"(","nonce": ")" +getTimestampString() + R"("})";
+        strPayLoad = R"({"access_key": ")" + unit.api_key + R"(","nonce": ")" +getUUID() + R"("})";
     }
     else
-    {    
-        strPayLoad = R"({"access_key":")" + unit.api_key + R"(","nonce":")" +getTimestampString() + R"(","query":")" + strQuery  + R"("})";
+    {
+       /* //uuid=e8eeedea-b495-49da-9cf9-ec3e2909ef16
+        strPayLoad = R"({"access_key":")" + unit.api_key + R"(","nonce":")" +getTimestampString()
+            + R"(","query":")" + strQuery
+            + R"("})";
+            */
+        strPayLoad = R"({"access_key":")" + unit.api_key + R"(","nonce":")" +getUUID() + R"(","query_hash":")" + str  
+            +R"(","query_hash_alg":"SHA512)"
+            +R"("})";
     }
     std::string strJWT = utils::crypto::jwt_hs256_create(strPayLoad,unit.secret_key);
     std::string strAuthorization = "Bearer ";

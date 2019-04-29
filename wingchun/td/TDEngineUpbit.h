@@ -161,6 +161,7 @@ private:
     void getAllMarkets(std::vector<std::string>& vstrMarkets);
     bool loadMarketsInfo(AccountUnitUpbit& unit, const std::vector<std::string>& vstrMarkets);
     std::string getEncode(const std::string& str);
+    std::string getUUID();
     std::string getAuthorization(const AccountUnitUpbit& unit,const std::string& strQuery = std::string());
     void get_exchange_time(AccountUnitUpbit& unit, Document &doc);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& doc);

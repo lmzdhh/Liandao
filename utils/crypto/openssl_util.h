@@ -10,6 +10,8 @@
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
 #include <sstream>
+#include <iomanip>
+
 namespace utils { namespace crypto {
 
 inline std::string b2a_hex(char *byte_arr, int n) {
@@ -340,14 +342,30 @@ inline std::string jwt_hs256_create(const std::string& data,const std::string& p
     std::string header =R"({"alg":"HS256","typ":"JWT"})";
     std::string payload = data;
 
-    std::string encoded_header = base64_encode((const unsigned char*)header.c_str(),header.length());
-    std::string encoded_payload=base64_encode((const unsigned char*)payload.c_str(),payload.length());
+    std::string encoded_header = base64_url_encode((const unsigned char*)header.c_str(),header.length());
+    std::string encoded_payload=base64_url_encode((const unsigned char*)payload.c_str(),payload.length());
     std::string data_to_sign = encoded_header +"."+encoded_payload;
     auto signature = hmac_sha256_byte(private_key.c_str(),data_to_sign.c_str());
-    std::string secret = base64_encode(signature,strlen((const char*)signature));
-
+    std::string secret = base64_url_encode(signature,strlen((const char*)signature));
     std::string jwt = data_to_sign+"."+secret;
     return  jwt;
+}
+
+inline std::string jwt_hash_sha512(const std::string& str)//quest5v6
+{
+    char buf[2];
+    unsigned char hash[SHA512_DIGEST_LENGTH];
+    SHA512_CTX sha512;
+    SHA512_Init(&sha512);
+    SHA512_Update(&sha512, str.c_str(), str.size());
+    SHA512_Final(hash, &sha512);
+    std::string NewString = "";
+    for(int i = 0; i < SHA512_DIGEST_LENGTH; i++)
+    {
+        sprintf(buf,"%02x",hash[i]);
+        NewString = NewString + buf;
+    }
+    return NewString;
 }
 
 }}
