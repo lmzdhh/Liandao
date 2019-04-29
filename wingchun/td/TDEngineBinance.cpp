@@ -2706,7 +2706,7 @@ void TDEngineBinance::onOrder(AccountUnitBinance& unit, Document& json) {
     if (json.HasMember("c")&& json.HasMember("i") && json.HasMember("X")&& json.HasMember("l")&& json.HasMember("L")&& json.HasMember("z")&& json.HasMember("t")) {
 		
 		std::lock_guard<std::mutex> lck(*unit.mutex_order_and_trade);		
-		std::string remoteOrderId= json["i"].GetString();      
+		std::string remoteOrderId= std::to_string(json["i"].GetInt64());      
 		auto it = unit.ordersMap.find(remoteOrderId);
 		if (it == unit.ordersMap.end())
 		{ 
