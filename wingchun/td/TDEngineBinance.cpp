@@ -815,7 +815,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         mapInsertOrders.insert(std::make_pair(data->OrderRef,&unit));
         lck.unlock();
         string orderId=std::to_string(d["orderId"].GetInt64());
-        strcpy(data->BusinessUnit,orderId.c_str());
+        strncpy(data->BusinessUnit,orderId.c_str(),21);
         //order insert success,on_rtn_order with NotTouched status first
         onRtnNewOrder(data, unit, requestId);
         /*
@@ -863,7 +863,7 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
     std::vector<std::string>::iterator it;
     for(it=unit.wsOrderStatus.begin();it!=unit.wsOrderStatus.end();it++){
         Document json;
-        json.Parse(*it);
+        json.Parse((*it).c_str());
         string remoteOrderId=data->BusinessUnit;
         if(json.HasMember("i")){
             string wsOrderId=std::to_string(json["i"].GetInt64());
