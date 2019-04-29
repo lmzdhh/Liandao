@@ -873,7 +873,7 @@ LfOrderStatusType TDEngineHuobi::GetOrderStatus(std::string state) {
         return LF_CHAR_Canceled;
     }else if(state == "submitting"){
         return LF_CHAR_NotTouched;
-    }else if(state == "partial-filled "){
+    }else if(state == "partial-filled"){
         return  LF_CHAR_PartTradedQueueing;
     }else if(state == "submitted"){
         return LF_CHAR_NotTouched;
