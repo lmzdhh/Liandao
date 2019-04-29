@@ -242,7 +242,9 @@ void TDEngineHuobi::on_lws_receive_orders(struct lws* conn,Document& json){
     if(data.HasMember("order-id")){
         KF_LOG_INFO(logger, "[on_lws_receive_orders] (receive success)");
         string remoteOrderId=std::to_string(data["order-id"].GetInt64());
+        std::unique_lock<std::mutex> rest_order_status_mutex(*mutex_order_and_trade);
         std::map<std::string,LFRtnOrderField>::iterator restOrderStatus=unit.restOrderStatusMap.find(remoteOrderId);
+        rest_order_status_mutex.unlock();
         if(restOrderStatus==unit.restOrderStatusMap.end()){
             KF_LOG_ERROR(logger,"[on_lws_receive_orders] rest receive no order id, save int websocketOrderStatusMap");
             unit.websocketOrderStatusMap.push_back(parseJsonToString(json));
@@ -1361,15 +1363,16 @@ void TDEngineHuobi::retrieveOrderStatus(AccountUnitHuobi& unit){
 void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, LFRtnOrderField& rtn_order){
     KF_LOG_DEBUG(logger, "[rest addNewOrderToMap]" );
     //add new orderId for GetAndHandleOrderTradeResponse
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
+    std::unique_lock<std::mutex> rest_order_status_mutex(*mutex_order_and_trade);
     string remoteOrderId=rtn_order.BusinessUnit;
     unit.restOrderStatusMap.insert(std::make_pair(remoteOrderId,rtn_order));
+    rest_order_status_mutex.unlock();
     KF_LOG_INFO(logger, "[addNewOrderToMap] (InstrumentID) " << rtn_order.InstrumentID
                                                                        << " (OrderRef) " << rtn_order.OrderRef
                                                                        << " (remoteOrderId) " << rtn_order.BusinessUnit
                                                                        << "(VolumeTraded)" << rtn_order.VolumeTraded);
     vector<string>::iterator wsOrderStatus;
-    for(wsOrderStatus=unit.websocketOrderStatusMap.begin();wsOrderStatus!=unit.websocketOrderStatusMap.end();){
+    for(wsOrderStatus=unit.websocketOrderStatusMap.begin();wsOrderStatus!=unit.websocketOrderStatusMap.end();wsOrderStatus++){
         Document json;
         json.Parse((*wsOrderStatus).c_str());
         if(json.HasParseError())continue;
@@ -1385,6 +1388,7 @@ void TDEngineHuobi::addNewOrderToMap(AccountUnitHuobi& unit, LFRtnOrderField& rt
                     unit.restOrderStatusMap.erase(remoteOrderId);
                 }
                 unit.websocketOrderStatusMap.erase(wsOrderStatus);
+                wsOrderStatus--;
             }
         }
     }
