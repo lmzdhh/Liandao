@@ -460,7 +460,7 @@ cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::stri
                                 {"API-Sign",strSignature}},Body{body},Timeout{30000});
     lock.unlock();
     if(response.text.length()<500){
-        KF_LOG_INFO(logger, "[POST] (url) " << url <<"(body) "<< body<< " (response.status_code) " << response.status_code
+        KF_LOG_INFO(logger, "[POST] (url) " << url <<" (body) "<< body<< " (response.status_code) " << response.status_code
             <<" (response.error.message) " << response.error.message <<" (response.text) " << response.text.c_str());
     }
     return response;
@@ -1485,7 +1485,15 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
     std::string requestPath = getPath;
     string s1="aclass=",s2="asset=";
     string postData=s1+"currency&"+s2+"ZUSD";
-    const auto response = Post(requestPath,"{}",postData,unit);
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("aclass");
+    writer.String("currency");
+    writer.Key("asset");
+    writer.String("ZUSD");
+    writer.EndObject();
+    const auto response = Post(requestPath,s.GetString(),postData,unit);
     json.Parse(response.text.c_str());
     //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
