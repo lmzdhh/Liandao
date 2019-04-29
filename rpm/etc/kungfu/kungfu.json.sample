@@ -229,20 +229,26 @@
 			}
 		},
 		"binance": {
-			"accounts": [{
-				"info": {
-					"interfaces": "10.0.0.22-10.0.0.193-10.0.0.104",
-					"interface_timeout_ms": 30000,
-					"interface_switch": 1,
-					"users":[
-						{
-							"APIKey": "your-api-key",
-							"SecretKey": "your-secret-key"
-						}
-					]
+      "accounts": [{
+        "info": {
+            "interfaces": "10.0.0.22-10.0.0.193-10.0.0.104",
+            "interface_timeout_ms": 30000,
+            "interface_switch": 1,
+            "users":[
+              {
+                "APIKey": "nNyyrOmKNk9KPp2c6XjxNNhgt5RwkR3W5U0DuooBISM5LWHXlx2zWVuCPm11wYxo",
+                "SecretKey": "SYE2vviOXHutnDhua42txo39XXBUyq8TxaKzT6oF8IokfKXSfXnOhDqzi79FuJ7G"
+              },
+              {
+                "APIKey": "5SxLPrucIKa42XghQbptPNjbHei1yFral8BAfJ1fpVL5sH1FiD42pobgyCC9LDlx",
+                "SecretKey": "0vUJKnuXRAggLtvNaYysumjZYNxOLNWC20pWETxPNMWK5Us3MCEtsffENntSSF73"
+              }
+          ],
 					"whiteLists": {
 						"etc_eth": "ETCETH",
-						"trx_btc": "TRXBTC"
+						"trx_btc": "TRXBTC",
+						"eos_btc":"EOSBTC",
+            "btt_btc":"BTTBTC"
 					},
 					"positionWhiteLists": {
 						"ETC": "ETC",
