@@ -27,6 +27,7 @@ using cpr::Payload;
 using cpr::Post;
 using cpr::Timeout;
 using cpr::Interface;
+using cpr::Put;
 
 using rapidjson::StringRef;
 using rapidjson::Writer;
@@ -117,7 +118,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 static struct lws_protocols protocols[] =
         {
                 {
-                        "md-protocol",
+                        "td-protocol",
                         ws_service_cb,
                               0,
                                  65536,
@@ -144,11 +145,52 @@ AccountUnitBinance::AccountUnitBinance()
 }
 AccountUnitBinance::~AccountUnitBinance()
 {
-    delete mutex_handle_429;
-    delete mutex_weight;
-    delete mutex_order_and_trade;
+    if(nullptr != mutex_handle_429)
+        delete mutex_handle_429;
+    if(nullptr != mutex_handle_429)
+        delete mutex_weight;
+    if(nullptr != mutex_handle_429)
+        delete mutex_order_and_trade;
 }
+AccountUnitBinance::AccountUnitBinance(const AccountUnitBinance& source)
+{
+    api_key =source.api_key;
+    secret_key = source.secret_key;
+    listenKey= source.listenKey;
+    // internal flags
+    logged_in = source.logged_in;
+    newOrderStatus = source.newOrderStatus;
+    pendingOrderStatus= source.pendingOrderStatus;
+    newTradeStatus= source.newTradeStatus;
+    pendingTradeStatus= source.pendingTradeStatus;
 
+    newOnRtnTrades= source.newOnRtnTrades;
+    pendingOnRtnTrades= source.pendingOnRtnTrades;
+    whiteListInstrumentIDs= source.whiteListInstrumentIDs;
+    sendOrderFilters= source.sendOrderFilters;
+    ordersMap= source.ordersMap;
+    // the trade id that has been called on_rtn_trade. Do not send it again.
+    newSentTradeIds= source.newSentTradeIds;
+    sentTradeIds= source.sentTradeIds;
+
+    coinPairWhiteList= source.coinPairWhiteList;
+    positionWhiteList= source.positionWhiteList;
+
+    
+    order_total_count = source.order_total_count;
+
+    weight_count = source.weight_count;
+    mutex_weight = new std::mutex();
+    weight_data_queue = source.weight_data_queue;
+
+    time_queue= source.time_queue;
+    bHandle_429 = source.bHandle_429;
+    mutex_handle_429 = new std::mutex();
+    startTime_429 = source.startTime_429;
+    mutex_order_and_trade = new std::mutex();
+    context = source.context;
+    websocketConn= source.websocketConn;
+}
 std::mutex http_mutex;
 std::mutex account_mutex;
 TDEngineBinance::TDEngineBinance(): ITDEngine(SOURCE_BINANCE)
@@ -218,9 +260,7 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     if(j_config.find("sync_time_interval") != j_config.end()) {
         SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
     }
-    if(j_config.find("sync_time_interval") != j_config.end()) {
-        SYNC_TIME_DEFAULT_INTERVAL = j_config["sync_time_interval"].get<int>();
-    }
+   
     KF_LOG_INFO(logger, "[load_account] (SYNC_TIME_DEFAULT_INTERVAL)" << SYNC_TIME_DEFAULT_INTERVAL);
 
     if(j_config.find("exchange_shift_ms") != j_config.end()) {
@@ -366,8 +406,9 @@ TradeAccount TDEngineBinance::load_account(int idx, const json& j_config)
     // set up
     TradeAccount account = {};
     //partly copy this fields
-    strncpy(account.UserID, account_units[0].api_key.c_str(), 16);
-    strncpy(account.Password, account_units[0].secret_key.c_str(), 21);
+    strncpy(account.UserID, account_units[0].api_key.c_str(), 15);
+    strncpy(account.Password, account_units[0].secret_key.c_str(), 20);
+    KF_LOG_INFO(logger, "[load_account] SUCCESS !");
     return account;
 }
 
@@ -420,8 +461,8 @@ bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Documen
                     const rapidjson::Value& filter = sym["filters"].GetArray()[j];
                     if (strcmp("PRICE_FILTER", filter["filterType"].GetString()) == 0) {
                         std::string tickSizeStr =  filter["tickSize"].GetString();
-                        KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
-                                                                                                   " (tickSizeStr)" << tickSizeStr);
+                        //KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+                        //                                                                           " (tickSizeStr)" << tickSizeStr);
                         //0.0000100; 0.001;
                         unsigned int locStart = tickSizeStr.find( ".", 0 );
                         unsigned int locEnd = tickSizeStr.find( "1", 0 );
@@ -431,9 +472,9 @@ bool TDEngineBinance::loadExchangeOrderFilters(AccountUnitBinance& unit, Documen
                             strncpy(afilter.InstrumentID, symbol.c_str(), 31);
                             afilter.ticksize = num;
                             unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
-                            KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
-                                                                                                       " (tickSizeStr)" << tickSizeStr
-                                                                                                       <<" (tickSize)" << afilter.ticksize);
+                            //KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol <<
+                            //                                                                          " (tickSizeStr)" << tickSizeStr
+                            //                                                                           <<" (tickSize)" << afilter.ticksize);
                         }
                     }
                 }
@@ -1559,12 +1600,12 @@ void TDEngineBinance::loop()
     {
         
         auto current_ms = getTimestamp();
-        uint64_t tmp_rest_get_interval_ms = rest_get_interval_ms;
+        //uint64_t tmp_rest_get_interval_ms = rest_get_interval_ms;
         
         for (size_t idx = 0; idx < account_units.size(); idx++)
         {
             AccountUnitBinance& unit = account_units[idx];
-            if(current_ms - last_put_time > 1800000)
+            if(last_put_time != 0 && current_ms - last_put_time > 1800000)
             {
                 Document json;
                 put_listen_key(unit,json);
@@ -1584,14 +1625,14 @@ void TDEngineBinance::loop()
             
             */
         }
-        sync_time_interval--;
-        if(sync_time_interval <= 0) {
+        if( current_ms - last_rest_get_ts > SYNC_TIME_DEFAULT_INTERVAL) {
             //reset
-            sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
+            //sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
             getTimeDiffOfExchange(account_units[0]);
-            KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
+            //KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
+            last_rest_get_ts = current_ms;
         }
-        //last_rest_get_ts = current_ms;
+        
         
     }
 }
@@ -2414,11 +2455,11 @@ void TDEngineBinance::put_listen_key(AccountUnitBinance& unit, Document &json)
     std::string Method = "PUT";
     std::string requestPath = restBaseUrl +"/api/v1/userDataStream";
     std::string queryString("");
-    std::string body = "{ \"listenKey\":"+ unit.listenKey + "}";
+    std::string body ="{ \"listenKey\":"+ unit.listenKey + "}";
 
     string url = requestPath + queryString;
     std::unique_lock<std::mutex> lck(http_mutex);
-    const auto response = Post(Url{url},
+    const auto response = Put(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
                               Body{body}, Timeout{100000});
 
