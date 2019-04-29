@@ -185,9 +185,9 @@ AccountUnitBinance::AccountUnitBinance(const AccountUnitBinance& source)
 
     time_queue= source.time_queue;
     bHandle_429 = source.bHandle_429;
-    std::mutex* mutex_handle_429 = new std::mutex();
+    mutex_handle_429 = new std::mutex();
     startTime_429 = source.startTime_429;
-    std::mutex* mutex_order_and_trade = new std::mutex();
+    mutex_order_and_trade = new std::mutex();
     context = source.context;
     websocketConn= source.websocketConn;
 }
