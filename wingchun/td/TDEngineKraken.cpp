@@ -1488,7 +1488,7 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
     writer.EndObject();
     string strSignature=signature(path,nonceStr,postData,unit);
 
-    const auto response = Post(path,s.GetString(),strSignature,unit);
+    const auto response = Post(path,postData,strSignature,unit);
     json.Parse(response.text.c_str());
     //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
