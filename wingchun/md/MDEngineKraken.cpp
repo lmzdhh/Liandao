@@ -235,7 +235,7 @@ void MDEngineKraken::login(long timeout_nsec) {
     lws_set_log_level(logs, NULL);
     KF_LOG_INFO(logger, "MDEngineKraken::login: test login #4 " );
     struct lws_client_connect_info ccinfo = {0};
-
+    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #5 " );
     static std::string host  = "ws.kraken.com";
     
 	//static std::string path = "/ws/2";
@@ -250,7 +250,7 @@ void MDEngineKraken::login(long timeout_nsec) {
     ccinfo.ietf_version_or_minus_one = -1;
     ccinfo.protocol = protocols[0].name;
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-
+    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #8 " );
     struct lws* wsi = lws_client_connect_via_info(&ccinfo);
     KF_LOG_INFO(logger, "MDEngineKraken::login: test login #6 " );
     KF_LOG_INFO(logger, "MDEngineKraken::login: Connecting to " <<  ccinfo.host << ":" << ccinfo.port << ":" << ccinfo.path);
