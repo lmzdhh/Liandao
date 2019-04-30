@@ -1643,20 +1643,28 @@ void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,const 
 }
 
 bool TDEngineKuCoin::shouldRetry(Document& doc)
-{
+{ 
     bool ret = false;
-    std::string strCode ;
-    if(doc.HasMember("code"))
-    {
-       strCode = doc["code"].GetString();
-    }
+    std::string strCode="null";
     bool isObJect = doc.IsObject();
-    if(!isObJect || strCode != "200000")
+    if(isObJect)
+    {
+        
+        if(doc.HasMember("code") && doc["code"].IsString())
+        {
+            strCode = doc["code"].GetString();
+        } 
+        if(strCode != "200000")
+        {
+            ret = true;
+        }
+    }
+    else
     {
         ret = true;
     }
-
-     KF_LOG_INFO(logger, "[shouldRetry] isObJect = " << isObJect << ",strCode = " << strCode);
+    
+    KF_LOG_INFO(logger, "[shouldRetry] isObJect = " << isObJect << ",strCode = " << strCode);
 
     return ret;
 }
