@@ -338,20 +338,6 @@ int64_t TDEngineKraken::getMSTime(){
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return  timestamp;
 }
-std::string TDEngineKraken::create_nonce(){
-   std::ostringstream oss;
-   timeval tp;
-   if (gettimeofday(&tp, NULL) != 0) {
-      oss << "gettimeofday() failed: " << strerror(errno); 
-      throw std::runtime_error(oss.str());
-   }else {
-      // format output string 
-      oss << std::setfill('0') 
-	  << std::setw(10) << tp.tv_sec 
-	  << std::setw(6)  << tp.tv_usec;
-   }
-   return oss.str();
-}
 // helper function to compute SHA256:
 std::vector<unsigned char> TDEngineKraken::sha256(string& data){
    std::vector<unsigned char> digest(SHA256_DIGEST_LENGTH);
@@ -630,8 +616,8 @@ void TDEngineKraken::getPriceVolumePrecision(AccountUnitKraken& unit){
 }
 void TDEngineKraken::krakenAuth(AccountUnitKraken& unit){
     KF_LOG_INFO(logger, "[krakenAuth] auth");
-    std::string strTimestamp = getKrakenTime();
-    std::string timestamp = getKrakenNormalTime();
+    std::string strTimestamp = std::to_string(getTimestamp());
+    std::string timestamp = std::to_string(getTimestamp());
     std::string strAccessKeyId=unit.api_key;
     std::string strSignatureMethod="HmacSHA256";
     std::string strSignatureVersion="2";
@@ -854,19 +840,18 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
     Document d;
     get_account(unit, d);
     KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
-    if(d.IsObject() && d.HasMember("status"))
+    if(d.IsObject() && d.HasMember("error"))
     {
-        std::string status=d["status"].GetString();
-        KF_LOG_INFO(logger, "[req_investor_position] (get status)" );
-        //errorId =  std::round(std::stod(d["id"].GetString()));
+        bool isError=d["error"].GetArray().isEmpty();
         errorId = 0;
-        KF_LOG_INFO(logger, "[req_investor_position] (status)" << status);
         KF_LOG_INFO(logger, "[req_investor_position] (errorId)" << errorId);
-        if(status != "ok") {
+        if(isError != true) {
             errorId=520;
-            if (d.HasMember("err-msg") && d["err-msg"].IsString()) {
-                std::string tab="\t";
-                errorMsg = d["err-code"].GetString()+tab+d["err-msg"].GetString();
+            if (d.HasMember("error") && d["error"].IsArray()) {
+                int i;
+                for(i=0;i<d["error"].Size();i++){
+                    errorMsg+=d["error"].GetArray()[i].GetString()+"\n";
+                }
             }
             KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId
                                                                    << " (errorMsg) " << errorMsg);
@@ -874,19 +859,22 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
         }
     }
     send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_KRAKEN, 1, requestId);
-
+    //{"error":[],"result":{"ZEUR":"10.0000"}}
     std::vector<LFRspPositionField> tmp_vector;
-    if(!d.HasParseError() && d.HasMember("data"))
+    if(!d.HasParseError() && d.HasMember("result"))
     {
-        auto& accounts = d["data"]["list"];
-        size_t len = d["data"]["list"].Size();
+        if(!d["result"].isArray()){
+            KF_LOG_INFO(logger,"[req_investor_position] result is not array.");
+            return;
+        }
+        auto& accounts = d["result"];
+        size_t len = d["result"].Size();
         KF_LOG_INFO(logger, "[req_investor_position] (accounts.length)" << len);
         for(size_t i = 0; i < len; i++)
         {
-            std::string symbol = accounts.GetArray()[i]["currency"].GetString();
-            if(symbol != "btc"||symbol != "usdt" || symbol !="etc" || symbol != "eos")continue;
+            std::string symbol = accounts.GetArray()[i].name.GetString();
             KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol);
-            pos.Position = std::round(std::stod(accounts.GetArray()[i]["balance"].GetString()) * scale_offset);
+            pos.Position = std::round(std::stod(accounts.GetArray()[i][symbol].GetString()) * scale_offset);
             tmp_vector.push_back(pos);
             KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId 
                             << " (symbol) " << symbol << " (position) " << pos.Position);
@@ -1473,19 +1461,12 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
     string path="/0/private/Balance";
-    //string nonce = create_nonce();
     int64_t nonce = getTimestamp();
     string nonceStr=std::to_string(nonce);
     KF_LOG_INFO(logger,"[get_account] (nonce) "<<nonce);
     string s1="nonce=";
     string postData=s1+nonceStr;
 
-    StringBuffer s;
-    Writer<StringBuffer> writer(s);
-    writer.StartObject();
-    writer.Key("nonce");
-    writer.Int64(nonce);
-    writer.EndObject();
     string strSignature=signature(path,nonceStr,postData,unit);
 
     const auto response = Post(path,postData,strSignature,unit);
@@ -1493,63 +1474,11 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
     //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
 }
-std::string TDEngineKraken::getKrakenTime(){
-    time_t t = time(NULL);
-    struct tm *local = gmtime(&t);
-    char timeBuf[100] = {0};
-    sprintf(timeBuf, "%04d-%02d-%02dT%02d%%3A%02d%%3A%02d",
-            local->tm_year + 1900,
-            local->tm_mon + 1,
-            local->tm_mday,
-            local->tm_hour,
-            local->tm_min,
-            local->tm_sec);
-    std::string krakenTime=timeBuf;
-    return krakenTime;
-}
-std::string TDEngineKraken::getKrakenNormalTime(){
-    time_t t = time(NULL);
-    struct tm *local = gmtime(&t);
-    char timeBuf[100] = {0};
-    sprintf(timeBuf, "%04d-%02d-%02dT%02d:%02d:%02d",
-            local->tm_year + 1900,
-            local->tm_mon + 1,
-            local->tm_mday,
-            local->tm_hour,
-            local->tm_min,
-            local->tm_sec);
-    std::string krakenTime=timeBuf;
-    return krakenTime;
-}
-/*
-    {
-  "account-id": "100009",
-  "amount": "10.1",
-  "price": "100.1",
-  "source": "api",
-  "symbol": "ethusdt",
-  "type": "buy-limit"
-
- * */
 std::string TDEngineKraken::createInsertOrdertring(const char *accountId,
         const char *amount, const char *price, const char *source, const char *symbol,const char *type){
-    StringBuffer s;
-    Writer<StringBuffer> writer(s);
-    writer.StartObject();
-    writer.Key("account-id");
-    writer.String(accountId);
-    writer.Key("amount");
-    writer.String(amount);
-    writer.Key("price");
-    writer.String(price);
-    writer.Key("source");
-    writer.String(source);
-    writer.Key("symbol");
-    writer.String(symbol);
-    writer.Key("type");
-    writer.String(type);
-    writer.EndObject();
-    return s.GetString();
+    string s="";
+
+    return s;
 }
 /*火币下单请求参数
     {
@@ -1572,16 +1501,7 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, const char *code,
     bool should_retry = false;
     do {
         should_retry = false;
-        //火币下单post /v1/order/orders/place
-        std::string requestPath = "/v1/order/orders/place";
-        string source="api";
-        string accountId=unit.spotAccountId;
-        //lock
-        if(isMargin){
-            source="margin-api";
-            accountId=unit.marginAccountId;
-        }
-        KF_LOG_INFO(logger,"[send_order] (isMargin) "<<isMargin<<" (source) "<<source);
+        std::string requestPath = "/0/private/AddOrder";
         response = Post(requestPath,createInsertOrdertring(accountId.c_str(), volume.c_str(), price.c_str(),
                         source.c_str(),code,st.c_str()),"",unit);
 
@@ -1639,7 +1559,6 @@ void TDEngineKraken::cancel_all_orders(AccountUnitKraken& unit, std::string code
 {
     KF_LOG_INFO(logger, "[cancel_all_orders]");
     std::string accountId = unit.spotAccountId;
-    if(isMargin)accountId=unit.marginAccountId;
     //火币post批量撤销订单
     std::string requestPath = "/v1/order/orders/batchCancelOpenOrders";
     StringBuffer s;

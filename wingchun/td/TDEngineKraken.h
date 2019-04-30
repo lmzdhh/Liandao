@@ -197,15 +197,12 @@ private:
     AccountUnitKraken& findAccountUnitKrakenByWebsocketConn(struct lws * websocketConn);
     std::string makeSubscribeOrdersUpdate(AccountUnitKraken& unit);
     int64_t getMSTime();
-    std::string create_nonce();
 public:
     //cys add kraken websocket status
     KrakenWsStatus wsStatus = nothing;
     KrakenWsStatus isAuth = nothing,isOrders=nothing;
     //当webSocket建立时
     void on_lws_open(struct lws* wsi);
-    std::string getKrakenTime();
-    std::string getKrakenNormalTime();
     std::string signature(std::string& path,std::string& nonce, std::string& postdata,AccountUnitKraken& unit);
     std::vector<unsigned char> sha256(string& data);
     vector<unsigned char> hmac_sha512_kraken(vector<unsigned char>& data,vector<unsigned char> key);
@@ -227,7 +224,6 @@ public:
     //websocket deal order status
 
 private:
-    bool isMargin=false;
     bool m_isPong = false;
     string version="0";
     struct lws_context *context = nullptr;
