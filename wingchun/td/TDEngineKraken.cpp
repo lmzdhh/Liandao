@@ -457,7 +457,7 @@ cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::stri
                                 {"API-Sign",strSignature}},Body{body},Timeout{30000});
     lock.unlock();
     //if(response.text.length()<500){
-    KF_LOG_INFO(logger, "[POST] (url) " << url <<" (body) "<< body<< " (response.status_code) " << response.status_code
+    KF_LOG_INFO(logger, "[POST] (url) " << url <<" (body) "<< body<< " \n(response.status_code) " << response.status_code
         <<" (response.error.message) " << response.error.message <<" (response.text) " << response.text.c_str());
     //}
     return response;
@@ -1488,7 +1488,8 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
     Writer<StringBuffer> writer(s);
     writer.StartObject();
     writer.Key("nonce");
-    writer.String(nonce.c_str());
+    int64_t nonceInt=std::stoll(nonce);
+    writer.Int64(nonceInt);
     writer.Key("aclass");
     writer.String("currency");
     writer.Key("asset");
