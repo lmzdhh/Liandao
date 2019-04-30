@@ -429,10 +429,7 @@ std::string TDEngineKraken::signature(std::string& path,std::string& nonce, std:
 std::mutex g_httpMutex;
 cpr::Response TDEngineKraken::Get(const std::string& method_url,const std::string& body, std::string postData,AccountUnitKraken& unit)
 {
-    string s2="/";
-    string path=s2 + version + "/public/" + method_url;
-    string postdata=postData;
-    string url = unit.baseUrl + path+"?"+postData;
+    string url = unit.baseUrl + method_url+"?"+postData;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Get(Url{url},
                                    Header{{}}, Timeout{10000} );
@@ -1476,19 +1473,19 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
     string path="/0/private/Balance";
-    string nonce = create_nonce();
+    //string nonce = create_nonce();
+    int64_t nonce = getTimestamp();
     KF_LOG_INFO(logger,"[get_account] (nonce) "<<nonce);
     string s1="nonce=";
-    string postData=s1+nonce;
+    string postData=s1+std::to_string(nonce);
 
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
     writer.Key("nonce");
-    int64_t nonceInt=std::stoll(nonce);
-    writer.Int64(nonceInt);
+    writer.Int64(nonce);
     writer.EndObject();
-    string strSignature=signature(path,nonce,postData,unit);
+    string strSignature=signature(path,std::to_string(nonce),postData,unit);
 
     const auto response = Post(path,s.GetString(),strSignature,unit);
     json.Parse(response.text.c_str());
