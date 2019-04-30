@@ -164,15 +164,16 @@ struct OrderActionInfo
 };
 
 //----UFR_data_map-----
-typedef struct UFRUnit
+struct UFRUnit
 {
     std::atomic<uint64_t> order_total; //委托总量
     std::atomic<uint64_t> trade_total; //成交总量
 
-    // UFRUnit(){
-    //     memset(this, 0 ,sizeof(UFRUnit));
-    // }
-}UFRUnit;
+    UFRUnit(const UFRUnit& src){
+         order_total = src.order_total.load();
+         trade_total = src.trade_total.load();
+    }
+};
 
 /**
  * CTP trade engine

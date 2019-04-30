@@ -861,7 +861,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     }
 
     //判断是否需要整十分钟重置
-    uint64_t timestamp = getTimestamp()
+    uint64_t timestamp = getTimestamp();
     if ((last_UFR_timestamp / 600000) != (timestamp / 600000))
     {
 
@@ -1974,36 +1974,6 @@ void TDEngineBinance::set_reader_thread()
     // test_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::testUTC,this)));
 }
 int64_t last_put_time = 0;
-// //测试UTC零点reset功能是否可用---------
-// void TDEngineBinance::testUTC(){
-//     KF_LOG_INFO(logger, "[testUTC] (isRunning) " << isRunning);
-//     while(isRunning)
-//     {
-//         //UTC 00：00：00 reset order_total_limit
-//         uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-//         //uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
-//         uint64_t UTC_timestamp = timestamp + timeDiffOfExchange;
-
-//         if((UTC_timestamp / 10000) != (last_UTC_timestamp / 10000))
-//         {
-//             KF_LOG_DEBUG(logger, "###[order_count_over_limit] (UTC_time)" << UTC_timestamp << " current UTC timestamp ; last_UTCtimestamp  "<<last_UTC_timestamp
-//                                     <<" ; local_timestamp: "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
-            
-//             if (((UTC_timestamp) / 86400000) != ((last_UTC_timestamp) / 86400000))
-//             {
-//                 order_total_count = 0;
-//                 KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset ; [last_UTCtimestamp : current_UTCtimestamp : local_timestamp] "
-//                                         <<last_UTC_timestamp<<" : "<<UTC_timestamp<<" : "<<timestamp<<" ; timeDiffOfExchange: "<<timeDiffOfExchange);
-//             //    last_UTC_timestamp = UTC_timestamp;
-                            
-//             }
-
-//             last_UTC_timestamp = UTC_timestamp;
-//         }
-
-//     }
-// }
-
 void TDEngineBinance::loop()
 {
     KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
@@ -2955,7 +2925,7 @@ void TDEngineBinance::getResponse(int http_status_code, std::string responseText
     json.Parse(responseText.c_str());
 }
 
-inline int64_t TDEngineBinance::getTimestamp()
+int64_t TDEngineBinance::getTimestamp()
 {
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return timestamp;
