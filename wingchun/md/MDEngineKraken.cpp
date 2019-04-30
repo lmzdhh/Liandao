@@ -133,6 +133,8 @@ void MDEngineKraken::load(const json& j_config)
 {
     book_depth_count = j_config["book_depth_count"].get<int>();
     trade_count = j_config["trade_count"].get<int>();
+    baseUrl = j_config["baseUrl"].get<std::string>();
+
 //    rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 //    KF_LOG_INFO(logger, "MDEngineKraken:: rest_get_interval_ms: " << rest_get_interval_ms);
 
@@ -156,7 +158,8 @@ void MDEngineKraken::load(const json& j_config)
     priceBook20Assembler.SetLevel(book_depth_count);
 
     KF_LOG_INFO(logger, "MDEngineKraken::load:  book_depth_count: "
-            << book_depth_count << " trade_count: " << trade_count );
+            << book_depth_count << " trade_count: " << trade_count <<
+            " baseUrl: " << baseUrl);
 }
 
 void MDEngineKraken::makeWebsocketSubscribeJsonString()
@@ -236,7 +239,8 @@ void MDEngineKraken::login(long timeout_nsec) {
     KF_LOG_INFO(logger, "MDEngineKraken::login: test login #4 " );
     struct lws_client_connect_info ccinfo = {0};
     KF_LOG_INFO(logger, "MDEngineKraken::login: test login #5 " );
-    static std::string host  = "ws.kraken.com";
+//    static std::string host  = "wss://ws.kraken.com";
+    static std::string host(baseUrl);
     
 	//static std::string path = "/ws/2";
     static int port = 443;
