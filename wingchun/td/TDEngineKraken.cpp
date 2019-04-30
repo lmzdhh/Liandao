@@ -447,12 +447,10 @@ cpr::Response TDEngineKraken::Get(const std::string& method_url,const std::strin
 cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::string& body,std::string postData, AccountUnitKraken& unit)
 {
     string nonce = create_nonce();
-    string s1="nonce=";
     string s2="/";
     string path=s2 + version + "/private/" + method_url;
-    string postdata = s1 + nonce+"&"+postData;
-    string strSignature=signature(path,nonce,postdata,unit);
-    string url = unit.baseUrl + path+"?"+postData;
+    string strSignature=signature(path,nonce,postData,unit);
+    string url = unit.baseUrl + path;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{
                                 {"API-Key", unit.api_key},
@@ -1482,11 +1480,15 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
     KF_LOG_INFO(logger, "[get_account]");
     std::string getPath="TradeBalance";
     std::string requestPath = getPath;
-    string s1="aclass=",s2="asset=";
-    string postData=s1+"currency&"+s2+"ZUSD";
+    string nonce = create_nonce();
+    string s1="aclass=",s2="asset=",s3="nonce=";
+    string postData=s3+nonce+"&"+s1+"currency&"+s2+"ZUSD";
+
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
+    writer.Key("nonce");
+    writer.String(nonce.c_str());
     writer.Key("aclass");
     writer.String("currency");
     writer.Key("asset");
