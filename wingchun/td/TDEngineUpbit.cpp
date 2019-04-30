@@ -1308,7 +1308,9 @@ std::int32_t TDEngineUpbit::get_order(AccountUnitUpbit& unit, const char *uuid, 
                 Header{{"Authorization", strAuthorization}},
                 Body{body}, Timeout{100000});
 
-        KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
+        KF_LOG_INFO(logger, "[get_order] (url) " << url << 
+                "(Authorization)"<<strAuthorization<<
+                " (response.status_code) " << response.status_code <<
                 " (response.error.message) " << response.error.message <<
                 " (response.text) " << response.text.c_str());
         if(response.status_code != 200) {
@@ -1378,7 +1380,7 @@ std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *sy
             get_order(unit,uuid,json);
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds/2));
         }
-        if (retry_times > 15) break;
+        if (retry_times >= max_rest_retry_times) break;
     } while(should_retry);
     if(response.status_code!=404)
     {
@@ -1582,23 +1584,22 @@ std::string TDEngineUpbit::getAuthorization(const AccountUnitUpbit& unit,const s
 {
     KF_LOG_INFO(logger, "[getAuthorization] strQuery:" << strQuery);
     std::string strPayLoad;
-    std::string str;
+    //std::string str;
     //str=utils::crypto::base64_encode((const unsigned char*)strQuery.c_str(),strQuery.length());
-    str =utils::crypto::jwt_hash_sha512(strQuery);
+    //str =utils::crypto::jwt_hash_sha512(strQuery);
     if(strQuery == "")
     {
         strPayLoad = R"({"access_key": ")" + unit.api_key + R"(","nonce": ")" +getUUID() + R"("})";
     }
     else
     {
-       /* //uuid=e8eeedea-b495-49da-9cf9-ec3e2909ef16
+        //uuid=e8eeedea-b495-49da-9cf9-ec3e2909ef16
         strPayLoad = R"({"access_key":")" + unit.api_key + R"(","nonce":")" +getTimestampString()
             + R"(","query":")" + strQuery
             + R"("})";
-            */
-        strPayLoad = R"({"access_key":")" + unit.api_key + R"(","nonce":")" +getUUID() + R"(","query_hash":")" + str  
+        /*strPayLoad = R"({"access_key":")" + unit.api_key + R"(","nonce":")" +getUUID() + R"(","query_hash":")" + str  
             +R"(","query_hash_alg":"SHA512)"
-            +R"("})";
+            +R"("})";      */
     }
     std::string strJWT = utils::crypto::jwt_hs256_create(strPayLoad,unit.secret_key);
     std::string strAuthorization = "Bearer ";
@@ -1630,7 +1631,9 @@ void TDEngineUpbit::getChanceResponce(const AccountUnitUpbit& unit, const std::s
         response = Get(Url{url},
                 Header{{  "Authorization", Authorization}},
                 Body{body}, Timeout{100000});
-        KF_LOG_INFO(logger, "[getChanceResponce] (url) " << url << " (response.status_code) " << response.status_code <<
+        KF_LOG_INFO(logger, "[getChanceResponce] (url) " << url <<
+                "(Authorization)"<<Authorization<<
+                " (response.status_code) " << response.status_code <<
                 " (response.error.message) " << response.error.message <<
                 " (response.text) " << response.text.c_str());
         if(response.status_code != 200) {
