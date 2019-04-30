@@ -437,11 +437,10 @@ cpr::Response TDEngineKraken::Get(const std::string& method_url,const std::strin
     const auto response = cpr::Get(Url{url},
                                    Header{{}}, Timeout{10000} );
     lock.unlock();
-    if(response.text.length()<500){
-        KF_LOG_INFO(logger, "[Get] (url) " << url << " (response.status_code) " << response.status_code <<
-                                       " (response.error.message) " << response.error.message <<
-                                       " (response.text) " << response.text.c_str());
-    }
+    //if(response.text.length()<500){
+    KF_LOG_INFO(logger, "[Get] (url) " << url << " (response.status_code) " << response.status_code <<
+        " (response.error.message) " << response.error.message <<" (response.text) " << response.text.c_str());
+    //}
     return response;
 }
 //cys edit
@@ -459,10 +458,10 @@ cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::stri
                                 {"API-Key", unit.api_key},
                                 {"API-Sign",strSignature}},Body{body},Timeout{30000});
     lock.unlock();
-    if(response.text.length()<500){
-        KF_LOG_INFO(logger, "[POST] (url) " << url <<" (body) "<< body<< " (response.status_code) " << response.status_code
-            <<" (response.error.message) " << response.error.message <<" (response.text) " << response.text.c_str());
-    }
+    //if(response.text.length()<500){
+    KF_LOG_INFO(logger, "[POST] (url) " << url <<" (body) "<< body<< " (response.status_code) " << response.status_code
+        <<" (response.error.message) " << response.error.message <<" (response.text) " << response.text.c_str());
+    //}
     return response;
 }
 void TDEngineKraken::init()
