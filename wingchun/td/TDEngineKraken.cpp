@@ -842,7 +842,7 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
     KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
     if(d.IsObject() && d.HasMember("error"))
     {
-        size_t isError=d["error"].GetArray().size();
+        size_t isError=d["error"].Size();
         errorId = 0;
         KF_LOG_INFO(logger, "[req_investor_position] (errorId)" << errorId);
         if(isError != 0) {
@@ -863,7 +863,7 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
     std::vector<LFRspPositionField> tmp_vector;
     if(!d.HasParseError() && d.HasMember("result"))
     {
-        if(!d["result"].isArray()){
+        if(!d["result"].GetObject().isArray()){
             KF_LOG_INFO(logger,"[req_investor_position] result is not array.");
             return;
         }
