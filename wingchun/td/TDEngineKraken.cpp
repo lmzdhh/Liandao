@@ -863,7 +863,7 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
     std::vector<LFRspPositionField> tmp_vector;
     if(!d.HasParseError() && d.HasMember("result"))
     {
-        Document accounts = d["result"].GetObject();
+        auto& accounts = d["result"].GetObject();
         size_t len = d["result"].Size();
         KF_LOG_INFO(logger, "[req_investor_position] (accounts.length)" << len);
         for (rapidjson::Value::ConstMemberIterator itr = accounts.MemberBegin();itr != accounts.MemberEnd(); ++itr){
