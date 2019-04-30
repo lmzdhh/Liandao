@@ -837,8 +837,6 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     {
         //uint64_t UFRnums[2] = {0,0};
         UFRUnit ufrUnit;
-        ufrUnit.order_total = 0;
-        ufrUnit.trade_total = 0;
         strncpy(instrument_ID, data->InstrumentID, 31);
         UFR_data_map.insert(std::make_pair(instrument_ID, ufrUnit));
 

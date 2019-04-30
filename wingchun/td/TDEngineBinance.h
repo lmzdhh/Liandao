@@ -173,6 +173,10 @@ struct UFRUnit
          order_total = src.order_total.load();
          trade_total = src.trade_total.load();
     }
+    UFRUnit(){
+         order_total = 0;
+         trade_total = 0;
+    }
 };
 
 /**
