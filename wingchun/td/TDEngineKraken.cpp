@@ -863,10 +863,6 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
     std::vector<LFRspPositionField> tmp_vector;
     if(!d.HasParseError() && d.HasMember("result"))
     {
-        if(!d["result"].GetObject().isArray()){
-            KF_LOG_INFO(logger,"[req_investor_position] result is not array.");
-            return;
-        }
         auto& accounts = d["result"];
         size_t len = d["result"].Size();
         KF_LOG_INFO(logger, "[req_investor_position] (accounts.length)" << len);
