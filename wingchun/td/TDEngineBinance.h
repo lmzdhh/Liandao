@@ -17,6 +17,8 @@
 #include <document.h>
 #include <queue>
 #include <libwebsockets.h>
+#include <atomic>
+#include <string>
 
 using rapidjson::Document;
 
@@ -33,7 +35,9 @@ enum RequestWeightType
     SendOrder_Type,
     CancelOrder_Type,
     GetOrder_Type,
-    TradeList_Type
+    TradeList_Type,
+    GetListenKey_Type,
+    PutListenKey_Type
 };
 struct weight_data
 {
@@ -63,6 +67,12 @@ struct weight_data
                 break;
             case TradeList_Type:
                 weight = 5;
+                break;
+            case GetListenKey_Type:
+                weight = 1;
+                break;
+            case PutListenKey_Type:
+                weight = 1;
                 break;
             default:
                 weight = 0;
@@ -153,6 +163,17 @@ struct OrderActionInfo
     int request_id;
 };
 
+//----UFR_data_map-----
+typedef struct UFRUnit
+{
+    std::atomic<uint64_t> order_total; //委托总量
+    std::atomic<uint64_t> trade_total; //成交总量
+
+    // UFRUnit(){
+    //     memset(this, 0 ,sizeof(UFRUnit));
+    // }
+}UFRUnit;
+
 /**
  * CTP trade engine
  */
@@ -205,6 +226,7 @@ private:
 
     virtual void set_reader_thread() override;
     void loop();
+    void testUTC();
     std::vector<std::string> split(std::string str, std::string token);
     bool loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc);
     void GetAndHandleOrderTradeResponse(AccountUnitBinance& unit);
@@ -274,13 +296,13 @@ private:
 
     AccountUnitBinance& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onOrder(AccountUnitBinance& unit, Document& json);
-    void onTrade(struct lws * websocketConn, Document& json);
     void wsloop();
 
     ThreadPtr ws_thread;
 private:
     static constexpr int scale_offset = 1e8;
     ThreadPtr rest_thread;
+    ThreadPtr test_thread;
     uint64_t last_rest_get_ts = 0;
     uint64_t rest_get_interval_ms = 500;
     std::string restBaseUrl = "https://api.binance.com";
@@ -292,6 +314,17 @@ private:
     //code=-1429,msg:order count over 10000 limit.
     int order_count_per_second = 5;
     
+
+    ////////////// last UTC time  /////////////////////
+    uint64_t last_UTC_timestamp = 0;
+  //  uint64_t last_test_timestamp = 0;
+
+    ////////////// UFR /////////////////////
+    float UFR_limit = 0.998;    //触发条件·未成交率上限
+    int UFR_order_lower_limit = 300;  //触发条件·委托单数量下限
+    std::map<string, UFRUnit> UFR_data_map;    //< 合约代码， {委托总量，成交总量} >
+    uint64_t last_UFR_timestamp = 0;    //
+    std::map<string, bool> UFR_orderRef_status_map;
 
     /////////////// request weight ////////////////
     //<=0，do nothing even meet 429

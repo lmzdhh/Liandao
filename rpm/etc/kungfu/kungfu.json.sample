@@ -264,7 +264,9 @@
           "order_count_per_second":5,
           "request_weight_per_minute":1000,
           "prohibit_order_ms":10000,
-          "default_429_rest_interval_ms":1000
+          "default_429_rest_interval_ms":1000,
+          "UFR_limit":0.998,
+          "UFR_order_lower_limit":300
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
