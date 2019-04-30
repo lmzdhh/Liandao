@@ -1475,9 +1475,10 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
     string path="/0/private/Balance";
     //string nonce = create_nonce();
     int64_t nonce = getTimestamp();
+    string nonceStr=std::to_string(nonce);
     KF_LOG_INFO(logger,"[get_account] (nonce) "<<nonce);
     string s1="nonce=";
-    string postData=s1+std::to_string(nonce);
+    string postData=s1+nonceStr;
 
     StringBuffer s;
     Writer<StringBuffer> writer(s);
@@ -1485,7 +1486,7 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
     writer.Key("nonce");
     writer.Int64(nonce);
     writer.EndObject();
-    string strSignature=signature(path,std::to_string(nonce),postData,unit);
+    string strSignature=signature(path,nonceStr,postData,unit);
 
     const auto response = Post(path,s.GetString(),strSignature,unit);
     json.Parse(response.text.c_str());
