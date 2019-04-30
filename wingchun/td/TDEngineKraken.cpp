@@ -444,13 +444,10 @@ cpr::Response TDEngineKraken::Get(const std::string& method_url,const std::strin
     return response;
 }
 //cys edit
-cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::string& body,std::string postData, AccountUnitKraken& unit)
+cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::string& body,std::string strSignature, AccountUnitKraken& unit)
 {
-    string nonce = create_nonce();
-    string s2="/";
-    string path=s2 + version + "/private/" + method_url;
-    string strSignature=signature(path,nonce,postData,unit);
-    string url = unit.baseUrl + path;
+    KF_LOG_INFO(logger,"[Post] (strSignature) "<<strSignature);
+    string url = unit.baseUrl + method_url;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{
                                 {"API-Key", unit.api_key},
@@ -1478,11 +1475,11 @@ void TDEngineKraken::getResponse(int http_status_code, std::string responseText,
 void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
-    std::string getPath="TradeBalance";
-    std::string requestPath = getPath;
+    string path="/0/private/Balance";
     string nonce = create_nonce();
-    string s1="aclass=",s2="asset=",s3="nonce=";
-    string postData=s3+nonce+"&"+s1+"currency&"+s2+"ZUSD";
+    KF_LOG_INFO(logger,"[get_account] (nonce) "<<nonce);
+    string s1="nonce=";
+    string postData=s1+nonce;
 
     StringBuffer s;
     Writer<StringBuffer> writer(s);
@@ -1490,12 +1487,10 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
     writer.Key("nonce");
     int64_t nonceInt=std::stoll(nonce);
     writer.Int64(nonceInt);
-    writer.Key("aclass");
-    writer.String("currency");
-    writer.Key("asset");
-    writer.String("ZUSD");
     writer.EndObject();
-    const auto response = Post(requestPath,s.GetString(),postData,unit);
+    string strSignature=signature(path,nonce,postData,unit);
+
+    const auto response = Post(path,s.GetString(),strSignature,unit);
     json.Parse(response.text.c_str());
     //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;

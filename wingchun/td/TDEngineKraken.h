@@ -183,7 +183,7 @@ private:
                     const char *amount, const char *price, const char *source, const char *symbol,const char *type);
 
     cpr::Response Get(const std::string& url,const std::string& body, std::string postData,AccountUnitKraken& unit);
-    cpr::Response Post(const std::string& url,const std::string& body, std::string postData,AccountUnitKraken& unit);
+    cpr::Response Post(const std::string& url,const std::string& body, std::string strSignature,AccountUnitKraken& unit);
     void genUniqueKey();
     std::string genClinetid(const std::string& orderRef);
     //精度处理
