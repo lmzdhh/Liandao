@@ -80,6 +80,7 @@ private:
     int book_depth_count = 25;
     int trade_count = 10;
     int rest_get_interval_ms = 500;
+    std::string baseUrl;
 
     static constexpr int scale_offset = 1e8;
 
