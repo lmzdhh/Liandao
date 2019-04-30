@@ -842,15 +842,15 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
     KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
     if(d.IsObject() && d.HasMember("error"))
     {
-        bool isError=d["error"].GetArray().isEmpty();
+        size_t isError=d["error"].GetArray().size();
         errorId = 0;
         KF_LOG_INFO(logger, "[req_investor_position] (errorId)" << errorId);
-        if(isError != true) {
+        if(isError != 0) {
             errorId=520;
             if (d.HasMember("error") && d["error"].IsArray()) {
                 int i;
                 for(i=0;i<d["error"].Size();i++){
-                    errorMsg+=d["error"].GetArray()[i].GetString()+"\n";
+                    errorMsg=errorMsg+d["error"].GetArray()[i].GetString()+"\n";
                 }
             }
             KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId
@@ -872,9 +872,9 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
         KF_LOG_INFO(logger, "[req_investor_position] (accounts.length)" << len);
         for(size_t i = 0; i < len; i++)
         {
-            std::string symbol = accounts.GetArray()[i].name.GetString();
+            std::string symbol = accounts.GetArray()[i].GetString();
             KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol);
-            pos.Position = std::round(std::stod(accounts.GetArray()[i][symbol].GetString()) * scale_offset);
+            pos.Position = std::round(std::stod(accounts.GetArray()[i][symbol.c_str()].GetString()) * scale_offset);
             tmp_vector.push_back(pos);
             KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId 
                             << " (symbol) " << symbol << " (position) " << pos.Position);
@@ -1502,8 +1502,8 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, const char *code,
     do {
         should_retry = false;
         std::string requestPath = "/0/private/AddOrder";
-        response = Post(requestPath,createInsertOrdertring(accountId.c_str(), volume.c_str(), price.c_str(),
-                        source.c_str(),code,st.c_str()),"",unit);
+        response = Post(requestPath,createInsertOrdertring(unit.spotAccountId.c_str(), volume.c_str(), price.c_str(),
+                        st.c_str(),code,st.c_str()),"",unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
                                                   << " (response.error.message) " << response.error.message 
