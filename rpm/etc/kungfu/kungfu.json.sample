@@ -143,7 +143,7 @@
 		},
 		"kraken":
 		{
-			"baseUrl":	"ws.kraken.com",
+			"baseUrl":	"wss://ws.kraken.com",
 			
 			"book_depth_count": 25,
 			"trade_count": 10,

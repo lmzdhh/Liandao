@@ -251,6 +251,7 @@ void MDEngineKraken::login(long timeout_nsec) {
     ccinfo.protocol = protocols[0].name;
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
     KF_LOG_INFO(logger, "MDEngineKraken::login: test login #8 " );
+
     struct lws* wsi = lws_client_connect_via_info(&ccinfo);
     KF_LOG_INFO(logger, "MDEngineKraken::login: test login #6 " );
     KF_LOG_INFO(logger, "MDEngineKraken::login: Connecting to " <<  ccinfo.host << ":" << ccinfo.port << ":" << ccinfo.path);
@@ -895,6 +896,7 @@ void MDEngineKraken::loop()
     {
         int n = lws_service( context, rest_get_interval_ms );
         std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
+        KF_LOG_INFO(logger, "MDEngineKraken::loop:n=lws_service: "<<n);
     }
 }
 
