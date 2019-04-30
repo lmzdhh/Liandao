@@ -2218,8 +2218,8 @@ bool TDEngineBinance::order_count_over_limit(AccountUnitBinance& unit)
     if ((UTC_timestamp / 86400000) != (last_UTC_timestamp / 86400000))
     {
         last_UTC_timestamp = UTC_timestamp;
-        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << order_total_count << " at UTC 00:00:00 and reset");
-        order_total_count = 0;
+        KF_LOG_DEBUG(logger, "[order_count_over_limit] (order_total_count)" << unit.order_total_count << " at UTC 00:00:00 and reset");
+        unit.order_total_count = 0;
     }
 
 
@@ -3192,8 +3192,8 @@ void TDEngineBinance::onOrder(AccountUnitBinance& unit, Document& json) {
             //测试日志
             KF_LOG_DEBUG(logger, "[onRspNewOrderRESULT] add OrderRef into UFR_orderRef_status_map " << 
                                 " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " order_total " << UFR_data_map[data->InstrumentID].order_total <<
-                                " trade_total " << UFR_data_map[data->InstrumentID].trade_total <<
+                                " order_total " << UFR_data_map[rtn_trade.InstrumentID].order_total <<
+                                " trade_total " << UFR_data_map[rtn_trade.InstrumentID].trade_total <<
                                 " OrderRef " << rtn_trade.OrderRef <<
                                 " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
                                 " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
