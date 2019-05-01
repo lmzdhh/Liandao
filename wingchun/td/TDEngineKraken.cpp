@@ -592,9 +592,9 @@ void TDEngineKraken::getPriceVolumePrecision(AccountUnitKraken& unit){
     json.Parse(response.text.c_str());
     int errLen=json["error"].Size();
     if(json.HasMember("result") && errLen == 0){
-        Value result=json["result"].GetObject();
-        for (Value::ConstMemberIterator itr = result.MemberBegin();itr != result.MemberEnd(); ++itr){
-            Value account=itr->value.GetObject();
+        rapidjson::Value result=json["result"].GetObject();
+        for (rapidjson::Value::ConstMemberIterator itr = result.MemberBegin();itr != result.MemberEnd(); ++itr){
+            rapidjson::Value account=itr->value.GetObject();
             PriceVolumePrecision stPriceVolumePrecision;
             stPriceVolumePrecision.symbol=account["altname"].GetString();
             std::string ticker = unit.coinPairWhiteList.GetKeyByValue(stPriceVolumePrecision.symbol);
@@ -1101,7 +1101,7 @@ void TDEngineKraken::req_order_action(const LFOrderActionField* data, int accoun
         raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KRAKEN, 1, requestId, errorId, errorMsg.c_str());
 
     } else {
-        KF_LOG_INFO(logger,"[req_order_action] cancel order success")
+        KF_LOG_INFO(logger,"[req_order_action] cancel order success");
     }
 }
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
@@ -1469,7 +1469,7 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
     //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
 }
-std::string TDEngineKraken::createInsertOrdertring(string pair,string type,string oedertype,string price,string volume,
+std::string TDEngineKraken::createInsertOrdertring(string pair,string type,string ordertype,string price,string volume,
         string oflags,string userref){
     string s="";
     s=s+"pair="+pair+"&"+
@@ -1501,7 +1501,7 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, string userref, string 
     do {
         should_retry = false;
         std::string requestPath = "/0/private/AddOrder";
-        string postData=createInsertOrdertring(code, type, side,price,volume,"",userref)
+        string postData=createInsertOrdertring(code, type, side,price,volume,"",userref);
         response = Post(requestPath,postData,postData,unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
@@ -1589,7 +1589,7 @@ void TDEngineKraken::cancel_order(AccountUnitKraken& unit, std::string code, std
         std::string postPath="/0/private/CancelOrder";
         std::string postData="txid=";
         postData=postData+orderId;
-        response = Post(requestPath,postData,postData,unit);
+        response = Post(postPath,postData,postData,unit);
 
         //json.Clear();
         getResponse(response.status_code, response.text, response.error.message, json);

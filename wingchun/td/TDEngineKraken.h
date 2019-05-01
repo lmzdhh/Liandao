@@ -178,7 +178,7 @@ private:
 
     bool shouldRetry(Document& d);
     
-    std::string createInsertOrdertring(string pair,string type,string oedertype,string price,string volume,
+    std::string createInsertOrdertring(string pair,string type,string ordertype,string price,string volume,
         string oflags,string userref);
 
     cpr::Response Get(const std::string& url,const std::string& body, std::string postData,AccountUnitKraken& unit);
