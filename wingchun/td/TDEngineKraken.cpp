@@ -594,7 +594,8 @@ void TDEngineKraken::getPriceVolumePrecision(AccountUnitKraken& unit){
     if(json.HasMember("result") && errLen == 0){
         rapidjson::Value result=json["result"].GetObject();
         for (rapidjson::Value::ConstMemberIterator itr = result.MemberBegin();itr != result.MemberEnd(); ++itr){
-            rapidjson::Value account=itr->value.GetObject();
+            auto key = (itr->name).GetString();
+            auto& account=result[key].GetObject();
             PriceVolumePrecision stPriceVolumePrecision;
             stPriceVolumePrecision.symbol=account["altname"].GetString();
             std::string ticker = unit.coinPairWhiteList.GetKeyByValue(stPriceVolumePrecision.symbol);
