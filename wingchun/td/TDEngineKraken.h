@@ -75,7 +75,6 @@ struct PriceVolumePrecision
     std::string quoteCurrency;
     int pricePrecision=0;
     int amountPrecision=0;
-    std::string symbolPartition;
     std::string symbol;
 };
 enum KrakenWsStatus{
@@ -169,8 +168,8 @@ private:
     void loopwebsocket();
 private:
     void get_account(AccountUnitKraken& unit, Document& json);
-    void send_order(AccountUnitKraken& unit, const char *code,
-                            const char *side, const char *type, std::string volume, std::string price, Document& json);
+    void send_order(AccountUnitKraken& unit, string userref, string code,
+                        string side, string type, string volume, string price, Document& json);
     void cancel_all_orders(AccountUnitKraken& unit, std::string code, Document& json);
     void cancel_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json);
     void query_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json);
@@ -179,8 +178,8 @@ private:
 
     bool shouldRetry(Document& d);
     
-    std::string createInsertOrdertring(const char *accountId,
-                    const char *amount, const char *price, const char *source, const char *symbol,const char *type);
+    std::string createInsertOrdertring(string pair,string type,string oedertype,string price,string volume,
+        string oflags,string userref);
 
     cpr::Response Get(const std::string& url,const std::string& body, std::string postData,AccountUnitKraken& unit);
     cpr::Response Post(const std::string& url,const std::string& body, std::string strSignature,AccountUnitKraken& unit);
