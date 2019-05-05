@@ -116,7 +116,7 @@ public:
 
     // req functions
     virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
-    virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId);
+    virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId);//not needed
     virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
     virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
 
@@ -153,7 +153,7 @@ private:
     std::string createCancelOrderIdJsonString(int64_t orderId);
     std::string createCancelOrderCIdJsonString(int cid, std::string dateStr);
     std::string getDateStr();
-
+    std::string createSubReportJsonString();
 
     void lws_login(AccountUnitHitBTC& unit, long timeout_nsec);
     void onInfo(Document& json);

@@ -443,11 +443,11 @@ void TDEngineHitBTC::on_lws_data(struct lws* conn, const char* data, size_t len)
         return;
     }
 
-    if(json.IsObject() && json.HasMember("event")) {
-        if (strcmp(json["event"].GetString(), "info") == 0) {
+    if(json.IsObject() && json.HasMember("method")) {
+        if (strcmp(json["method"].GetString(), "info") == 0) {
             KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: is info");
             onInfo(json);
-        } else if (strcmp(json["event"].GetString(), "auth") == 0) {
+        } else if (strcmp(json["method"].GetString(), "auth") == 0) {
             KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: is auth");
             onAuth(conn, json);
         } else {
@@ -1506,71 +1506,60 @@ std::string TDEngineHitBTC::createAuthJsonString(AccountUnitHitBTC& unit )
     return s.GetString();
 }
 
-
-/*
- // Model
-[
-  0,
-  "on",
-  null,
-  {
-    "gid": GID,
-    "cid": CID,
-    "type": TYPE,
-    "symbol": SYMBOL,
-    "amount": AMOUNT,
-    "price": PRICE,
-    ...
-  }
-]
-
-// Example
-[
-  0,
-  "on",
-  null,
-  {
-    "gid": 1,
-    "cid": 12345,
-    "type": "LIMIT",
-    "symbol": "tBTCUSD",
-    "amount": "1.0",
-    "price": "500"
-  }
-]
- * */
-std::string TDEngineHitBTC::createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr)
+std::string TDEngineHitBTC::createSubReportJsonString()
 {
-
     StringBuffer s;
     Writer<StringBuffer> writer(s);
-    writer.StartArray();
+    writer.StartObject();
+    writer.Key("method");
+    writer.String("subscribeReports");
+    writer.Key("params");
 
-    writer.Int(0);
-    writer.String("on");
-    writer.Null();
+    writer.EndObject();
+    return s.GetString();
+
+}
+//{
+//  "method": "newOrder",
+//  "params": {
+//    "clientOrderId": "57d5525562c945448e3cbd559bd068c4",
+//    "symbol": "ETHBTC",
+//    "side": "sell",
+//    "price": "0.059837",
+//    "quantity": "0.015"
+//  },
+//  "id": 123
+//}
+
+std::string TDEngineHitBTC::createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr)
+{
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("method");
+    writer.String("login");
+
+    writer.Key("params");
+
 
     writer.StartObject();
-    writer.Key("gid");
-    writer.Int(gid);
 
-    writer.Key("cid");
+    writer.Key("ClientOrderId");
     writer.Int(cid);
-
-    writer.Key("type");
-    writer.String(type.c_str());
 
     writer.Key("symbol");
     writer.String(symbol.c_str());
 
-    writer.Key("amount");
+    writer.Key("side");
+    writer.String(type.c_str());
+
+    writer.Key("quantity");
     writer.String(amountStr.c_str());
 
     writer.Key("price");
     writer.String(priceStr.c_str());
 
     writer.EndObject();
-    writer.EndArray();
 
     return s.GetString();
 }
