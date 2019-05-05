@@ -110,7 +110,7 @@ void Strategy::on_price_book_update(const LFPriceBook20Field* data, short source
 {
     std::cout << "[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID
               << " (bidcount)" << data->BidLevelCount
-              << " (askcount)" << data->AskLevelCount << std::endl;
+              << " (askcount)" << data->AskLevelCount <<"(status)"<<data->Status<< std::endl;  /*FXW's edits*/
 //    KF_LOG_INFO(logger, "[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID
 //                                                        << " (bidcount)" << data->BidLevelCount
 //                                                        << " (askcount)" << data->AskLevelCount);
