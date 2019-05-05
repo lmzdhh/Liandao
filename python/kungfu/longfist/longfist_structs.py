@@ -316,6 +316,7 @@ class LFInputOrderField(Structure):
         ("MassOrderSeqId", c_uint64),	
         ("MassOrderIndex", c_int),	
         ("MassOrderTotalNum", c_int),	
+        ("ExpectPrice", c_int64),	# 期望价格 
         ]
 
 class LFRtnOrderField(Structure):

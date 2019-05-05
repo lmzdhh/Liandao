@@ -321,6 +321,7 @@ struct LFInputOrderField
 	uint64_t			MassOrderSeqId;
 	int				MassOrderIndex;
 	int				MassOrderTotalNum;
+	int64_t 		ExpectPrice; 						//预期价格，市价单使用
 };
 
 struct LFRtnOrderField

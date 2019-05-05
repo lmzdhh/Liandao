@@ -258,11 +258,11 @@ bool IWCStrategy::td_is_connected(short source) const
     }
 
 /** util functions, check before calling WCStrategyUtil */
-int IWCStrategy::insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
+int IWCStrategy::insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info,int64_t expect_price)
 {
     CHECK_TD_READY(source);
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
-    return util->insert_market_order(source, instrument_id, exchange_id, volume, direction, offset,misc_info);
+    return util->insert_market_order(source, instrument_id, exchange_id, volume, direction, offset,misc_info,expect_price);
 }
 
 int IWCStrategy::insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)

@@ -284,6 +284,7 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "MassOrderSeqId:" << std::setw(6) << "(i)" << " " << ptr->MassOrderSeqId << std::endl \
 	 << std::setw(20) << "MassOrderIndex:" << std::setw(6) << "(i)" << " " << ptr->MassOrderIndex << std::endl \
 	 << std::setw(20) << "MassOrderTotalNum:" << std::setw(6) << "(i)" << " " << ptr->MassOrderTotalNum << std::endl \
+	 << std::setw(20) << "ExpectPrice:" << std::setw(6) << "(i64)" << " " << ptr->ExpectPrice << std::endl \
 	
 #define PRINT_RTN_ORDER(ptr) ""\
 	 << std::setw(20) << "BrokerID:" << std::setw(6) << "(c11)" << " " << ptr->BrokerID << std::endl \

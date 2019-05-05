@@ -111,7 +111,7 @@ int WCStrategyUtil::insert_market_order(short source,
                                         string exchange_id,
                                         uint64_t volume,
                                         LfDirectionType direction,
-                                        LfOffsetFlagType offset,string misc_info)
+                                        LfOffsetFlagType offset,string misc_info,int64_t expect_price)
 {
     int rid = get_rid();
     LFInputOrderField order = {};
@@ -132,6 +132,7 @@ int WCStrategyUtil::insert_market_order(short source,
     order.ContingentCondition = LF_CHAR_Immediately;
     strncpy(order.BusinessUnit, strategy_name.c_str(),64);
     strncpy(order.MiscInfo, misc_info.c_str(),64);
+    order.ExpectPrice = expect_price;
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
