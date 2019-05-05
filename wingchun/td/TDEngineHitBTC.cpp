@@ -185,7 +185,7 @@ TradeAccount TDEngineHitBTC::load_account(int idx, const json& j_config)
     //unit.passphrase = passphrase;
     unit.baseUrl = baseUrl;
 
-    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
+    KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl<<" (rest_interval)"<<rest_get_interval_ms);
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
 
@@ -238,7 +238,7 @@ void TDEngineHitBTC::connect(long timeout_nsec)
 
             lws_login(unit, 0);
             //set true to for let the kungfuctl think td is running.
-            //unit.logged_in = true;
+            unit.logged_in = true;
         }
 
     }
@@ -1422,6 +1422,27 @@ void TDEngineHitBTC::moveNewtoPending(AccountUnitHitBTC& unit)
         newMsgIterator = unit.newPendingSendMsg.erase(newMsgIterator);
     }
 }
+
+void TDEngineHitBTC::set_reader_thread()
+{
+    ITDEngine::set_reader_thread();
+
+    KF_LOG_INFO(logger, "[set_reader_thread] ws_thread start on TDEngineBitmex::wsloop");
+    ws_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineHitBTC::wsloop, this)));
+
+}
+
+
+void TDEngineHitBTC::wsloop()
+{
+    KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
+    while(isRunning)
+    {
+        int n = lws_service( context, rest_get_interval_ms );
+        //std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
+    }
+}
+
 //void TDEngineHitBTC::loop()
 //{
 //    while(isRunning)
@@ -1443,38 +1464,47 @@ inline int64_t TDEngineHitBTC::getTimestamp()
     return timestamp;
 }
 
+
 std::string TDEngineHitBTC::createAuthJsonString(AccountUnitHitBTC& unit )
 {
-    std::string authNonce = std::to_string(getTimestamp());
-    std::string secret_key = unit.secret_key;
-    std::string payload = "AUTH" + authNonce;
-    std::string signature =  hmac_sha256( secret_key.c_str(), payload.c_str());
+
 
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
-    writer.Key("event");
-    writer.String("auth");
+    writer.Key("method");
+    writer.String("login");
 
-    writer.Key("apiKey");
+    writer.Key("params");
+
+    //BASIC login, does not work now
+    /*writer.StartObject();
+    writer.Key("algo");
+    writer.String("BASIC");
+    writer.Key("pKey");
     writer.String(unit.api_key.c_str());
 
-    writer.Key("authSig");
+    writer.Key("sKey");
+    writer.String(unit.secret_key.c_str());*/
+
+    std::string authNonce = std::to_string(getTimestamp());
+    std::string secret_key = unit.secret_key;
+    std::string payload = authNonce;
+    std::string signature =  hmac_sha256( secret_key.c_str(), payload.c_str());
+    writer.StartObject();
+    writer.Key("algo");
+    writer.String("HS256");
+    writer.Key("pKey");
+    writer.String(unit.api_key.c_str());
+    writer.Key("nonce");
+    writer.String(payload.c_str());
+    writer.Key("signature");
     writer.String(signature.c_str());
 
-    writer.Key("authPayload");
-    writer.String(payload.c_str());
-
-    writer.Key("authNonce");
-    writer.String(authNonce.c_str());
-
-    writer.Key("dms");
-    writer.Int(4);
-    //dms: 4 -> when socket is closed, cancel all account orders
+    writer.EndObject();
     writer.EndObject();
     return s.GetString();
 }
-
 
 
 /*
