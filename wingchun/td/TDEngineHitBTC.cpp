@@ -231,10 +231,14 @@ void TDEngineHitBTC::connect(long timeout_nsec)
 
         if (!unit.logged_in)
         {
-            unit.newPendingSendMsg.push_back(createAuthJsonString(unit ));
+            std::string auth = createAuthJsonString(unit);
+            unit.newPendingSendMsg.push_back(auth);
+
+            KF_LOG_INFO(logger,auth);
+
             lws_login(unit, 0);
             //set true to for let the kungfuctl think td is running.
-            unit.logged_in = true;
+            //unit.logged_in = true;
         }
 
     }
@@ -1046,7 +1050,7 @@ void TDEngineHitBTC::onOrder(struct lws* conn, rapidjson::Value& order_i)
 //[0,"n",[1536562255341,"oc-req",null,null,[],null,"SUCCESS","Submitted for cancellation; waiting for confirmation (ID: 16609272883)."]]
 void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
 {
-    KF_LOG_INFO(logger, "TDEngineHITBTC::onNotification: " << parseJsonToString(json));
+    KF_LOG_DEBUG(logger, "TDEngineHITBTC::onNotification: " << parseJsonToString(json));
     AccountUnitHitBTC& unit = findAccountUnitHitBTCByWebsocketConn(conn);
     if(json.GetArray()[2].IsArray()) {
         auto &notify = json.GetArray()[2];

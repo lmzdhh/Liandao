@@ -80,6 +80,7 @@ struct LFPriceBookFieldTmpl
 	int		AskLevelCount;	
 	LFPriceLevel 	BidLevels[level_count];
 	LFPriceLevel	AskLevels[level_count];
+    int Status;/*FXW's edits,0=normal 1=loss level 2=crossed*/
 };
 
 using LFPriceBook20Field = LFPriceBookFieldTmpl<20>;
@@ -251,6 +252,7 @@ struct LFL2TradeField
 	char_64     TakerOrderID;
 	char_64     TradeID;
 	char_32     Sequence;    
+    int         Status;                 //状态码 0为正常//quest3 edited by fxw
 };
 
 struct LFBarMarketDataField
@@ -273,6 +275,7 @@ struct LFBarMarketDataField
 	uint64_t   	StartVolume;           //初始总交易量
     int64_t         BestBidPrice;      
     int64_t         BestAskPrice;
+    int Status;//状态码 0为正常/*quest3 edited by fxw*/
 };
 
 struct LFQryPositionField

@@ -243,16 +243,26 @@
 			}
 		},
 		"binance": {
-			"accounts": [{
-				"info": {
-					"interfaces": "10.0.0.22-10.0.0.193-10.0.0.104",
-					"interface_timeout_ms": 30000,
-					"interface_switch": 1,
-					"APIKey": "your-api-key",
-					"SecretKey": "your-secret-key",
+      "accounts": [{
+        "info": {
+            "interfaces": "10.0.0.22-10.0.0.193-10.0.0.104",
+            "interface_timeout_ms": 30000,
+            "interface_switch": 1,
+            "users":[
+              {
+                "APIKey": "nNyyrOmKNk9KPp2c6XjxNNhgt5RwkR3W5U0DuooBISM5LWHXlx2zWVuCPm11wYxo",
+                "SecretKey": "SYE2vviOXHutnDhua42txo39XXBUyq8TxaKzT6oF8IokfKXSfXnOhDqzi79FuJ7G"
+              },
+              {
+                "APIKey": "5SxLPrucIKa42XghQbptPNjbHei1yFral8BAfJ1fpVL5sH1FiD42pobgyCC9LDlx",
+                "SecretKey": "0vUJKnuXRAggLtvNaYysumjZYNxOLNWC20pWETxPNMWK5Us3MCEtsffENntSSF73"
+              }
+          ],
 					"whiteLists": {
 						"etc_eth": "ETCETH",
-						"trx_btc": "TRXBTC"
+						"trx_btc": "TRXBTC",
+						"eos_btc":"EOSBTC",
+            "btt_btc":"BTTBTC"
 					},
 					"positionWhiteLists": {
 						"ETC": "ETC",
@@ -268,7 +278,9 @@
           "order_count_per_second":5,
           "request_weight_per_minute":1000,
           "prohibit_order_ms":10000,
-          "default_429_rest_interval_ms":1000
+          "default_429_rest_interval_ms":1000,
+          "UFR_limit":0.998,
+          "UFR_order_lower_limit":300
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true

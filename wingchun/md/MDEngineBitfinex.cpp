@@ -16,6 +16,7 @@
 #include <cpr/cpr.h>
 #include <chrono>
 
+#include <unistd.h>
 
 using cpr::Get;
 using cpr::Url;
@@ -36,6 +37,78 @@ using std::stoi;
 USING_WC_NAMESPACE
 
 static MDEngineBitfinex* global_md = nullptr;
+
+/*quest3 fxw v4 starts*/
+int MDEngineBitfinex::GetSnapShotAndRtn(std::string ticker)//v1
+{
+    std::string symbol=ticker;
+    symbol.erase(3,1);
+    std::string requestPath = "/v1/book/";
+    std::string body="";
+    string url = "https://api.bitfinex.com" + requestPath +symbol;//complete url
+    KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]the url we ask :" << url);
+    cpr::Response response = Get(
+        Url{ url }, cpr::VerifySsl{ false },
+        cpr::Body{body},
+        cpr::Timeout{10000}
+    );
+    if (response.status_code >= 200 && response.status_code <= 299)
+    {
+        KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]request succeeded,the text is :" << response.text.c_str());
+        Document d;
+        d.Parse(response.text.c_str());  
+        LFPriceBook20Field md;
+        strcpy(md.ExchangeID, "bitfinex");
+        strcpy(md.InstrumentID, ticker.c_str());
+        md.UpdateMicroSecond =0;
+        md.Status = 0;
+        if (d.HasMember("bids"))
+        {
+            auto& bids = d["bids"];
+            if (bids.IsArray() && bids.Size() > 0)
+            {
+                auto size = std::min((int)bids.Size(), 20);
+                for (int i = 0; i < size; ++i)
+                {
+                    md.BidLevels[i].price = stod(bids.GetArray()[i]["price"].GetString()) * scale_offset;
+                    md.BidLevels[i].volume = stod(bids.GetArray()[i]["amount"].GetString()) * scale_offset;
+                    KF_LOG_DEBUG(logger, "[quest2v4]bids price:"<<md.BidLevels[i].price<<"volume:"<<md.BidLevels[i].volume);
+                }
+                md.BidLevelCount = size;
+            }
+        }
+        if (d.HasMember("asks"))
+        {
+            auto& asks = d["asks"];
+
+            if (asks.IsArray() && asks.Size() > 0)
+            {
+                auto size = std::min((int)asks.Size(), 20);
+
+                for (int i = 0; i < size; ++i)
+                {
+                    md.AskLevels[i].price = stod(asks.GetArray()[i]["price"].GetString()) * scale_offset;
+                    md.AskLevels[i].volume = stod(asks.GetArray()[i]["amount"].GetString()) * scale_offset;
+                    KF_LOG_DEBUG(logger, "[quest2v4]asks price:"<<md.AskLevels[i].price<<"volume:"<<md.AskLevels[i].volume);
+                }
+                md.AskLevelCount = size;
+            }
+        }
+        if (md.BidLevels[0].price > md.AskLevels[0].price)
+            md.Status = 2;
+        else md.Status = 0;
+        timer = getTimestamp();
+        on_price_book_update(&md);
+        KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]snapshot price book update succeeded");
+    }
+    else
+    {
+        KF_LOG_DEBUG(logger, "[quest2 fxw GetSnapShot]request failed");
+        KF_LOG_DEBUG(logger, "[quest2 fxw GetSnapShot](response.status_code)"<<response.status_code<<"(response.text)"<<response.text.c_str());
+    }
+    return  0;
+}
+/*quest3 fxw v4 ends*/
 
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
@@ -130,6 +203,9 @@ MDEngineBitfinex::MDEngineBitfinex(): IMDEngine(SOURCE_BITFINEX)
 void MDEngineBitfinex::load(const json& j_config)
 {
     book_depth_count = j_config["book_depth_count"].get<int>();
+    priceBook20Assembler.SetLevel(book_depth_count);/*FXW's edits*/
+    level_threshold= j_config["level_threshold"].get<int>();/*FXW's edits*/
+    priceBook20Assembler.SetLeastLevel(level_threshold);/*FXW's edits*/
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineBitfinex:: rest_get_interval_ms: " << rest_get_interval_ms);
@@ -251,6 +327,7 @@ void MDEngineBitfinex::login(long timeout_nsec) {
     KF_LOG_INFO(logger, "MDEngineBitfinex::login: wsi create success.");
 
     logged_in = true;
+    timer = getTimestamp();/*quest2 fxw's edits v3*/
 }
 
 void MDEngineBitfinex::set_reader_thread()
@@ -757,16 +834,58 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 //            KF_LOG_INFO(logger, " update(2)"<< json.GetArray()[last_element].GetArray()[2].GetDouble() );
         }
     }
-
-    // has any update
+    //has any update
     LFPriceBook20Field md;
     memset(&md, 0, sizeof(md));
     if(priceBook20Assembler.Assembler(ticker, md)) {
         strcpy(md.ExchangeID, "bitfinex");
 
         KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: on_price_book_update");
-        on_price_book_update(&md);
+        /*on_price_book_update(&md);*/
+        /*quest2 FXW's edits start here*/
+        if (priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_asks(ticker) ||
+                priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_bids(ticker) 
+                /*|| priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker) */
+           )
+        {
+            md.Status = 1;
+            /*need re-login*/
+            KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update failed ,lose level,re-login....");
+            on_price_book_update(&md);
+            GetSnapShotAndRtn(ticker);
+
+        }
+        /*else if((priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker))&&once)
+        {//这个if分支仅是为测试用
+            once=0;
+            md.Status = 4;
+            //need re-login
+            KF_LOG_DEBUG(logger, "[quest2test]MDEngineBitfinex on_price_book_update test request orderbook snapshot....");
+            on_price_book_update(&md);
+            KF_LOG_DEBUG(logger, "[quest2test]ticker this time:"<<ticker);
+            GetSnapShotAndRtn(ticker);
+            sleep(6000);
+        }*/
+        else if((-1 == priceBook20Assembler.GetBestBidPrice(ticker)) ||(-1 == priceBook20Assembler.GetBestAskPrice(ticker))||
+                priceBook20Assembler.GetBestBidPrice(ticker) >= priceBook20Assembler.GetBestAskPrice(ticker))
+        {
+            md.Status = 2;
+            /*need re-login*/
+            KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update failed ,orderbook crossed,re-login....");
+            on_price_book_update(&md);
+            GetSnapShotAndRtn(ticker);
+        }
+        else
+        {
+            md.Status = 0;
+            on_price_book_update(&md);
+            timer = getTimestamp();/*quest2 fxw's edits v3*/
+            KF_LOG_DEBUG(logger, "[FXW successed]MDEngineBitfinex on_price_book_update successed");
+        }
+
+        /*quest2 FXW's edits end here*/
     }
+
 }
 
 std::string MDEngineBitfinex::parseJsonToString(Document &d)
@@ -824,6 +943,17 @@ void MDEngineBitfinex::loop()
 {
     while(isRunning)
     {
+        /*quest2 fxw's edits v3 starts here*/
+        int64_t lag=getTimestamp()-timer;
+        if ((lag / 1000) > refresh_normal_check_book_s)
+        {
+            LFPriceBook20Field md;
+            memset(&md, 0, sizeof(md));
+            md.Status = 3;
+            on_price_book_update(&md);
+            KF_LOG_DEBUG(logger, "[quest2 fxw's edits v3]MDEngineBitfinex::update error status 3,lag is "<<lag);
+        }
+        /*quest2 fxw's edits v3 ends here*/
         int n = lws_service( context, rest_get_interval_ms );
         std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
     }
