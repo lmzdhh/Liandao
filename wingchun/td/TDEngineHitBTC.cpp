@@ -1601,6 +1601,7 @@ std::string TDEngineHitBTC::createInsertOrderJsonString(int gid, int cid, std::s
 
     writer.EndObject();
 
+    writer.EndObject();
     return s.GetString();
 }
 
