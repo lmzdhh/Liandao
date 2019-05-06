@@ -426,14 +426,14 @@ cpr::Response TDEngineKraken::Get(const std::string& method_url,const std::strin
     return response;
 }
 //cys edit
-cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::string& body,std::string& postData, AccountUnitKraken& unit)
+cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::string& body,std::string postData, AccountUnitKraken& unit)
 {
     
     string nonceStr=std::to_string(getTimestamp());
     KF_LOG_INFO(logger,"[Post] (nonce) "<<nonceStr);
     string s1="nonce=";
-    postData=s1+nonceStr+"&"+postData;
-    string strSignature=signature(method_url,nonceStr,postData,unit);
+    string postdata=s1+nonceStr+"&"+postData;
+    string strSignature=signature(method_url,nonceStr,postdata,unit);
     KF_LOG_INFO(logger,"[Post] (strSignature) "<<strSignature);
 
     string url = unit.baseUrl + method_url;

@@ -183,7 +183,7 @@ private:
         string oflags,string userref);
 
     cpr::Response Get(const std::string& url,const std::string& body, std::string postData,AccountUnitKraken& unit);
-    cpr::Response Post(const std::string& url,const std::string& body, std::string& postData,AccountUnitKraken& unit);
+    cpr::Response Post(const std::string& url,const std::string& body, std::string postData,AccountUnitKraken& unit);
     void genUniqueKey();
     std::string genClinetid(const std::string& orderRef);
     //精度处理
