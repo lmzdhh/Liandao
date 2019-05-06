@@ -1567,7 +1567,7 @@ std::string TDEngineHitBTC::createInsertOrderJsonString(int gid, int cid, std::s
     Writer<StringBuffer> writer(s);
     writer.StartObject();
     writer.Key("method");
-    writer.String("login");
+    writer.String("newOrder");
 
     writer.Key("params");
 
