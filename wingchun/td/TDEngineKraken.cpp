@@ -396,7 +396,7 @@ std::vector<unsigned char> TDEngineKraken::b64_decode(const std::string& data) {
    
    return output;
 }
-std::string TDEngineKraken::signature(std::string& path,std::string& nonce, std::string postdata,AccountUnitKraken& unit){
+std::string TDEngineKraken::getKrakenSignature(std::string& path,std::string& nonce, std::string postdata,AccountUnitKraken& unit){
    // add path to data to encrypt
    std::vector<unsigned char> data(path.begin(), path.end());
 
@@ -433,7 +433,7 @@ cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::stri
     KF_LOG_INFO(logger,"[Post] (nonce) "<<nonceStr);
     string s1="nonce=";
     string postdata=s1+nonceStr+"&"+postData;
-    string strSignature=signature(method_url,nonceStr,postdata,unit);
+    string strSignature=getKrakenSignature(method_url,nonceStr,postdata,unit);
     KF_LOG_INFO(logger,"[Post] (strSignature) "<<strSignature);
 
     string url = unit.baseUrl + method_url;

@@ -203,7 +203,7 @@ public:
     KrakenWsStatus isAuth = nothing,isOrders=nothing;
     //当webSocket建立时
     void on_lws_open(struct lws* wsi);
-    std::string signature(std::string& path,std::string& nonce, std::string postdata,AccountUnitKraken& unit);
+    std::string getKrakenSignature(std::string& path,std::string& nonce, std::string postdata,AccountUnitKraken& unit);
     std::vector<unsigned char> sha256(string& data);
     vector<unsigned char> hmac_sha512_kraken(vector<unsigned char>& data,vector<unsigned char> key);
     std::string b64_encode(const std::vector<unsigned char>& data);
