@@ -644,9 +644,10 @@
 					"baseUrl": "https://api.kraken.com",
 					"whiteLists": {
 						"strategy_coinpair(base_quote)": "exchange_coinpair",
-						"eos_eth": "EOSETH",
+						"xbt_eur": "XBTEUR",
 				    "atom_xbt": "ATOMXBT",
-				    "dash_eur": "DASHEUR"
+				    "dash_eur": "DASHEUR",
+						"xbt_ltc": "XBTLTC"
 					},
 					"rest_get_interval_ms": 2000
 				},

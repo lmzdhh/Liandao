@@ -766,9 +766,9 @@ std::string TDEngineKraken::GetSide(const LfDirectionType& input) {
 }
 
 LfDirectionType TDEngineKraken::GetDirection(std::string input) {
-    if ("buy-limit" == input || "buy-market" == input) {
+    if ("buy" == input) {
         return LF_CHAR_Buy;
-    } else if ("sell-limit" == input || "sell-market" == input) {
+    } else if ("sell" == input) {
         return LF_CHAR_Sell;
     } else {
         return LF_CHAR_Buy;
@@ -786,31 +786,29 @@ std::string TDEngineKraken::GetType(const LfOrderPriceTypeType& input) {
 }
 
 LfOrderPriceTypeType TDEngineKraken::GetPriceType(std::string input) {
-    if ("buy-limit" == input||"sell-limit" == input) {
+    if ("limit" == input) {
         return LF_CHAR_LimitPrice;
-    } else if ("buy-market" == input||"sell-market" == input) {
+    } else if ("market" == input) {
         return LF_CHAR_AnyPrice;
     } else {
         return '0';
     }
 }
-//订单状态，submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
+//订单状态，pending 提交, open 部分成交, closed , open 成交, canceled 已撤销,expired 失效
 LfOrderStatusType TDEngineKraken::GetOrderStatus(std::string state) {
 
     if(state == "canceled"){
         return LF_CHAR_Canceled;
-    }else if(state == "submitting"){
+    }else if(state == "pending"){
         return LF_CHAR_NotTouched;
-    }else if(state == "partial-filled "){
-        return  LF_CHAR_PartTradedQueueing;
-    }else if(state == "submitted"){
-        return LF_CHAR_NotTouched;
-    }else if(state == "partial-canceled"){
-        return LF_CHAR_PartTradedNotQueueing;
-    }else if(state == "filled"){
+    }else if(state == "closed"){
+        return LF_CHAR_Error;
+    }else if(state == "expired"){
+        return LF_CHAR_Error;
+    }else if(state == "open"){
         return LF_CHAR_AllTraded;
     }
-    return LF_CHAR_AllTraded;
+    return LF_CHAR_Unknown;
 }
 
 /**
@@ -821,6 +819,7 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
     KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId);
 
     AccountUnitKraken& unit = account_units[account_index];
+    unit.userref=std::to_string(requestId);
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key << " (InstrumentID) " << data->InstrumentID);
 
     LFRspPositionField pos;
@@ -933,6 +932,7 @@ void TDEngineKraken::dealPriceVolume(AccountUnitKraken& unit,const std::string& 
 //发单
 void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time){
     AccountUnitKraken& unit = account_units[account_index];
+    unit.userref=std::to_string(requestId);
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Tid)" << data->InstrumentID
@@ -970,8 +970,7 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
     }
     KF_LOG_INFO(logger,"[req_order_insert] cys_ticker "<<ticker.c_str());
     //lock
-    std::string userref=data->OrderRef;
-    send_order(unit, userref, ticker, GetSide(data->Direction),GetType(data->OrderPriceType), fixedVolume, fixedPrice, d);
+    send_order(unit, unit.userref, ticker, GetSide(data->Direction),GetType(data->OrderPriceType), fixedVolume, fixedPrice, d);
     //not expected response
     if(!d.IsObject()){
         errorId = 100;
@@ -1041,6 +1040,7 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
 
 void TDEngineKraken::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time){
     AccountUnitKraken& unit = account_units[account_index];
+    unit.userref=std::to_string(requestId);
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Iid)" << data->InvestorID
@@ -1157,47 +1157,7 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
 
         Document d;
         query_order(unit, ticker,orderStatusIterator->remoteOrderId, d);
-        /*kraken查询订单详情
-            字段名称	是否必须	数据类型	描述	取值范围
-            account-id	true	long	账户 ID	
-            amount	true	string	订单数量	
-            canceled-at	false	long	订单撤销时间	
-            created-at	true	long	订单创建时间	
-            field-amount	true	string	已成交数量	
-            field-cash-amount	true	string	已成交总金额	
-            field-fees	true	string	已成交手续费（买入为币，卖出为钱）	
-            finished-at	false	long	订单变为终结态的时间，不是成交时间，包含“已撤单”状态	
-            id	true	long	订单ID	
-            price	true	string	订单价格	
-            source	true	string	订单来源	api
-            state	true	string	订单状态	submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
-            symbol	true	string	交易对	btcusdt, ethbtc, rcneth ...
-            type	true	string	订单类型	buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖, buy-ioc：IOC买单, sell-ioc：IOC卖单
-            {    
-            "data": 
-            {
-                "id": 59378,
-                "symbol": "ethusdt",
-                "account-id": 100009,
-                "amount": "10.1000000000",
-                "price": "100.1000000000",
-                "created-at": 1494901162595,
-                "type": "buy-limit",
-                "field-amount": "10.1000000000",
-                "field-cash-amount": "1011.0100000000",
-                "field-fees": "0.0202000000",
-                "finished-at": 1494901400468,
-                "user-id": 1000,
-                "source": "api",
-                "state": "filled",
-                "canceled-at": 0,
-                "exchange": "kraken",
-                "batch": ""
-            }
-            }
-        */
-        //parse order status
-        //订单状态，submitting , submitted 已提交, partial-filled 部分成交, partial-canceled 部分成交撤销, filled 完全成交, canceled 已撤销
+        //订单状态，pending 提交, open 成交, canceled 已撤销, expired已失效, closed 
         if(d.HasParseError()) {
             //HasParseError, skip
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order response HasParseError " << " (symbol)" << orderStatusIterator->InstrumentID
@@ -1205,12 +1165,11 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
                                                                                            << " (remoteOrderId) " << orderStatusIterator->remoteOrderId);
             continue;
         }
-        const std::string strSuccessCode = "ok";
         KF_LOG_INFO(logger, "[retrieveOrderStatus] query_order:");
-        if(d.HasMember("status") && strSuccessCode ==  d["status"].GetString())
+        if(d.HasMember("error") && d["error"].Size()==0)
         {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
-            rapidjson::Value &data = d["data"];
+            rapidjson::Value &data = d["result"];
             ResponsedOrderStatus responsedOrderStatus;
             responsedOrderStatus.ticker = ticker;
             //已成交总金额
@@ -1240,13 +1199,13 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
         } else {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
             std::string errorMsg;
-            std::string errorId = "404";
-            if(d.HasMember("err-msg") && d["err-msg"].IsString())
-            {
-                std::string tab="\t";
-                errorMsg = d["err-code"].GetString()+tab+d["err-msg"].GetString();
+            std::string errorId = "520";
+            if (d.HasMember("error") && d["error"].IsArray()) {
+                int i;
+                for(i=0;i<d["error"].Size();i++){
+                    errorMsg=errorMsg+d["error"].GetArray()[i].GetString()+"\t";
+                }
             }
-
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
                                                                          << " (orderRef)" << orderStatusIterator->OrderRef
                                                                          << " (errorId)" << errorId
@@ -1337,7 +1296,7 @@ void TDEngineKraken::set_reader_thread()
     ITDEngine::set_reader_thread();
 
     KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineKraken::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineKraken::loopwebsocket, this)));
+    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineKraken::loop, this)));
 
     KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineKraken::loopOrderActionNoResponseTimeOut");
     orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineKraken::loopOrderActionNoResponseTimeOut, this)));
@@ -1612,10 +1571,11 @@ void TDEngineKraken::cancel_order(AccountUnitKraken& unit, std::string code, std
 void TDEngineKraken::query_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[query_order]");
-    //火币get查询订单详情
-    std::string getPath = "/v1/order/orders/";
-    std::string requestPath = getPath + orderId;
-    auto response = Get(requestPath,"","",unit);
+    //kraken查询订单详情
+    string getPath = "/0/private/OpenOrders";
+    string s1="trades=",s2="userref=",s3="txid=";
+    string postData=s1+"true&"+s2+unit.userref+"&"+s3+orderId;
+    auto response = Post(getPath,postData,postData,unit);
     json.Parse(response.text.c_str());
     KF_LOG_DEBUG(logger,"[query_order] response "<<response.text.c_str());
     //getResponse(response.status_code, response.text, response.error.message, json);

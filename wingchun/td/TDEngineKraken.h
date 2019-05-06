@@ -102,6 +102,7 @@ struct AccountUnitKraken
     CoinPairWhiteList positionWhiteList;
     std::string spotAccountId;
     std::string marginAccountId;
+    std::string userref;
     struct lws* webSocketConn;
     map<string,LFRtnOrderField> restOrderStatusMap;
     vector<string> websocketOrderStatusMap;
