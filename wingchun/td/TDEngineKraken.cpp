@@ -428,8 +428,8 @@ cpr::Response TDEngineKraken::Get(const std::string& method_url,const std::strin
 //cys edit
 cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::string& body,std::string postData, AccountUnitKraken& unit)
 {
-    
-    string nonceStr=std::to_string(getTimestamp());
+    int64_t nonce = getTimestamp();
+    string nonceStr=std::to_string(nonce);
     KF_LOG_INFO(logger,"[Post] (nonce) "<<nonceStr);
     string s1="nonce=";
     postData=s1+nonceStr+"&"+postData;
