@@ -1336,7 +1336,7 @@ void TDEngineHitBTC::req_order_insert(const LFInputOrderField* data, int account
                                                  type << " (size) "<< sizeStr << " (price) "<< priceStr
                                                  << " (cid) " << cid << " (dateStr) "<< dateStr);
 
-    std::string insertOrderJsonString = createInsertOrderJsonString(0, cid, type, ticker, sizeStr, priceStr, sideStr);
+    std::string insertOrderJsonString = createInsertOrderJsonString(0, requestId, type, ticker, sizeStr, priceStr, sideStr);
     addPendingSendMsg(unit, insertOrderJsonString);
     //emit e event for websocket callback
     lws_callback_on_writable(unit.websocketConn);
@@ -1582,7 +1582,7 @@ std::string TDEngineHitBTC::createInsertOrderJsonString(int gid, int cid, std::s
     writer.StartObject();
 
     writer.Key("clientOrderId");
-    writer.Int(cid);
+    writer.String(std::to_string(cid).c_str());
 
     writer.Key("symbol");
     writer.String(symbol.c_str());
