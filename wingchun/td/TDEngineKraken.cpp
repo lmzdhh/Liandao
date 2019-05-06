@@ -426,9 +426,16 @@ cpr::Response TDEngineKraken::Get(const std::string& method_url,const std::strin
     return response;
 }
 //cys edit
-cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::string& body,std::string strSignature, AccountUnitKraken& unit)
+cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::string& body,std::string postData, AccountUnitKraken& unit)
 {
+    
+    string nonceStr=std::to_string(getTimestamp());
+    KF_LOG_INFO(logger,"[Post] (nonce) "<<nonce);
+    string s1="nonce=";
+    postData=s1+nonceStr+"&"+postData;
+    string strSignature=signature(path,nonceStr,postData,unit);
     KF_LOG_INFO(logger,"[Post] (strSignature) "<<strSignature);
+
     string url = unit.baseUrl + method_url;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{
@@ -1364,15 +1371,8 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
     string path="/0/private/Balance";
-    int64_t nonce = getTimestamp();
-    string nonceStr=std::to_string(nonce);
-    KF_LOG_INFO(logger,"[get_account] (nonce) "<<nonce);
-    string s1="nonce=";
-    string postData=s1+nonceStr;
 
-    string strSignature=signature(path,nonceStr,postData,unit);
-
-    const auto response = Post(path,postData,strSignature,unit);
+    const auto response = Post(path,postData,postData,unit);
     json.Parse(response.text.c_str());
     //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
@@ -1389,16 +1389,6 @@ std::string TDEngineKraken::createInsertOrdertring(string pair,string type,strin
 
     return s;
 }
-/*火币下单请求参数
-    {
-        "account-id": "100009",
-        "amount": "10.1",
-        "price": "100.1",
-        "source": "api",
-        "symbol": "ethusdt",
-        "type": "buy-limit"
-    }
-*/
 void TDEngineKraken::send_order(AccountUnitKraken& unit, string userref, string code,
                         string side, string type, string volume, string price, Document& json){
     KF_LOG_INFO(logger, "[send_order]");
@@ -1408,9 +1398,10 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, string userref, string 
     bool should_retry = false;
     do {
         should_retry = false;
-        std::string requestPath = "/0/private/AddOrder";
+        string path = "/0/private/AddOrder";
         string postData=createInsertOrdertring(code, type, side,price,volume,"",userref);
-        response = Post(requestPath,postData,postData,unit);
+
+        response = Post(path,postData,postData,unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
                                                   << " (response.error.message) " << response.error.message 
@@ -1494,10 +1485,11 @@ void TDEngineKraken::cancel_order(AccountUnitKraken& unit, std::string code, std
     bool should_retry = false;
     do {
         should_retry = false;
-        std::string postPath="/0/private/CancelOrder";
+        std::string path="/0/private/CancelOrder";
         std::string postData="txid=";
         postData=postData+orderId;
-        response = Post(postPath,postData,postData,unit);
+
+        response = Post(path,postData,postData,unit);
 
         //json.Clear();
         getResponse(response.status_code, response.text, response.error.message, json);
@@ -1523,6 +1515,7 @@ void TDEngineKraken::query_order(AccountUnitKraken& unit, std::string code, std:
     string getPath = "/0/private/QueryOrders";
     string s1="trades=",s2="userref=",s3="txid=";
     string postData=s1+"true&"+s2+unit.userref+"&"+s3+orderId;
+
     auto response = Post(getPath,postData,postData,unit);
     json.Parse(response.text.c_str());
     KF_LOG_DEBUG(logger,"[query_order] response "<<response.text.c_str());
