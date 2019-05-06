@@ -862,8 +862,6 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
     if(!d.HasParseError() && d.HasMember("result"))
     {
         Value accounts = d["result"].GetObject();
-        size_t len = d["result"].Size();
-        KF_LOG_INFO(logger, "[req_investor_position] (accounts.length)" << len);
         for (rapidjson::Value::ConstMemberIterator itr = accounts.MemberBegin();itr != accounts.MemberEnd(); ++itr){
             //itr->name.GetString(), itr->value.GetType()
             std::string symbol = itr->name.GetString();
