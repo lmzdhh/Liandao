@@ -430,10 +430,10 @@ cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::stri
 {
     
     string nonceStr=std::to_string(getTimestamp());
-    KF_LOG_INFO(logger,"[Post] (nonce) "<<nonce);
+    KF_LOG_INFO(logger,"[Post] (nonce) "<<nonceStr);
     string s1="nonce=";
     postData=s1+nonceStr+"&"+postData;
-    string strSignature=signature(path,nonceStr,postData,unit);
+    string strSignature=signature(method_url,nonceStr,postData,unit);
     KF_LOG_INFO(logger,"[Post] (strSignature) "<<strSignature);
 
     string url = unit.baseUrl + method_url;
@@ -1372,7 +1372,7 @@ void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
     KF_LOG_INFO(logger, "[get_account]");
     string path="/0/private/Balance";
 
-    const auto response = Post(path,postData,postData,unit);
+    const auto response = Post(path,"","",unit);
     json.Parse(response.text.c_str());
     //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
@@ -1403,7 +1403,7 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, string userref, string 
 
         response = Post(path,postData,postData,unit);
 
-        KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code 
+        KF_LOG_INFO(logger, "[send_order] (url) " << path << " (response.status_code) " << response.status_code 
                                                   << " (response.error.message) " << response.error.message 
                                                   <<" (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
 
