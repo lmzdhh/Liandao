@@ -137,7 +137,7 @@ private:
 
     virtual void set_reader_thread() override;
 
-    //std::string GetSide(const LfDirectionType& input);
+    std::string GetSide(const LfDirectionType& input);
     //LfDirectionType GetDirection(std::string input);
     std::string GetType(const LfOrderPriceTypeType& input);
     LfOrderPriceTypeType GetPriceType(std::string input);
@@ -151,8 +151,9 @@ private:
 
     std::string createAuthJsonString(AccountUnitHitBTC& unit );
     std::string parseJsonToString(Document &d);
-    std::string createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr);
-    std::string createCancelOrderIdJsonString(int64_t orderId);
+    std::string createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr,
+            std::string priceStr, std::string sideStr);
+    std::string createCancelOrderIdJsonString(std::string orderId);
     std::string createCancelOrderCIdJsonString(int cid, std::string dateStr);
     std::string getDateStr();
     std::string createSubReportJsonString();
