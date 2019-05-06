@@ -199,7 +199,6 @@ public:
     std::vector<unsigned char> b64_decode(const std::string& data) ;
 public:
     //websocket
-    void krakenAuth(AccountUnitKraken& unit);
     void lws_login(AccountUnitKraken& unit, long timeout_nsec);
     void writeInfoLog(std::string strInfo);
     void writeErrorLog(std::string strError);

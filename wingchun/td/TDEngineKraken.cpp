@@ -132,7 +132,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 }
 void TDEngineKraken::on_lws_open(struct lws* wsi){
     KF_LOG_INFO(logger,"[on_lws_open] ");
-    krakenAuth(findAccountUnitKrakenByWebsocketConn(wsi));
+    //krakenAuth(findAccountUnitKrakenByWebsocketConn(wsi));
     KF_LOG_INFO(logger,"[on_lws_open] finished ");
 }
 //cys websocket connect
@@ -534,8 +534,7 @@ TradeAccount TDEngineKraken::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     //printResponse(json);
-    cancel_order(unit,"code","OGA5CZ-SKUCW-7XFQ7F",json);
-    cancel_order(unit,"code","OUTKRJ-5PSEU-7VP4RJ",json);
+    //cancel_order(unit,"code","OGA5CZ-SKUCW-7XFQ7F",json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
     // set up
@@ -593,51 +592,6 @@ void TDEngineKraken::getPriceVolumePrecision(AccountUnitKraken& unit){
         }
         KF_LOG_INFO(logger,"[getPriceVolumePrecision] (map size) "<<unit.mapPriceVolumePrecision.size());
     }
-}
-void TDEngineKraken::krakenAuth(AccountUnitKraken& unit){
-    KF_LOG_INFO(logger, "[krakenAuth] auth");
-    std::string strTimestamp = std::to_string(getTimestamp());
-    std::string timestamp = std::to_string(getTimestamp());
-    std::string strAccessKeyId=unit.api_key;
-    std::string strSignatureMethod="HmacSHA256";
-    std::string strSignatureVersion="2";
-    string reqType="GET\n";
-    std::string strSign = reqType+"api.kraken.pro\n" + "/ws/v1\n"+
-                            "AccessKeyId="+strAccessKeyId+"&"+
-                            "SignatureMethod="+strSignatureMethod+"&"+
-                            "SignatureVersion="+strSignatureVersion+"&"+
-                            "Timestamp="+strTimestamp;
-    KF_LOG_INFO(logger, "[krakenAuth] strSign = " << strSign );
-    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    KF_LOG_INFO(logger, "[krakenAuth] strHmac = " << strHmac );
-    std::string strSignatrue = base64_encode(strHmac,32);
-    KF_LOG_INFO(logger, "[krakenAuth] Signatrue = " << strSignatrue );
-    StringBuffer sbUpdate;
-    Writer<StringBuffer> writer(sbUpdate);
-    writer.StartObject();
-    writer.Key("AccessKeyId");
-    writer.String(unit.api_key.c_str());
-    writer.Key("SignatureMethod");
-    writer.String("HmacSHA256");
-    writer.Key("SignatureVersion");
-    writer.String("2");
-    writer.Key("Timestamp");
-    writer.String(timestamp.c_str());
-    writer.Key("Signature");
-    writer.String(strSignatrue.c_str());
-    writer.Key("op");
-    writer.String("auth");
-    writer.EndObject();
-    std::string strSubscribe = sbUpdate.GetString();
-    unsigned char msg[1024];
-    memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
-    int length = strSubscribe.length();
-    KF_LOG_INFO(logger, "[krakenAuth] auth data " << strSubscribe.c_str() << " ,len = " << length);
-    strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
-    //请求
-    int ret = lws_write(unit.webSocketConn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
-    lws_callback_on_writable(unit.webSocketConn);
-    KF_LOG_INFO(logger, "[krakenAuth] auth success...");
 }
 void TDEngineKraken::lws_login(AccountUnitKraken& unit, long timeout_nsec){
     KF_LOG_INFO(logger, "[TDEngineKraken::lws_login]");
