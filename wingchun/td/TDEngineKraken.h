@@ -157,7 +157,7 @@ private:
     void addNewQueryOrdersAndTrades(AccountUnitKraken& unit, const char_31 InstrumentID,
                                     const char_21 OrderRef, const LfOrderStatusType OrderStatus,
                                     const uint64_t VolumeTraded, const std::string& remoteOrderId);
-    void addNewOrderToMap(AccountUnitKraken& unit, LFRtnOrderField& rtn_order);
+
     void retrieveOrderStatus(AccountUnitKraken& unit);
     void moveNewOrderStatusToPending(AccountUnitKraken& unit);
     void handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, 
@@ -166,7 +166,7 @@ private:
                                         Document& json);
     void loopOrderActionNoResponseTimeOut();
     void orderActionNoResponseTimeOut();
-    void loopwebsocket();
+
 private:
     void get_account(AccountUnitKraken& unit, Document& json);
     void send_order(AccountUnitKraken& unit, string userref, string code,

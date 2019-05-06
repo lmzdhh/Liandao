@@ -189,7 +189,6 @@ void TDEngineKraken::on_lws_receive_orders(struct lws* conn,Document& json){
             LfOrderStatusType orderStatus=GetOrderStatus(json["data"]["order-state"].GetString());
             if(orderStatus == LF_CHAR_AllTraded  || orderStatus == LF_CHAR_Canceled
                 || orderStatus == LF_CHAR_Error){
-                KF_LOG_INFO(logger, "[rest addNewOrderToMap] remove a pendingOrderStatus.");
                 unit.restOrderStatusMap.erase(remoteOrderId);
             }
         }
@@ -1011,8 +1010,8 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
                                     source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
                                     1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
 
-            KF_LOG_DEBUG(logger, "[req_order_insert] (addNewOrderToMap)" );
-            addNewOrderToMap(unit, rtn_order);
+            KF_LOG_DEBUG(logger, "[req_order_insert] (addNewQueryOrdersAndTrades)" );
+            addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, LF_CHAR_NotTouched, 0, remoteOrderId);
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KRAKEN, 1,
                                           requestId, errorId, errorMsg.c_str());
             KF_LOG_DEBUG(logger, "[req_order_insert] success" );
@@ -1169,23 +1168,24 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
         if(d.HasMember("error") && d["error"].Size()==0)
         {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
-            rapidjson::Value &data = d["result"];
+            rapidjson::Value &data = d["result"].GetObject();
             ResponsedOrderStatus responsedOrderStatus;
             responsedOrderStatus.ticker = ticker;
             //已成交总金额
-            double dDealFunds = std::stod(data["field-cash-amount"].GetString());
+            double dDealFunds = std::stod(data["cost"].GetString());
             //已成交数量
-            double dDealSize = std::stod(data["field-amount"].GetString());
+            double dDealSize = std::stod(data["vol_exec"].GetString());
             responsedOrderStatus.averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
             responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
+            rapidjson::Value &descr=data["descr"].GetObject();
             //报单价格条件
-            responsedOrderStatus.OrderPriceType = GetPriceType(data["type"].GetString());
+            responsedOrderStatus.OrderPriceType = GetPriceType(descr["ordertype"].GetString());
             //买卖方向
-            responsedOrderStatus.Direction = GetDirection(data["type"].GetString());
+            responsedOrderStatus.Direction = GetDirection(descr["type"].GetString());
             //报单状态
             int64_t nDealSize = std::round(dDealSize * scale_offset);
-            int64_t nSize = std::round(std::stod(data["account"].GetString()) * scale_offset);
-            responsedOrderStatus.OrderStatus = GetOrderStatus(data["state"].GetString());
+            int64_t nSize = std::round(std::stod(data["vol"].GetString()) * scale_offset);
+            responsedOrderStatus.OrderStatus = GetOrderStatus(data["status"].GetString());
             responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
             responsedOrderStatus.volume = nSize;
             //今成交数量
@@ -1222,37 +1222,6 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
             ++orderStatusIterator;
         }
         //KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
-    }
-}
-void TDEngineKraken::addNewOrderToMap(AccountUnitKraken& unit, LFRtnOrderField& rtn_order){
-    KF_LOG_DEBUG(logger, "[rest addNewOrderToMap]" );
-    //add new orderId for GetAndHandleOrderTradeResponse
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
-    string remoteOrderId=rtn_order.BusinessUnit;
-    unit.restOrderStatusMap.insert(std::make_pair(remoteOrderId,rtn_order));
-    KF_LOG_INFO(logger, "[addNewOrderToMap] (InstrumentID) " << rtn_order.InstrumentID
-                                                                       << " (OrderRef) " << rtn_order.OrderRef
-                                                                       << " (remoteOrderId) " << rtn_order.BusinessUnit
-                                                                       << "(VolumeTraded)" << rtn_order.VolumeTraded);
-    vector<string>::iterator wsOrderStatus;
-    for(wsOrderStatus=unit.websocketOrderStatusMap.begin();wsOrderStatus!=unit.websocketOrderStatusMap.end();){
-        Document json;
-        json.Parse((*wsOrderStatus).c_str());
-        if(json.HasParseError())continue;
-        if(json.HasMember("data")&&json["data"].HasMember("order-id")){
-            string orderId=std::to_string(json["data"]["order-id"].GetInt64());
-            if(remoteOrderId==orderId){
-                handleResponseOrderStatus(unit, rtn_order,json);
-                //remove order when finish
-                KF_LOG_INFO(logger,"[addNewOrderToMap] remove order when finish");
-                LfOrderStatusType orderStatus=GetOrderStatus(json["data"]["order-state"].GetString());
-                if(orderStatus == LF_CHAR_AllTraded  || orderStatus == LF_CHAR_Canceled|| orderStatus == LF_CHAR_Error){
-                    KF_LOG_INFO(logger, "[addNewOrderToMap] remove a pendingOrderStatus.");
-                    unit.restOrderStatusMap.erase(remoteOrderId);
-                }
-                unit.websocketOrderStatusMap.erase(wsOrderStatus);
-            }
-        }
     }
 }
 void TDEngineKraken::addNewQueryOrdersAndTrades(AccountUnitKraken& unit, const char_31 InstrumentID,
@@ -1300,26 +1269,6 @@ void TDEngineKraken::set_reader_thread()
 
     KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineKraken::loopOrderActionNoResponseTimeOut");
     orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineKraken::loopOrderActionNoResponseTimeOut, this)));
-}
-//cys no use
-void TDEngineKraken::loopwebsocket()
-{
-    time_t nLastTime = time(0);
-
-    while(isRunning)
-    {
-        time_t nNowTime = time(0);
-        if(m_isPong && (nNowTime - nLastTime>= 30))
-        {
-            m_isPong = false;
-            nLastTime = nNowTime;
-            KF_LOG_INFO(logger, "[loop] last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
-            //m_shouldPing = true;
-            lws_callback_on_writable(m_conn);
-        }
-        //KF_LOG_INFO(logger, "TDEngineKraken::loop:lws_service");
-        lws_service( context, rest_get_interval_ms );
-    }
 }
 //cys no use
 void TDEngineKraken::loop()
@@ -1572,7 +1521,7 @@ void TDEngineKraken::query_order(AccountUnitKraken& unit, std::string code, std:
 {
     KF_LOG_INFO(logger, "[query_order]");
     //kraken查询订单详情
-    string getPath = "/0/private/OpenOrders";
+    string getPath = "/0/private/QueryOrders";
     string s1="trades=",s2="userref=",s3="txid=";
     string postData=s1+"true&"+s2+unit.userref+"&"+s3+orderId;
     auto response = Post(getPath,postData,postData,unit);
@@ -1586,189 +1535,47 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
 {
     KF_LOG_INFO(logger, "[handlerResponseOrderStatus]");
 
-    if( (responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched && LF_CHAR_PartTradedQueueing == orderStatusIterator-> OrderStatus || 
-            responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus) && 
+    if( responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched && responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus && 
             responsedOrderStatus.VolumeTraded == orderStatusIterator->VolumeTraded){//no change
         return;
     }
     int64_t newAveragePrice = responsedOrderStatus.averagePrice;
-    //cancel 需要特殊处理
-    if(LF_CHAR_Canceled == responsedOrderStatus.OrderStatus)  {
-        /*
-         * 因为restful查询有间隔时间，订单可能会先经历过部分成交，然后才达到的cancnel，所以得到cancel不能只认为是cancel，还需要判断有没有部分成交过。
-         * 这时候需要补状态，补一个on rtn order，一个on rtn trade。
-         * 这种情况仅cancel才有, 部分成交和全成交没有此问题。
-         * 当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
-         * 不清楚websocket会不会有这个问题，先做同样的处理
-         */
-        //虽然是撤单状态，但是已经成交的数量和上一次记录的数量不一样，期间一定发生了部分成交. 要补发 LF_CHAR_PartTradedQueueing
-        if(responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded) {
-            //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
-            std::string strOrderID = orderStatusIterator->remoteOrderId;
-            strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
+    //emit the LF_CHAR_Canceled status
+    LFRtnOrderField rtn_order;
+    memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 
-            rtn_order.OrderStatus = LF_CHAR_PartTradedNotQueueing;
-            rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
-            //first send onRtnOrder about the status change or VolumeTraded change
-            strcpy(rtn_order.ExchangeID, "kraken");
-            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-            rtn_order.Direction = responsedOrderStatus.Direction;
-            //No this setting on Kraken
-            rtn_order.TimeCondition = LF_CHAR_GTC;
-            rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
-            strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-            rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
-            rtn_order.LimitPrice = responsedOrderStatus.price;
-            //剩余数量
-            rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
+    std::string strOrderID = orderStatusIterator->remoteOrderId;
+    strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
 
-            //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
-            //on_rtn_order(&rtn_order);
-            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
-                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+    rtn_order.OrderStatus = LF_CHAR_Canceled;
+    rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
+
+    //first send onRtnOrder about the status change or VolumeTraded change
+    strcpy(rtn_order.ExchangeID, "kraken");
+    strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+    strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
+    rtn_order.Direction = responsedOrderStatus.Direction;
+    //Kraken has no this setting
+    rtn_order.TimeCondition = LF_CHAR_GTC;
+    rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
+    strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
+    rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
+    rtn_order.LimitPrice = responsedOrderStatus.price;
+    //剩余数量
+    rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
+
+    on_rtn_order(&rtn_order);
+    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),source_id, 
+        MSG_TYPE_LF_RTN_TRADE_KRAKEN,1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
+
+    KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
+        << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
 
 
-            //send OnRtnTrade
-            LFRtnTradeField rtn_trade;
-            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-            strcpy(rtn_trade.ExchangeID, "kraken");
-            strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
-            strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
-            rtn_trade.Direction = rtn_order.Direction;
-            double oldAmount = (double)orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
-            double newAmount = (double)rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
-
-            //calculate the volumn and price (it is average too)
-            rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
-            rtn_trade.Price =(price + 0.000000001)*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
-            strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
-            on_rtn_trade(&rtn_trade);
-            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
-
-            KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
-                                                                  << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
-
-
-        }
-
-        //emit the LF_CHAR_Canceled status
-        LFRtnOrderField rtn_order;
-        memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-
-        std::string strOrderID = orderStatusIterator->remoteOrderId;
-        strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
-
-        rtn_order.OrderStatus = LF_CHAR_Canceled;
-        rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
-
-        //first send onRtnOrder about the status change or VolumeTraded change
-        strcpy(rtn_order.ExchangeID, "kraken");
-        strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-        strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-        rtn_order.Direction = responsedOrderStatus.Direction;
-        //Kraken has no this setting
-        rtn_order.TimeCondition = LF_CHAR_GTC;
-        rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
-        strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-        rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
-        rtn_order.LimitPrice = responsedOrderStatus.price;
-        //剩余数量
-        rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
-
-        on_rtn_order(&rtn_order);
-        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
-                                1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-        KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
-                                                            << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
-
-
-        //third, update last status for next query_order
-        orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-        orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-        orderStatusIterator->averagePrice = newAveragePrice;
-
-    }else{
-        //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
-        LFRtnOrderField rtn_order;
-        memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-
-        std::string strOrderID = orderStatusIterator->remoteOrderId;
-        strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
-
-        KF_LOG_INFO(logger, "[handlerResponseOrderStatus] VolumeTraded Change  LastOrderPsp:" << orderStatusIterator->VolumeTraded << ", NewOrderRsp: " << responsedOrderStatus.VolumeTraded  <<
-                                                                                              " NewOrderRsp.Status " << responsedOrderStatus.OrderStatus);
-        if(responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched && responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded) {
-            rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
-        } else{
-            rtn_order.OrderStatus = responsedOrderStatus.OrderStatus;
-        }
-        rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
-
-        //first send onRtnOrder about the status change or VolumeTraded change
-        strcpy(rtn_order.ExchangeID, "kraken");
-        strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-        strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-        rtn_order.Direction = responsedOrderStatus.Direction;
-        //No this setting on Kraken
-        rtn_order.TimeCondition = LF_CHAR_GTC;
-        rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
-        strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-        rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
-        rtn_order.LimitPrice = responsedOrderStatus.price;
-        rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
-
-        on_rtn_order(&rtn_order);
-        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
-                                1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-        KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
-                                                            << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
-
-        int64_t newAveragePrice = responsedOrderStatus.averagePrice;
-        //second, if the status is PartTraded/AllTraded, send OnRtnTrade
-        if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
-           (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-            && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
-        {
-            LFRtnTradeField rtn_trade;
-            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-            strcpy(rtn_trade.ExchangeID, "kraken");
-            strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
-            strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
-            rtn_trade.Direction = rtn_order.Direction;
-            double oldAmount = (double)orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
-            double newAmount = (double)rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
-
-            //calculate the volumn and price (it is average too)
-            rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
-            rtn_trade.Price = (price + 0.000000001)*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
-            strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
-            on_rtn_trade(&rtn_trade);
-            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
-
-            KF_LOG_INFO(logger, "[on_rtn_trade] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
-                                                                << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
-
-        }
-        //third, update last status for next query_order
-        orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-        orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-        orderStatusIterator->averagePrice = newAveragePrice;
-    }
+    orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
+    orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
+    orderStatusIterator->averagePrice = newAveragePrice;
 }
 void TDEngineKraken::handleResponseOrderStatus(AccountUnitKraken& unit, LFRtnOrderField& rtn_order, 
                                         Document& json){
