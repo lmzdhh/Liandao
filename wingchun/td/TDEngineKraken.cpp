@@ -1168,7 +1168,7 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
         if(d.HasMember("error") && d["error"].Size()==0)
         {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
-            rapidjson::Value &data = d["result"].GetObject();
+            rapidjson::Value data = d["result"].GetObject();
             ResponsedOrderStatus responsedOrderStatus;
             responsedOrderStatus.ticker = ticker;
             //已成交总金额
@@ -1177,7 +1177,7 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
             double dDealSize = std::stod(data["vol_exec"].GetString());
             responsedOrderStatus.averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
             responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
-            rapidjson::Value &descr=data["descr"].GetObject();
+            rapidjson::Value descr=data["descr"].GetObject();
             //报单价格条件
             responsedOrderStatus.OrderPriceType = GetPriceType(descr["ordertype"].GetString());
             //买卖方向
