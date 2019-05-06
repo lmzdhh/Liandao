@@ -647,7 +647,7 @@
 						"xbt_eur": "XBTEUR",
 				    "atom_xbt": "ATOMXBT",
 				    "dash_eur": "DASHEUR",
-						"xbt_ltc": "XBTLTC"
+						"atom_eth": "ATOMETH"
 					},
 					"rest_get_interval_ms": 2000
 				},
