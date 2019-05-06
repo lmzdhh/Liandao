@@ -1091,7 +1091,10 @@ void TDEngineKraken::req_order_action(const LFOrderActionField* data, int accoun
     Document d;
     cancel_order(unit, ticker, remoteOrderId, d);
 
-    if(!d.HasParseError() && d.HasMember("error")&&d["error"].Size()!=0) {
+    if(!d.HasParseError() && d.HasMember("error")&&d["error"].Size()==0) {
+        errorId = 0;
+        KF_LOG_INFO(logger,"[req_order_action] (response) " << parseJsonToString(d));
+    }else{
         errorId = 520;
         if (d.HasMember("error") && d["error"].IsArray()) {
             int i;
