@@ -44,6 +44,9 @@ using utils::crypto::base64_encode;
 
 USING_WC_NAMESPACE
 
+//wait for reply from upbit about the server problem
+//
+//
 TDEngineUpbit::TDEngineUpbit(): ITDEngine(SOURCE_UPBIT)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.Upbit");
