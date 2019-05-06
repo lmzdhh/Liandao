@@ -1189,7 +1189,7 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
             handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
 
             //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
-            remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
+            remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->BusinessUnit);
         } else {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
             std::string errorMsg;
@@ -1224,10 +1224,10 @@ void TDEngineKraken::addNewQueryOrdersAndTrades(AccountUnitKraken& unit, LFRtnOr
 
     unit.newOrderStatus.push_back(rtnOrder);
 
-    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << status.InstrumentID
-                                                                       << " (OrderRef) " << status.OrderRef
-                                                                       << " (remoteOrderId) " << status.remoteOrderId
-                                                                       << "(VolumeTraded)" << VolumeTraded);
+    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << rtnOrder.InstrumentID
+                                                                       << " (OrderRef) " << rtnOrder.OrderRef
+                                                                       << " (remoteOrderId) " << rtnOrder.BusinessUnit
+                                                                       << "(VolumeTraded)" << rtnOrder.VolumeTraded);
 }
 
 
@@ -1486,7 +1486,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     //orderStatusIterator.VolumeTraded;
     //剩余未成交数量
     orderStatusIterator->VolumeTotal = responsedOrderStatus.volume-orderStatusIterator->VolumeTraded;
-    on_rtn_order(orderStatusIterator);
+    on_rtn_order(&(*orderStatusIterator));
     raw_writer->write_frame(orderStatusIterator, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
         1, (orderStatusIterator->RequestID > 0) ? orderStatusIterator->RequestID: -1);
 
@@ -1499,8 +1499,8 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
     rtn_trade.Direction = orderStatusIterator->Direction;
     //单次成交数量
-    rtn_trade.Volume = nDealSize;
-    rtn_trade.Price =std::round(std::stod(data["price"].GetString())*scale_offset);//(newAmount - oldAmount)/(rtn_trade.Volume);
+    rtn_trade.Volume = responsedOrderStatus.VolumeTraded;
+    rtn_trade.Price =std::round(std::stod(ResponsedOrderStatus.price)*scale_offset);//(newAmount - oldAmount)/(rtn_trade.Volume);
     strncpy(rtn_trade.OrderSysID,orderStatusIterator->BusinessUnit,31);
     on_rtn_trade(&rtn_trade);
 
