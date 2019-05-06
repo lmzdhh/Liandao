@@ -572,7 +572,7 @@ void TDEngineKraken::getPriceVolumePrecision(AccountUnitKraken& unit){
     const auto response = Get("/0/public/AssetPairs","","",unit);
     json.Parse(response.text.c_str());
     int errLen=json["error"].Size();
-    if(json.HasMember("result") && errLen == 0){
+    if(json.HasMember("result") && errLen == 0 &&json["result"].IsObject()){
         rapidjson::Value result=json["result"].GetObject();
         for (rapidjson::Value::ConstMemberIterator itr = result.MemberBegin();itr != result.MemberEnd(); ++itr){
             auto key = (itr->name).GetString();
@@ -841,7 +841,7 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
     //{"error":[],"result":{"ZEUR":"10.0000"}}
     std::vector<LFRspPositionField> tmp_vector;
     KF_LOG_INFO(logger, "[req_investor_position] (result)");
-    if(!d.HasParseError() && d.HasMember("result"))
+    if(!d.HasParseError() && d.HasMember("result")&&d["result"].IsObject())
     {
         Value accounts = d["result"].GetObject();
         for (rapidjson::Value::ConstMemberIterator itr = accounts.MemberBegin();itr != accounts.MemberEnd(); ++itr){
@@ -851,8 +851,9 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
             pos.Position = std::round(std::stod(itr->value.GetString()) * scale_offset);
             tmp_vector.push_back(pos);
             KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId 
-                            << " (symbol) " << symbol << " (position) " << pos.Position);
+                << " (symbol) " << symbol << " (position) " << pos.Position);
         }
+        
     }
 
     //send the filtered position
@@ -958,7 +959,8 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
         errorMsg = "send_order http response has parse error or is not json. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                            errorId << " (errorMsg) " << errorMsg);
-    } else  if(d.HasMember("result")){//发单成功
+    } else  if(d.HasMember("result")&&d["result"].IsObject()){//发单成功
+        
         rapidjson::Value result=d["result"].GetObject();
         int errLen=d["error"].Size();
         KF_LOG_INFO(logger,"[req_order_insert] (errorLen) "<<errLen);
@@ -1153,13 +1155,9 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
             continue;
         }
         KF_LOG_INFO(logger, "[retrieveOrderStatus] query_order:");
-        if(d.HasMember("error") && d["error"].Size()==0)
+        if(d.HasMember("error") && d["error"].Size()==0&&d["result"].IsObject())
         {
             rapidjson::Value data = d["result"].GetObject();
-            if(data.HasParseError()||!data.IsObject()){
-                KF_LOG_INFO(logger, "[retrieveOrderStatus] (query no status)");
-                continue;
-            }
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
             ResponsedOrderStatus responsedOrderStatus;
             responsedOrderStatus.ticker = ticker;
