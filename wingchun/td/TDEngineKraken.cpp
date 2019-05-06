@@ -1400,7 +1400,7 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, string userref, string 
     do {
         should_retry = false;
         string path = "/0/private/AddOrder";
-        string postData=createInsertOrdertring(code, type, side,price,volume,"",userref);
+        string postData=createInsertOrdertring(code, side, type, price,volume,"",userref);
 
         response = Post(path,postData,postData,unit);
 
