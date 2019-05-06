@@ -43,6 +43,8 @@ using utils::crypto::base64_encode;
 USING_WC_NAMESPACE
 static TDEngineHitBTC* global_md = nullptr;
 
+std::recursive_mutex insertMapMutex;
+std::recursive_mutex actionMapMutex;
 
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
@@ -1298,36 +1300,64 @@ void TDEngineHitBTC::req_order_insert(const LFInputOrderField* data, int account
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
 
-    if(errorId != 0)
-    {
-        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-    }
-    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_MOCK, 1, requestId, errorId, errorMsg.c_str());
+    //Price (Not required for market orders)
+    double price = data->LimitPrice*1.0/scale_offset;
 
+    double size = data->Volume*1.0/scale_offset;
+    //amount	decimal string	Positive for buy, Negative for sell
+    if (LF_CHAR_Sell == data->Direction) {
+        size = size * -1;
+    }
+
+    std::string priceStr;
+    std::stringstream convertPriceStream;
+    convertPriceStream <<std::fixed << std::setprecision(8) << price;
+    convertPriceStream >> priceStr;
+
+    std::string sizeStr;
+    std::stringstream convertSizeStream;
+    convertSizeStream <<std::fixed << std::setprecision(8) << size;
+    convertSizeStream >> sizeStr;
+
+//type limit, market, stopLimit, stopMarket
+    std::string type = GetType(data->OrderPriceType);
+
+
+    int cid = atoi(data->OrderRef);
+    std::string dateStr = getDateStr();
+
+    KF_LOG_INFO(logger, "[send_order] (ticker) " << ticker << " (type) " <<
+                                                 type << " (size) "<< sizeStr << " (price) "<< priceStr
+                                                 << " (cid) " << cid << " (dateStr) "<< dateStr);
+
+    std::string insertOrderJsonString = createInsertOrderJsonString(0, cid, type, ticker, sizeStr, priceStr);
+    addPendingSendMsg(unit, insertOrderJsonString);
+    //emit e event for websocket callback
+    lws_callback_on_writable(unit.websocketConn);
 
     LFRtnOrderField rtn_order;
     memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-    rtn_order.OrderStatus = LF_CHAR_OrderInserted;
-    rtn_order.VolumeTraded = 0;
-
-    //first send onRtnOrder about the status change or VolumeTraded change
-    strcpy(rtn_order.ExchangeID, "mock");
+    strcpy(rtn_order.ExchangeID, "bitfinex");
     strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+    rtn_order.OrderStatus = LF_CHAR_Unknown;
     strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
-    rtn_order.Direction = LF_CHAR_Buy;
-    //No this setting on coinmex
-    rtn_order.TimeCondition = LF_CHAR_GTC;
-    rtn_order.OrderPriceType = LF_CHAR_AnyPrice;
+    rtn_order.VolumeTraded = 0;
+    rtn_order.Direction = data->Direction;
+    rtn_order.TimeCondition = data->TimeCondition;
+    rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, data->OrderRef, 13);
     rtn_order.VolumeTotalOriginal = data->Volume;
-    rtn_order.LimitPrice = std::round(data->LimitPrice);
-    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
+    rtn_order.LimitPrice = data->LimitPrice;
+    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal;
 
-    on_rtn_order(&rtn_order);
-    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                            source_id, MSG_TYPE_LF_RTN_ORDER_HITBTC,
-                            1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
+    OrderInsertData cache;
+    cache.requestId = requestId;
+    cache.remoteOrderId = 0;
+    cache.dateStr = dateStr;
+    memcpy(&cache.rtnOrder, &rtn_order, sizeof(LFRtnOrderField));
+    memcpy(&cache.data, data, sizeof(LFInputOrderField));
+    std::lock_guard<std::recursive_mutex> lck(insertMapMutex);
+    CIDorderInsertData.insert(std::pair<int, OrderInsertData>(cid, cache));
 }
 
 

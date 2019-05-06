@@ -85,6 +85,8 @@ struct AccountUnitHitBTC
             //            如果撤单时发现有orderid  会优先使用orderid ，没有orderid 的时候，才会使用clientid + date
             //            这种情况可能发生在 我们发单以后， on-req还没有来得及返回orderid，我们就发送撤单指令了
             std::string dateStr;
+
+            LFRtnOrderField rtnOrder;
         };
 
         struct OrderActionData
