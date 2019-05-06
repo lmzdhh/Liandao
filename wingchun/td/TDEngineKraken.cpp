@@ -1487,8 +1487,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     //剩余未成交数量
     orderStatusIterator->VolumeTotal = responsedOrderStatus.volume-orderStatusIterator->VolumeTraded;
     on_rtn_order(&(*orderStatusIterator));
-    raw_writer->write_frame(orderStatusIterator, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
-        1, (orderStatusIterator->RequestID > 0) ? orderStatusIterator->RequestID: -1);
+    raw_writer->write_frame(&(*orderStatusIterator), sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,1, (orderStatusIterator->RequestID > 0) ? orderStatusIterator->RequestID: -1);
 
     //send OnRtnTrade
     LFRtnTradeField rtn_trade;
@@ -1500,7 +1499,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     rtn_trade.Direction = orderStatusIterator->Direction;
     //单次成交数量
     rtn_trade.Volume = responsedOrderStatus.VolumeTraded;
-    rtn_trade.Price =std::round(std::stod(ResponsedOrderStatus.price)*scale_offset);//(newAmount - oldAmount)/(rtn_trade.Volume);
+    rtn_trade.Price = responsedOrderStatus.price;
     strncpy(rtn_trade.OrderSysID,orderStatusIterator->BusinessUnit,31);
     on_rtn_trade(&rtn_trade);
 
