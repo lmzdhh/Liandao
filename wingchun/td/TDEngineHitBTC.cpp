@@ -1278,6 +1278,12 @@ void TDEngineHitBTC::req_qry_account(const LFQryAccountField *data, int account_
 
 
 
+std::string zeroPadNumber(int num)
+{
+    std::ostringstream ss;
+    ss << std::setw( 9 ) << std::setfill( '0' ) << num;
+    return ss.str();
+}
 void TDEngineHitBTC::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     AccountUnitHitBTC& unit = account_units[account_index];
@@ -1336,7 +1342,8 @@ void TDEngineHitBTC::req_order_insert(const LFInputOrderField* data, int account
                                                  type << " (size) "<< sizeStr << " (price) "<< priceStr
                                                  << " (cid) " << cid << " (dateStr) "<< dateStr);
 
-    std::string insertOrderJsonString = createInsertOrderJsonString(0, requestId, type, ticker, sizeStr, priceStr, sideStr);
+    std::string clientorderId = zeroPadNumber(cid);
+    std::string insertOrderJsonString = createInsertOrderJsonString(0, clientorderId, type, ticker, sizeStr, priceStr, sideStr);
     addPendingSendMsg(unit, insertOrderJsonString);
     //emit e event for websocket callback
     lws_callback_on_writable(unit.websocketConn);
@@ -1567,7 +1574,7 @@ std::string TDEngineHitBTC::createSubReportJsonString()
 //  "id": 123
 //}
 
-std::string TDEngineHitBTC::createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr,
+std::string TDEngineHitBTC::createInsertOrderJsonString(int gid, std::string clientOrderId, std::string type, std::string symbol, std::string amountStr,
         std::string priceStr, std::string sideStr)
 {
     StringBuffer s;
@@ -1582,7 +1589,7 @@ std::string TDEngineHitBTC::createInsertOrderJsonString(int gid, int cid, std::s
     writer.StartObject();
 
     writer.Key("clientOrderId");
-    writer.String(std::to_string(cid).c_str());
+    writer.String(clientOrderId.c_str());
 
     writer.Key("symbol");
     writer.String(symbol.c_str());

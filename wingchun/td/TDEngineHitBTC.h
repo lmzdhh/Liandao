@@ -151,7 +151,7 @@ private:
 
     std::string createAuthJsonString(AccountUnitHitBTC& unit );
     std::string parseJsonToString(Document &d);
-    std::string createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr,
+    std::string createInsertOrderJsonString(int gid, std::string clientOrderId, std::string type, std::string symbol, std::string amountStr,
             std::string priceStr, std::string sideStr);
     std::string createCancelOrderIdJsonString(std::string orderId);
     std::string createCancelOrderCIdJsonString(int cid, std::string dateStr);
