@@ -23,15 +23,6 @@ WC_NAMESPACE_START
  * account information unit extra is here.
  */
 
-struct PendingOrderStatus
-{
-    char_31 InstrumentID = {0};   //合约代码
-    char_21 OrderRef = {0};       //报单引用
-    LfOrderStatusType OrderStatus = LF_CHAR_NotTouched;  //报单状态
-    uint64_t VolumeTraded = 0;  //今成交数量
-    int64_t averagePrice = 0;// given averagePrice on response of query_order
-    std::string remoteOrderId;// sender_order response order id://{"orderId":19319936159776,"result":true}
-};
 struct OrderActionSentTime
 {
     LFOrderActionField data;
@@ -95,8 +86,8 @@ struct AccountUnitKraken
     string baseUrl;
     // internal flags
     bool    logged_in;
-    std::vector<PendingOrderStatus> newOrderStatus;
-    std::vector<PendingOrderStatus> pendingOrderStatus;
+    std::vector<LFRtnOrderField> newOrderStatus;
+    std::vector<LFRtnOrderField> pendingOrderStatus;
     std::map<std::string,PriceVolumePrecision> mapPriceVolumePrecision;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
@@ -154,13 +145,11 @@ private:
     virtual void set_reader_thread() override;
     void loop();
     void GetAndHandleOrderTradeResponse();
-    void addNewQueryOrdersAndTrades(AccountUnitKraken& unit, const char_31 InstrumentID,
-                                    const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                    const uint64_t VolumeTraded, const std::string& remoteOrderId);
+    void addNewQueryOrdersAndTrades(AccountUnitKraken& unit, LFRtnOrderField rtnOrder, std::string& remoteOrderId);
 
     void retrieveOrderStatus(AccountUnitKraken& unit);
     void moveNewOrderStatusToPending(AccountUnitKraken& unit);
-    void handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, 
+    void handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<LFRtnOrderField>::iterator orderStatusIterator, 
                                         ResponsedOrderStatus& responsedOrderStatus);
     void handleResponseOrderStatus(AccountUnitKraken& unit, LFRtnOrderField& rtn_order, 
                                         Document& json);
@@ -171,7 +160,7 @@ private:
     void get_account(AccountUnitKraken& unit, Document& json);
     void send_order(AccountUnitKraken& unit, string userref, string code,
                         string side, string type, string volume, string price, Document& json);
-    void cancel_all_orders(AccountUnitKraken& unit, std::string code, Document& json);
+
     void cancel_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json);
     void query_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
