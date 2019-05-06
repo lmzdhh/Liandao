@@ -534,7 +534,7 @@ TradeAccount TDEngineKraken::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     //printResponse(json);
-    //cancel_order(unit,"code","1",json);
+    cancel_order(unit,"code","OU4JZ4-CHRYX-QZQ7XH",json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
     // set up
@@ -960,9 +960,10 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
     } else  if(d.HasMember("result")){//发单成功
         rapidjson::Value result=d["result"].GetObject();
         int errLen=d["error"].Size();
+        KF_LOG_INFO(logger,"[req_order_insert] (errorLen) "<<errLen);
         if(errLen == 0) {
             //if send successful and the exchange has received ok, then add to  pending query order list
-            std::string remoteOrderId = result["txid"].GetString();
+            std::string remoteOrderId = result["txid"].GetArray()[0].GetString();
             //fix defect of use the old value
             localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
