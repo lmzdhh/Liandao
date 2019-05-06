@@ -34,7 +34,7 @@ def initialize(context):
 def on_pos(context, pos_handler, request_id, source, rcv_time):
     print("on_pos,", pos_handler, request_id, source, rcv_time)
     if request_id == -1:
-        if pos_handler is None:
+        if pos_handler is None:createInsertOrderJsonString
             print '-- got no pos in initial, so req pos --'
             context.req_pos(source=SOURCE.HITBTC)
             context.pos_set = False
