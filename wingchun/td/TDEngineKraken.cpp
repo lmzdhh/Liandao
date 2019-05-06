@@ -534,7 +534,8 @@ TradeAccount TDEngineKraken::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     //printResponse(json);
-    cancel_order(unit,"code","OU4JZ4-CHRYX-QZQ7XH",json);
+    cancel_order(unit,"code","OGA5CZ-SKUCW-7XFQ7F",json);
+    cancel_order(unit,"code","OUTKRJ-5PSEU-7VP4RJ",json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
     // set up
@@ -1154,8 +1155,12 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
         KF_LOG_INFO(logger, "[retrieveOrderStatus] query_order:");
         if(d.HasMember("error") && d["error"].Size()==0)
         {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
             rapidjson::Value data = d["result"].GetObject();
+            if(data.HasParseError()||!data.IsObject()){
+                KF_LOG_INFO(logger, "[retrieveOrderStatus] (query no status)");
+                continue;
+            }
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
             ResponsedOrderStatus responsedOrderStatus;
             responsedOrderStatus.ticker = ticker;
             //已成交总金额
@@ -1413,17 +1418,17 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, string userref, string 
 bool TDEngineKraken::shouldRetry(Document& doc)
 {
     bool ret = false;
-    std::string strCode ;
-    if(doc.HasMember("status"))
+    int errLen = 0;
+    if(doc.HasMember("error"))
     {
-        strCode = doc["status"].GetString();
+        errLen = doc["error"].Size();
     }
     bool isObJect = doc.IsObject();
-    if(!isObJect || strCode != "ok")
+    if(!isObJect || errLen != 0)
     {
         ret = true;
     }
-    KF_LOG_INFO(logger, "[shouldRetry] isObJect = " << isObJect << ",strCode = " << strCode);
+    KF_LOG_INFO(logger, "[shouldRetry] isObJect = " << isObJect << ",errLen = " << errLen);
     return ret;
 }
 
