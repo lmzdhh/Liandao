@@ -1374,11 +1374,23 @@ std::int32_t  TDEngineUpbit::cancel_order(AccountUnitUpbit& unit, const char *sy
         else if(strcmp(json["state"].GetString(),"cancel")&&strcmp(json["state"].GetString(),"done"))//撤单动作未起效
         {
             should_retry = true;
-            retry_times++;
-            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds/2));
-            KF_LOG_INFO(logger,"(retry_times)"<<retry_times<<"(timeConsumed)"<<(getTimestamp()-start)<<"ms");
-            get_order(unit,uuid,json);
-            std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds/2));
+            //retry_times++;
+            int count = 0;
+            while (1)
+            {
+                count++;
+                if (count==16) break;
+                std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds / 15));//等待一段时间
+                //KF_LOG_INFO(logger,"(retry_times)"<<retry_times<<"(timeConsumed)"<<(getTimestamp()-start)<<"ms");
+                KF_LOG_INFO(logger,"(timeConsumed)" << (getTimestamp() - start) << "ms");
+                get_order(unit, uuid, json);//查询订单状态
+                //std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds/2));
+                if (!strcmp(json["state"].GetString(), "cancel") || !strcmp(json["state"].GetString(), "done"))
+                {
+                    should_retry = false;
+                    break;
+                }
+            }
         }
         if (retry_times >= max_rest_retry_times) break;
     } while(should_retry);
