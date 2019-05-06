@@ -28,7 +28,8 @@ enum exchange_source_index : short
 	SOURCE_OCEANEXB = 27,
     SOURCE_PROBIT = 28,
     SOURCE_BITHUMB = 29,
-    SOURCE_DAYBIT = 31  
+    SOURCE_DAYBIT = 31,
+    SOURCE_BITFLYER= 33  
 };
 
 inline const char* get_str_from_source_index(exchange_source_index source)
@@ -69,6 +70,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "bithumb";
         case SOURCE_DAYBIT:
             return "daybit";
+	case SOURCE_BITFLYER:
+	    return "bitflyer";
 		default:
 			return "unknown";
 	}
@@ -144,6 +147,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
 		return SOURCE_BITHUMB;
     }
+    else if(exch_str == "bitflyer")
+    {
+        return SOURCE_BITFLYER;
+    }
     else 
     {
 		return SOURCE_UNKNOWN;
@@ -173,6 +180,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_PROBIT "PROBIT"
 #define EXCHANGE_BITHUMB "BITHUMB"
 #define EXCHANGE_DAYBIT "DAYBIT"
+#define EXCHANGE_BITFLYER "BITFLYER"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -196,6 +204,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_PROBIT  28
 #define EXCHANGE_ID_BITHUMB  29
 #define EXCHANGE_ID_DAYBIT  31
+#define EXCHANGE_ID_BITFLYER  33
 // MsgTypes that used for LF data structure...
 const short MSG_TYPE_LF_MD            = 101;
 const short MSG_TYPE_LF_L2_MD         = 102;
@@ -364,6 +373,17 @@ const short MSG_TYPE_LF_ORDER_DAYBIT     	= 31204;
 const short MSG_TYPE_LF_RTN_ORDER_DAYBIT 	= 31205;
 const short MSG_TYPE_LF_RTN_TRADE_DAYBIT 	= 31206;
 const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
+
+//BITFLYER, idx=33
+const short MSG_TYPE_LF_MD_BITFLYER               = 33101;
+const short MSG_TYPE_LF_QRY_POS_BITFLYER          = 33201;
+const short MSG_TYPE_LF_RSP_POS_BITFLYER          = 33202;
+const short MSG_TYPE_LF_ORDER_BITFLYER            = 33204;
+const short MSG_TYPE_LF_RTN_ORDER_BITFLYER        = 33205;
+const short MSG_TYPE_LF_RTN_TRADE_BITFLYER        = 33206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITFLYER = 33207;
+
+
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
 ///////////////////////////////////

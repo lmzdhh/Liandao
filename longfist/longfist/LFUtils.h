@@ -53,6 +53,9 @@ inline std::string getExchangeName(short exchange_id)
 			return EXCHANGE_BITHUMB;
 		case EXCHANGE_ID_DAYBIT:
 			return EXCHANGE_DAYBIT;
+                case EXCHANGE_ID_BITFLYER:
+                        return EXCHANGE_BITFLYER;
+
 		default:
 			return "";
 	}
@@ -103,6 +106,9 @@ inline int getExchangeId(std::string exchange_name)
 		return EXCHANGE_ID_BITHUMB;
 	else if (exchange_name.compare(EXCHANGE_DAYBIT) == 0) 
 		return EXCHANGE_ID_DAYBIT;
+        else if (exchange_name.compare(EXCHANGE_BITFLYER) == 0)
+                return EXCHANGE_ID_BITFLYER;
+
 	return -1;
 }
 
@@ -142,6 +148,9 @@ inline JournalPair getMdJournalPair(short source)
 			return { "/shared/kungfu/journal/MD/BITHUMB/", "MD_BITHUMB" };
 		case 31:
 			return{ "/shared/kungfu/journal/MD/DAYBIT/", "MD_DAYBIT" };
+                case 33:
+                        return {"/shared/kungfu/journal/MD/BITFLYER/", "MD_BITFLYER"};
+
 		default:
 			return {"", ""};
 	}
@@ -179,6 +188,9 @@ inline JournalPair getMdRawJournalPair(short source)
                    	return{ "/shared/kungfu/journal/MD_RAW/BITHUMB/", "MDRAW_BITHUMB" };
 		case 31:
 			return{ "/shared/kungfu/journal/MD_RAW/DAYBIT/", "MDRAW_DAYBIT" };
+                case 33:
+                        return{ "/shared/kungfu/journal/MD_RAW/BITFLYER/", "MDRAW_BITFLYER" };
+
 		default:
 			return {"", ""};
 	}
@@ -218,6 +230,9 @@ inline JournalPair getTdJournalPair(short source)
 			return {"/shared/kungfu/journal/TD/BITHUMB/", "TD_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD/DAYBIT/", "TD_DAYBIT"};
+                case 33:
+                        return {"/shared/kungfu/journal/TD/BITFLYER/", "TD_BITFLYER"};
+
 		default:
 			return {"", ""};
 	}
@@ -257,6 +272,8 @@ inline JournalPair getTdSendJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_SEND/BITHUMB/", "TD_SEND_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD_SEND/DAYBIT/", "TD_SEND_DAYBIT"};
+                case 33:
+                        return {"/shared/kungfu/journal/TD_SEND/BITFLYER/", "TD_SEND_BITFLYER"};
 		default:
 			return {"", ""};
 	}
@@ -296,6 +313,8 @@ inline JournalPair getTdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_RAW/BITHUMB/", "TD_RAW_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD_RAW/DAYBIT/", "TD_RAW_DAYBIT"};
+                case 33:
+                        return {"/shared/kungfu/journal/TD_RAW/BITFLYER/", "TD_RAW_BITFLYER"};
 		default:
 			return {"", ""};
 	}
@@ -335,6 +354,8 @@ inline JournalPair getTdQJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_Q/BITHUMB/", "TD_Q_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD_Q/DAYBIT/", "TD_Q_DAYBIT"};
+                case 33:
+                        return {"/shared/kungfu/journal/TD_Q/BITFLYER/", "TD_Q_BITFLYER"};
 		default:
 			return {"", ""};
 	}

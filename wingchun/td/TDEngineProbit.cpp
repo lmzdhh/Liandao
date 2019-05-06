@@ -754,23 +754,24 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
 	{
         document.AddMember("time_in_force", StringRef("gtc"), allocator);
 	    document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
-	    document.AddMember("cost", nullObject,allocator);
+	 /*   document.AddMember("cost", nullObject,allocator);*/
+		document.AddMember("limit_price", StringRef(priceStr.c_str()), allocator);
 	}
 	else
 	{
         document.AddMember("time_in_force", StringRef("ioc"), allocator);
 		if (strcmp(side, "buy") == 0)
 		{
-			document.AddMember("quantity", StringRef(""), allocator);
+		/*	document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);*/
 			document.AddMember("cost", StringRef(costStr.c_str()), allocator);
 		}
 		else
 		{
 			document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
-			document.AddMember("cost", StringRef(""), allocator);
+			document.AddMember("cost", StringRef("0.00000001"), allocator);
 		}
 	}
-    document.AddMember("limit_price", StringRef(priceStr.c_str()), allocator);
+  /*  document.AddMember("limit_price", StringRef(priceStr.c_str()), allocator);*/
     std::string client_id = clientId;
     document.AddMember("client_order_id", StringRef(client_id.c_str()), allocator);
     StringBuffer jsonStr;

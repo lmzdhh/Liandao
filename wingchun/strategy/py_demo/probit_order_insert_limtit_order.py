@@ -45,13 +45,13 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.print_pos(pos_handler)
             #context.stop()
             print '----will test buy cancel----'
-            context.buy_price = 100000000 #market_data.LowerLimitPrice
-            context.sell_price = 999999999 #market_data.UpperLimitPrice
+            context.buy_price = 10400000 #market_data.LowerLimitPrice
+            #context.sell_price = 999999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
-                context.order_rid = context.insert_market_order(source=SOURCE.PROBIT,
+                context.order_rid = context.insert_limit_order(source=SOURCE.PROBIT,
                                                                ticker=context.ticker,
-                                                             #  price=context.buy_price,
+                                                               price=context.buy_price,
                                                                exchange_id=context.exchange_id,
                                                                volume=100000000,
                                                                direction=DIRECTION.Buy,
@@ -75,8 +75,8 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
 def on_tick(context, market_data, source, rcv_time):
     print('market_data', market_data)
     if market_data.InstrumentID == context.ticker:
-        # context.buy_price = 001000000 #market_data.LowerLimitPrice
-        context.sell_price = 99999999 #market_data.UpperLimitPrice
+         context.buy_price = 16800000000 #market_data.LowerLimitPrice
+        #context.sell_price = 99999999 #market_data.UpperLimitPrice
         # if context.order_rid < 0:
         #     print("context.insert_limit_order 1.")
         #     context.order_rid = context.insert_limit_order(source=SOURCE.PROBIT,
@@ -91,9 +91,9 @@ def on_tick(context, market_data, source, rcv_time):
 def on_rtn_order(context, rtn_order, order_id, source, rcv_time):
     print('----on rtn order----',rtn_order, ' order_id ', order_id)
     if order_id == context.order_rid and context.cancel_id < 0 and rtn_order.OrderStatus != 'a':
-        print('send cancel order, but is no time, cancel will be fail')
-        #context.cancel_id = context.cancel_order(source=source, order_id=order_id)
-        #print 'cancel (order_id)', order_id, ' (request_id)', context.cancel_id
+        #print('send cancel order, but is no time, cancel will be fail')
+        context.cancel_id = context.cancel_order(source=source, order_id=order_id)
+        print 'cancel (order_id)', order_id, ' (request_id)', context.cancel_id
     if order_id == context.order_rid and rtn_order.OrderStatus == '5':
         print 'cancel successfully!'
         context.stop()

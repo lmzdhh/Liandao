@@ -31,6 +31,7 @@ class SOURCE:
     PROBIT = 28
     BITHUMB = 29
     DAYBIT = 31
+    BITFLYER = 33
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
