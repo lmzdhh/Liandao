@@ -1313,7 +1313,7 @@ bool TDEngineKraken::shouldRetry(Document& doc)
     if(!doc.IsObject()||(errLen==0&&!doc["result"].IsObject())){
         ret = true;
     }
-    KF_LOG_INFO(logger, "[shouldRetry] isObJect = " << isObJect << ",errLen = " << errLen);
+    KF_LOG_INFO(logger, "[shouldRetry] ret = " << ret << ", errLen = " << errLen);
     return ret;
 }
 
