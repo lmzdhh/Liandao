@@ -1310,9 +1310,7 @@ bool TDEngineKraken::shouldRetry(Document& doc)
     {
         errLen = doc["error"].Size();
     }
-    bool isObJect = doc.IsObject();
-    if(!isObJect || errLen != 0)
-    {
+    if(!doc.IsObject()||(errLen==0&&!doc["result"].IsObject())){
         ret = true;
     }
     KF_LOG_INFO(logger, "[shouldRetry] isObJect = " << isObJect << ",errLen = " << errLen);
@@ -1353,7 +1351,7 @@ void TDEngineKraken::cancel_order(AccountUnitKraken& unit, std::string code, std
 }
 void TDEngineKraken::query_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json)
 {
-    KF_LOG_INFO(logger, "[query_order]");
+    KF_LOG_INFO(logger, "[query_order] start");
     //kraken查询订单详情
     string getPath = "/0/private/QueryOrders";
     string s1="trades=",s2="userref=",s3="txid=";
@@ -1361,8 +1359,7 @@ void TDEngineKraken::query_order(AccountUnitKraken& unit, std::string code, std:
 
     auto response = Post(getPath,postData,postData,unit);
     json.Parse(response.text.c_str());
-    KF_LOG_DEBUG(logger,"[query_order] response "<<response.text.c_str());
-    //getResponse(response.status_code, response.text, response.error.message, json);
+    KF_LOG_INFO(logger, "[query_order] end");
 }
 
 
