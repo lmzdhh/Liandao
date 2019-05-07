@@ -151,8 +151,7 @@ private:
     void moveNewOrderStatusToPending(AccountUnitKraken& unit);
     void handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<LFRtnOrderField>::iterator orderStatusIterator, 
                                         ResponsedOrderStatus& responsedOrderStatus);
-    void handleResponseOrderStatus(AccountUnitKraken& unit, LFRtnOrderField& rtn_order, 
-                                        Document& json);
+
     void loopOrderActionNoResponseTimeOut();
     void orderActionNoResponseTimeOut();
 
@@ -208,7 +207,6 @@ public:
     int on_lws_write_subscribe(struct lws* conn);
     void on_lws_connection_error(struct lws* conn);
     void on_lws_close(struct lws* conn);
-    void on_lws_receive_orders(struct lws* conn,Document& json);
     //websocket deal order status
 
 private:

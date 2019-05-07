@@ -170,38 +170,7 @@ void TDEngineKraken::Pong(struct lws* conn,long long ping){
     strncpy((char *)msg+LWS_PRE, strPong.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 }
-void TDEngineKraken::on_lws_receive_orders(struct lws* conn,Document& json){
-    KF_LOG_INFO(logger,"[on_lws_receive_orders]");
-    std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
-    std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
-    AccountUnitKraken& unit = findAccountUnitKrakenByWebsocketConn(conn);
-    rapidjson::Value &data=json["data"];
-    KF_LOG_INFO(logger, "[on_lws_receive_orders] receive_order:");
-    if(data.HasMember("order-id")){
-        KF_LOG_INFO(logger, "[on_lws_receive_orders] (receive success)");
-        string remoteOrderId=std::to_string(data["order-id"].GetInt64());
-        std::map<std::string,LFRtnOrderField>::iterator restOrderStatus=unit.restOrderStatusMap.find(remoteOrderId);
-        if(restOrderStatus==unit.restOrderStatusMap.end()){
-            KF_LOG_ERROR(logger,"[on_lws_receive_orders] rest receive no order id, save int websocketOrderStatusMap");
-            unit.websocketOrderStatusMap.push_back(parseJsonToString(json));
-        }else{
-            handleResponseOrderStatus(unit, restOrderStatus->second, json);
-            LfOrderStatusType orderStatus=GetOrderStatus(json["data"]["order-state"].GetString());
-            if(orderStatus == LF_CHAR_AllTraded  || orderStatus == LF_CHAR_Canceled
-                || orderStatus == LF_CHAR_Error){
-                unit.restOrderStatusMap.erase(remoteOrderId);
-            }
-        }
-    } else {
-        KF_LOG_INFO(logger, "[on_lws_receive_orders] (reveive failed)");
-        std::string errorMsg;
-        int errorId = json["err-code"].GetInt();
-        if(json.HasMember("err-msg") && json["err-msg"].IsString()){
-            errorMsg = json["err-msg"].GetString();
-        }
-        KF_LOG_ERROR(logger, "[on_lws_receive_orders] get_order fail."<< " (errorId)" << errorId<< " (errorMsg)" << errorMsg);
-    }
-}
+
 void TDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     KF_LOG_INFO(logger, "[on_lws_data] (data) " << data);
@@ -211,40 +180,6 @@ void TDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
     if(json.HasParseError()||!json.IsObject()){
         KF_LOG_ERROR(logger, "[cys_on_lws_data] parse to json error ");
         return;
-    }
-    if(json.HasMember("op")||json.HasMember("ping"))
-    {
-        if ((json.HasMember("status") && json["status"].GetString()!="ok")||      
-              (json.HasMember("err-code")&&json["err-code"].GetInt()!=0) ) {
-            int errorCode = json["err-code"].GetInt();
-            std::string errorMsg = json["err-msg"].GetString();
-            KF_LOG_ERROR(logger, "[on_lws_data] (err-code) "<<errorCode<<" (errMsg) " << errorMsg);
-        } else if (json.HasMember("op")) {
-            std::string op = json["op"].GetString();
-            if (op == "notify") {
-                string topic=json["topic"].GetString();
-                if(topic.substr(0,topic.find("."))=="orders"){
-                    on_lws_receive_orders(conn,json);
-                }
-            } else if (op == "ping") {
-                long long ping=json["ts"].GetInt64();
-                Pong(conn,ping);
-            } else if (op == "auth") {
-                isAuth=kraken_auth;
-                int userId=json["data"]["user-id"].GetInt();
-                KF_LOG_INFO(logger,"[on_lws_data] cys_krakenAuth success. authed user-id "<<userId);
-            }
-        } else if (json.HasMember("ch")) {
-
-        } else if (json.HasMember("ping")) {
-            long long ping=json["ts"].GetInt64();
-            Pong(conn,ping);
-        } else if (json.HasMember("subbed")) {
-
-        }
-    } else
-    {
-        KF_LOG_ERROR(logger, "[on_lws_data] . parse json error(data): " << data);
     }
 
 }
@@ -526,7 +461,7 @@ TradeAccount TDEngineKraken::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     //printResponse(json);
-    cancel_order(unit,"code","OHC2AS-7IH55-2PTIXJ",json);
+    //cancel_order(unit,"code","OHC2AS-7IH55-2PTIXJ",json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
     // set up
@@ -1467,77 +1402,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
                 << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
 }
-void TDEngineKraken::handleResponseOrderStatus(AccountUnitKraken& unit, LFRtnOrderField& rtn_order, 
-                                        Document& json){
-    KF_LOG_INFO(logger, "[handleResponseOrderStatus]");
-    if(!json.HasMember("data")){
-        KF_LOG_ERROR(logger,"[handleResponseOrderStatus] no data segment");
-        return;
-    }
-    auto& data=json["data"];
-    if(!data.HasMember("filled-cash-amount")||!data.HasMember("filled-amount")||!data.HasMember("unfilled-amount")
-        ||!data.HasMember("order-type")||!data.HasMember("order-amount")||!data.HasMember("order-state")
-        ||!data.HasMember("order-price")||!data.HasMember("price")){
-        KF_LOG_ERROR(logger,"[handleResponseOrderStatus] no child segment");
-        return;
-    }
-    //单次成交总金额
-    double dDealFunds = std::stod(data["filled-cash-amount"].GetString());
-    //单次成交数量
-    double dDealSize = std::stod(data["filled-amount"].GetString());
-    //单次成交数量
-    int64_t nDealSize = std::round(dDealSize * scale_offset);
-    int64_t averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
-    //单次未成交数量
-    double unfilledAmount=std::stod(data["unfilled-amount"].GetString());
-    //单次未成交数量
-    int64_t nUnfilledAmount = std::round(unfilledAmount * scale_offset);
-    //报单价格条件
-    LfOrderPriceTypeType orderPriceType = GetPriceType(data["order-type"].GetString());
-    //买卖方向
-    LfDirectionType direction = GetDirection(data["order-type"].GetString());
-    //总量
-    int64_t nVolume = std::round(std::stod(data["order-amount"].GetString()) * scale_offset);
-    //报单状态
-    LfOrderStatusType orderStatus=GetOrderStatus(data["order-state"].GetString());
-    //总价
-    int64_t price = std::round(std::stod(data["order-price"].GetString()) * scale_offset);
-    int64_t volumeTraded = nVolume-nUnfilledAmount;
-    if( (orderStatus == LF_CHAR_NotTouched && LF_CHAR_PartTradedQueueing == orderStatus || 
-            orderStatus == rtn_order.OrderStatus) && 
-            volumeTraded == rtn_order.VolumeTraded){//no change
-        return;
-    }
-    rtn_order.OrderStatus = orderStatus;
-    //累计成交数量
-    rtn_order.VolumeTraded = volumeTraded;
-    //剩余数量
-    rtn_order.VolumeTotal = nUnfilledAmount;
-    on_rtn_order(&rtn_order);
-    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
-        1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
-    //send OnRtnTrade
-    LFRtnTradeField rtn_trade;
-    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-    strcpy(rtn_trade.ExchangeID, "kraken");
-    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_trade.InstrumentID, rtn_order.InstrumentID, 31);
-    strncpy(rtn_trade.OrderRef, rtn_order.OrderRef, 13);
-    rtn_trade.Direction = rtn_order.Direction;
-    //单次成交数量
-    rtn_trade.Volume = nDealSize;
-    rtn_trade.Price =std::round(std::stod(data["price"].GetString())*scale_offset);//(newAmount - oldAmount)/(rtn_trade.Volume);
-    strncpy(rtn_trade.OrderSysID,rtn_order.BusinessUnit,31);
-    on_rtn_trade(&rtn_trade);
-
-    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-        source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
-
-    KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
-                << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
-
-}
 std::string TDEngineKraken::parseJsonToString(Document &d){
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
