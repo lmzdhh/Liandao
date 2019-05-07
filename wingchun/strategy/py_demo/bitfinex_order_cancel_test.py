@@ -53,7 +53,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                                ticker=context.ticker,
                                                                price=context.buy_price,
                                                                exchange_id=context.exchange_id,
-                                                               volume=800000000,
+                                                               volume=100000000,
                                                                direction=DIRECTION.Sell,
                                                                offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
@@ -89,7 +89,7 @@ def on_tick(context, market_data, source, rcv_time):
 def on_rtn_order(context, rtn_order, order_id, source, rcv_time):
     print('---on_rtn_order',  rtn_order, order_id, source, rcv_time)
     if order_id == context.order_rid and context.cancel_id < 0 and rtn_order.OrderStatus != 'a':
-        #context.cancel_id = context.cancel_order(source=source, order_id=order_id)
+        context.cancel_id = context.cancel_order(source=source, order_id=order_id)
         print 'cancel (order_id)', order_id, ' (request_id)', context.cancel_id
     if order_id == context.order_rid and rtn_order.OrderStatus == '5':
         print 'cancel successfully!'
