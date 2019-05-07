@@ -110,10 +110,12 @@ void Strategy::on_price_book_update(const LFPriceBook20Field* data, short source
 {
     std::cout << "LIBINGCHEN RECV[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID
               << " (bidcount)" << data->BidLevelCount
-              << " (askcount)" << data->AskLevelCount << std::endl;
+              << " (askcount)" << data->AskLevelCount
+    <<" (status)"<<data->Status << std::endl;/*FXW's edits*/
     KF_LOG_INFO(logger, "LIBINGCHEN RECV[on_price_book_update] (source)" << source << " (ticker)" << data->InstrumentID
                                                         << " (bidcount)" << data->BidLevelCount
-                                                        << " (askcount)" << data->AskLevelCount);
+                                                        << " (askcount)" << data->AskLevelCount
+                                                        <<" (status)"<<data->Status );/*FXW's edits*/
 }
 
 int main(int argc, const char* argv[])

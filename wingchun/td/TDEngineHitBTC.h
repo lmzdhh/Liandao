@@ -133,6 +133,8 @@ private:
     yijinjing::JournalWriterPtr raw_writer;
     vector<AccountUnitHitBTC> account_units;
 
+    virtual void set_reader_thread() override;
+
     //std::string GetSide(const LfDirectionType& input);
     //LfDirectionType GetDirection(std::string input);
     std::string GetType(const LfOrderPriceTypeType& input);
@@ -166,6 +168,7 @@ private:
 
 
     void onOrder(struct lws * websocketConn, rapidjson::Value& json);
+    void wsloop();
 
 
     AccountUnitHitBTC& findAccountUnitHitBTCByWebsocketConn(struct lws * websocketConn);
@@ -178,6 +181,8 @@ private:
 
     static constexpr int scale_offset = 1e8;
     struct lws_context *context = nullptr;
+    ThreadPtr ws_thread;
+
 
     ThreadPtr rest_thread;
     uint64_t last_rest_get_ts = 0;
