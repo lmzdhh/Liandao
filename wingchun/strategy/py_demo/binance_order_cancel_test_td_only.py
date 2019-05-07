@@ -22,7 +22,7 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 
 def initialize(context):
     #context.add_md(source=SOURCE.COINMEX)
-    context.ticker = 'trx_btc'
+    context.ticker = 'trx_usdt'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
@@ -52,7 +52,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                                ticker=context.ticker,
                                                                price=context.buy_price,
                                                                exchange_id=context.exchange_id,
-                                                               volume=51200000000,
+                                                               volume=2300000,
                                                                direction=DIRECTION.Buy,
                                                                offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)

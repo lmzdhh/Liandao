@@ -221,14 +221,15 @@ void IMDEngine::on_market_bar_data(const LFBarMarketDataField* data)
     if (isRunning)
     {
         writer->write_frame(data, sizeof(LFBarMarketDataField), source_id, MSG_TYPE_LF_BAR_MD, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "%-10s [open %ld, close %ld | low %ld, high %ld] [best bid %ld, best ask %ld]",
+        KF_LOG_DEBUG_FMT(logger, "%-10s [open %ld, close %ld | low %ld, high %ld] [best bid %ld, best ask %ld][status %d]",/*quest3 editd by fxw*/
                          data->InstrumentID,
                          data->Open,
                          data->Close,
                          data->Low,
                          data->High,
                          data->BestBidPrice,
-                         data->BestAskPrice);
+                         data->BestAskPrice,
+                        data->Status);/*quest3 editd by fxw*/
     }
 }
 
@@ -237,14 +238,15 @@ void IMDEngine::on_price_book_update(const LFPriceBook20Field* data)
     if (isRunning)
     {
         writer->write_frame(data, sizeof(LFPriceBook20Field), source_id, MSG_TYPE_LF_PRICE_BOOK_20, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "price book 20 update: %-10s %d | %d [%ld, %lu | %ld, %lu]",
+        KF_LOG_DEBUG_FMT(logger, "price book 20 update: %-10s %d | %d [%ld, %lu | %ld, %lu] %d",/*FXW's edits*/
                          data->InstrumentID,
                          data->BidLevelCount,
                          data->AskLevelCount,
                          data->BidLevels[0].price,
                          data->BidLevels[0].volume,
                          data->AskLevels[0].price,
-                         data->AskLevels[0].volume);
+                         data->AskLevels[0].volume,
+                         data->Status);
     }
 }
 
@@ -253,9 +255,25 @@ void IMDEngine::on_trade(const LFL2TradeField* trade)
     if (isRunning)
     {
         writer->write_frame(trade, sizeof(LFL2TradeField), source_id, MSG_TYPE_LF_L2_TRADE, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "%-10s [%ld, %lu]",
+        KF_LOG_DEBUG_FMT(logger, "%-10s [%ld, %lu][%d]",/*quest3 edited by fxw*/
                          trade->InstrumentID,
                          trade->Price,
-                         trade->Volume);
+                         trade->Volume,
+                         trade->Status); /*quest3 edited by fxw*/
+    }
+}
+
+void IMDEngine::on_funding_update(const LFFundingField* data)
+{
+    if (isRunning)
+    {
+        writer->write_frame(data, sizeof(LFFundingField), source_id, MSG_TYPE_LF_FUNDING, 1/*islast*/, -1/*invalidRid*/);
+        KF_LOG_DEBUG_FMT(logger, "funding data update: %-10s %s | %lld, %lld, %lf, %lf]",
+                         data->InstrumentID,
+                         data->ExchangeID,
+                         data->TimeStamp,
+                         data->Interval,
+                         data->Rate,
+                         data->RateDaily);
     }
 }

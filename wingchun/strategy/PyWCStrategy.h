@@ -41,6 +41,8 @@ public:
     virtual void on_market_bar(const BarMdMap& data, int min_interval, short source, long rcv_time);
     virtual void on_market_data(const LFMarketDataField* data, short source, long rcv_time);
     virtual void on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time);
+    virtual void on_funding_update(const LFFundingField* data, short source, long rcv_time);
+    virtual void on_market_bar_data(const LFBarMarketDataField* data, short source, long rcv_time);
     virtual void on_rtn_order(const LFRtnOrderField* data, int request_id, short source, long rcv_time);
     virtual void on_rtn_trade(const LFRtnTradeField* data, int request_id, short source, long rcv_time);
     virtual void on_rsp_order(const LFInputOrderField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
@@ -65,24 +67,27 @@ public:
     boost::python::list get_effective_orders() const;
 
 public:
-    // python binding, no char allowed, use string and transfer manually.
-    inline int insert_market_order_py(short source, string instrument_id, string exchange_id, uint64_t volume, string direction, string offset)
+    // python bcancel_orderd, use string and transfer manually.
+    inline int insert_market_order_py(short source, string instrument_id, string exchange_id, uint64_t volume, string direction, string offset,string misc_info = "",int64_t expect_price = 0)
     {
-        return insert_market_order(source, instrument_id, exchange_id, volume, direction[0], offset[0]);
+        return insert_market_order(source, instrument_id, exchange_id, volume, direction[0], offset[0],misc_info,expect_price);
     }
-    inline int insert_limit_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset)
+    inline int insert_limit_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset,string misc_info = "")
     {
-        return insert_limit_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0]);
+        return insert_limit_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0],misc_info);
     }
-    inline int insert_fok_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset)
+    inline int insert_fok_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset,string misc_info = "")
     {
-        return insert_fok_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0]);
+        return insert_fok_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0],misc_info);
     }
-    inline int insert_fak_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset)
+    inline int insert_fak_order_py(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, string direction, string offset,string misc_info = "")
     {
-        return insert_fak_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0]);
+        return insert_fak_order(source, instrument_id, exchange_id, price, volume, direction[0], offset[0],misc_info);
     }
-
+    inline int cancel_order_py(short source, int order_id,string misc_info = "")
+    {
+        return cancel_order(source, order_id,misc_info);
+    }
 public:
     PyWCStrategy(const string& name): IWCStrategy(name) {}
     PyWCStrategy(): IWCStrategy("Default") {}

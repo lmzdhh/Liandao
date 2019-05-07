@@ -206,7 +206,7 @@ void ITDEngine::listening()
                         strcpy(order->BrokerID, accounts[idx].BrokerID);
                         strcpy(order->InvestorID, accounts[idx].InvestorID);
                         strcpy(order->UserID, accounts[idx].UserID);
-                        strcpy(order->BusinessUnit, accounts[idx].BusinessUnit);
+                        //strcpy(order->BusinessUnit, accounts[idx].BusinessUnit);
                         string order_ref = std::to_string(local_id);
                         //通过orderRef来记录requestId(KfOrderID), InstrumentID
                         td_helper->record_order(local_id, requestId);
@@ -551,4 +551,16 @@ TradeAccount ITDEngine::load_account(int idx, const json& j_account)
 {
     KF_LOG_ERROR(logger, "[account] NOT IMPLEMENTED! (content)" << j_account);
     throw std::runtime_error("load_account not implemented yet!");
+}
+
+bool ITDEngine::is_post_only(const LFInputOrderField* data)
+{
+    if(data != nullptr && data->MiscInfo[39] == '1')
+    {
+        return true;
+    }
+    else 
+    {
+        return false;
+    }
 }

@@ -43,7 +43,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             print '-- got pos in initial --'
             context.print_pos(pos_handler)
             #context.stop()
-            context.buy_price = 289 #market_data.LowerLimitPrice
+            context.buy_price = 400 #market_data.LowerLimitPrice
             context.sell_price = 99999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 512.")
@@ -51,14 +51,14 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                          ticker=context.ticker,
                                                          price=context.buy_price,
                                                          exchange_id=context.exchange_id,
-                                                         volume=51200000000,
+                                                         volume=2000000000000,
                                                          direction=DIRECTION.Buy,
                                                          offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
                 print('will cancel it')
-                import time
-                time.sleep(6)
-                context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
+                #import time
+                #time.sleep(6)
+                #context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
                 print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
 
 

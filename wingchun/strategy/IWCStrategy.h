@@ -26,12 +26,12 @@
 #include "WCStrategyUtil.h"
 #include "WCDataWrapper.h"
 #include "KfLog.h"
+#include "monitor_api/MonitorClient.h"
+USING_MONITOR_NAMESPACE
 
 WC_NAMESPACE_START
-
 using yijinjing::KfLogPtr;
-
-class IWCStrategy: public IWCDataProcessor
+class IWCStrategy: public IWCDataProcessor, MonitorClientSpi
 {
 protected:
     bool td_is_ready(short source) const;
@@ -41,6 +41,7 @@ public:
     virtual void on_market_data(const LFMarketDataField* data, short source, long rcv_time);
     virtual void on_market_bar_data(const LFBarMarketDataField* data, short source, long rcv_time);
     virtual void on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time);
+    virtual void on_funding_update(const LFFundingField* data, short source, long rcv_time);
     virtual void on_market_data_level2(const LFL2MarketDataField* data, short source, long rcv_time);
     virtual void on_l2_index(const LFL2IndexField* data, short source, long rcv_time);
     virtual void on_l2_order(const LFL2OrderField* data, short source, long rcv_time);
@@ -70,12 +71,12 @@ public:
 
 public: // util functions, wrap upon WCStrategyUtil
     /** insert order, check status before calling WCStrategyUtil */
-    int insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
-    int insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
-    int insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
-    int insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset);
+    int insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info = "",int64_t expecct_price = 0);
+    int insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info = "");
+    int insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info = "");
+    int insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info = "");
     int req_position(short source);
-    int cancel_order(short source, int order_id);
+    int cancel_order(short source, int order_id,string misc_info = "");
 
 public:
     /** default destructor */
@@ -93,6 +94,12 @@ public:
     /* block process by data thread */
     void block();
 
+private:
+    bool connectMonitor(const std::string& url, const std::string& name, const std::string &type);
+
+protected:
+    virtual void OnMessage(const std::string& ){ };
+
 protected:
     /** logger, will be improved later */
     KfLogPtr logger;
@@ -104,6 +111,8 @@ protected:
     WCDataWrapperPtr data;
     /** data thread */
     ThreadPtr data_thread;
+
+    MonitorClientPtr m_monitorClient;
 };
 
 WC_NAMESPACE_END

@@ -14,6 +14,8 @@
 #include <document.h>
 #include <libwebsockets.h>
 
+#include<cpr/cpr.h>
+
 
 using rapidjson::Document;
 
@@ -57,6 +59,8 @@ struct OrderInsertData
     //            如果撤单时发现有orderid  会优先使用orderid ，没有orderid 的时候，才会使用clientid + date
     //            这种情况可能发生在 我们发单以后， on-req还没有来得及返回orderid，我们就发送撤单指令了
     std::string dateStr;
+
+    LFRtnOrderField rtnOrder;
 };
 
 struct OrderActionData
@@ -171,6 +175,11 @@ private:
     std::unordered_map<int, OrderActionData> CIDorderActionData;
     std::unordered_map<int, OrderActionData> pendingOrderActionData;
     std::unordered_map<int64_t, OrderActionData> RemoteOrderIDorderActionData;
+public:
+    cpr::Response cancelOrder(AccountUnitBitfinex& unit, int64_t& remoteOrderId);
+    cpr::Response orderStatus(AccountUnitBitfinex& unit, int64_t& remoteOrderId);
+    cpr::Response retriveTradeStatus(AccountUnitBitfinex& unit, OrderInsertData& insertData);
+    bool deal_connect_error(struct lws* conn);
 };
 
 WC_NAMESPACE_END

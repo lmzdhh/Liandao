@@ -2,13 +2,15 @@
 // Created by wang on 10/20/18.
 //
 #include "MDEngineHuobi.h"
+#include "../../utils/common/ld_utils.h"
 #include <stringbuffer.h>
 #include <writer.h>
 #include <document.h>
 #include <libwebsockets.h>
 #include <algorithm>
 #include <stdio.h>
-#include "../../utils/common/Utils.h"
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 using rapidjson::Document;
 using namespace rapidjson;
 using namespace kungfu;
@@ -51,10 +53,10 @@ void MDEngineHuobi::load(const json& config)
     try
     {
         m_priceBookNum = config["book_depth_count"].get<int>();
-        m_protocol = config["protocol"].get<std::string>();
-        m_ip = config["ip"].get<std::string>();
-        m_port = config["port"].get<int>();
-        m_path = config["path"].get<std::string>();
+        if (!parseAddress(config["exchange_url"].get<std::string>()))
+        {
+            return;
+        }
         m_whiteList.ReadWhiteLists(config, "whiteLists");
         m_whiteList.Debug_print();
         genSubscribeString();
@@ -125,7 +127,6 @@ std::string MDEngineHuobi::genTradeString(const std::string& symbol)
 
 void MDEngineHuobi::connect(long)
 {
-    KF_LOG_INFO(logger, "connect");
     m_connected = true;
 }
 
@@ -158,10 +159,10 @@ void MDEngineHuobi::createConnection()
     struct lws_client_connect_info conn_info = { 0 };
     //parse uri
     conn_info.context 	= m_lwsContext;
-    conn_info.address = m_ip.c_str();
-    conn_info.path 	= m_path.c_str();
-    conn_info.port = m_port;
-    conn_info.protocol = m_protocol.c_str();
+    conn_info.protocol = m_exchUrl.protocol.c_str();
+    conn_info.address = m_exchUrl.ip.c_str();
+    conn_info.port = m_exchUrl.port;
+    conn_info.path 	= m_exchUrl.path.c_str();
     conn_info.host 	= conn_info.address;
     conn_info.origin = conn_info.address;
     conn_info.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
@@ -171,7 +172,7 @@ void MDEngineHuobi::createConnection()
         KF_LOG_INFO(logger, "create connect error");
         return ;
     }
-    KF_LOG_INFO(logger, "connect to "<< conn_info.protocol<< conn_info.address<< ":"<< conn_info.port<< conn_info.path <<" success");
+    KF_LOG_INFO(logger, "connect to "<< conn_info.protocol<< conn_info.address<< ":"<< conn_info.port<< "/"<<conn_info.path <<" success");
     m_logged_in = true;
 }
 
@@ -184,9 +185,9 @@ void MDEngineHuobi::logout()
 
 void MDEngineHuobi::lwsEventLoop()
 {
-    while(isRunning)
+    while( isRunning)
     {
-        lws_service(m_lwsContext, 500);
+       lws_service(m_lwsContext, 500);
     }
 }
 
@@ -206,7 +207,7 @@ void MDEngineHuobi::onMessage(struct lws* conn, char* data, size_t len)
             return;
         }
         Document json;
-        auto dataJson = LDUtils::gzip_decompress(std::string(data,len));
+        auto dataJson = ldutils::gzip_decompress(std::string(data,len));
         json.Parse(dataJson.c_str());
         KF_LOG_DEBUG(logger, "received data from huobi,{msg:"<< dataJson<< "}");
         if(json.HasParseError())
@@ -336,7 +337,7 @@ void MDEngineHuobi::onWrite(struct lws* conn)
  void MDEngineHuobi::parseSubscribeData(const rapidjson::Document& json)
  {
      KF_LOG_DEBUG(logger, "parseSubscribeData start");
-     auto ch = LDUtils::split(json["ch"].GetString(), ".");
+     auto ch = ldutils::split(json["ch"].GetString(), ".");
      if(ch.size() != 4)
      {
          KF_LOG_INFO(logger, "parseSubscribeData [ch] split error");
@@ -445,7 +446,32 @@ void MDEngineHuobi::onWrite(struct lws* conn)
      KF_LOG_DEBUG(logger, "doTradeData end");
  }
 
- int lwsEventCallback( struct lws *conn, enum lws_callback_reasons reason, void *, void *data , size_t len )
+bool MDEngineHuobi::parseAddress(const std::string& exch_url)
+{
+    try
+    {
+        //url format is xxx://xxx.xxx.xxx:xxx/
+        std::vector<std::string> result;
+        boost::split(result, exch_url, boost::is_any_of("//:/"));
+        if (result.size() != 6)
+        {
+            KF_LOG_INFO(logger, "parse exchange url error, must be xxx://xxx.xxx.xxx:xxx/");
+            return false;
+        }
+        m_exchUrl.protocol = result[0] + "://";
+        m_exchUrl.ip = result[3];
+        m_exchUrl.port = std::atoi(result[4].c_str());
+        m_exchUrl.path = result[5];
+        return  true;
+    }
+    catch (std::exception& e)
+    {
+        KF_LOG_INFO(logger, "parseAddress, exception:"<< e.what());
+    }
+    return false;
+}
+
+int lwsEventCallback( struct lws *conn, enum lws_callback_reasons reason, void *, void *data , size_t len )
 {
     switch( reason )
     {
@@ -470,7 +496,7 @@ void MDEngineHuobi::onWrite(struct lws* conn)
             }
             break;
         }
-        case LWS_CALLBACK_WSI_DESTROY:
+        case LWS_CALLBACK_CLIENT_CLOSED:
         case LWS_CALLBACK_CLOSED:
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
@@ -481,7 +507,6 @@ void MDEngineHuobi::onWrite(struct lws* conn)
             break;
         }
         default:
-            std::cout<< "callback #"<<(int)reason<<std::endl;
             break;
     }
     return 0;

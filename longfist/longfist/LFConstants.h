@@ -11,6 +11,7 @@
 // Index for Sources...
 enum exchange_source_index : short
 {
+    SOURCE_UNKNOWN =-1,
     SOURCE_CTP = 1,
     SOURCE_XTP = 15,
     SOURCE_BINANCE = 16,
@@ -24,30 +25,33 @@ enum exchange_source_index : short
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
-    SOURCE_PROBIT = 27,
-    SOURCE_UNKNOWN
+    SOURCE_OCEANEXB = 27,
+    SOURCE_PROBIT = 28,
+    SOURCE_BITHUMB = 29,
+    SOURCE_DAYBIT = 31,
+    SOURCE_KUCOIN = 32
 };
 
 inline const char* get_str_from_source_index(exchange_source_index source)
 {
-	switch(source)
-	{
-		case SOURCE_CTP:
-			return "ctp";
-		case SOURCE_XTP:
-			return "xtp";
-		case SOURCE_BINANCE:
-			return "binance";
-		case SOURCE_INDODAX:
-			return "indodax";
-		case SOURCE_OKEX:
-			return "okex";
-		case SOURCE_COINMEX:
-			return "coinmex";
-		case SOURCE_MOCK:
-			return "mock";
-		case SOURCE_BITMAX:
-			return "bitmax";
+    switch(source)
+    {
+        case SOURCE_CTP:
+            return "ctp";
+        case SOURCE_XTP:
+            return "xtp";
+        case SOURCE_BINANCE:
+            return "binance";
+        case SOURCE_INDODAX:
+            return "indodax";
+        case SOURCE_OKEX:
+            return "okex";
+        case SOURCE_COINMEX:
+            return "coinmex";
+        case SOURCE_MOCK:
+            return "mock";
+        case SOURCE_BITMAX:
+            return "bitmax";
         case SOURCE_BITFINEX:
             return "bitfinex";
         case SOURCE_BITMEX:
@@ -58,8 +62,16 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "oceanex";
         case SOURCE_HUOBI:
             return "huobi";
+        case SOURCE_OCEANEXB:
+            return "oceanexb";
         case SOURCE_PROBIT:
             return "probit";
+        case SOURCE_BITHUMB:
+            return "bithumb";
+        case SOURCE_DAYBIT:
+            return "daybit";
+         case SOURCE_KUCOIN:
+            return "kucoin";
 		default:
 			return "unknown";
 	}
@@ -69,27 +81,27 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 {
     if(exch_str == "ctp")
     {
-         return SOURCE_CTP;
+        return SOURCE_CTP;
     }
     else if(exch_str == "xtp")
     {
-	return SOURCE_XTP;
+        return SOURCE_XTP;
     }
     else if(exch_str == "binance")
     {
-	return SOURCE_BINANCE;
+        return SOURCE_BINANCE;
     }
     else if(exch_str == "indodax")
     {
-	return SOURCE_INDODAX;
+        return SOURCE_INDODAX;
     }
     else if(exch_str == "okex")
     {
-	return SOURCE_OKEX;
+        return SOURCE_OKEX;
     }
     else if(exch_str == "coinmex")
     {
-	return SOURCE_COINMEX;
+        return SOURCE_COINMEX;
     }
     else if(exch_str == "mock")
     {
@@ -97,7 +109,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     }
     else if(exch_str == "bitmax")
     {
-	return SOURCE_BITMAX;
+        return SOURCE_BITMAX;
     }
     else if(exch_str == "bitfinex")
     {
@@ -105,7 +117,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     }
     else if(exch_str == "bitmex")
     {
-	return SOURCE_BITMEX;
+        return SOURCE_BITMEX;
     }
     else if(exch_str == "hitbtc")
     {
@@ -119,14 +131,31 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_HUOBI;
     }
+	else if (exch_str == "oceanexb")
+	{
+		return SOURCE_OCEANEXB;
+	}
     else if(exch_str == "probit")
     {
         return SOURCE_PROBIT;
     }
-    else
+    else if(exch_str == "daybit")
     {
-	return SOURCE_UNKNOWN;
+        return SOURCE_DAYBIT;
     }
+    else if(exch_str == "bithumb")
+    {
+		return SOURCE_BITHUMB;
+    }
+     else if(exch_str == "kucoin")
+    {
+		return SOURCE_KUCOIN;
+    }
+    else 
+    {
+		return SOURCE_UNKNOWN;
+    }
+
 }
 
 // Exchange names
@@ -137,6 +166,8 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_DCE "DCE" //大连商品交易所
 #define EXCHANGE_CZCE "CZCE" //郑州商品交易所
 #define EXCHANGE_BINANCE "BINANCE"
+#define EXCHANGE_INDODAX "INDODAX"
+#define EXCHANGE_OKEX "OKEX"
 #define EXCHANGE_COINMEX "COINMEX"
 #define EXCHANGE_MOCK "MOCK"
 #define EXCHANGE_BITMAX "BITMAX"
@@ -145,6 +176,11 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_HITBTC "HITBTC"
 #define EXCHANGE_OCEANEX "OCEANEX"
 #define EXCHANGE_HUOBI "HUOBI"
+#define EXCHANGE_OCEANEXB "OCEANEXB"
+#define EXCHANGE_PROBIT "PROBIT"
+#define EXCHANGE_BITHUMB "BITHUMB"
+#define EXCHANGE_DAYBIT "DAYBIT"
+#define EXCHANGE_KUCOIN "KUCOIN"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -153,7 +189,22 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_SHFE 12 //上海期货交易所
 #define EXCHANGE_ID_DCE 13 //大连商品交易所
 #define EXCHANGE_ID_CZCE 14 //郑州商品交易所
-
+#define EXCHANGE_ID_BINANCE  16
+#define EXCHANGE_ID_INDODAX  17
+#define EXCHANGE_ID_OKEX  18
+#define EXCHANGE_ID_COINMEX  19
+#define EXCHANGE_ID_MOCK  20
+#define EXCHANGE_ID_BITMAX  21
+#define EXCHANGE_ID_BITFINEX  22
+#define EXCHANGE_ID_BITMEX  23
+#define EXCHANGE_ID_HITBTC  24
+#define EXCHANGE_ID_OCEANEX  25
+#define EXCHANGE_ID_HUOBI  26
+#define EXCHANGE_ID_OCEANEXB  27
+#define EXCHANGE_ID_PROBIT  28
+#define EXCHANGE_ID_BITHUMB  29
+#define EXCHANGE_ID_DAYBIT  31
+#define EXCHANGE_ID_KUCOIN  32
 // MsgTypes that used for LF data structure...
 const short MSG_TYPE_LF_MD            = 101;
 const short MSG_TYPE_LF_L2_MD         = 102;
@@ -162,10 +213,11 @@ const short MSG_TYPE_LF_L2_ORDER      = 104;
 const short MSG_TYPE_LF_L2_TRADE      = 105;
 const short MSG_TYPE_LF_PRICE_BOOK_20 = 106;
 const short MSG_TYPE_LF_BAR_MD        = 110;
+const short MSG_TYPE_LF_FUNDING       = 111;
 const short MSG_TYPE_LF_QRY_POS       = 201;
 const short MSG_TYPE_LF_RSP_POS       = 202;
 const short MSG_TYPE_LF_ORDER         = 204;
-const short     MSG_TYPE_LF_RTN_ORDER     = 205;
+const short MSG_TYPE_LF_RTN_ORDER     = 205;
 const short MSG_TYPE_LF_RTN_TRADE     = 206;
 const short MSG_TYPE_LF_ORDER_ACTION  = 207;
 const short MSG_TYPE_LF_QRY_ACCOUNT   = 208;
@@ -258,7 +310,6 @@ const short MSG_TYPE_LF_RTN_ORDER_BITMEX = 23205;
 const short MSG_TYPE_LF_RTN_TRADE_BITMEX = 23206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITMEX = 23207;
 
-
 //HITBTC, idx=24
 const short MSG_TYPE_LF_MD_HITBTC        = 24101;
 const short MSG_TYPE_LF_QRY_POS_HITBTC   = 24201;
@@ -267,7 +318,6 @@ const short MSG_TYPE_LF_ORDER_HITBTC     = 24204;
 const short MSG_TYPE_LF_RTN_ORDER_HITBTC = 24205;
 const short MSG_TYPE_LF_RTN_TRADE_HITBTC = 24206;
 const short MSG_TYPE_LF_ORDER_ACTION_HITBTC = 24207;
-
 
 //OCEANEX, idx=25
 const short MSG_TYPE_LF_MD_OCEANEX        = 25101;
@@ -278,15 +328,60 @@ const short MSG_TYPE_LF_RTN_ORDER_OCEANEX = 25205;
 const short MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206;
 const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207;
 
+//HUOBI, idx=26
+const short MSG_TYPE_LF_MD_HUOBI = 26101;
+const short MSG_TYPE_LF_QRY_POS_HUOBI = 26201;
+const short MSG_TYPE_LF_RSP_POS_HUOBI = 26202;
+const short MSG_TYPE_LF_ORDER_HUOBI = 26204;
+const short MSG_TYPE_LF_RTN_ORDER_HUOBI = 26205;
+const short MSG_TYPE_LF_RTN_TRADE_HUOBI = 26206;
+const short MSG_TYPE_LF_ORDER_ACTION_HUOBI = 26207;
 
-//probit, idx=27
-const short MSG_TYPE_LF_MD_PROBIT        = 27101;
-const short MSG_TYPE_LF_QRY_POS_PROBIT   = 27201;
-const short MSG_TYPE_LF_RSP_POS_PROBIT   = 27202;
-const short MSG_TYPE_LF_ORDER_PROBIT     = 27204;
-const short MSG_TYPE_LF_RTN_ORDER_PROBIT = 27205;
-const short MSG_TYPE_LF_RTN_TRADE_PROBIT = 27206;
-const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 27207;
+//OCEANEXB, idx=27
+const short MSG_TYPE_LF_MD_OCEANEXB        = 27101;
+const short MSG_TYPE_LF_QRY_POS_OCEANEXB   = 27201;
+const short MSG_TYPE_LF_RSP_POS_OCEANEXB   = 27202;
+const short MSG_TYPE_LF_ORDER_OCEANEXB     = 27204;
+const short MSG_TYPE_LF_RTN_ORDER_OCEANEXB = 27205;
+const short MSG_TYPE_LF_RTN_TRADE_OCEANEXB = 27206;
+const short MSG_TYPE_LF_ORDER_ACTION_OCEANEXB = 27207;
+//PROBIT, idx=28
+const short MSG_TYPE_LF_MD_PROBIT        	= 28101;
+const short MSG_TYPE_LF_QRY_POS_PROBIT   	= 28201;
+const short MSG_TYPE_LF_RSP_POS_PROBIT   	= 28202;
+const short MSG_TYPE_LF_ORDER_PROBIT     	= 28204;
+const short MSG_TYPE_LF_RTN_ORDER_PROBIT 	= 28205;
+const short MSG_TYPE_LF_RTN_TRADE_PROBIT 	= 28206;
+const short MSG_TYPE_LF_ORDER_ACTION_PROBIT = 28207;
+
+//BITHUMB, idx=29
+const short MSG_TYPE_LF_MD_BITHUMB             = 29101;
+const short MSG_TYPE_LF_QRY_POS_BITHUMB           = 29201;
+const short MSG_TYPE_LF_RSP_POS_BITHUMB           = 29202;
+const short MSG_TYPE_LF_ORDER_BITHUMB             = 29204;
+const short MSG_TYPE_LF_RTN_ORDER_BITHUMB         = 29205;
+const short MSG_TYPE_LF_RTN_TRADE_BITHUMB         = 29206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITHUMB     = 29207;
+
+
+
+//DAYBIT, idx=31
+const short MSG_TYPE_LF_MD_DAYBIT        	= 31101;
+const short MSG_TYPE_LF_QRY_POS_DAYBIT   	= 31201;
+const short MSG_TYPE_LF_RSP_POS_DAYBIT   	= 31202;
+const short MSG_TYPE_LF_ORDER_DAYBIT     	= 31204;
+const short MSG_TYPE_LF_RTN_ORDER_DAYBIT 	= 31205;
+const short MSG_TYPE_LF_RTN_TRADE_DAYBIT 	= 31206;
+const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
+
+//KUCOIN, idx=32
+const short MSG_TYPE_LF_MD_KUCOIN       	= 32101;
+const short MSG_TYPE_LF_QRY_POS_KUCOIN  	= 32201;
+const short MSG_TYPE_LF_RSP_POS_KUCOIN  	= 32202;
+const short MSG_TYPE_LF_ORDER_KUCOIN   	= 32204;
+const short MSG_TYPE_LF_RTN_ORDER_KUCOIN 	= 32205;
+const short MSG_TYPE_LF_RTN_TRADE_KUCOIN	= 32206;
+const short MSG_TYPE_LF_ORDER_ACTION_KUCOIN = 32207;
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
 ///////////////////////////////////

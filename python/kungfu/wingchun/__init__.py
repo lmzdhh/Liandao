@@ -16,6 +16,7 @@ limitations under the License.
 
 from engine import Engine
 from strategy import Strategy
+from monitor import Monitor
     #[name, type, index]
 def run_engine(args):
     engine = Engine(args)
@@ -24,3 +25,7 @@ def run_engine(args):
 def run_strategy(name, path):
     strategy = Strategy(name, path)
     strategy.run()
+
+def run_monitor(name, type):
+    monitor = Monitor(name, type)
+    monitor.start()

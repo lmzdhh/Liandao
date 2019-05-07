@@ -229,8 +229,8 @@ void WCDataWrapper::run()
                             processor->on_price_book_update((LFPriceBook20Field*)data, msg_source, cur_time);
                             break;
                         }
-		        case MSG_TYPE_LF_BAR_MD:
-		        {
+                        case MSG_TYPE_LF_BAR_MD:
+                        {
                             processor->on_market_bar_data((LFBarMarketDataField*)data, msg_source, cur_time);
                             break;
                         }
@@ -252,6 +252,11 @@ void WCDataWrapper::run()
                         case MSG_TYPE_LF_L2_TRADE:
                         {
                             processor->on_l2_trade((LFL2TradeField *)data, msg_source, cur_time);
+                            break;
+                        }
+                        case MSG_TYPE_LF_FUNDING:
+                        {
+                            processor->on_funding_update((LFFundingField*)data,msg_source,cur_time);
                             break;
                         }
                     }

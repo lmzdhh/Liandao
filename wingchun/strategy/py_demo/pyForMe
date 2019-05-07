@@ -1,0 +1,2 @@
+cd /root/liandao/wingchun/strategy/py_demo/;
+wingchun strategy -n mm_strategy2 -p bitfinex_order_cancel_test.py;

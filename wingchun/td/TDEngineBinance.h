@@ -5,6 +5,7 @@
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
 #include "CoinPairWhiteList.h"
+#include "InterfaceMgr.h"
 #include <vector>
 #include <algorithm>
 #include <iomanip>
@@ -14,6 +15,10 @@
 #include <mutex>
 #include "Timer.h"
 #include <document.h>
+#include <queue>
+#include <libwebsockets.h>
+#include <atomic>
+#include <string>
 
 using rapidjson::Document;
 
@@ -23,12 +28,66 @@ WC_NAMESPACE_START
  * account information unit extra is here.
  */
 
+enum RequestWeightType
+{
+    Unkonw = 0,
+    GetOpenOrder_Type,
+    SendOrder_Type,
+    CancelOrder_Type,
+    GetOrder_Type,
+    TradeList_Type,
+    GetListenKey_Type,
+    PutListenKey_Type
+};
+struct weight_data
+{
+    int weight;
+    uint64_t time;
+
+    weight_data()
+    {
+        memset(this, 0, sizeof(weight_data));
+    }
+
+    void addWeight(RequestWeightType type)
+    {
+        switch(type)
+        {
+            case GetOpenOrder_Type:
+                weight = 1;
+                break;
+            case SendOrder_Type:
+                weight = 1;
+                break;
+            case CancelOrder_Type:
+                weight = 1;
+                break;
+            case GetOrder_Type:
+                weight = 1;
+                break;
+            case TradeList_Type:
+                weight = 5;
+                break;
+            case GetListenKey_Type:
+                weight = 1;
+                break;
+            case PutListenKey_Type:
+                weight = 1;
+                break;
+            default:
+                weight = 0;
+                break;
+        }
+    }
+};
+
 struct PendingBinanceOrderStatus
 {
     char_31 InstrumentID;   //合约代码
     char_21 OrderRef;       //报单引用
     LfOrderStatusType OrderStatus;  //报单状态
     uint64_t VolumeTraded;  //今成交数量
+    int64_t LimitPrice;
 };
 
 struct PendingBinanceTradeStatus
@@ -49,6 +108,7 @@ struct SendOrderFilter
 {
     char_31 InstrumentID;   //合约代码
     int ticksize; //for price round.
+    int stepsize;
     //...other
 };
 
@@ -56,6 +116,7 @@ struct AccountUnitBinance
 {
     std::string api_key;
     std::string secret_key;
+    std::string listenKey;
     // internal flags
     bool    logged_in;
     std::vector<PendingBinanceOrderStatus> newOrderStatus;
@@ -67,13 +128,55 @@ struct AccountUnitBinance
     std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade> pendingOnRtnTrades;
     std::vector<std::string> whiteListInstrumentIDs;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
-
+    std::map<std::string, LFRtnOrderField> ordersMap;
+    std::vector<std::string> wsOrderStatus;
     // the trade id that has been called on_rtn_trade. Do not send it again.
     std::vector<int64_t> newSentTradeIds;
     std::vector<int64_t> sentTradeIds;
 
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
+
+    
+    uint64_t order_total_count = 0;
+
+    uint64_t weight_count = 0;
+    std::mutex* mutex_weight = nullptr;
+    std::queue<weight_data> weight_data_queue;
+
+    std::queue<long long> time_queue;
+    bool bHandle_429 = false;
+    std::mutex* mutex_handle_429 = nullptr;
+    uint64_t startTime_429 = 0;
+    std::mutex* mutex_order_and_trade = nullptr;
+    struct lws_context *context = nullptr;
+    struct lws * websocketConn;
+    AccountUnitBinance(const AccountUnitBinance& source);
+    AccountUnitBinance();
+    ~AccountUnitBinance();
+};
+
+struct OrderActionInfo
+{
+    int64_t rcv_time;
+    LFOrderActionField data;
+    int request_id;
+};
+
+//----UFR_data_map-----
+struct UFRUnit
+{
+    std::atomic<uint64_t> order_total; //委托总量
+    std::atomic<uint64_t> trade_total; //成交总量
+
+    UFRUnit(const UFRUnit& src){
+         order_total = src.order_total.load();
+         trade_total = src.trade_total.load();
+    };
+    UFRUnit(){
+         order_total = 0;
+         trade_total = 0;
+    };
 };
 
 /**
@@ -103,6 +206,12 @@ public:
     virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
     virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
 
+        //websocket
+    void on_lws_data(struct lws* conn, const char* data, size_t len);
+    void on_lws_connection_error(struct lws* conn);
+    int lws_write_subscribe(struct lws* conn);
+    void lws_login(AccountUnitBinance& unit, long timeout_nsec);
+
 public:
     TDEngineBinance();
     ~TDEngineBinance();
@@ -110,6 +219,7 @@ private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
     vector<AccountUnitBinance> account_units;
+	InterfaceMgr m_interfaceMgr;
 
     std::string GetSide(const LfDirectionType& input);
     LfDirectionType GetDirection(std::string input);
@@ -121,17 +231,18 @@ private:
 
     virtual void set_reader_thread() override;
     void loop();
+    void testUTC();
     std::vector<std::string> split(std::string str, std::string token);
     bool loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc);
-    void GetAndHandleOrderTradeResponse();
+    void GetAndHandleOrderTradeResponse(AccountUnitBinance& unit);
     void addNewSentTradeIds(AccountUnitBinance& unit, int64_t newSentTradeIds);
-    void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,
+    void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,int64_t limitPrice,
                                         const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, int64_t binanceOrderId);
 
     inline void onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
     inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
     inline void onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
-
+    void onRtnNewOrder(const LFInputOrderField* data, AccountUnitBinance& unit, int requestId,string remoteOrderId);
     void retrieveOrderStatus(AccountUnitBinance& unit);
     void retrieveTradeStatus(AccountUnitBinance& unit);
     void moveNewtoPending(AccountUnitBinance& unit);
@@ -140,10 +251,12 @@ private:
     bool removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId);
 
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
+    int64_t fixVolumeStepSize(int keepPrecision, int64_t volume, bool isBuy);
+
 
     inline int64_t getTimestamp();
     int64_t getTimeDiffOfExchange(AccountUnitBinance& unit);
-
+    std::string parseJsonToString(Document &d);
 private:
     int HTTP_RESPONSE_OK = 200;
     void send_order(AccountUnitBinance& unit, const char *symbol,
@@ -165,6 +278,8 @@ private:
     void get_exchange_infos(AccountUnitBinance& unit, Document &doc);
     void get_exchange_time(AccountUnitBinance& unit, Document &doc);
     void get_account(AccountUnitBinance& unit, Document &doc);
+    void get_listen_key(AccountUnitBinance& unit, Document &doc);
+    void put_listen_key(AccountUnitBinance& unit, Document &doc);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& doc);
     void printResponse(const Document& d);
     inline std::string getTimestampString();
@@ -174,23 +289,74 @@ private:
     SendOrderFilter getSendOrderFilter(AccountUnitBinance& unit, const char *symbol);
 
     bool shouldRetry(int http_status_code, std::string errorMsg, std::string text);
+    bool order_count_over_limit(AccountUnitBinance& unit);
+
+   
+
+    void handle_request_weight(AccountUnitBinance& unit,RequestWeightType type);
+    void meet_429(AccountUnitBinance& unit);
+    bool isHandling(AccountUnitBinance& unit);
+    
+  
+
+    AccountUnitBinance& findAccountUnitByWebsocketConn(struct lws * websocketConn);
+    void onOrder(AccountUnitBinance& unit, Document& json);
+    void wsloop();
+
+    ThreadPtr ws_thread;
 private:
     static constexpr int scale_offset = 1e8;
     ThreadPtr rest_thread;
+    ThreadPtr test_thread;
     uint64_t last_rest_get_ts = 0;
     uint64_t rest_get_interval_ms = 500;
-
+    std::string restBaseUrl = "https://api.binance.com";
+    std::string wsBaseUrl = "stream.binance.com";
     uint64_t order_insert_recvwindow_ms = 5000;
     uint64_t order_action_recvwindow_ms = 5000;
-    std::mutex* mutex_order_and_trade = nullptr;
 
-    int SYNC_TIME_DEFAULT_INTERVAL = 10000;
-    int sync_time_interval;
+    /////////////// order_count_over_limit ////////////////
+    //code=-1429,msg:order count over 10000 limit.
+    int order_count_per_second = 5;
+    
+
+    ////////////// last UTC time  /////////////////////
+    uint64_t last_UTC_timestamp = 0;
+  //  uint64_t last_test_timestamp = 0;
+
+    ////////////// UFR /////////////////////
+    float UFR_limit = 0.998;    //触发条件·未成交率上限
+    int UFR_order_lower_limit = 300;  //触发条件·委托单数量下限
+    std::map<string, UFRUnit> UFR_data_map;    //< 合约代码， {委托总量，成交总量} >
+    uint64_t last_UFR_timestamp = 0;    //
+    std::map<string, bool> UFR_orderRef_status_map;
+
+    /////////////// request weight ////////////////
+    //<=0，do nothing even meet 429
+    //>0，limit weight per minute；
+    int request_weight_per_minute = 1000;
+    
+
+    //handle 429,prohibit send/cencel order time,ms
+    //code=-1429,msg:order count over 10000 limit.
+    int prohibit_order_ms = 10000;      //default 10s
+    int default_429_rest_interval_ms = 1000;      //default 10s
+    
+
+    
+    int SYNC_TIME_DEFAULT_INTERVAL = 30000;
+    //int sync_time_interval = 10000;
     int64_t timeDiffOfExchange = 0;
     int exchange_shift_ms = 0;
 
     int max_rest_retry_times = 3;
     int retry_interval_milliseconds = 1000;
+	int m_interface_switch = 0;
+    int cancel_timeout_milliseconds = 5000;
+    std::map<std::string,OrderActionInfo> mapCancelOrder;
+    std::map<std::string,AccountUnitBinance*> mapInsertOrders;
+    AccountUnitBinance& get_current_account();
+    AccountUnitBinance& get_account_from_orderref(std::string& ref);
 };
 
 WC_NAMESPACE_END

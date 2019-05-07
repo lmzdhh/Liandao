@@ -27,7 +27,11 @@ class SOURCE:
     HITBTC = 24
     OCEANEX = 25
     HUOBI = 26
-    PROBIT = 27
+    OCEANEXB = 27
+    PROBIT = 28
+    BITHUMB = 29
+    DAYBIT = 31
+    KUCOIN = 32
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所

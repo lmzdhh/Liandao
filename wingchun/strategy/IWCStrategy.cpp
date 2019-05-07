@@ -34,7 +34,7 @@ void setup_signal_callback()
     std::signal(SIGKILL, IWCDataProcessor::signal_handler);
 }
 
-IWCStrategy::IWCStrategy(const string &name): name(name)
+IWCStrategy::IWCStrategy(const string &name): name(name), m_monitorClient(MonitorClient::create())
 {
     logger = yijinjing::KfLog::getStrategyLogger(name, name);
     util = WCStrategyUtilPtr(new WCStrategyUtil(name));
@@ -46,7 +46,11 @@ IWCStrategy::IWCStrategy(const string &name): name(name)
 void IWCStrategy::start()
 {
     data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
-    KF_LOG_INFO(logger, "[start] data started");
+    KF_LOG_INFO(logger, "[start] data started,name:" << name);
+    if (!connectMonitor("ws://127.0.0.1:45678", name, "st"))
+    {
+        KF_LOG_INFO(logger, "connect to monitor error,name@" << name << ",url@" << "ws://127.0.0.1:45678");
+    }
 }
 
 IWCStrategy::~IWCStrategy()
@@ -77,6 +81,11 @@ void IWCStrategy::stop()
     {
         data->stop();
     }
+    if (m_monitorClient)
+    {
+        m_monitorClient->setCallback(nullptr);
+        m_monitorClient.reset();
+    }
 }
 
 void IWCStrategy::run()
@@ -100,13 +109,20 @@ void IWCStrategy::on_market_data(const LFMarketDataField* data, short source, lo
 
 void IWCStrategy::on_market_bar_data(const LFBarMarketDataField* data, short source, long rcv_time)
 {
-    KF_LOG_DEBUG(logger, "[market_bar_data] (source)" << source << " (ticker)" << data->InstrumentID << " (bid_price)" << data->BestBidPrice << " (ask_price)" << data->BestAskPrice);
+    KF_LOG_DEBUG(logger, "[market_bar_data] (source)" << source << " (ticker)" << data->InstrumentID << " (bid_price)" << data->BestBidPrice << " (ask_price)" << data->BestAskPrice<<"(status)"<<data->Status);/*quest3 editd by fxw*/
 }
 
 void IWCStrategy::on_price_book_update(const LFPriceBook20Field* data, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[price_book_update] (source)" << source << " (ticker)" << data->InstrumentID 
-					<< " (bidcount)" << data->BidLevelCount << " (askcount)" << data->AskLevelCount);
+					<< " (bidcount)" << data->BidLevelCount << " (askcount)" << data->AskLevelCount
+                    <<"(Status)"<<data->Status);//FXW's edits
+}
+
+void IWCStrategy::on_funding_update(const LFFundingField* data, short source, long rcv_time)
+{
+    KF_LOG_DEBUG(logger, "[funding_update] (source)" << source << " (ticker)" << data->InstrumentID 
+				<< " (rate)" << data->Rate << " (rate_daily)" << data->RateDaily);
 }
 
 void IWCStrategy::on_market_data_level2(const LFL2MarketDataField* data, short source, long rcv_time)
@@ -166,7 +182,7 @@ void IWCStrategy::on_market_bar(const BarMdMap& data, int min_interval, short so
     for (auto &iter: data)
     {
         const LFBarMarketDataField& bar = iter.second;
-        KF_LOG_DEBUG(logger, "[bar] (ticker)" << iter.first << " (o)" << bar.Open << " (h)" << bar.High << " (l)" << bar.Low << " (c)" << bar.Close);
+        KF_LOG_DEBUG(logger, "[bar] (ticker)" << iter.first << " (o)" << bar.Open << " (h)" << bar.High << " (l)" << bar.Low << " (c)" << bar.Close<<"(status)"<<bar.Status);/*quest3 edited by fxw*/
     }
 }
 
@@ -243,32 +259,32 @@ bool IWCStrategy::td_is_connected(short source) const
     }
 
 /** util functions, check before calling WCStrategyUtil */
-int IWCStrategy::insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int IWCStrategy::insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info,int64_t expect_price)
 {
     CHECK_TD_READY(source);
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
-    return util->insert_market_order(source, instrument_id, exchange_id, volume, direction, offset);
+    return util->insert_market_order(source, instrument_id, exchange_id, volume, direction, offset,misc_info,expect_price);
 }
 
-int IWCStrategy::insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int IWCStrategy::insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     CHECK_TD_READY(source);
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
-    return util->insert_limit_order(source, instrument_id, exchange_id, price, volume, direction, offset);
+    return util->insert_limit_order(source, instrument_id, exchange_id, price, volume, direction, offset,misc_info);
 }
 
-int IWCStrategy::insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int IWCStrategy::insert_fok_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     CHECK_TD_READY(source);
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
-    return util->insert_fok_order(source, instrument_id, exchange_id, price, volume, direction, offset);
+    return util->insert_fok_order(source, instrument_id, exchange_id, price, volume, direction, offset,misc_info);
 }
 
-int IWCStrategy::insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset)
+int IWCStrategy::insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     CHECK_TD_READY(source);
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
-    return util->insert_fak_order(source, instrument_id, exchange_id, price, volume, direction, offset);
+    return util->insert_fak_order(source, instrument_id, exchange_id, price, volume, direction, offset,misc_info);
 }
 
 int IWCStrategy::req_position(short source)
@@ -281,8 +297,19 @@ int IWCStrategy::req_position(short source)
     return util->req_position(source);
 }
 
-int IWCStrategy::cancel_order(short source, int order_id)
+int IWCStrategy::cancel_order(short source, int order_id,string misc_info)
 {
     CHECK_TD_READY(source);
-    return util->cancel_order(source, order_id);
+    return util->cancel_order(source, order_id,misc_info);
+}
+
+bool IWCStrategy::connectMonitor(const std::string &url, const std::string &name, const std::string &type)
+{
+    m_monitorClient->init(logger);
+    m_monitorClient->setCallback(this);
+    if(!m_monitorClient->connect(url))
+    {
+        return false;
+    }
+    return m_monitorClient->login(name, type);
 }

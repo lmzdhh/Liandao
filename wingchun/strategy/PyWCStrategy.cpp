@@ -44,8 +44,9 @@ void PyWCStrategy::start()
         PyEval_InitThreads();
     std::signal(SIGTERM, IWCDataProcessor::signal_handler);
     std::signal(SIGINT, IWCDataProcessor::signal_handler);
-    data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
-    KF_LOG_INFO(logger, "[start] data started");
+    //data_thread = ThreadPtr(new std::thread(&WCDataWrapper::run, data.get()));
+    //KF_LOG_INFO(logger, "[start] data started");
+    IWCStrategy::start();
 }
 
 void PyWCStrategy::on_market_data(const LFMarketDataField* data, short source, long rcv_time)
@@ -65,7 +66,29 @@ void PyWCStrategy::on_price_book_update(const LFPriceBook20Field* data, short so
     if (obj != bp::object() && IWCDataProcessor::signal_received <= 0)
     {
         START_PYTHON_FUNC_CALLING
-            obj((uintptr_t)data, source, rcv_time);
+        obj((uintptr_t)data, source, rcv_time);
+        END_PYTHON_FUNC_CALLING
+    }
+}
+
+void PyWCStrategy::on_funding_update(const LFFundingField* data, short source, long rcv_time)
+{
+    bp::object& obj = py_on_data[MSG_TYPE_LF_FUNDING];
+    if (obj != bp::object() && IWCDataProcessor::signal_received <= 0)
+    {
+        START_PYTHON_FUNC_CALLING
+        obj((uintptr_t)data, source, rcv_time);
+        END_PYTHON_FUNC_CALLING
+    }
+}
+
+void PyWCStrategy::on_market_bar_data(const LFBarMarketDataField* data, short source, long rcv_time)
+{
+    bp::object& obj = py_on_data[MSG_TYPE_LF_BAR_MD];
+    if (obj != bp::object() && IWCDataProcessor::signal_received <= 0)
+    {
+        START_PYTHON_FUNC_CALLING
+        obj((uintptr_t)data, source, rcv_time);
         END_PYTHON_FUNC_CALLING
     }
 }
@@ -226,12 +249,12 @@ BOOST_PYTHON_MODULE(libwingchunstrategy)
     .def("set_on_data", &PyWCStrategy::set_on_data, (bp::arg("msg_type"), bp::arg("func")))
     .def("set_on_pos", &PyWCStrategy::set_on_pos, (bp::arg("func")))
     .def("set_on_switch_day", &PyWCStrategy::set_on_switch_day, (bp::arg("func")))
-    .def("insert_market_order", &PyWCStrategy::insert_market_order_py, (bp::arg("source"), bp::arg("ticker"), bp::arg("exchange_id"), bp::arg("volume"), bp::arg("direction"), bp::arg("offset")))
-    .def("insert_limit_order", &PyWCStrategy::insert_limit_order_py, (bp::arg("source"), bp::arg("ticker"), bp::arg("exchange_id"), bp::arg("price"), bp::arg("volume"), bp::arg("direction"), bp::arg("offset")))
-    .def("insert_fok_order", &PyWCStrategy::insert_fok_order_py, (bp::arg("source"), bp::arg("ticker"), bp::arg("exchange_id"), bp::arg("price"), bp::arg("volume"), bp::arg("direction"), bp::arg("offset")))
-    .def("insert_fak_order", &PyWCStrategy::insert_fak_order_py, (bp::arg("source"), bp::arg("ticker"), bp::arg("exchange_id"), bp::arg("price"), bp::arg("volume"), bp::arg("direction"), bp::arg("offset")))
+    .def("insert_market_order", &PyWCStrategy::insert_market_order_py, (bp::arg("source"), bp::arg("ticker"), bp::arg("exchange_id"), bp::arg("volume"), bp::arg("direction"), bp::arg("offset"), bp::arg("misc_info")="", bp::arg("expect_price")=0))
+    .def("insert_limit_order", &PyWCStrategy::insert_limit_order_py, (bp::arg("source"), bp::arg("ticker"), bp::arg("exchange_id"), bp::arg("price"), bp::arg("volume"), bp::arg("direction"), bp::arg("offset"), bp::arg("misc_info")=""))
+    .def("insert_fok_order", &PyWCStrategy::insert_fok_order_py, (bp::arg("source"), bp::arg("ticker"), bp::arg("exchange_id"), bp::arg("price"), bp::arg("volume"), bp::arg("direction"), bp::arg("offset"), bp::arg("misc_info")=""))
+    .def("insert_fak_order", &PyWCStrategy::insert_fak_order_py, (bp::arg("source"), bp::arg("ticker"), bp::arg("exchange_id"), bp::arg("price"), bp::arg("volume"), bp::arg("direction"), bp::arg("offset"), bp::arg("misc_info")=""))
     .def("req_position", &PyWCStrategy::req_position, (bp::arg("source")))
-    .def("cancel_order", &PyWCStrategy::cancel_order, (bp::arg("source"), bp::arg("order_id")))
+    .def("cancel_order", &PyWCStrategy::cancel_order_py, (bp::arg("source"), bp::arg("order_id"),bp::arg("misc_info")=""))
     .def("set_on_error", &PyWCStrategy::set_on_error, (bp::arg("func")));
 
     bp::class_<WCStrategyUtil, WCStrategyUtilPtr>("Util", bp::no_init)
@@ -240,7 +263,11 @@ BOOST_PYTHON_MODULE(libwingchunstrategy)
     .def("get_nano", &WCStrategyUtil::get_nano)
     .def("get_time", &WCStrategyUtil::get_time)
     .def("parse_time", &WCStrategyUtil::parse_time, (bp::arg("time_str")))
-    .def("parse_nano", &WCStrategyUtil::parse_nano, (bp::arg("nano_time")));
+    .def("parse_nano", &WCStrategyUtil::parse_nano, (bp::arg("nano_time")))
+    .def("gen_md_trigger_tag",&WCStrategyUtil::gen_md_trigger_tag,(bp::arg("time"),bp::arg("source"),bp::arg("is_hedge") = false,bp::arg("is_post_only") = false))
+    .def("gen_trade_trigger_tag",&WCStrategyUtil::gen_trade_trigger_tag,(bp::arg("time"),bp::arg("source"),bp::arg("is_hedge") = false,bp::arg("is_post_only") = false))
+    .def("gen_cancel_trigger_tag",&WCStrategyUtil::gen_cancel_trigger_tag,(bp::arg("time"),bp::arg("source"),bp::arg("order_ref"),bp::arg("request_id"),bp::arg("is_hedge") = false,bp::arg("is_post_only") = false))
+    .def("gen_timeout_trigger_tag",&WCStrategyUtil::gen_timeout_trigger_tag,(bp::arg("time"),bp::arg("source"),bp::arg("is_hedge") = false,bp::arg("is_post_only") = false));
 
     bp::class_<PosHandler, PosHandlerPtr>("PosHandler", bp::no_init)
     .def("update", &PosHandler::update_py, (bp::arg("ticker"), bp::arg("volume"), bp::arg("direction"), bp::arg("trade_off"), bp::arg("order_off")))
