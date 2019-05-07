@@ -22,7 +22,11 @@ WC_NAMESPACE_START
 /**
  * account information unit extra is here.
  */
-
+struct PendingOrderStatus
+{
+    LFRtnOrderField rtn_order;
+    int64_t averagePrice;
+};
 struct OrderActionSentTime
 {
     LFOrderActionField data;
@@ -31,12 +35,13 @@ struct OrderActionSentTime
 };
 struct ResponsedOrderStatus
 {
+    std::string ticker;
     int64_t averagePrice = 0;
     //今成交数量
     uint64_t VolumeTraded;
     int id = 0;
     uint64_t openVolume = 0;
-    int64_t price = 0;
+    int64_t PriceTraded = 0;
     //报单状态
     LfOrderStatusType OrderStatus;
     uint64_t volume = 0;
@@ -76,8 +81,8 @@ struct AccountUnitKraken
     string baseUrl;
     // internal flags
     bool    logged_in;
-    std::vector<LFRtnOrderField> newOrderStatus;
-    std::vector<LFRtnOrderField> pendingOrderStatus;
+    std::vector<PendingOrderStatus> newOrderStatus;
+    std::vector<PendingOrderStatus> pendingOrderStatus;
     std::map<std::string,PriceVolumePrecision> mapPriceVolumePrecision;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
@@ -139,7 +144,7 @@ private:
 
     void retrieveOrderStatus(AccountUnitKraken& unit);
     void moveNewOrderStatusToPending(AccountUnitKraken& unit);
-    void handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<LFRtnOrderField>::iterator orderStatusIterator, 
+    void handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<PendingOrderStatus>::iterator itr, 
                                         ResponsedOrderStatus& responsedOrderStatus);
 
     void loopOrderActionNoResponseTimeOut();
