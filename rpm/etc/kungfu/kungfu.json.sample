@@ -650,7 +650,8 @@
 						"eth_xbt": "ETHXBT",
 						"etc_xbt": "ETCXBT"
 					},
-					"rest_get_interval_ms": 2000
+					"rest_get_interval_ms": 2000,
+					"max_rest_retry_times": 3
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
