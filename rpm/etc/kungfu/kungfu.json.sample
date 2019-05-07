@@ -141,6 +141,17 @@
 				"btc_usdt": "USDT;BTC"
 			}
 		}
+		"poloniex":
+		{
+			"baseUrl": "https://poloniex.com/public",
+			"book_depth_count":20,
+			"trade_count":10,
+			"whiteLists":
+			{
+				"strategy_coinpair(base_quote)": "quote;base",
+				"eth_btc":"BTC_ETH"
+			}
+		}
 	},
 	"td": {
 		"daybit":

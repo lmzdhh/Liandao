@@ -89,6 +89,11 @@ ADD_LIBRARY(daybitmd SHARED ${DAYBIT_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(daybitmd ${COMMON_LIBRARIES} ${Boost_LIBRARIES}  ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so ${CMAKE_SOURCE_DIR}/utils/zlib/lib/libz.so.1.2.11)
 INSTALL(TARGETS daybitmd DESTINATION "lib/wingchun")
 
+SET(POLONIEX_SOURCE_FILES MDEnginePoloniex.cpp MDEnginePoloniex.h IMDEngine.cpp IMDEngine.h ../base/IEngine.cpp ../base/IEngine.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h PriceBook20Assembler.cpp PriceBook20Assembler.h ../../utils/common/Utils.h ../../utils/common/Utils.cpp)
+ADD_LIBRARY(poloniexmd SHARED ${POLONIEX_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(poloniexmd ${COMMON_LIBRARIES} ${Boost_LIBRARIES}  ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so ${CMAKE_SOURCE_DIR}/utils/zlib/lib/libz.so.1.2.11)
+INSTALL(TARGETS poloniexmd DESTINATION "lib/wingchun")
+
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/utils/cpr/lib/ DESTINATION "lib/wingchun")
 
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/utils/zlib/lib/ DESTINATION "lib/wingchun")
