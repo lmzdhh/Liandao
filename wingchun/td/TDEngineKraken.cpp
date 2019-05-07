@@ -668,7 +668,7 @@ LfOrderStatusType TDEngineKraken::GetOrderStatus(std::string state) {
     }else if(state == "expired"){
         return LF_CHAR_Error;
     }else if(state == "open"){
-        return LF_CHAR_PartTradedQueueing;
+        return LF_CHAR_NoTradeQueueing;
     }
     return LF_CHAR_Unknown;
 }
@@ -858,6 +858,8 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
             strncpy(rtn_order.BusinessUnit,remoteOrderId.c_str(),21);
             rtn_order.OrderStatus = LF_CHAR_NotTouched;
             rtn_order.VolumeTraded = 0;
+            rtn_order.VolumeTotalOriginal = data->Volume;
+            rtn_order.LimitPrice = data->LimitPrice;
             
             strcpy(rtn_order.ExchangeID, "kraken");
             strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
@@ -952,8 +954,20 @@ void TDEngineKraken::req_order_action(const LFOrderActionField* data, int accoun
     Document d;
     cancel_order(unit, ticker, remoteOrderId, d);
 
-    if(!d.HasParseError() && d.HasMember("error")&&d["error"].Size()==0) {
+    if(!d.HasParseError() && d.HasMember("error")&&d["error"].Size()==0&&d["result"].IsObject()) {
         errorId = 0;
+        rapidjson::Value result = d["result"].GetObject();
+        int count = result["count"].GetInt();
+        std::vector<LFRtnOrderField>::iterator itr;
+        for(itr = unit.pendingOrderStatus.begin(); itr != unit.pendingOrderStatus.end();){
+            string oldRemoteOrderId=itr->BusinessUnit;
+            if(remoteOrderId == oldRemoteOrderId){
+                orderIsCanceled(unit,&(*itr));
+                unit.pendingOrderStatus.erase(itr);
+            }else{
+                itr++;
+            }
+        }
         KF_LOG_INFO(logger,"[req_order_action] (response) " << parseJsonToString(d));
     }else{
         errorId = 520;
@@ -972,6 +986,7 @@ void TDEngineKraken::req_order_action(const LFOrderActionField* data, int accoun
         raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KRAKEN, 1, requestId, errorId, errorMsg.c_str());
 
     } else {
+        
         KF_LOG_INFO(logger,"[req_order_action] cancel order success");
     }
 }
@@ -1048,23 +1063,15 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
         
                 KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
                 ResponsedOrderStatus responsedOrderStatus;
-                responsedOrderStatus.ticker = ticker;
-                //已成交总金额
-                double dDealFunds = std::stod(data["cost"].GetString());
-                //已成交数量
-                double dDealSize = std::stod(data["vol_exec"].GetString());
-                responsedOrderStatus.averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
-                responsedOrderStatus.orderId = orderStatusIterator->BusinessUnit;
-                rapidjson::Value descr=data["descr"].GetObject();
-                //报单价格条件
-                responsedOrderStatus.OrderPriceType = GetPriceType(descr["ordertype"].GetString());
-                //买卖方向
-                responsedOrderStatus.Direction = GetDirection(descr["type"].GetString());
-                //已成交数量
-                int64_t nDealSize = std::round(dDealSize * scale_offset);
+                //平均价格
+                responsedOrderStatus.averagePrice = std::round(std::stod(data["price"].GetString()) * scale_offset);
+                //单次成交数量
+                int64_t nDealSize = std::round(std::stod(data["vol_exec"].GetString()) * scale_offset);
                 //总量
                 int64_t nSize = std::round(std::stod(data["vol"].GetString()) * scale_offset);
-                responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
+                //单次成交价格
+                responsedOrderStatus.price = std::round(std::stod(data["cost"].GetString()) * scale_offset);
+                //
                 responsedOrderStatus.volume = nSize;
                 //单次成交数量
                 responsedOrderStatus.VolumeTraded = nDealSize;
@@ -1073,17 +1080,32 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
                 }
                 //单次未成交数量
                 responsedOrderStatus.openVolume =  nSize - orderStatusIterator->VolumeTraded;
+                //订单状态
                 LfOrderStatusType orderStatus = GetOrderStatus(data["status"].GetString());
-                if(orderStatus == LF_CHAR_PartTradedQueueing&&orderStatusIterator->VolumeTraded>=responsedOrderStatus.volume){
-                    orderStatus = LF_CHAR_AllTraded;
+                if(orderStatus == LF_CHAR_NoTradeQueueing){
+                    if(orderStatusIterator->VolumeTraded >= responsedOrderStatus.volume){
+                        orderStatus = LF_CHAR_AllTraded;
+                    }else if(orderStatusIterator->VolumeTraded == 0){
+                        orderStatus = LF_CHAR_Touched;
+                    }else if(orderStatusIterator->VolumeTraded < responsedOrderStatus.volume){
+                        orderStatus = LF_CHAR_PartTradedQueueing;
+                    }
+                    
+                }else if(orderStatus == LF_CHAR_Canceled){
+                    if(orderStatusIterator->VolumeTraded < responsedOrderStatus.volume){
+                        orderStatus = LF_CHAR_PartTradedNotQueueing;
+                    }
                 }
                 responsedOrderStatus.OrderStatus = orderStatus;
+                //订单信息处理
                 handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
 
                 //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
                 remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->BusinessUnit);
             }
-        } else {
+        } else if(d.HasMember("error") && d["error"].Size()==0&&!d["result"].IsObject()){
+            orderIsCanceled(unit,&(*orderStatusIterator));
+        }else{
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
             std::string errorMsg;
             std::string errorId = "520";
@@ -1294,14 +1316,7 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, string userref, string 
 
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
-/*火币返回数据格式
-    {
-  "status": "ok",
-  "ch": "market.btcusdt.kline.1day",
-  "ts": 1499223904680,
-  "data": // per API response data in nested JSON object
-    }
-*/
+
 bool TDEngineKraken::shouldRetry(Document& doc)
 {
     bool ret = false;
@@ -1361,8 +1376,36 @@ void TDEngineKraken::query_order(AccountUnitKraken& unit, std::string code, std:
     json.Parse(response.text.c_str());
     KF_LOG_INFO(logger, "[query_order] end");
 }
+void TDEngineKraken::orderIsCanceled(AccountUnitKraken& unit, LFRtnOrderField* rtn_order){
+    rtn_order->OrderStatus = LF_CHAR_Canceled;
+    //累计成交数量
+    //rtn_order.VolumeTraded;
+    //剩余未成交数量
+    //rtn_order->VolumeTotal = rtn_order.VolumeTotalOriginal-rtn_order->VolumeTraded;
+    on_rtn_order(rtn_order);
+    raw_writer->write_frame(&(*rtn_order), sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,1, 
+            (rtn_order->RequestID > 0) ? rtn_order->RequestID: -1);
 
+    //send OnRtnTrade
+    LFRtnTradeField rtn_trade;
+    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+    strcpy(rtn_trade.ExchangeID, "kraken");
+    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+    strncpy(rtn_trade.InstrumentID, rtn_order->InstrumentID, 31);
+    strncpy(rtn_trade.OrderRef, rtn_order->OrderRef, 13);
+    rtn_trade.Direction = rtn_order->Direction;
+    //单次成交数量
+    rtn_trade.Volume = 0;
+    rtn_trade.Price = 0;
+    strncpy(rtn_trade.OrderSysID,rtn_order->BusinessUnit,31);
+    on_rtn_trade(&rtn_trade);
 
+    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+        source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
+
+    KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
+                << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+}
 void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<LFRtnOrderField>::iterator orderStatusIterator,
          ResponsedOrderStatus& responsedOrderStatus)
 {
@@ -1375,7 +1418,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     //累计成交数量
     //orderStatusIterator.VolumeTraded;
     //剩余未成交数量
-    orderStatusIterator->VolumeTotal = responsedOrderStatus.volume-orderStatusIterator->VolumeTraded;
+    orderStatusIterator->VolumeTotal = orderStatusIterator->VolumeTotalOriginal-orderStatusIterator->VolumeTraded;
     on_rtn_order(&(*orderStatusIterator));
     raw_writer->write_frame(&(*orderStatusIterator), sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,1, (orderStatusIterator->RequestID > 0) ? orderStatusIterator->RequestID: -1);
 
@@ -1389,6 +1432,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     rtn_trade.Direction = orderStatusIterator->Direction;
     //单次成交数量
     rtn_trade.Volume = responsedOrderStatus.VolumeTraded;
+    //单次成交价格
     rtn_trade.Price = responsedOrderStatus.price;
     strncpy(rtn_trade.OrderSysID,orderStatusIterator->BusinessUnit,31);
     on_rtn_trade(&rtn_trade);

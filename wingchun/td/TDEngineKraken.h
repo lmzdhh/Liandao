@@ -32,23 +32,13 @@ struct OrderActionSentTime
 struct ResponsedOrderStatus
 {
     int64_t averagePrice = 0;
-    std::string ticker;
-    int64_t createdDate = 0;
     //今成交数量
     uint64_t VolumeTraded;
     int id = 0;
     uint64_t openVolume = 0;
-    std::string orderId;
-    std::string orderType;
-    //报单价格条件
-    LfOrderPriceTypeType OrderPriceType;
     int64_t price = 0;
-    //买卖方向
-    LfDirectionType Direction;
-
     //报单状态
     LfOrderStatusType OrderStatus;
-    uint64_t trunoverVolume = 0;
     uint64_t volume = 0;
 };
 //价格和数量精度
@@ -154,6 +144,7 @@ private:
 
     void loopOrderActionNoResponseTimeOut();
     void orderActionNoResponseTimeOut();
+    void orderIsCanceled(AccountUnitKraken& unit, LFRtnOrderField* rtn_order);
 
 private:
     void get_account(AccountUnitKraken& unit, Document& json);

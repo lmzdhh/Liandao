@@ -648,7 +648,8 @@
 				    "atom_xbt": "ATOMXBT",
 				    "ada_xbt": "ADAXBT",
 						"eth_xbt": "ETHXBT",
-						"etc_xbt": "ETCXBT"
+						"etc_xbt": "ETCXBT",
+						"usdt_usd":"USDTUSD"
 					},
 					"rest_get_interval_ms": 2000,
 					"max_rest_retry_times": 3
