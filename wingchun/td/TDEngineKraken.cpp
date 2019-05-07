@@ -1086,7 +1086,7 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
                     if(orderStatusIterator->VolumeTraded >= responsedOrderStatus.volume){
                         orderStatus = LF_CHAR_AllTraded;
                     }else if(orderStatusIterator->VolumeTraded == 0){
-                        orderStatus = LF_CHAR_Touched;
+                        orderStatus = LF_CHAR_NotTouched;
                     }else if(orderStatusIterator->VolumeTraded < responsedOrderStatus.volume){
                         orderStatus = LF_CHAR_PartTradedQueueing;
                     }
