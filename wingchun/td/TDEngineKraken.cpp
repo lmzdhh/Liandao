@@ -881,7 +881,7 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
 
             KF_LOG_DEBUG(logger, "[req_order_insert] (addNewQueryOrdersAndTrades)" );
 
-            addNewQueryOrdersAndTrades(unit, *rtn_order, remoteOrderId);
+            addNewQueryOrdersAndTrades(unit, pOrderStatus, remoteOrderId);
 
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KRAKEN, 1,
                                           requestId, errorId, errorMsg.c_str());
@@ -1111,17 +1111,17 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
         }
     }
 }
-void TDEngineKraken::addNewQueryOrdersAndTrades(AccountUnitKraken& unit, LFRtnOrderField rtnOrder, std::string& remoteOrderId){
+void TDEngineKraken::addNewQueryOrdersAndTrades(AccountUnitKraken& unit, PendingOrderStatus pOrderStatus, std::string& remoteOrderId){
     KF_LOG_DEBUG(logger, "[addNewQueryOrdersAndTrades]" );
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
 
-    unit.newOrderStatus.push_back(rtnOrder);
+    unit.newOrderStatus.push_back(pOrderStatus);
 
-    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << rtnOrder.InstrumentID
-                                                                       << " (OrderRef) " << rtnOrder.OrderRef
-                                                                       << " (remoteOrderId) " << rtnOrder.BusinessUnit
-                                                                       << "(VolumeTraded)" << rtnOrder.VolumeTraded);
+    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << pOrderStatus.rtn_order.InstrumentID
+                                                                       << " (OrderRef) " << pOrderStatus.rtn_order.OrderRef
+                                                                       << " (remoteOrderId) " << pOrderStatus.rtn_order.BusinessUnit
+                                                                       << "(VolumeTraded)" << pOrderStatus.rtn_order.VolumeTraded);
 }
 
 

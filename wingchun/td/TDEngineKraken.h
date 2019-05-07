@@ -140,7 +140,7 @@ private:
     virtual void set_reader_thread() override;
     void loop();
     void GetAndHandleOrderTradeResponse();
-    void addNewQueryOrdersAndTrades(AccountUnitKraken& unit, LFRtnOrderField rtnOrder, std::string& remoteOrderId);
+    void addNewQueryOrdersAndTrades(AccountUnitKraken& unit, PendingOrderStatus pOrderStatus, std::string& remoteOrderId);
 
     void retrieveOrderStatus(AccountUnitKraken& unit);
     void moveNewOrderStatusToPending(AccountUnitKraken& unit);
