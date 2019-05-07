@@ -961,14 +961,14 @@ void TDEngineKraken::req_order_action(const LFOrderActionField* data, int accoun
         std::vector<LFRtnOrderField>::iterator itr;
         for(itr = unit.pendingOrderStatus.begin(); itr != unit.pendingOrderStatus.end();){
             string oldRemoteOrderId=itr->BusinessUnit;
-            if(remoteOrderId == oldRemoteOrderId){
+            if(remoteOrderId == oldRemoteOrderId&&count>=1){
                 orderIsCanceled(unit,&(*itr));
                 unit.pendingOrderStatus.erase(itr);
             }else{
                 itr++;
             }
         }
-        KF_LOG_INFO(logger,"[req_order_action] (response) " << parseJsonToString(d));
+        KF_LOG_INFO(logger,"[req_order_action] (canceled order counts) "<<count);
     }else{
         errorId = 520;
         if (d.HasMember("error") && d["error"].IsArray()) {
