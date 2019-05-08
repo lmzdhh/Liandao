@@ -82,7 +82,7 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_PROBIT);
     loadJournalInfo(SOURCE_BITHUMB);
     loadJournalInfo(SOURCE_DAYBIT);
-
+    loadJournalInfo(SOURCE_BITTREX);
 
     loadJournalInfo(0, getSystemJournalPair);
 

@@ -37,6 +37,8 @@ inline std::string getExchangeName(short exchange_id)
 			return EXCHANGE_BITMAX;
 		case EXCHANGE_ID_BITFINEX:
 			return EXCHANGE_BITFINEX;
+		case EXCHANGE_ID_BITTREX:
+			return EXCHANGE_BITTREX;
 		case EXCHANGE_ID_BITMEX:
 			return EXCHANGE_BITMEX;
 		case EXCHANGE_ID_HITBTC:

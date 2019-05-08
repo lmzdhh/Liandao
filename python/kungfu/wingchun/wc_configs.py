@@ -361,7 +361,8 @@ wingchun_constants = [
                        ('OCEANEXB', 27, ''),
                        ('PROBIT', 28, ''),
                        ('BITHUMB', 29, ''),
-                       ('DAYBIT', 31, '')
+                       ('DAYBIT', 31, ''),
+                       ('BITTREX', 36, '')
                        ],'source index'),
     ('DIRECTION', 'char', [('Buy', '0', '买'),
                            ('Sell', '1', '卖')],

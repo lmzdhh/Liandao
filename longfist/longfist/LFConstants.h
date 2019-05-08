@@ -21,6 +21,7 @@ enum exchange_source_index : short
     SOURCE_MOCK = 20,
     SOURCE_BITMAX = 21,
     SOURCE_BITFINEX = 22,
+    SOURCE_BITTREX = 36,
     SOURCE_BITMEX = 23,
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
@@ -196,6 +197,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_PROBIT  28
 #define EXCHANGE_ID_BITHUMB  29
 #define EXCHANGE_ID_DAYBIT  31
+#define EXCHANGE_ID_BITTREX  36
 // MsgTypes that used for LF data structure...
 const short MSG_TYPE_LF_MD            = 101;
 const short MSG_TYPE_LF_L2_MD         = 102;
@@ -364,6 +366,15 @@ const short MSG_TYPE_LF_ORDER_DAYBIT     	= 31204;
 const short MSG_TYPE_LF_RTN_ORDER_DAYBIT 	= 31205;
 const short MSG_TYPE_LF_RTN_TRADE_DAYBIT 	= 31206;
 const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
+
+//bittrex, idx=36
+const short MSG_TYPE_LF_MD_BITRREX        = 36101;
+const short MSG_TYPE_LF_QRY_POS_BITTREX   = 36201;
+const short MSG_TYPE_LF_RSP_POS_BITTREX   = 36202;
+const short MSG_TYPE_LF_ORDER_BITTREX     = 36204;
+const short MSG_TYPE_LF_RTN_ORDER_BITTREX = 36205;
+const short MSG_TYPE_LF_RTN_TRADE_BITTREX = 36206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITTREX = 36207;
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
 ///////////////////////////////////

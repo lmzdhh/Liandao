@@ -848,6 +848,14 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITFINEX: LFRtnTradeField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITFINEX: LFOrderActionField,
 
+    lf.MsgTypes.MSG_TYPE_LF_MD_BITTREX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITTREX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITTREX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BITFTREX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITTREX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITTREX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITTREX: LFOrderActionField,
+
     lf.MsgTypes.MSG_TYPE_LF_MD_BITMEX: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITMEX: LFQryPositionField,
     lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITMEX: LFRspPositionField,
