@@ -16,6 +16,7 @@ typedef char char_16[16];
 typedef char char_13[13];
 typedef char char_2[2];
 typedef char char_11[11];
+typedef char char_32[32];
 
 struct LFMarketDataField
 {
@@ -79,6 +80,7 @@ struct LFPriceBookFieldTmpl
 	int		AskLevelCount;	
 	LFPriceLevel 	BidLevels[level_count];
 	LFPriceLevel	AskLevels[level_count];
+    int Status;/*FXW's edits,0=normal 1=loss level 2=crossed*/
 };
 
 using LFPriceBook20Field = LFPriceBookFieldTmpl<20>;
@@ -239,13 +241,18 @@ struct LFL2OrderField
 
 struct LFL2TradeField
 {
-	char_9   	TradeTime;             //成交时间（秒）
+	char_32   	TradeTime;             //成交时间（秒）
 	char_9   	ExchangeID;            //交易所代码
 	char_31  	InstrumentID;          //合约代码
 	int64_t   	Price;                 //成交价格
 	uint64_t   	Volume;                //成交数量
 	char_2   	OrderKind;             //报单类型
 	char_2   	OrderBSFlag;           //内外盘标志
+	char_64     MakerOrderID;
+	char_64     TakerOrderID;
+	char_64     TradeID;
+	char_32     Sequence;    
+    int         Status;                 //状态码 0为正常//quest3 edited by fxw
 };
 
 struct LFBarMarketDataField
@@ -268,6 +275,7 @@ struct LFBarMarketDataField
 	uint64_t   	StartVolume;           //初始总交易量
     int64_t         BestBidPrice;      
     int64_t         BestAskPrice;
+    int Status;//状态码 0为正常/*quest3 edited by fxw*/
 };
 
 struct LFQryPositionField
@@ -295,7 +303,7 @@ struct LFInputOrderField
 	char_11                    	BrokerID;              //经纪公司代码
 	char_16                    	UserID;                //用户代码
 	char_19                    	InvestorID;            //投资者代码
-	char_21                    	BusinessUnit;          //业务单元
+	char_64                    	BusinessUnit;          //业务单元
 	char_9                     	ExchangeID;            //交易所代码
 	char_31                    	InstrumentID;          //合约代码
 	char_21                    	OrderRef;              //报单引用
@@ -316,6 +324,7 @@ struct LFInputOrderField
 	uint64_t			MassOrderSeqId;
 	int				MassOrderIndex;
 	int				MassOrderTotalNum;
+	int64_t 		ExpectPrice; 						//预期价格，市价单使用
 };
 
 struct LFRtnOrderField
@@ -324,7 +333,7 @@ struct LFRtnOrderField
 	char_16                	UserID;                //用户代码
 	char_11                	ParticipantID;         //会员代码
 	char_19                	InvestorID;            //投资者代码
-	char_21                	BusinessUnit;          //业务单元
+	char_64                	BusinessUnit;          //业务单元
 	char_31                	InstrumentID;          //合约代码
 	char_21                	OrderRef;              //报单引用
 	char_11                	ExchangeID;            //交易所代码
@@ -347,18 +356,18 @@ struct LFRtnTradeField
 	char_11           	BrokerID;              //经纪公司代码
 	char_16           	UserID;                //用户代码
 	char_19           	InvestorID;            //投资者代码
-	char_21           	BusinessUnit;          //业务单元
+	char_64           	BusinessUnit;          //业务单元
 	char_31           	InstrumentID;          //合约代码
 	char_21           	OrderRef;              //报单引用
 	char_11           	ExchangeID;            //交易所代码
-	char_21           	TradeID;               //成交编号
-	char_31           	OrderSysID;            //报单编号
+	char_64           	TradeID;               //成交编号
+	char_64           	OrderSysID;            //报单编号
 	char_11           	ParticipantID;         //会员代码
 	char_21           	ClientID;              //客户代码
 	int64_t            	Price;                 //价格
 	uint64_t            Volume;                //数量
 	char_13           	TradingDay;            //交易日
-	char_13           	TradeTime;             //成交时间
+	char_32           	TradeTime;             //成交时间
 	LfDirectionType   	Direction;             //买卖方向
 	LfOffsetFlagType  	OffsetFlag;            //开平标志
 	LfHedgeFlagType   	HedgeFlag;             //投机套保标志

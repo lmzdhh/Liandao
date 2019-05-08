@@ -141,17 +141,31 @@
 				"btc_usdt": "USDT;BTC"
 			}
 		},
-                "bitflyer": {
-                        "book_depth_count": 25,
-                        "trade_count": 10,
-                        "whiteLists": {
-                                "strategy_coinpair(base_quote)": "exchange_coinpair",
-                                "btc_jpy": "BTC_JPY",
-       		                "fx_btc_jpy": "FX_BTC_JPY",
-                                "eth_btc": "ETH_BTC"
-                        },
-                        "rest_get_interval_ms": 500
-                }
+    "bitflyer": {
+        "book_depth_count": 25,
+        "trade_count": 10,
+        "whiteLists": {
+        	"strategy_coinpair(base_quote)": "exchange_coinpair",
+          "btc_jpy": "BTC_JPY",
+       		"fx_btc_jpy": "FX_BTC_JPY",
+          "eth_btc": "ETH_BTC"
+        },
+        "rest_get_interval_ms": 500
+    },
+		"kucoin":
+		{
+			"book_depth_count": 5,
+			"rest_get_interval_ms": 500,
+			"rest_try_count":5,
+			"whiteLists": {
+				"btc_usdt": "BTC-USDT",
+				"eth_usdt": "ETH-USDT",
+				"vet_usdt": "VET-USDT",
+				"eth_btc": "ETH-BTC",
+				"vet_btc": "VET-BTC",
+				"vet_eth": "VET-ETH"
+			}
+		}
 	},
 	"td": {
 		"daybit":
@@ -241,16 +255,26 @@
 		},
 
 		"binance": {
-			"accounts": [{
-				"info": {
-					"interfaces": "10.0.0.22-10.0.0.193-10.0.0.104",
-					"interface_timeout_ms": 30000,
-					"interface_switch": 1,
-					"APIKey": "your-api-key",
-					"SecretKey": "your-secret-key",
+      "accounts": [{
+        "info": {
+            "interfaces": "10.0.0.22-10.0.0.193-10.0.0.104",
+            "interface_timeout_ms": 30000,
+            "interface_switch": 1,
+            "users":[
+              {
+                "APIKey": "nNyyrOmKNk9KPp2c6XjxNNhgt5RwkR3W5U0DuooBISM5LWHXlx2zWVuCPm11wYxo",
+                "SecretKey": "SYE2vviOXHutnDhua42txo39XXBUyq8TxaKzT6oF8IokfKXSfXnOhDqzi79FuJ7G"
+              },
+              {
+                "APIKey": "5SxLPrucIKa42XghQbptPNjbHei1yFral8BAfJ1fpVL5sH1FiD42pobgyCC9LDlx",
+                "SecretKey": "0vUJKnuXRAggLtvNaYysumjZYNxOLNWC20pWETxPNMWK5Us3MCEtsffENntSSF73"
+              }
+          ],
 					"whiteLists": {
 						"etc_eth": "ETCETH",
-						"trx_btc": "TRXBTC"
+						"trx_btc": "TRXBTC",
+						"eos_btc":"EOSBTC",
+            "btt_btc":"BTTBTC"
 					},
 					"positionWhiteLists": {
 						"ETC": "ETC",
@@ -266,7 +290,9 @@
           "order_count_per_second":5,
           "request_weight_per_minute":1000,
           "prohibit_order_ms":10000,
-          "default_429_rest_interval_ms":1000
+          "default_429_rest_interval_ms":1000,
+          "UFR_limit":0.998,
+          "UFR_order_lower_limit":300
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
@@ -632,43 +658,120 @@
 				"future_exotic": null
 			}
 		},
-                "bitflyer": {
-                        "accounts": [{
-                                "info": {
-                                        "APIKey": "your-api-key",
-                                        "SecretKey": "your-secret-key",
-                                        "passphrase": "your-passphrase",
-                                        "baseUrl": "https://api.bitflyer.com",
-                                        "whiteLists": {
-                                                "strategy_coinpair(base_quote)": "exchange_coinpair",
-                                                "btc_jpy": "BTC_JPY",
-                                                "fx_btc_jpy": "FX_BTC_JPY",
-                                                "eth_btc": "ETH_BTC"
-                                        },
-                                        "positionWhiteLists": {
-                                                "ETC": "ETC",
-                                                "BTC": "BTC"
-                                        },
-                                        "rest_get_interval_ms": 2000
-                                },
-                                "clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
-                                "is_default": true
-                        }],
-                        "FeeSetup": {
-                                "stock": {
-                                        "type": "amount",
-                                        "fee_multi": 0.0003,
-                                        "ctr_multi": 1,
-                                        "min_fee": 0
-                                },
-                                "future": {
-                                        "type": "amount",
-                                        "fee_multi": [0.000023, 0.00069, 0.000023],
-                                        "ctr_multi": 200,
-                                        "min_fee": 0
-                                },
-                                "future_exotic": null
-                        }
+    "bitflyer": {
+    	"accounts": [{
+        "info": {
+            "APIKey": "your-api-key",
+            "SecretKey": "your-secret-key",
+            "passphrase": "your-passphrase",
+            "baseUrl": "https://api.bitflyer.com",
+            "whiteLists": {
+                "strategy_coinpair(base_quote)": "exchange_coinpair",
+                    "btc_jpy": "BTC_JPY",
+                    "fx_btc_jpy": "FX_BTC_JPY",
+                    "eth_btc": "ETH_BTC"
+            },
+            "positionWhiteLists": {
+                "ETC": "ETC",
+                 "BTC": "BTC"
+            },
+             "rest_get_interval_ms": 2000
+        },
+        "clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+        "is_default": true
+      }],
+      "FeeSetup": {
+        "stock": {
+          "type": "amount",
+          "fee_multi": 0.0003,
+          "ctr_multi": 1,
+          "min_fee": 0
+        	},
+        	"future": {
+            "type": "amount",
+            fee_multi": [0.000023, 0.00069, 0.000023],
+            "ctr_multi": 200,
+            "min_fee": 0
+          },
+          "future_exotic": null
+      }
+		},
+		"kucoin": {
+			"accounts": [{
+				"info": {
+					"APIKey": "5c8a6f9f38300c0cdc2d58f2",
+					"SecretKey": "34d0a97a-5eb6-40e6-8090-b19d6b571c2d",
+					"passphrase": "passphrase",
+					"baseUrl": "https://api.kucoin.com",
+					"whiteLists": {
+						"btc_usdt": "BTC-USDT",
+						"eth_usdt": "ETH-USDT",
+						"vet_usdt": "VET-USDT",
+						"eth_btc": "ETH-BTC",
+						"vet_btc": "VET-BTC",
+						"vet_eth": "VET-ETH"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"BTC": "BTC",
+						"ETH": "ETH"
+					},
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			},
+		"huobi": {
+			"accounts": [{
+				"info": {
+					"APIKey": "1c574897-588985ef-4b53184b-69e48",
+					"SecretKey": "6fae0be0-d8985c81-fe49a4c1-3f47d",
+					"passphrase": "your-passphrase",
+					"baseUrl": "https://api.huobi.pro",
+					"whiteLists": {
+						"strategy_coinpair(base_quote)": "exchange_coinpair",
+						"btc_usd": "btcusdt",
+				    "eth_usd": "etcusdt",
+						"eos_btc": "eosbtc",
+						"hit_btc": "hitbtc",
+						"edu_btc": "edubtc"
+					},
+					"is_margin": false,
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
 		}
 	}
 }

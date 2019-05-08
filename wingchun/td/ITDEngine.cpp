@@ -552,3 +552,15 @@ TradeAccount ITDEngine::load_account(int idx, const json& j_account)
     KF_LOG_ERROR(logger, "[account] NOT IMPLEMENTED! (content)" << j_account);
     throw std::runtime_error("load_account not implemented yet!");
 }
+
+bool ITDEngine::is_post_only(const LFInputOrderField* data)
+{
+    if(data != nullptr && data->MiscInfo[39] == '1')
+    {
+        return true;
+    }
+    else 
+    {
+        return false;
+    }
+}
