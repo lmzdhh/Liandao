@@ -1018,10 +1018,10 @@ void TDEngineHuobi::dealPriceVolume(AccountUnitHuobi& unit,const std::string& sy
         sprintf(chV,"%.8lf",nVolume*1.0/scale_offset);
         nDealPrice=chP;
         KF_LOG_INFO(logger,"[dealPriceVolume] (chP) "<<chP<<" (nDealPrice) "<<nDealPrice);
-        nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+pPrecision+1);
+        nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+(pPrecision==0?pPrecision:(pPrecision+1)));
         nDealVolume=chV;
          KF_LOG_INFO(logger,"[dealPriceVolume]  (chP) "<<chV<<" (nDealVolume) "<<nDealVolume);
-        nDealVolume=nDealVolume.substr(0,nDealVolume.find(".")+vPrecision+1);
+        nDealVolume=nDealVolume.substr(0,nDealVolume.find(".")+(vPrecision==0?vPrecision:(vPrecision+1)));
     }
     KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << ticker << " (Volume)" << nVolume << " (Price)" << nPrice
                                                       << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
@@ -2035,6 +2035,7 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     }
     rtn_order.OrderStatus = orderStatus;
     KF_LOG_INFO(logger, "[handleResponseOrderStatus] (orderStatus) "<<rtn_order.OrderStatus);
+    uint64_t oldVolumeTraded = rtn_order.VolumeTraded;
     //累计成交数量
     rtn_order.VolumeTraded = volumeTraded;
     //剩余数量
@@ -2043,25 +2044,28 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_ORDER_HUOBI,
         1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
 
-    //send OnRtnTrade
-    LFRtnTradeField rtn_trade;
-    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-    strcpy(rtn_trade.ExchangeID, "huobi");
-    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_trade.InstrumentID, rtn_order.InstrumentID, 31);
-    strncpy(rtn_trade.OrderRef, rtn_order.OrderRef, 13);
-    rtn_trade.Direction = rtn_order.Direction;
-    //单次成交数量
-    rtn_trade.Volume = nDealSize;
-    rtn_trade.Price =std::round(std::stod(data["price"].GetString())*scale_offset);//(newAmount - oldAmount)/(rtn_trade.Volume);
-    strncpy(rtn_trade.OrderSysID,rtn_order.BusinessUnit,31);
-    on_rtn_trade(&rtn_trade);
+    if(oldVolumeTraded != rtn_order.VolumeTraded){
+        //send OnRtnTrade
+        LFRtnTradeField rtn_trade;
+        memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+        strcpy(rtn_trade.ExchangeID, "huobi");
+        strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+        strncpy(rtn_trade.InstrumentID, rtn_order.InstrumentID, 31);
+        strncpy(rtn_trade.OrderRef, rtn_order.OrderRef, 13);
+        rtn_trade.Direction = rtn_order.Direction;
+        //单次成交数量
+        rtn_trade.Volume = nDealSize;
+        rtn_trade.Price =std::round(std::stod(data["price"].GetString())*scale_offset);//(newAmount - oldAmount)/(rtn_trade.Volume);
+        strncpy(rtn_trade.OrderSysID,rtn_order.BusinessUnit,31);
+        on_rtn_trade(&rtn_trade);
 
-    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-        source_id, MSG_TYPE_LF_RTN_TRADE_HUOBI, 1, -1);
+        raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+            source_id, MSG_TYPE_LF_RTN_TRADE_HUOBI, 1, -1);
 
-    KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
-                << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+        KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
+                << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);  
+    }
+
 
 }
 std::string TDEngineHuobi::parseJsonToString(Document &d){
