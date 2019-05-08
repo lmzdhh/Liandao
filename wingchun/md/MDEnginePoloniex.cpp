@@ -305,12 +305,16 @@ void MDEnginePoloniex::on_lws_data(struct lws* conn, const char* data, size_t le
         return;
     }
 
-    if(json.IsArray){
+    if(json.IsArray()){
         int channelId = json.GetArray()[0].GetInt();
         //get initialization infomation
-        if(strcmp(json.GetArray()[1].GetArray()[0].GetArray(1)[0].GetString(),"i")==0){
-            KF_LOG_INFO(logger,"MDEnginePology::on_lws_data: getInfo");
-            GetINitializationInfomation(json,channelId);
+        if(strcmp(json.GetArray()[2].GetArray()[0].GetArray()[0].GetString(),"i")==0){
+            KF_LOG_INFO(logger,"MDEnginePology::on_lws_data: getInfo: inistial");
+            GetINitializationInfomation(json,channelId,true);
+        }
+        else{
+            KF_LOG_INFO(logger,"MDEnginePology::on_lws_data: getInfo: getchange");
+            GetINitializationInfomation(json,channelId,false);
         }
 
 
@@ -321,24 +325,83 @@ void MDEnginePoloniex::on_lws_data(struct lws* conn, const char* data, size_t le
 }
 
 
-void MDEnginePoloniex::GetINitializationInfomation(Documen& json,channelId){
+int MDEnginePoloniex::GetINitializationInfomation(Documen& json,int channelId,bool isInistial){
     KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation");
-    std::string ticker = json.GetArray()[1].GetArray()[0].GetArray(1)["currencyPair"].GetString();
-    if(ticker.length()==0) return;
+    std::string ticker;
 
-    KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation"<<ticker);
+    if(isInistial){
+        ticker = json.GetArray()[2].GetArray()[0].GetArray()[1]["currencyPair"].GetString();
+        if(ticker.length()==0) return;
 
-    SubscribeChannel newChannel;
-    newChannel.channelId = channelId;
-    newChannel.exchange_coinpair = ticker;
-    websocketSubscribeChannel.push_back(newChannel);
-    debug_print(websocketSubscribeChannel);
+        KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation"<<ticker);
 
-    // [ <channel id>, <sequence number>, [ [ "i", { "currencyPair": "<currency pair name>", "orderBook": [ { "<lowest ask price>": "<lowest ask size>", "<next ask price>": "<next ask size>", ... }, { "<highest bid price>": "<highest bid size>", "<next bid price>": "<next bid size>", ... } ] } ] ] ]
-    // [ 14, 8767, [ [ "i", { "currencyPair": "BTC_BTS", "orderBook": [ { "0.00001853": "2537.5637", "0.00001854": "1567238.172367" }, { "0.00001841": "3645.3647", "0.00001840": "1637.3647" } ] } ] ] ]
-    
-    if(json.GetArray()[1].GetArray()[0].GetArray(1)["orderBook"].IsArray()){
-        
+        SubscribeChannel newChannel;
+        newChannel.channelId = channelId;
+        newChannel.exchange_coinpair = ticker;
+        websocketSubscribeChannel.push_back(newChannel);
+        debug_print(websocketSubscribeChannel);
+    }
+    else{
+        SubscribeChannel channel = findByChannelID(channelId);
+        ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
+        if(ticker.length()==0) return;
+
+        int len = json.GetArray()[2].Size();
+        for(int i = 0; i < len; i++){
+            std::string op = json.GetArray()[2].GetArray()[i].GetArray()[0].GetString();
+            if(strcmp(op,"o")==0){
+                KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o");
+                int isBookBuy = json.GetArray()[2].GetArray()[i].GetArray()[1].GetInt();
+                int64_t price = std::round(json.GetArray()[2].GetArray()[i].GetArray()[2].GetDouble()*scale_offset);
+                uint64_t amount = std::round(json.GetArray()[2].GetArray()[i].GetArray()[3].GetDouble()*scale_offset);
+                if(amount>0){
+                    if(isBookBuy==1){
+                        KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o : buy & amount!=0");
+                        priceBook20Assembler.UpdateBidPrice(ticker,price,amount);
+                    }
+                    else {
+                        KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o : sell & amount!=0");
+                        priceBook20Assembler.UpdateAskPrice(ticekr,price,amount);
+                    }
+                }
+                else if(amunt==0){
+                    if(isBookBuy==1){
+                        KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o : buy & amount==0");
+                        priceBook20Assembler.EraseBidPrice(ticker,price);
+                    }
+                    else {
+                        KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o : sell & amount==0");
+                        priceBook20Assembler.EraseAskPrice(ticker,price);
+                    }
+                }
+                else KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o : false");
+            }
+            else if(strcmp(op,"t")==0){
+                KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : t");
+                LFL2TradeField trade;
+                memset(&trade, 0, sizeof(trade));
+                strcpy(trade.InstrumentID, ticker.c_str());
+                strcpy(trade.ExchangeID, "poloniex");
+                trade.Price = std::round(json.GetArray()[2].GetArray()[i].GetArray()[3].GetDouble()*scale_offset);
+                int isTradeBuy = json.GetArray()[2].GetArray()[i].GetArray()[2].GetInt();
+                uint64_t amount = std::round(json.GetArray()[2].GetArray()[i].GetArray()[4].GetDouble()*scale_offset);
+                trade.Volume = amount;
+                trade.OrderBSFlag[0] = isTradeBuy == 1 ? 'B' : 'S';
+                KF_LOG_INFO(logger, "MDEnginePoloniex::[onTrade] (ticker)" << ticker <<
+                                                                           " (Price)" << trade.Price <<
+                                                                           " (trade.Volume)" << trade.Volume);
+                on_trade(&trade);
+                return 0;
+            }
+        }
+    }
+    LFPriceBook20Field md;
+    memset(&md, 0, sizeof(md));
+    if(priceBook20Assembler.Assembler(ticker, md)) {
+        strcpy(md.ExchangeID, "poloniex");
+
+        KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update");
+        on_price_book_update(&md);
     }
 
 
@@ -680,7 +743,7 @@ std::string MDEnginePoloniex::parseJsonToString(Document &d)
 
 
 //{ "command":"subscribe", "channel": 14 }
-std::string MDEnginePoloniex::createBookJsonString(int exchange_coinpair)
+std::string MDEnginePoloniex::createBookJsonString(std::string exchange_coinpair)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);

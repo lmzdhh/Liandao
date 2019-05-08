@@ -47,7 +47,7 @@ public:
 private:
     inline int64_t getTimestamp();
 
-    void GetINitializationInfomation(Document& json);
+    void GetINitializationInfomation(Document& json,int channelId,bool isInistial);
 
     void onInfo(Document& json);
 
@@ -57,7 +57,7 @@ private:
     SubscribeChannel findByChannelID(int channelId);
 
     std::string parseJsonToString(Document &d);
-    std::string createBookJsonString(int exchange_coinpair);
+    std::string createBookJsonString(std::string exchange_coinpair);
 
     void loop();
 
