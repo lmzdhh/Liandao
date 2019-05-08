@@ -375,13 +375,13 @@ const short MSG_TYPE_LF_RTN_TRADE_DAYBIT 	= 31206;
 const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
 
 //POLONIEX, idx=37
-const short MSG_TYPE_LF_MD_POLONIEX        	= 32101;
-const short MSG_TYPE_LF_QRY_POS_POLONIEX   	= 32201;
-const short MSG_TYPE_LF_RSP_POS_POLONIEX   	= 32202;
-const short MSG_TYPE_LF_ORDER_POLONIEX     	= 32204;
-const short MSG_TYPE_LF_RTN_ORDER_POLONIEX 	= 32205;
-const short MSG_TYPE_LF_RTN_TRADE_POLONIEX 	= 32206;
-const short MSG_TYPE_LF_ORDER_ACTION_POLONIEX = 32207;
+const short MSG_TYPE_LF_MD_POLONIEX        	= 37101;
+const short MSG_TYPE_LF_QRY_POS_POLONIEX   	= 37201;
+const short MSG_TYPE_LF_RSP_POS_POLONIEX   	= 37202;
+const short MSG_TYPE_LF_ORDER_POLONIEX     	= 37204;
+const short MSG_TYPE_LF_RTN_ORDER_POLONIEX 	= 37205;
+const short MSG_TYPE_LF_RTN_TRADE_POLONIEX 	= 37206;
+const short MSG_TYPE_LF_ORDER_ACTION_POLONIEX = 37207;
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
