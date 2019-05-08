@@ -47,7 +47,7 @@ public:
 private:
     inline int64_t getTimestamp();
 
-    void GetINitializationInfomation(Document& json,int channelId,bool isInistial);
+    int GetINitializationInfomation(Document& json,int channelId,bool isInistial);
 
     void onInfo(Document& json);
 

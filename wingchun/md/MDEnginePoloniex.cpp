@@ -325,7 +325,7 @@ void MDEnginePoloniex::on_lws_data(struct lws* conn, const char* data, size_t le
 }
 
 
-int MDEnginePoloniex::GetINitializationInfomation(Documen& json,int channelId,bool isInistial){
+int MDEnginePoloniex::GetINitializationInfomation(Documen& json, int channelId, bool isInistial){
     KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation");
     std::string ticker;
 
@@ -403,7 +403,7 @@ int MDEnginePoloniex::GetINitializationInfomation(Documen& json,int channelId,bo
         KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update");
         on_price_book_update(&md);
     }
-
+    return 0;
 
 }
 
