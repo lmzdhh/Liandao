@@ -51,16 +51,12 @@ private:
 
     void onInfo(Document& json);
 
-    void onBook(SubscribeChannel& channel, Document& json);
-    void onTrade(SubscribeChannel& channel, Document& json);
-
     SubscribeChannel findByChannelID(int channelId);
 
     std::string parseJsonToString(Document &d);
     std::string createBookJsonString(std::string exchange_coinpair);
 
     void loop();
-
 
     virtual void set_reader_thread() override;
     void debug_print(std::vector<std::string> &subJsonString);
