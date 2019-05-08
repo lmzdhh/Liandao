@@ -150,7 +150,8 @@
 			{
 				"strategy_coinpair(base_quote)": "quote;base",
 				"eth_btc":"BTC_ETH"
-			}
+			},
+			"rest_get_interval_ms": 500
 		}
 	},
 	"td": {
