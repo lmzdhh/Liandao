@@ -840,7 +840,7 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
         errorMsg = "send_order http response has parse error or is not json. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                            errorId << " (errorMsg) " << errorMsg);
-    } else  if(d.HasMember("result")&&d["result"].IsObject()){//发单成功
+    } else  if(d.HasMember("error")&&d.HasMember("result")&&d["result"].IsObject()){//发单成功
         
         rapidjson::Value result=d["result"].GetObject();
         int errLen=d["error"].Size();
@@ -898,8 +898,19 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
                 }
             }
             KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
-                                                                               errorId << " (errorMsg) " << errorMsg);
+                errorId << " (errorMsg) " << errorMsg);
         }
+    }else if(d.HasMember("error")&&!d.HasMember("result")){
+        //errorId = std::round(std::stod(d["id"].GetString()));
+        errorId=520;
+        if (d.HasMember("error") && d["error"].IsArray()) {
+            int i;
+            for(i=0;i<d["error"].Size();i++){
+                errorMsg=errorMsg+d["error"].GetArray()[i].GetString()+"\t";
+            }
+        }
+        KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
+            errorId << " (errorMsg) " << errorMsg);
     }
     //unlock
     if(errorId != 0)
