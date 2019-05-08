@@ -214,7 +214,7 @@ void MDEnginePoloniex::login(long timeout_nsec) {
 
     struct lws_client_connect_info ccinfo = {0};
 
-    static std::string host  = "api2.poloniex.com";
+    static std::string host  = "wss://api2.poloniex.com";
     static std::string path = "";
     static int port = 443;
 
