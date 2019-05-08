@@ -1032,6 +1032,7 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
         std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->rtn_order.InstrumentID));
         if(ticker.length() == 0) {
             KF_LOG_INFO(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->rtn_order.InstrumentID);
+            unit.pendingOrderStatus.erase(orderStatusIterator);
             continue;
         }
         KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "( account.api_key) " << unit.api_key
