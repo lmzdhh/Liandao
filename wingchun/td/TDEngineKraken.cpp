@@ -783,10 +783,10 @@ void TDEngineKraken::dealPriceVolume(AccountUnitKraken& unit,const std::string& 
         sprintf(chV,"%.8lf",nVolume*1.0/scale_offset);
         nDealPrice=chP;
         KF_LOG_INFO(logger,"[dealPriceVolume] (chP) "<<chP<<" (nDealPrice) "<<nDealPrice);
-        nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+pPrecision+1);
+        nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+(pPrecision==0?pPrecision:(pPrecision+1)));
         nDealVolume=chV;
          KF_LOG_INFO(logger,"[dealPriceVolume]  (chP) "<<chV<<" (nDealVolume) "<<nDealVolume);
-        nDealVolume=nDealVolume.substr(0,nDealVolume.find(".")+vPrecision+1);
+        nDealVolume=nDealVolume.substr(0,nDealVolume.find(".")+(vPrecision==0?vPrecision:(vPrecision+1)));
     }
     KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << ticker << " (Volume)" << nVolume << " (Price)" << nPrice
                                                       << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
@@ -1032,7 +1032,7 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
         std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->rtn_order.InstrumentID));
         if(ticker.length() == 0) {
             KF_LOG_INFO(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->rtn_order.InstrumentID);
-            unit.pendingOrderStatus.erase(orderStatusIterator);
+            orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
             continue;
         }
         KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "( account.api_key) " << unit.api_key
@@ -1365,26 +1365,6 @@ void TDEngineKraken::orderIsCanceled(AccountUnitKraken& unit, LFRtnOrderField* r
     on_rtn_order(rtn_order);
     raw_writer->write_frame(&(*rtn_order), sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,1, 
             (rtn_order->RequestID > 0) ? rtn_order->RequestID: -1);
-
-    //send OnRtnTrade
-    /*LFRtnTradeField rtn_trade;
-    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-    strcpy(rtn_trade.ExchangeID, "kraken");
-    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_trade.InstrumentID, rtn_order->InstrumentID, 31);
-    strncpy(rtn_trade.OrderRef, rtn_order->OrderRef, 13);
-    rtn_trade.Direction = rtn_order->Direction;
-    //单次成交数量
-    rtn_trade.Volume = 0;
-    rtn_trade.Price = 0;
-    strncpy(rtn_trade.OrderSysID,rtn_order->BusinessUnit,31);
-    on_rtn_trade(&rtn_trade);
-
-    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-        source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
-
-    KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
-                << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);*/
 }
 void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<PendingOrderStatus>::iterator itr,
          ResponsedOrderStatus& responsedOrderStatus)
@@ -1412,6 +1392,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     double oldAmount = itr->rtn_order.VolumeTraded/(scale_offset*1.0) * itr->averagePrice/(scale_offset*1.0);
     double newAmount = responsedOrderStatus.VolumeTraded/(scale_offset*1.0) * responsedOrderStatus.averagePrice/(scale_offset*1.0);
     double singlePrice = newAmount - oldAmount;
+    uint64_t oldVolumeTraded = itr->rtn_order.VolumeTraded;
     //累计成交数量
     itr->rtn_order.VolumeTraded=responsedOrderStatus.VolumeTraded;
     //剩余未成交数量
@@ -1420,26 +1401,29 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     on_rtn_order(&(itr->rtn_order));
     raw_writer->write_frame(&(itr->rtn_order), sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,1, (itr->rtn_order.RequestID > 0) ? itr->rtn_order.RequestID: -1);
 
-    //send OnRtnTrade
-    LFRtnTradeField rtn_trade;
-    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-    strcpy(rtn_trade.ExchangeID, "kraken");
-    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_trade.InstrumentID, itr->rtn_order.InstrumentID, 31);
-    strncpy(rtn_trade.OrderRef, itr->rtn_order.OrderRef, 13);
-    rtn_trade.Direction = itr->rtn_order.Direction;
-    //单次成交数量
-    rtn_trade.Volume = singleVolume;
-    //单次成交价格
-    rtn_trade.Price = std::round(singlePrice*scale_offset);
-    strncpy(rtn_trade.OrderSysID,itr->rtn_order.BusinessUnit,31);
-    on_rtn_trade(&rtn_trade);
+    if(oldVolumeTraded!=itr->rtn_order.VolumeTraded){
+        //send OnRtnTrade
+        LFRtnTradeField rtn_trade;
+        memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+        strcpy(rtn_trade.ExchangeID, "kraken");
+        strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
+        strncpy(rtn_trade.InstrumentID, itr->rtn_order.InstrumentID, 31);
+        strncpy(rtn_trade.OrderRef, itr->rtn_order.OrderRef, 13);
+        rtn_trade.Direction = itr->rtn_order.Direction;
+        //单次成交数量
+        rtn_trade.Volume = singleVolume;
+        //单次成交价格
+        rtn_trade.Price = std::round(singlePrice*scale_offset);
+        strncpy(rtn_trade.OrderSysID,itr->rtn_order.BusinessUnit,31);
+        on_rtn_trade(&rtn_trade);
 
-    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-        source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
+        raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
+            source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
 
-    KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
+        KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
                 << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+    }
+
 }
 
 std::string TDEngineKraken::parseJsonToString(Document &d){
