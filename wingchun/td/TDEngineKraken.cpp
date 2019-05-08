@@ -1406,7 +1406,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     }
     if(orderStatus == LF_CHAR_NotTouched || (orderStatus == itr->rtn_order.OrderStatus&&
         responsedOrderStatus.VolumeTraded == itr->rtn_order.VolumeTraded)){//no change
-        KF_LOG_INFO(logger,"[handlerResponseOrderStatus] order status not change.")
+        KF_LOG_INFO(logger,"[handlerResponseOrderStatus] order status not change, return nothing.");
         return;
     }
     itr->rtn_order.OrderStatus = orderStatus;
