@@ -358,8 +358,7 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
 
         int len = json.GetArray()[2].Size();
         for(int i = 0; i < len; i++){
-            std::string op = json.GetArray()[2].GetArray()[i].GetArray()[0].GetString();
-            if(strcmp(op,"o")==0){
+            if(strcmp(json.GetArray()[2].GetArray()[i].GetArray()[0].GetString(),"o")==0){
                 KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o");
                 int isBookBuy = json.GetArray()[2].GetArray()[i].GetArray()[1].GetInt();
                 int64_t price = std::round(json.GetArray()[2].GetArray()[i].GetArray()[2].GetDouble()*scale_offset);
@@ -371,10 +370,10 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
                     }
                     else {
                         KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o : sell & amount!=0");
-                        priceBook20Assembler.UpdateAskPrice(ticekr,price,amount);
+                        priceBook20Assembler.UpdateAskPrice(ticker,price,amount);
                     }
                 }
-                else if(amunt==0){
+                else if(amount==0){
                     if(isBookBuy==1){
                         KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o : buy & amount==0");
                         priceBook20Assembler.EraseBidPrice(ticker,price);
@@ -394,7 +393,7 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
                     on_price_book_update(&md);
                 }
             }
-            else if(strcmp(op,"t")==0){
+            else if(strcmp(json.GetArray()[2].GetArray()[i].GetArray()[0].GetString(),"t")==0){
                 KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : t");
                 LFL2TradeField trade;
                 memset(&trade, 0, sizeof(trade));
@@ -412,7 +411,6 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
             }
         }
     }
-
 }
 
 
