@@ -854,6 +854,7 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
                                                                        data->OrderRef << " (remoteOrderId) "
                                                                        << remoteOrderId);
             PendingOrderStatus pOrderStatus;
+            //初始化
             memset(&pOrderStatus, 0, sizeof(PendingOrderStatus));
             LFRtnOrderField *rtn_order = &pOrderStatus.rtn_order;
             strncpy(rtn_order->BusinessUnit,remoteOrderId.c_str(),21);
