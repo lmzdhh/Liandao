@@ -186,7 +186,7 @@ inline JournalPair getMdRawJournalPair(short source)
 		case 31:
 			return{ "/shared/kungfu/journal/MD_RAW/DAYBIT/", "MDRAW_DAYBIT" };
 		case 37:
-			return{ "/shared/kungfu/journal/MD_RAW/POLONIEX/", "MDRAW_POLONIEX"}
+			return{ "/shared/kungfu/journal/MD_RAW/POLONIEX/", "MDRAW_POLONIEX"};
 		default:
 			return {"", ""};
 	}
@@ -227,7 +227,7 @@ inline JournalPair getTdJournalPair(short source)
 		case 31:
 			return {"/shared/kungfu/journal/TD/DAYBIT/", "TD_DAYBIT"};
 		case 37:
-			return {"/shared/kungfu/journal/TD/POLONIEX/", "TD_POLONIEX"}
+			return {"/shared/kungfu/journal/TD/POLONIEX/", "TD_POLONIEX"};
 		default:
 			return {"", ""};
 	}
@@ -268,7 +268,7 @@ inline JournalPair getTdSendJournalPair(short source)
 		case 31:
 			return {"/shared/kungfu/journal/TD_SEND/DAYBIT/", "TD_SEND_DAYBIT"};
 		case 37:
-			return {"/shared/kungfu/journal/TD_SEND/POLONIEX/", "TD_SEND_POLONIEX"}
+			return {"/shared/kungfu/journal/TD_SEND/POLONIEX/", "TD_SEND_POLONIEX"};
 		default:
 			return {"", ""};
 	}
@@ -309,7 +309,7 @@ inline JournalPair getTdRawJournalPair(short source)
 		case 31:
 			return {"/shared/kungfu/journal/TD_RAW/DAYBIT/", "TD_RAW_DAYBIT"};
 		case 37:
-			return {"/shared/kungfu/journal/TD_RAW/POLONIEX/", "TD_RAW_POLONIEX"}
+			return {"/shared/kungfu/journal/TD_RAW/POLONIEX/", "TD_RAW_POLONIEX"};
 		default:
 			return {"", ""};
 	}
@@ -350,7 +350,7 @@ inline JournalPair getTdQJournalPair(short source)
 		case 31:
 			return {"/shared/kungfu/journal/TD_Q/DAYBIT/", "TD_Q_DAYBIT"};
 		case 37:
-			return {"/shared/kungfu/journal/TD_Q/POLONIEX/", "TD_Q_POLONIEX"}
+			return {"/shared/kungfu/journal/TD_Q/POLONIEX/", "TD_Q_POLONIEX"};
 		default:
 			return {"", ""};
 	}
