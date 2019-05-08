@@ -1039,7 +1039,7 @@ void TDEngineHuobi::req_order_insert(const LFInputOrderField* data, int account_
 
     int errorId = 0;
     std::string errorMsg = "";
-
+    on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
     std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
     if(ticker.length() == 0) {
         errorId = 200;
