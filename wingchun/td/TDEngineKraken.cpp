@@ -461,7 +461,7 @@ TradeAccount TDEngineKraken::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     //printResponse(json);
-    //cancel_order(unit,"code","OHC2AS-7IH55-2PTIXJ",json);
+    cancel_order(unit,"code","OCITZY-JMMFG-AT2MB3",json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
     // set up
@@ -854,8 +854,8 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
                                                                        data->OrderRef << " (remoteOrderId) "
                                                                        << remoteOrderId);
             PendingOrderStatus pOrderStatus;
+            memset(&pOrderStatus, 0, sizeof(PendingOrderStatus));
             LFRtnOrderField *rtn_order = &pOrderStatus.rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
             strncpy(rtn_order->BusinessUnit,remoteOrderId.c_str(),21);
             rtn_order->OrderStatus = LF_CHAR_NotTouched;
             rtn_order->VolumeTraded = 0;
@@ -880,7 +880,7 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
                                     1, (rtn_order->RequestID > 0) ? rtn_order->RequestID : -1);
 
             KF_LOG_DEBUG(logger, "[req_order_insert] (addNewQueryOrdersAndTrades)" );
-
+            pOrderStatus.averagePrice = 0;
             addNewQueryOrdersAndTrades(unit, pOrderStatus, remoteOrderId);
 
             raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KRAKEN, 1,
@@ -1278,11 +1278,10 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, string userref, string 
 
         KF_LOG_INFO(logger, "[send_order] (url) " << path << " (response.status_code) " << response.status_code 
                                                   << " (response.error.message) " << response.error.message 
-                                                  <<" (response.text) " << response.text.c_str() << " (retry_times)" << retry_times);
+                                                  << " (retry_times)" << retry_times);
 
         //json.Clear();
         getResponse(response.status_code, response.text, response.error.message, json);
-        //has error and find the 'error setting certificate verify locations' error, should retry
         if(shouldRetry(json)) {
             should_retry = true;
             retry_times++;
@@ -1419,6 +1418,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     itr->rtn_order.VolumeTraded=responsedOrderStatus.VolumeTraded;
     //剩余未成交数量
     itr->rtn_order.VolumeTotal = itr->rtn_order.VolumeTotalOriginal-itr->rtn_order.VolumeTraded;
+    itr->averagePrice = responsedOrderStatus.averagePrice;
     on_rtn_order(&(itr->rtn_order));
     raw_writer->write_frame(&(itr->rtn_order), sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,1, (itr->rtn_order.RequestID > 0) ? itr->rtn_order.RequestID: -1);
 
