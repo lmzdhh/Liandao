@@ -1367,7 +1367,7 @@ void TDEngineKraken::orderIsCanceled(AccountUnitKraken& unit, LFRtnOrderField* r
             (rtn_order->RequestID > 0) ? rtn_order->RequestID: -1);
 
     //send OnRtnTrade
-    LFRtnTradeField rtn_trade;
+    /*LFRtnTradeField rtn_trade;
     memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
     strcpy(rtn_trade.ExchangeID, "kraken");
     strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
@@ -1384,7 +1384,7 @@ void TDEngineKraken::orderIsCanceled(AccountUnitKraken& unit, LFRtnOrderField* r
         source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
 
     KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
-                << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
+                << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);*/
 }
 void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<PendingOrderStatus>::iterator itr,
          ResponsedOrderStatus& responsedOrderStatus)
@@ -1400,13 +1400,8 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
             orderStatus = LF_CHAR_PartTradedQueueing;
         }
                     
-    }else if(orderStatus == LF_CHAR_Canceled){
-        if(responsedOrderStatus.VolumeTraded < responsedOrderStatus.volume){
-            orderStatus = LF_CHAR_PartTradedNotQueueing;
-        }
     }
-    if(orderStatus == LF_CHAR_NotTouched || (orderStatus == itr->rtn_order.OrderStatus&&
-        responsedOrderStatus.VolumeTraded == itr->rtn_order.VolumeTraded)){//no change
+    if(orderStatus == itr->rtn_order.OrderStatus&&responsedOrderStatus.VolumeTraded == itr->rtn_order.VolumeTraded){//no change
         KF_LOG_INFO(logger,"[handlerResponseOrderStatus] order status not change, return nothing.");
         return;
     }
