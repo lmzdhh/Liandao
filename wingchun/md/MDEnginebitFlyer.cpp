@@ -594,6 +594,26 @@ void MDEnginebitFlyer::onTrade(Document& json)
             trade.Volume = std::round(node.GetArray()[i]["size"].GetDouble() * scale_offset);
             std::string side = node.GetArray()[i]["side"].GetString();
             trade.OrderBSFlag[0] = side == "BUY" ? 'B' : 'S';    
+            std::string tridetime = node.GetArray()[i]["exec_date"].GetString();
+            strcpy(trade.TradeTime, tridetime.c_str()); 
+            std::tradeid = node.GetArray()[i]["id"].GetString();
+            strcpy(trade.TradeID,tradeid.c_str());
+
+ 
+            std::string buyid = node.GetArray()[i]["buy_child_order_acceptance_id"].GetString();
+            std::string sellid = node.GetArray()[i]["sell_child_order_acceptance_id"].GetString();
+            std::string big;
+            std::string small;
+            if(buyid > sellid) {
+                big = buyid;
+                small = sellid;
+            }
+            else{
+                big = sellid;
+                small = buyid;
+            }
+            strcpy(trade.takerOrderID,big.c_str());
+            strcpy(trade.makerOrderID,small.c_str());
 
             KF_LOG_INFO(logger, "MDEnginebitFlyer::[onTrade] (ticker)" << ticker <<
                                                                            " (Price)" << trade.Price <<
