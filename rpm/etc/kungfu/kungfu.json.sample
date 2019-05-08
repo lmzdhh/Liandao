@@ -140,7 +140,7 @@
 				"ltc_btc": "BTC;LTC",
 				"btc_usdt": "USDT;BTC"
 			}
-		}
+		},
 		"poloniex":
 		{
 			"baseUrl": "https://poloniex.com/public",

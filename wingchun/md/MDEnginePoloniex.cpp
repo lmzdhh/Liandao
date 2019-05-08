@@ -133,7 +133,7 @@ void MDEnginePoloniex::load(const json& j_config)
 
     //display usage:
     if(coinPairWhiteList.Size() == 0) {
-        KF_LOG_ERROR(logger, "MDEnginePoloniex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
+        KF_LOG_ERROR(logger, "MDEnginePoloniex::lws_write_subscribe: subscribeCoiQuote is empty. please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
         KF_LOG_ERROR(logger, "    \"btc_usdt\": \"tBTCUSDT\",");
