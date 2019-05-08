@@ -470,9 +470,7 @@ void MDEnginePoloniex::debug_print(std::vector<SubscribeChannel> &websocketSubsc
 
     for (size_t i = 0; i < count; i++)
     {
-        KF_LOG_INFO(logger, "[debug_print] websocketSubscribeChannel (subType) "
-                            << websocketSubscribeChannel[i].subType <<
-                            " (exchange_coinpair)" << websocketSubscribeChannel[i].exchange_coinpair <<
+        KF_LOG_INFO(logger,  " (exchange_coinpair)" << websocketSubscribeChannel[i].exchange_coinpair <<
                             " (channelId)" << websocketSubscribeChannel[i].channelId);
     }
 }
@@ -748,7 +746,7 @@ std::string MDEnginePoloniex::parseJsonToString(Document &d)
 }
 
 
-//{ "command":"subscribe", "channel": 14 }
+//{ "command": "subscribe", "channel": "BTC_BTS" }
 std::string MDEnginePoloniex::createBookJsonString(std::string exchange_coinpair)
 {
     StringBuffer s;
@@ -758,7 +756,7 @@ std::string MDEnginePoloniex::createBookJsonString(std::string exchange_coinpair
     writer.String("subscribe");
 
     writer.Key("channel");
-    writer.String(exchange_coinpair);
+    writer.String(exchange_coinpair.c_str());
 
     writer.EndObject();
     return s.GetString();
