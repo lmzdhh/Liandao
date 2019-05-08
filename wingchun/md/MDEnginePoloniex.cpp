@@ -325,7 +325,8 @@ void MDEnginePoloniex::on_lws_data(struct lws* conn, const char* data, size_t le
 }
 
 
-int MDEnginePoloniex::GetINitializationInfomation(Documen& json, int channelId, bool isInistial){
+void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId, bool isInistial)
+{
     KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation");
     std::string ticker;
 
@@ -336,13 +337,22 @@ int MDEnginePoloniex::GetINitializationInfomation(Documen& json, int channelId, 
         KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation"<<ticker);
 
         SubscribeChannel newChannel;
-        newChannel.channelId = channelId;
+        newChannel.channelId = channlId;
         newChannel.exchange_coinpair = ticker;
         websocketSubscribeChannel.push_back(newChannel);
         debug_print(websocketSubscribeChannel);
+
+        LFPriceBook20Field md;
+        memset(&md, 0, sizeof(md));
+        if(priceBook20Assembler.Assembler(ticker, md)) {
+            strcpy(md.ExchangeID, "poloniex");
+
+            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update");
+            on_price_book_update(&md);
+        }
     }
     else{
-        SubscribeChannel channel = findByChannelID(channelId);
+        SubscribeChannel channel = findByChannelID(channlId);
         ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
         if(ticker.length()==0) return;
 
@@ -375,6 +385,14 @@ int MDEnginePoloniex::GetINitializationInfomation(Documen& json, int channelId, 
                     }
                 }
                 else KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o : false");
+                LFPriceBook20Field md;
+                memset(&md, 0, sizeof(md));
+                if(priceBook20Assembler.Assembler(ticker, md)) {
+                    strcpy(md.ExchangeID, "poloniex");
+
+                    KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update");
+                    on_price_book_update(&md);
+                }
             }
             else if(strcmp(op,"t")==0){
                 KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : t");
@@ -391,19 +409,9 @@ int MDEnginePoloniex::GetINitializationInfomation(Documen& json, int channelId, 
                                                                            " (Price)" << trade.Price <<
                                                                            " (trade.Volume)" << trade.Volume);
                 on_trade(&trade);
-                return 0;
             }
         }
     }
-    LFPriceBook20Field md;
-    memset(&md, 0, sizeof(md));
-    if(priceBook20Assembler.Assembler(ticker, md)) {
-        strcpy(md.ExchangeID, "poloniex");
-
-        KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update");
-        on_price_book_update(&md);
-    }
-    return 0;
 
 }
 
