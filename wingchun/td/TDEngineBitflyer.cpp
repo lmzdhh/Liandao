@@ -43,7 +43,7 @@ using utils::crypto::base64_encode;
 USING_WC_NAMESPACE
 
 
-TDEngineBitflyer::TDEngineBitflyer() : ITDEngine(SOURCE_BITFINEX)
+TDEngineBitflyer::TDEngineBitflyer() : ITDEngine(SOURCE_BITFLYER)
 {
     logger = yijinjing::KfLog::getLogger("TradeEngine.Bitflyer");
     KF_LOG_INFO(logger, "[TDEngineBitflyer]");
@@ -367,7 +367,7 @@ int TDEngineBitflyer::get_response_parsed_position(cpr::Response r)
             else ps.isLong = false;
             unit.positionHolder.push_back(ps);
         }
-
+        //TODO: debug print
         return 1;
     }
     return 0;
