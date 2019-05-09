@@ -78,9 +78,8 @@ public:
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
-    AccountUnitBitflyer account_unit;
+    vector<AccountUnitBitflyer> account_units;
 
-    virtual void set_reader_thread() override;//可能不会用到这个
     inline int64_t get_timestamp();
     int get_response_parsed_position(cpr::Response r);
     string get_order_type(LfOrderPriceTypeType type);

@@ -49,8 +49,8 @@ TDEngineBitflyer::TDEngineBitflyer() : ITDEngine(SOURCE_BITFINEX)
     KF_LOG_INFO(logger, "[TDEngineBitflyer]");
 
     mutex_order_and_trade = new std::mutex();
-    mutex_response_order_status = new std::mutex();
-    mutex_orderaction_waiting_response = new std::mutex();
+    //mutex_response_order_status = new std::mutex();
+    //mutex_orderaction_waiting_response = new std::mutex();
 }
 
 TDEngineBitflyer::~TDEngineBitflyer()
@@ -60,9 +60,6 @@ TDEngineBitflyer::~TDEngineBitflyer()
     if (mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
 }
 
-void TDEngineBitflyer::set_reader_thread()
-{
-}
 
 inline int64_t TDEngineBitflyer::get_timestamp()
 {
@@ -79,14 +76,14 @@ queryString格式 “/v1/”+query
 cpr::Response TDEngineBitflyer::rest_withoutAuth(string& method, string& path, string& body)
 {
     string Timestamp = to_string(get_timestamp());
-    //string method = "Get";
-    //string path = "getchats/usa";
+    //string method = "GET";
+    //string path = "/v1/getchats/usa"; please append the version /v1/
     //string body="";
     /*baseUrl:https://api.bitflyer.com*/
-    string url = "https://api.bitflyer.com/v1/";
+    string url = "https://api.bitflyer.com";
     url += path;
     cpr::Response response;
-    if (!strcmp(method.c_str(), "Get"))
+    if (!strcmp(method.c_str(), "GET"))
     {
         response = cpr::Get(
             Url{ url },
@@ -94,7 +91,7 @@ cpr::Response TDEngineBitflyer::rest_withoutAuth(string& method, string& path, s
             Timeout{ 10000 }
         );
     }
-    else if (!strcmp(method.c_str(), "Post"))
+    else if (!strcmp(method.c_str(), "POST"))
     {
         response = cpr::Post(
             Url{ url },
@@ -121,34 +118,36 @@ cpr::Response TDEngineBitflyer::rest_withoutAuth(string& method, string& path, s
 cpr::Response TDEngineBitflyer::rest_withAuth(AccountUnitBitflyer& unit, string& method, string& path, string& body)
 {
     string Timestamp = to_string(get_timestamp());
-    //string method = "Get";
-    //string path = "getchats/usa";
+    //string method = "GET";
+    //string path = "/v1/getchats/usa"; please append the version /v1/
     //string body="";
     /*baseUrl:https://api.bitflyer.com*/
-    string url = unit.baseUrl + "/v1/" + path;
+    string key=unit.api_key;
+    string secret=unit.secret_key;
+    string url = unit.baseUrl + path;
     string text = Timestamp + method + path + body;
-    string sign=hmac_sha256(unit.secret_key.c_str(), text.c_str());
+    string sign=hmac_sha256(secret.c_str(), text.c_str());
     cpr::Response response;
-    if (!strcmp(method.c_str(), "Get"))
+    if (!strcmp(method.c_str(), "GET"))
     {
         response = cpr::Get(
             Url{ url },
             Body{ body },
             Header{
-            {"ACCESS-KEY", unit.api_key},
+            {"ACCESS-KEY", key.c_str()},
             {"ACCESS-TIMESTAMP",Timestamp},
-            {"ACCESS-SIGN",sign},
+            {"ACCESS-SIGN",sign.c_str()},
             {"Content-Type", "application/json"}
             },
             Timeout{ 10000 }
         );
     }
-    else if (!strcmp(method.c_str(), "Post"))
+    else if (!strcmp(method.c_str(), "POST"))
     {
         response = cpr::Post(
             Url{ url },
             Body{ body },
-            Header{{"ACCESS-KEY", unit.api_key},
+            Header{{"ACCESS-KEY", key},
             {"ACCESS-TIMESTAMP",Timestamp},
             {"ACCESS-SIGN",sign},
             {"Content-Type", "application/json"}
@@ -166,6 +165,10 @@ cpr::Response TDEngineBitflyer::rest_withAuth(AccountUnitBitflyer& unit, string&
     KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
         " (body) " << body <<
         " (timestamp) " << Timestamp <<
+        " (text) "<<text<<
+        //" (key) "<<key<<
+        //" (secret) "<<secret<<
+        " (sign) "<<sign<<
         " (response.status_code) " << response.status_code <<
         " (response.error.message) " << response.error.message <<
         " (response.text) " << response.text.c_str());
@@ -175,8 +178,8 @@ cpr::Response TDEngineBitflyer::rest_withAuth(AccountUnitBitflyer& unit, string&
 cpr::Response TDEngineBitflyer::chat()
 {
     cpr::Response r;
-    string method = "Get";
-    string path = "getchats/usa";
+    string method = "GET";
+    string path = "/v1/getchats/usa";
     string body = "";
 
     r = rest_withoutAuth(method, path, body);
@@ -185,11 +188,11 @@ cpr::Response TDEngineBitflyer::chat()
 
 cpr::Response TDEngineBitflyer::get_order(int requestId, int type)
 {
-    string method = "Get";
-    string path = "me/getchildorders";
+    string method = "GET";
+    string path = "/v1/me/getchildorders";
     string body = "";
     cpr::Response r;
-    AccountUnitBitflyer& unit = account_unit;
+    AccountUnitBitflyer& unit = account_units[0];
     if (type == 0) //get order about child order
     {
         map<int, OrderInfo>::iterator it;
@@ -208,7 +211,7 @@ cpr::Response TDEngineBitflyer::get_order(int requestId, int type)
             + R"("child_order_state":")" + "ACTIVE" + R"(",)"
             + R"("child_order_id":")" + stOrderInfo.child_order_acceptance_id
             + R"("})";
-        r = rest_withAuth(account_unit, method, path, body);
+        r = rest_withAuth(account_units[0], method, path, body);
     }
     return r;
 }
@@ -230,13 +233,14 @@ void TDEngineBitflyer::pre_load(const json& j_config)
 void TDEngineBitflyer::resize_accounts(int account_num)
 {
     //占位
+    account_units.resize(account_num);
     KF_LOG_INFO(logger, "[resize_accounts]");
 }
 
 TradeAccount TDEngineBitflyer::load_account(int idx, const json & j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
-    AccountUnitBitflyer& unit = account_unit;
+    AccountUnitBitflyer& unit = account_units[idx];
     //加载必要参数
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
@@ -261,12 +265,22 @@ TradeAccount TDEngineBitflyer::load_account(int idx, const json & j_config)
     unit.secret_key = secret_key;
     unit.baseUrl = baseUrl;
     unit.positionHolder.clear();
-    KF_LOG_INFO(logger, " [load_account] (baseUrl)" << unit.baseUrl);
+    KF_LOG_INFO(logger, "[load_account] (baseUrl)" << unit.baseUrl);
 
     //系统账户信息
     TradeAccount account = {};
     strncpy(account.UserID, api_key.c_str(), 16);
     strncpy(account.Password, secret_key.c_str(), 21);
+    //simply for rest api test
+    chat();
+    string body = "";
+    string path = "/v1/me/getbalance";
+    string method = "GET";
+    cpr::Response r = rest_withAuth(account_units[0], method, path, body);//获得账户余额消息
+    KF_LOG_DEBUG(logger, "[getbalance](status_code)" << r.status_code <<
+            "(response.text)" << r.text <<
+            "(response.error.text)" << r.error.message);
+    //test ends here
     return account;
 }
 
@@ -274,12 +288,17 @@ void TDEngineBitflyer::connect(long timeout_nesc)
 {
     //占位
     KF_LOG_INFO(logger, "[connect]");
+    for(auto& unit:account_units)
+    {
+        account_units[0].logged_in=true;//maybe we need to add some "if" here
+    }
 }
 
 void TDEngineBitflyer::login(long timeout_nesc)
 {
     //占位
     KF_LOG_INFO(logger, "[login]");
+    connect(timeout_nesc);
 }
 
 void TDEngineBitflyer::logout()
@@ -304,13 +323,18 @@ bool TDEngineBitflyer::is_logged_in() const
 {
     //占位
     KF_LOG_INFO(logger, "[is_logged_in]");
-    return false;
+    /*for(auto &unit:account_units)
+    {
+        if(!unit.logged_in)
+            return false;
+    }*/
+    return true;
 }
 
 int TDEngineBitflyer::get_response_parsed_position(cpr::Response r)
 {
     auto js = json::parse(r.text);
-    AccountUnitBitflyer& unit = account_unit;
+    AccountUnitBitflyer& unit = account_units[0];
     PositionSetting ps;
     /*
     [
@@ -353,7 +377,7 @@ void TDEngineBitflyer::req_investor_position(const LFQryPositionField * data, in
 {
     KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId);
 
-    AccountUnitBitflyer& unit = account_unit;
+    AccountUnitBitflyer& unit = account_units[account_index];
     KF_LOG_INFO(logger, "[req_investor_position]" << "(InstrumentID) " << data->InstrumentID);
     send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BITFINEX, 1, requestId);
     int errorId = 0;
@@ -372,8 +396,8 @@ void TDEngineBitflyer::req_investor_position(const LFQryPositionField * data, in
 
     /*实现一个函数获得balance信息，一个函数解析并存储到positionHolder里面去*/
     string body = "";
-    string path = "me/getbalance";
-    string method = "Get";
+    string path = "/v1/me/getbalance";
+    string method = "GET";
     cpr::Response r = rest_withAuth(unit, method, path, body);//获得账户余额消息
     KF_LOG_DEBUG(logger, "[getbalance](status_code)" << r.status_code <<
         "(response.text)" << r.text <<
@@ -385,7 +409,7 @@ void TDEngineBitflyer::req_investor_position(const LFQryPositionField * data, in
         {
             if (get_response_parsed_position(r))
             {
-                /*TODO:解析response*/
+                /*解析response*/
                 /*若是解析成功则退出*/
                 break;
             }
@@ -467,7 +491,7 @@ string TDEngineBitflyer::get_order_side(LfDirectionType type)
 void TDEngineBitflyer::req_order_insert(const LFInputOrderField * data, int account_index, int requestId, long rcv_time)
 {
     KF_LOG_INFO(logger, "[req_order_insert]");
-    AccountUnitBitflyer& unit = account_unit;
+    AccountUnitBitflyer& unit = account_units[account_index];
     /*
     Request
 
@@ -486,8 +510,8 @@ void TDEngineBitflyer::req_order_insert(const LFInputOrderField * data, int acco
     */
     int errorId = 0;
     string errorMsg;
-    string method = "Post";
-    string path = "me/sendchildorder";
+    string method = "POST";
+    string path = "/v1/me/sendchildorder";
     string body;
     string product_code = unit.coinPairWhiteList.GetValueByKey(string(data->InstrumentID));//就是ticker
     if (product_code.length() == 0)
@@ -581,7 +605,7 @@ void TDEngineBitflyer::req_order_insert(const LFInputOrderField * data, int acco
 
 void TDEngineBitflyer::req_order_action(const LFOrderActionField * data, int account_index, int requestId, long rcv_time)
 {
-    AccountUnitBitflyer& unit=account_unit;
+    AccountUnitBitflyer& unit=account_units[account_index];
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
         << " (APIKey)" << unit.api_key
         << " (Iid)" << data->InvestorID
@@ -590,8 +614,8 @@ void TDEngineBitflyer::req_order_action(const LFOrderActionField * data, int acc
     send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFLYER, 1, requestId);
     int errorId = 0;
     std::string errorMsg = "";
-    string method = "Post";
-    string path = "me/cancelchildorder";
+    string method = "POST";
+    string path = "/v1/me/cancelchildorder";
     string body;
     std::string product_code = unit.coinPairWhiteList.GetValueByKey(string(data->InstrumentID));
     if (product_code.length() == 0)
