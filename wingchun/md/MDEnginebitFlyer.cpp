@@ -594,11 +594,19 @@ void MDEnginebitFlyer::onTrade(Document& json)
             trade.Volume = std::round(node.GetArray()[i]["size"].GetDouble() * scale_offset);
             std::string side = node.GetArray()[i]["side"].GetString();
             trade.OrderBSFlag[0] = side == "BUY" ? 'B' : 'S';    
-            std::string tridetime = node.GetArray()[i]["exec_date"].GetString();
+            std::string tridetime;
+	    tridetime = node.GetArray()[i]["exec_date"].GetString();
             strcpy(trade.TradeTime, tridetime.c_str()); 
-            std::tradeid = node.GetArray()[i]["id"].GetString();
-            strcpy(trade.TradeID,tradeid.c_str());
-
+	    
+	    int tradeid;
+           // std::string tradeid;
+	    tradeid = node.GetArray()[i]["id"].GetInt();
+            strcpy(trade.TradeID,std::to_string(tradeid).c_str());	  
+           // strcpy(trade.TradeID,tradeid.c_str());
+           /* stringstream s;
+            s<<tradeid;
+            string tradeidstring=s.str();
+            strcpy(trade.TradeID,tradeidstring.c_str());*/
  
             std::string buyid = node.GetArray()[i]["buy_child_order_acceptance_id"].GetString();
             std::string sellid = node.GetArray()[i]["sell_child_order_acceptance_id"].GetString();
@@ -612,12 +620,16 @@ void MDEnginebitFlyer::onTrade(Document& json)
                 big = sellid;
                 small = buyid;
             }
-            strcpy(trade.takerOrderID,big.c_str());
-            strcpy(trade.makerOrderID,small.c_str());
+            strcpy(trade.TakerOrderID,big.c_str());
+            strcpy(trade.MakerOrderID,small.c_str());
 
             KF_LOG_INFO(logger, "MDEnginebitFlyer::[onTrade] (ticker)" << ticker <<
                                                                            " (Price)" << trade.Price <<
-                                                                           " (trade.Volume)" << trade.Volume);
+                                                                           " (trade.Volume)" << trade.Volume <<
+                                                                           " (trade.TradeID)" << trade.TradeID <<
+                                                                           " (trade.TradeTime)" << trade.TradeTime <<
+                                                                           " (trade.TakerOrderID)" << trade.TakerOrderID <<
+                                                                           " (trade.MakerOrderID)" << trade.MakerOrderID);
                                                                        
             on_trade(&trade);
         }
