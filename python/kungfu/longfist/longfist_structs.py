@@ -651,6 +651,7 @@ DataFieldMap = {
         'MassOrderSeqId':'i64',
 	    'MassOrderIndex':'i',
 	    'MassOrderTotalNum':'i',
+        'ExpectPrice':'i64'
 	},
 	'LFRtnOrderField': {
 		'InstrumentID': 'c31',
