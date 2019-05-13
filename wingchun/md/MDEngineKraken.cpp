@@ -203,61 +203,55 @@ void MDEngineKraken::login(long timeout_nsec) {
     KF_LOG_INFO(logger, "MDEngineKraken::login:");
     global_md = this;
 
-    if (context == NULL) {
-        struct lws_context_creation_info info;
-        memset( &info, 0, sizeof(info) );
+    struct lws_context_creation_info info;
+    memset( &info, 0, sizeof(info) );
 
-        info.port = CONTEXT_PORT_NO_LISTEN;
-        info.protocols = protocols;
-        info.iface = NULL;
-        info.ssl_cert_filepath = NULL;
-        info.ssl_private_key_filepath = NULL;
-        info.extensions = NULL;
-        info.gid = -1;
-        info.uid = -1;
-        info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-        info.max_http_header_pool = 1024;
-        info.fd_limit_per_thread = 1024;
-        info.ws_ping_pong_interval = 10;
-        info.ka_time = 10;
-        info.ka_probes = 10;
-        info.ka_interval = 10;
+    info.port = CONTEXT_PORT_NO_LISTEN;
+    info.protocols = protocols;
+    info.iface = NULL;
+    info.ssl_cert_filepath = NULL;
+    info.ssl_private_key_filepath = NULL;
+    info.extensions = NULL;
+    info.gid = -1;
+    info.uid = -1;
+    info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
+    info.max_http_header_pool = 1024;
+    info.fd_limit_per_thread = 1024;
+    info.ws_ping_pong_interval = 10;
+    info.ka_time = 10;
+    info.ka_probes = 10;
+    info.ka_interval = 10;
 
-        context = lws_create_context( &info );
-        KF_LOG_INFO(logger, "MDEngineKraken::login: context created.");
-    }
+    context = lws_create_context( &info );
+    KF_LOG_INFO(logger, "MDEngineKraken::login: context created.");
 
-    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #1 " );
     if (context == NULL) {
         KF_LOG_ERROR(logger, "MDEngineKraken::login: context is NULL. return");
         return;
     }
-    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #2 " );
+
     int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
-    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #3 logs:" << logs);
-    lws_set_log_level(logs, NULL);
-    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #4 " );
-    struct lws_client_connect_info ccinfo = {0};
-    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #5 " );
+
+    struct lws_client_connect_info ccinfo;
+    memset(&ccinfo, 0, sizeof(ccinfo));
+    struct lws *wsi = NULL;
     // static std::string host  = "wss://ws.kraken.com";
     static std::string host(baseUrl);
     
 	//static std::string path = "/ws/2";
-    static int port = 443;
 
     ccinfo.context 	= context;
     ccinfo.address 	= host.c_str();
-    ccinfo.port 	= port;
+    ccinfo.port 	= 443;
     //ccinfo.path 	= path.c_str();
     ccinfo.host 	= host.c_str();
     ccinfo.origin 	= host.c_str();
-    ccinfo.ietf_version_or_minus_one = -1;
     ccinfo.protocol = protocols[0].name;
+    clientConnectInfo.pwsi = &wsi;
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
-    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #8 " );
+    ccinfo.ietf_version_or_minus_one = -1;
 
-    struct lws* wsi = lws_client_connect_via_info(&ccinfo);
-    KF_LOG_INFO(logger, "MDEngineKraken::login: test login #6 " );
+    wsi = lws_client_connect_via_info(&ccinfo);
     KF_LOG_INFO(logger, "MDEngineKraken::login: Connecting to " <<  ccinfo.host << ":" << ccinfo.port << ":" << ccinfo.path);
 
     if (wsi == NULL) {
