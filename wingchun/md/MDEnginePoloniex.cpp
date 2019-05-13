@@ -358,7 +358,9 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
         if(ticker.length()==0) return;
 
         int len = json.GetArray()[2].Size();
+        KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : len : "<<len);
         for(int i = 0; i < len; i++){
+            KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation on Array[2]: "<<json.GetArray()[2].GetArray()[i].GetArray()[0].GetString());
             if(strcmp(json.GetArray()[2].GetArray()[i].GetArray()[0].GetString(),"o")==0){
                 KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o");
                 int isBookBuy = json.GetArray()[2].GetArray()[i].GetArray()[1].GetInt();
