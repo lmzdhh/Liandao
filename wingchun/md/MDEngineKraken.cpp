@@ -63,7 +63,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         case LWS_CALLBACK_CLIENT_CLOSED:
         {
             if(global_md) {
-                std::cout << "3.1415926 LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
+                std::cout << "LWS_CALLBACK_CLIENT_CLOSED 2,  (call on_lws_connection_error)  reason = " << reason << std::endl;
                 global_md->on_lws_connection_error(wsi);
             }
             break;
@@ -87,7 +87,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         case LWS_CALLBACK_CLOSED:
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
-            std::cout << "3.1415926 LWS_CALLBACK_CLOSED/LWS_CALLBACK_CLIENT_CONNECTION_ERROR writeable, reason = " << reason << std::endl;
+            std::cout << "LWS_CALLBACK_CLOSED/LWS_CALLBACK_CLIENT_CONNECTION_ERROR writeable, reason = " << reason << std::endl;
             if(global_md)
             {
                 global_md->on_lws_connection_error(wsi);
@@ -166,6 +166,10 @@ void MDEngineKraken::makeWebsocketSubscribeJsonString()
 {
     std::unordered_map<std::string, std::string>::iterator map_itr;
     map_itr = coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+    if(map_itr == coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()){
+        return;
+    }
+    map_itr++;
     while(map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
         KF_LOG_DEBUG(logger, "[makeWebsocketSubscribeJsonString] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) "<< map_itr->second);
 
@@ -910,8 +914,8 @@ void MDEngineKraken::loop()
     while(isRunning)
     {
         int n = lws_service( context, rest_get_interval_ms );
-        std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
-        KF_LOG_INFO(logger, "MDEngineKraken::loop:n=lws_service: "<<n);
+        //std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
+        //KF_LOG_INFO(logger, "MDEngineKraken::loop:n=lws_service: "<<n);
     }
 }
 
