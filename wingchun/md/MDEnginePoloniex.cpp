@@ -141,7 +141,7 @@ void MDEnginePoloniex::load(const json& j_config)
         KF_LOG_ERROR(logger, "     \"etc_eth\": \"tETCETH\"");
         KF_LOG_ERROR(logger, "},");
     }
-    PriceBook20Assembler.SetLevel(book_depth_count);
+    priceBook20Assembler.SetLevel(book_depth_count);
     KF_LOG_INFO(logger, "MDEnginePoloniex::load:  book_depth_count: "
             << book_depth_count << " trade_count: " << trade_count << " rest_get_interval_ms: " << rest_get_interval_ms);
 }
