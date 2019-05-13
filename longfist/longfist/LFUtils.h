@@ -186,7 +186,7 @@ inline JournalPair getMdRawJournalPair(short source)
 		case 31:
 			return{ "/shared/kungfu/journal/MD_RAW/DAYBIT/", "MDRAW_DAYBIT" };
 		case 34:
-			return{ "/shared/kungfu/journal/MD_RAW/KRAKEN/", "MD_KRAKEN" };
+			return{ "/shared/kungfu/journal/MD_RAW/KRAKEN/", "MDRAW_KRAKEN" };
 		default:
 			return {"", ""};
 	}
