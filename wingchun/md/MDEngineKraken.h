@@ -69,8 +69,7 @@ private:
     virtual void set_reader_thread() override;
     void debug_print(std::vector<std::string> &subJsonString);
     void debug_print(std::vector<SubscribeChannel> &websocketSubscribeChannel);
-
-
+    void onPing(struct lws* conn, Document& json);
     void makeWebsocketSubscribeJsonString();
 private:
     ThreadPtr rest_thread;

@@ -338,8 +338,25 @@ int MDEngineKraken::lws_write_subscribe(struct lws* conn)
 
     return ret;
 }
+void MDEngineKraken::onPing(struct lws* conn, Document& json)
+{
+    KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: " << parseJsonToString(json));
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("event");
+    writer.String("pong");
 
+    writer.Key("reqid");
+    writer.Int(json["reqid"].GetInt());
 
+    writer.EndObject();
+
+    std::string result = s.GetString();
+    KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: (Pong)" << result);
+    //emit a callback
+    lws_callback_on_writable( conn );
+}
 void MDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: " << data);
@@ -357,7 +374,7 @@ void MDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
         //    onInfo(json);
         } else if (strcmp(json["event"].GetString(), "ping") == 0) {
             KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: is ping");
-        //    onPing(conn, json);
+            onPing(conn, json);
         } else if (strcmp(json["event"].GetString(), "subscriptionStatus") == 0) {
             KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: is subscriptionStatus");
             onSubscribed(json);
