@@ -730,19 +730,19 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
             int len_as = json.GetArray()[last_element]["as"].GetArray().Size(); 
             int len_bs = json.GetArray()[last_element]["bs"].GetArray().Size();
             if(len_as == 0 || len_bs == 0) return;
-
-           for(int i = 0; i < len_as; i++)
-           {
-               int64_t price = std::round(json.GetArray()[last_element]["as"].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
-               uint64_t volume = std::round(json.GetArray()[last_element]["as"].GetArray()[i].GetArray()[1].GetFloat() * scale_offset);
-               priceBook20Assembler.UpdateAskPrice(ticker, price, volume);
-           }
-           for(int i = 0; i < len_bs; i++)
-           {
-               int64_t price = std::round(json.GetArray()[last_element]["bs"].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
-               uint64_t volume = std::round(json.GetArray()[last_element]["bs"].GetArray()[i].GetArray()[1].GetFloat() * scale_offset);
-               priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
-           }
+            KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_as) " << len_as << " (len_bs) " << len_bs);
+            for(int i = 0; i < len_as; i++)
+            {
+                int64_t price = std::round(json.GetArray()[last_element]["as"].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
+                uint64_t volume = std::round(json.GetArray()[last_element]["as"].GetArray()[i].GetArray()[1].GetFloat() * scale_offset);
+                priceBook20Assembler.UpdateAskPrice(ticker, price, volume);
+            }
+            for(int i = 0; i < len_bs; i++)
+            {
+                int64_t price = std::round(json.GetArray()[last_element]["bs"].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
+                uint64_t volume = std::round(json.GetArray()[last_element]["bs"].GetArray()[i].GetArray()[1].GetFloat() * scale_offset);
+                priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
+            }
         } 
         else if( (json.GetArray()[last_element].HasMember("a") && 
             json.GetArray()[last_element]["a"].IsArray() ) || 
@@ -778,6 +778,7 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
            if(json.GetArray()[last_element].HasMember("a"))
            {
                int len_a = json.GetArray()[last_element]['a'].GetArray().Size();
+               KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_a) " << len_a);
                for(int i = 0; i < len_a; i++)
                {
                    int64_t price = std::round(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
@@ -795,6 +796,7 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
            if(json.GetArray()[last_element].HasMember("b"))
            {
                int len_a = json.GetArray()[last_element]['b'].GetArray().Size();
+               KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_b) " << len_a);
                for(int i = 0; i < len_a; i++)
                {
                    int64_t price = std::round(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
