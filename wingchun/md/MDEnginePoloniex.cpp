@@ -106,7 +106,7 @@ static struct lws_protocols protocols[] =
                 "md-poloniex",
                 ws_service_cb,
                         0,
-                            65536,
+                            524288,
         },
         { NULL, NULL, 0, 0 } /* terminator */
 };
