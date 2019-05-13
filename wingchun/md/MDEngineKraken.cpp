@@ -239,7 +239,7 @@ void MDEngineKraken::login(long timeout_nsec) {
     KF_LOG_INFO(logger, "MDEngineKraken::login: test login #4 " );
     struct lws_client_connect_info ccinfo = {0};
     KF_LOG_INFO(logger, "MDEngineKraken::login: test login #5 " );
-//    static std::string host  = "wss://ws.kraken.com";
+    // static std::string host  = "wss://ws.kraken.com";
     static std::string host(baseUrl);
     
 	//static std::string path = "/ws/2";
