@@ -1,4 +1,4 @@
-#include "TDEngineKraken.h"
+#include "TDEngineBittrex.h"
 #include "longfist/ctp.h"
 #include "longfist/LFUtils.h"
 #include "TypeConvert.hpp"
@@ -44,27 +44,28 @@ using std::stod;
 using std::stoi;
 using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
+using utils::crypto::hmac_sha512;
 using utils::crypto::base64_encode;
 using utils::crypto::base64_url_encode;
 USING_WC_NAMESPACE
 
-TDEngineKraken::TDEngineKraken(): ITDEngine(SOURCE_KRAKEN)
+TDEngineBittrex::TDEngineBittrex(): ITDEngine(SOURCE_BITTREX)
 {
-    logger = yijinjing::KfLog::getLogger("TradeEngine.Kraken");
-    KF_LOG_INFO(logger, "[TDEngineKraken]");
+    logger = yijinjing::KfLog::getLogger("TradeEngine.Bittrex");
+    KF_LOG_INFO(logger, "[TDEngineBittrex]");
 
     mutex_order_and_trade = new std::mutex();
     mutex_response_order_status = new std::mutex();
     mutex_orderaction_waiting_response = new std::mutex();
 }
 
-TDEngineKraken::~TDEngineKraken()
+TDEngineBittrex::~TDEngineBittrex()
 {
     if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
     if(mutex_response_order_status != nullptr) delete mutex_response_order_status;
     if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
 }
-static TDEngineKraken* global_md = nullptr;
+static TDEngineBittrex* global_md = nullptr;
 //web socket代码
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
@@ -130,13 +131,13 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 
     return 0;
 }
-void TDEngineKraken::on_lws_open(struct lws* wsi){
+void TDEngineBittrex::on_lws_open(struct lws* wsi){
     KF_LOG_INFO(logger,"[on_lws_open] ");
-    //krakenAuth(findAccountUnitKrakenByWebsocketConn(wsi));
+    //bittrexAuth(findAccountUnitBittrexByWebsocketConn(wsi));
     KF_LOG_INFO(logger,"[on_lws_open] finished ");
 }
 //cys websocket connect
-void TDEngineKraken::Ping(struct lws* conn)
+void TDEngineBittrex::Ping(struct lws* conn)
 {
     StringBuffer sbPing;
     Writer<StringBuffer> writer(sbPing);
@@ -148,11 +149,11 @@ void TDEngineKraken::Ping(struct lws* conn)
     unsigned char msg[512];
     memset(&msg[LWS_PRE], 0, 512-LWS_PRE);
     int length = strPing.length();
-    KF_LOG_INFO(logger, "TDEngineKraken::lws_write_ping: " << strPing.c_str() << " ,len = " << length);
+    KF_LOG_INFO(logger, "TDEngineBittrex::lws_write_ping: " << strPing.c_str() << " ,len = " << length);
     strncpy((char *)msg+LWS_PRE, strPing.c_str(), length);
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 }
-void TDEngineKraken::Pong(struct lws* conn,long long ping){
+void TDEngineBittrex::Pong(struct lws* conn,long long ping){
     KF_LOG_INFO(logger,"[Pong] pong the ping of websocket");
     StringBuffer sbPing;
     Writer<StringBuffer> writer(sbPing);
@@ -171,7 +172,7 @@ void TDEngineKraken::Pong(struct lws* conn,long long ping){
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
 }
 
-void TDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
+void TDEngineBittrex::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     KF_LOG_INFO(logger, "[on_lws_data] (data) " << data);
     //std::string strData = dealDataSprit(data);
@@ -183,7 +184,7 @@ void TDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
     }
 
 }
-std::string TDEngineKraken::makeSubscribeOrdersUpdate(AccountUnitKraken& unit){
+std::string TDEngineBittrex::makeSubscribeOrdersUpdate(AccountUnitBittrex& unit){
     StringBuffer sbUpdate;
     Writer<StringBuffer> writer(sbUpdate);
     writer.StartObject();
@@ -199,16 +200,16 @@ std::string TDEngineKraken::makeSubscribeOrdersUpdate(AccountUnitKraken& unit){
     std::string strUpdate = sbUpdate.GetString();
     return strUpdate;
 }
-AccountUnitKraken& TDEngineKraken::findAccountUnitKrakenByWebsocketConn(struct lws * websocketConn){
+AccountUnitBittrex& TDEngineBittrex::findAccountUnitBittrexByWebsocketConn(struct lws * websocketConn){
     for (size_t idx = 0; idx < account_units.size(); idx++) {
-        AccountUnitKraken &unit = account_units[idx];
+        AccountUnitBittrex &unit = account_units[idx];
         if(unit.webSocketConn == websocketConn) {
             return unit;
         }
     }
     return account_units[0];
 }
-int TDEngineKraken::subscribeTopic(struct lws* conn,string strSubscribe){
+int TDEngineBittrex::subscribeTopic(struct lws* conn,string strSubscribe){
     unsigned char msg[1024];
     memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
     int length = strSubscribe.length();
@@ -219,11 +220,11 @@ int TDEngineKraken::subscribeTopic(struct lws* conn,string strSubscribe){
     lws_callback_on_writable(conn);
     return ret;
 }
-int TDEngineKraken::on_lws_write_subscribe(struct lws* conn){
+int TDEngineBittrex::on_lws_write_subscribe(struct lws* conn){
     //KF_LOG_INFO(logger, "[on_lws_write_subscribe]" );
     int ret = 0;
-    AccountUnitKraken& unit=findAccountUnitKrakenByWebsocketConn(conn);
-    if(isAuth==kraken_auth&&isOrders != orders_sub){
+    AccountUnitBittrex& unit=findAccountUnitBittrexByWebsocketConn(conn);
+    if(isAuth==bittrex_auth&&isOrders != orders_sub){
         isOrders=orders_sub;
         string strSubscribe = makeSubscribeOrdersUpdate(unit);
         ret=subscribeTopic(conn,strSubscribe);
@@ -231,16 +232,16 @@ int TDEngineKraken::on_lws_write_subscribe(struct lws* conn){
     return ret;
 }
 
-void TDEngineKraken::on_lws_connection_error(struct lws* conn){
-    KF_LOG_ERROR(logger, "TDEngineKraken::on_lws_connection_error. login again.");
+void TDEngineBittrex::on_lws_connection_error(struct lws* conn){
+    KF_LOG_ERROR(logger, "TDEngineBittrex::on_lws_connection_error. login again.");
     //clear the price book, the new websocket will give 200 depth on the first connect, it will make a new price book
     m_isPong = false;
     isAuth = nothing;isOrders=nothing;
     long timeout_nsec = 0;
-    AccountUnitKraken& unit=findAccountUnitKrakenByWebsocketConn(conn);
+    AccountUnitBittrex& unit=findAccountUnitBittrexByWebsocketConn(conn);
     lws_login(unit,0);
 }
-void TDEngineKraken::on_lws_close(struct lws* conn){
+void TDEngineBittrex::on_lws_close(struct lws* conn){
     isAuth=nothing;isOrders=nothing;
     KF_LOG_INFO(logger,"[websocket close]");
 }
@@ -260,99 +261,41 @@ void on_lws_connection_error(struct lws* conn);
 struct session_data {
     int fd;
 };
-void TDEngineKraken::writeInfoLog(std::string strInfo){
+void TDEngineBittrex::writeInfoLog(std::string strInfo){
     KF_LOG_INFO(logger,strInfo);
 }
-void TDEngineKraken::writeErrorLog(std::string strError)
+void TDEngineBittrex::writeErrorLog(std::string strError)
 {
     KF_LOG_ERROR(logger, strError);
 }
 
-int64_t TDEngineKraken::getMSTime(){
+int64_t TDEngineBittrex::getMSTime(){
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return  timestamp;
 }
-// helper function to compute SHA256:
-std::vector<unsigned char> TDEngineKraken::sha256(string& data){
-   std::vector<unsigned char> digest(SHA256_DIGEST_LENGTH);
-   SHA256_CTX ctx;
-   SHA256_Init(&ctx);
-   SHA256_Update(&ctx, data.c_str(), data.length());
-   SHA256_Final(digest.data(), &ctx);
 
-   return digest;
+std::string TDEngineBittrex::getBittrexSignature(std::string& message,std::string& secret,AccountUnitBittrex& unit){
+    KF_LOG_INFO(logger,"[getBittrexSignature] (message) " << message << " (secret) " << secret);
+    string hash = hmac_sha512(secret.c_str(),message.c_str());
+    KF_LOG_INFO(logger,"[getBittrexSignature] (hash) " << hash);
 }
-vector<unsigned char> TDEngineKraken::hmac_sha512_kraken(vector<unsigned char>& data,vector<unsigned char> key){   
-   unsigned int len = EVP_MAX_MD_SIZE;
-   std::vector<unsigned char> digest(len);
-
-   HMAC_CTX ctx;
-   HMAC_CTX_init(&ctx);
-
-   HMAC_Init_ex(&ctx, key.data(), key.size(), EVP_sha512(), NULL);
-   HMAC_Update(&ctx, data.data(), data.size());
-   HMAC_Final(&ctx, digest.data(), &len);
-   
-   HMAC_CTX_cleanup(&ctx);
-   
-   return digest;
-}
-std::string TDEngineKraken::b64_encode(const std::vector<unsigned char>& data) {
-   BIO* b64 = BIO_new(BIO_f_base64());
-   BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-
-   BIO* bmem = BIO_new(BIO_s_mem());
-   b64 = BIO_push(b64, bmem);
-   
-   BIO_write(b64, data.data(), data.size());
-   BIO_flush(b64);
-
-   BUF_MEM* bptr = NULL;
-   BIO_get_mem_ptr(b64, &bptr);
-   
-   std::string output(bptr->data, bptr->length);
-   BIO_free_all(b64);
-
-   return output;
-}
-std::vector<unsigned char> TDEngineKraken::b64_decode(const std::string& data) {
-   BIO* b64 = BIO_new(BIO_f_base64());
-   BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-
-   BIO* bmem = BIO_new_mem_buf((void*)data.c_str(),data.length());
-   bmem = BIO_push(b64, bmem);
-   
-   std::vector<unsigned char> output(data.length());
-   int decoded_size = BIO_read(bmem, output.data(), output.size());
-   BIO_free_all(bmem);
-
-   if (decoded_size < 0)
-      throw std::runtime_error("failed while decoding base64.");
-   
-   return output;
-}
-std::string TDEngineKraken::getKrakenSignature(std::string& path,std::string& nonce, std::string postdata,AccountUnitKraken& unit){
-   // add path to data to encrypt
-   std::vector<unsigned char> data(path.begin(), path.end());
-
-   // concatenate nonce and postdata and compute SHA256
-   string np=nonce + postdata;
-   std::vector<unsigned char> nonce_postdata = sha256(np);
-
-   // concatenate path and nonce_postdata (path + sha256(nonce + postdata))
-   data.insert(data.end(), nonce_postdata.begin(), nonce_postdata.end());
-
-   // and compute HMAC
-   return b64_encode(hmac_sha512_kraken(data, b64_decode(unit.secret_key)));
-}
-//cys edit from kraken api
+//cys edit from bittrex api
 std::mutex g_httpMutex;
-cpr::Response TDEngineKraken::Get(const std::string& method_url,const std::string& body, std::string postData,AccountUnitKraken& unit)
+cpr::Response TDEngineBittrex::Get(const std::string& method_url,const std::string& body, std::string postData,AccountUnitBittrex& unit)
 {
+    int64_t nonce = getTimestamp();
+    string nonceStr=std::to_string(nonce);
+    KF_LOG_INFO(logger,"[Post] (nonce) "<<nonceStr);
+    postData=postData+"&apikey="+unit.api_key+"&nonce="+nonceStr;
+    string message = unit.baseUrl+method_url+"?"+postData;
+
+    string strSignature=getBittrexSignature(message,unit.secret_key,unit);
+
     string url = unit.baseUrl + method_url+"?"+postData;
+
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Get(Url{url},
-                                   Header{{}}, Timeout{10000} );
+                                   Header{{"apisign", strSignature}}, Timeout{10000} );
     lock.unlock();
     //if(response.text.length()<500){
     KF_LOG_INFO(logger, "[Get] (url) " << url << " (response.status_code) " << response.status_code <<
@@ -361,15 +304,15 @@ cpr::Response TDEngineKraken::Get(const std::string& method_url,const std::strin
     return response;
 }
 //cys edit
-cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::string& body,std::string postData, AccountUnitKraken& unit)
+cpr::Response TDEngineBittrex::Post(const std::string& method_url,const std::string& body,std::string postData, AccountUnitBittrex& unit)
 {
     int64_t nonce = getTimestamp();
     string nonceStr=std::to_string(nonce);
     KF_LOG_INFO(logger,"[Post] (nonce) "<<nonceStr);
-    string s1="nonce=";
-    postData=s1+nonceStr+"&"+postData;
+    postData=postData+"&apikey="+unit.api_key+"&nonce="+nonceStr;
+    string message = unit.baseUrl+method_url+"?"+postData;
     string path = method_url;
-    string strSignature=getKrakenSignature(path,nonceStr,postData,unit);
+    string strSignature=getBittrexSignature(path,nonceStr,postData,unit);
     KF_LOG_INFO(logger,"[Post] (strSignature) "<<strSignature);
 
     string url = unit.baseUrl + method_url;
@@ -384,7 +327,7 @@ cpr::Response TDEngineKraken::Post(const std::string& method_url,const std::stri
     //}
     return response;
 }
-void TDEngineKraken::init()
+void TDEngineBittrex::init()
 {
     genUniqueKey();
     ITDEngine::init();
@@ -393,25 +336,25 @@ void TDEngineKraken::init()
     KF_LOG_INFO(logger, "[init]");
 }
 
-void TDEngineKraken::pre_load(const json& j_config)
+void TDEngineBittrex::pre_load(const json& j_config)
 {
     KF_LOG_INFO(logger, "[pre_load]");
 }
 
-void TDEngineKraken::resize_accounts(int account_num)
+void TDEngineBittrex::resize_accounts(int account_num)
 {
     account_units.resize(account_num);
     KF_LOG_INFO(logger, "[resize_accounts]");
 }
 
-TradeAccount TDEngineKraken::load_account(int idx, const json& j_config)
+TradeAccount TDEngineBittrex::load_account(int idx, const json& j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
     // internal load
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
     string passphrase = j_config["passphrase"].get<string>();
-    //https://api.kraken.pro
+    //https://api.bittrex.pro
     string baseUrl = j_config["baseUrl"].get<string>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
@@ -431,7 +374,7 @@ TradeAccount TDEngineKraken::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
 
-    AccountUnitKraken& unit = account_units[idx];
+    AccountUnitBittrex& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
     unit.passphrase = passphrase;
@@ -450,7 +393,7 @@ TradeAccount TDEngineKraken::load_account(int idx, const json& j_config)
 
     //display usage:
     if(unit.coinPairWhiteList.Size() == 0) {
-        KF_LOG_ERROR(logger, "TDEngineKraken::load_account: please add whiteLists in kungfu.json like this :");
+        KF_LOG_ERROR(logger, "TDEngineBittrex::load_account: please add whiteLists in kungfu.json like this :");
         KF_LOG_ERROR(logger, "\"whiteLists\":{");
         KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
         KF_LOG_ERROR(logger, "    \"btc_usdt\": \"btcusdt\",");
@@ -463,7 +406,7 @@ TradeAccount TDEngineKraken::load_account(int idx, const json& j_config)
     //printResponse(json);
     //cancel_order(unit,"code","OCITZY-JMMFG-AT2MB3",json);
     //printResponse(json);
-    getPriceVolumePrecision(unit);
+    //getPriceVolumePrecision(unit);
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -474,12 +417,12 @@ TradeAccount TDEngineKraken::load_account(int idx, const json& j_config)
     return account;
 }
 
-void TDEngineKraken::connect(long timeout_nsec)
+void TDEngineBittrex::connect(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "[connect]");
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
-        AccountUnitKraken& unit = account_units[idx];
+        AccountUnitBittrex& unit = account_units[idx];
         //unit.logged_in = true;
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
         if (!unit.logged_in)
@@ -492,7 +435,7 @@ void TDEngineKraken::connect(long timeout_nsec)
     }
 }
 
-void TDEngineKraken::getPriceVolumePrecision(AccountUnitKraken& unit){
+void TDEngineBittrex::getPriceVolumePrecision(AccountUnitBittrex& unit){
     KF_LOG_INFO(logger,"[getPriceVolumePrecision]");
     Document json;
     const auto response = Get("/0/public/AssetPairs","","",unit);
@@ -520,8 +463,8 @@ void TDEngineKraken::getPriceVolumePrecision(AccountUnitKraken& unit){
         KF_LOG_INFO(logger,"[getPriceVolumePrecision] (map size) "<<unit.mapPriceVolumePrecision.size());
     }
 }
-void TDEngineKraken::lws_login(AccountUnitKraken& unit, long timeout_nsec){
-    KF_LOG_INFO(logger, "[TDEngineKraken::lws_login]");
+void TDEngineBittrex::lws_login(AccountUnitBittrex& unit, long timeout_nsec){
+    KF_LOG_INFO(logger, "[TDEngineBittrex::lws_login]");
     global_md = this;
     isAuth=nothing;
     isOrders=nothing;
@@ -553,16 +496,16 @@ void TDEngineKraken::lws_login(AccountUnitKraken& unit, long timeout_nsec){
     ctxCreationInfo.ka_interval = 10;
 
     context = lws_create_context(&ctxCreationInfo);
-    KF_LOG_INFO(logger, "[TDEngineKraken::lws_login] context created.");
+    KF_LOG_INFO(logger, "[TDEngineBittrex::lws_login] context created.");
 
 
     if (context == NULL) {
-        KF_LOG_ERROR(logger, "[TDEngineKraken::lws_login] context is NULL. return");
+        KF_LOG_ERROR(logger, "[TDEngineBittrex::lws_login] context is NULL. return");
         return;
     }
 
     // Set up the client creation info
-    static std::string host  = "api.kraken.pro";
+    static std::string host  = "api.bittrex.pro";
     static std::string path = "/ws/v1";
     clientConnectInfo.address = host.c_str();
     clientConnectInfo.path = path.c_str(); // Set the info's path to the fixed up url path
@@ -576,32 +519,32 @@ void TDEngineKraken::lws_login(AccountUnitKraken& unit, long timeout_nsec){
     clientConnectInfo.protocol = protocols[0].name;
     clientConnectInfo.pwsi = &unit.webSocketConn;
 
-    KF_LOG_INFO(logger, "[TDEngineKraken::login] address = " << clientConnectInfo.address << ",path = " << clientConnectInfo.path);
+    KF_LOG_INFO(logger, "[TDEngineBittrex::login] address = " << clientConnectInfo.address << ",path = " << clientConnectInfo.path);
     //建立websocket连接
     unit.webSocketConn = lws_client_connect_via_info(&clientConnectInfo);
     if (unit.webSocketConn == NULL) {
-        KF_LOG_ERROR(logger, "[TDEngineKraken::lws_login] wsi create error.");
+        KF_LOG_ERROR(logger, "[TDEngineBittrex::lws_login] wsi create error.");
         return;
     }
-    KF_LOG_INFO(logger, "[TDEngineKraken::login] wsi create success.");
+    KF_LOG_INFO(logger, "[TDEngineBittrex::login] wsi create success.");
 }
-void TDEngineKraken::login(long timeout_nsec)
+void TDEngineBittrex::login(long timeout_nsec)
 {
-    KF_LOG_INFO(logger, "[TDEngineKraken::login]");
+    KF_LOG_INFO(logger, "[TDEngineBittrex::login]");
     connect(timeout_nsec);
 }
 
-void TDEngineKraken::logout()
+void TDEngineBittrex::logout()
 {
     KF_LOG_INFO(logger, "[logout]");
 }
 
-void TDEngineKraken::release_api()
+void TDEngineBittrex::release_api()
 {
     KF_LOG_INFO(logger, "[release_api]");
 }
 
-bool TDEngineKraken::is_logged_in() const{
+bool TDEngineBittrex::is_logged_in() const{
     KF_LOG_INFO(logger, "[is_logged_in]");
     for (auto& unit: account_units)
     {
@@ -611,13 +554,13 @@ bool TDEngineKraken::is_logged_in() const{
     return true;
 }
 
-bool TDEngineKraken::is_connected() const{
+bool TDEngineBittrex::is_connected() const{
     KF_LOG_INFO(logger, "[is_connected]");
     return is_logged_in();
 }
 
 
-std::string TDEngineKraken::GetSide(const LfDirectionType& input) {
+std::string TDEngineBittrex::GetSide(const LfDirectionType& input) {
     if (LF_CHAR_Buy == input) {
         return "buy";
     } else if (LF_CHAR_Sell == input) {
@@ -627,7 +570,7 @@ std::string TDEngineKraken::GetSide(const LfDirectionType& input) {
     }
 }
 
-LfDirectionType TDEngineKraken::GetDirection(std::string input) {
+LfDirectionType TDEngineBittrex::GetDirection(std::string input) {
     if ("buy" == input) {
         return LF_CHAR_Buy;
     } else if ("sell" == input) {
@@ -637,7 +580,7 @@ LfDirectionType TDEngineKraken::GetDirection(std::string input) {
     }
 }
 
-std::string TDEngineKraken::GetType(const LfOrderPriceTypeType& input) {
+std::string TDEngineBittrex::GetType(const LfOrderPriceTypeType& input) {
     if (LF_CHAR_LimitPrice == input) {
         return "limit";
     } else if (LF_CHAR_AnyPrice == input) {
@@ -647,7 +590,7 @@ std::string TDEngineKraken::GetType(const LfOrderPriceTypeType& input) {
     }
 }
 
-LfOrderPriceTypeType TDEngineKraken::GetPriceType(std::string input) {
+LfOrderPriceTypeType TDEngineBittrex::GetPriceType(std::string input) {
     if ("limit" == input) {
         return LF_CHAR_LimitPrice;
     } else if ("market" == input) {
@@ -657,7 +600,7 @@ LfOrderPriceTypeType TDEngineKraken::GetPriceType(std::string input) {
     }
 }
 //订单状态，pending 提交, open 部分成交, closed , open 成交, canceled 已撤销,expired 失效
-LfOrderStatusType TDEngineKraken::GetOrderStatus(std::string state) {
+LfOrderStatusType TDEngineBittrex::GetOrderStatus(std::string state) {
 
     if(state == "canceled"){
         return LF_CHAR_Canceled;
@@ -677,10 +620,10 @@ LfOrderStatusType TDEngineKraken::GetOrderStatus(std::string state) {
  * req functions
  * 查询账户持仓
  */
-void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int account_index, int requestId){
+void TDEngineBittrex::req_investor_position(const LFQryPositionField* data, int account_index, int requestId){
     KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId);
 
-    AccountUnitKraken& unit = account_units[account_index];
+    AccountUnitBittrex& unit = account_units[account_index];
     unit.userref=std::to_string(requestId);
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key << " (InstrumentID) " << data->InstrumentID);
 
@@ -715,10 +658,10 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
             }
             KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId
                                                                    << " (errorMsg) " << errorMsg);
-            raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_KRAKEN, 1, requestId, errorId, errorMsg.c_str());
+            raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITTREX, 1, requestId, errorId, errorMsg.c_str());
         }
     }
-    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_KRAKEN, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BITTREX, 1, requestId);
     //{"error":[],"result":{"ZEUR":"10.0000"}}
     std::vector<LFRspPositionField> tmp_vector;
     KF_LOG_INFO(logger, "[req_investor_position] (result)");
@@ -751,12 +694,12 @@ void TDEngineKraken::req_investor_position(const LFQryPositionField* data, int a
     }
 }
 
-void TDEngineKraken::req_qry_account(const LFQryAccountField *data, int account_index, int requestId)
+void TDEngineBittrex::req_qry_account(const LFQryAccountField *data, int account_index, int requestId)
 {
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
 
-void TDEngineKraken::dealPriceVolume(AccountUnitKraken& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,
+void TDEngineBittrex::dealPriceVolume(AccountUnitBittrex& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,
             std::string& nDealPrice,std::string& nDealVolume){
     KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
     KF_LOG_DEBUG(logger, "[dealPriceVolume] (price)" << nPrice);
@@ -792,9 +735,9 @@ void TDEngineKraken::dealPriceVolume(AccountUnitKraken& unit,const std::string& 
                                                       << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
 }
 //发单
-void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time){
+void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time){
     //on_rtn_order(NULL);
-    AccountUnitKraken& unit = account_units[account_index];
+    AccountUnitBittrex& unit = account_units[account_index];
     unit.userref=std::to_string(requestId);
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
@@ -802,7 +745,7 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
                                               << " (Volume)" << data->Volume
                                               << " (LimitPrice)" << data->LimitPrice
                                               << " (OrderRef)" << data->OrderRef);
-    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KRAKEN, 1/*ISLAST*/, requestId);
+    send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITTREX, 1/*ISLAST*/, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -814,7 +757,7 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
         KF_LOG_ERROR(logger, "[req_order_insert]: not in WhiteList, ignore it  (rid)" << requestId <<
                                                                                       " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KRAKEN, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITTREX, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
@@ -828,7 +771,7 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
         errorMsg = data->InstrumentID;
         errorMsg += " : no such ticker";
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KRAKEN, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITTREX, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_INFO(logger,"[req_order_insert] cys_ticker "<<ticker.c_str());
@@ -863,11 +806,11 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
             rtn_order->VolumeTotalOriginal = data->Volume;
             rtn_order->LimitPrice = data->LimitPrice;
             
-            strcpy(rtn_order->ExchangeID, "kraken");
+            strcpy(rtn_order->ExchangeID, "bittrex");
             strncpy(rtn_order->UserID, unit.api_key.c_str(), 16);
             strncpy(rtn_order->InstrumentID, data->InstrumentID, 31);
             rtn_order->Direction = data->Direction;
-            //No this setting on Kraken
+            //No this setting on Bittrex
             rtn_order->TimeCondition = LF_CHAR_GTC;
             rtn_order->OrderPriceType = data->OrderPriceType;
             strncpy(rtn_order->OrderRef, data->OrderRef, 13);
@@ -877,14 +820,14 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
 
             on_rtn_order(rtn_order);
             raw_writer->write_frame(rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,
+                                    source_id, MSG_TYPE_LF_RTN_TRADE_BITTREX,
                                     1, (rtn_order->RequestID > 0) ? rtn_order->RequestID : -1);
 
             KF_LOG_DEBUG(logger, "[req_order_insert] (addNewQueryOrdersAndTrades)" );
             pOrderStatus.averagePrice = 0;
             addNewQueryOrdersAndTrades(unit, pOrderStatus, remoteOrderId);
 
-            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KRAKEN, 1,
+            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITTREX, 1,
                                           requestId, errorId, errorMsg.c_str());
             KF_LOG_DEBUG(logger, "[req_order_insert] success" );
             return;
@@ -916,12 +859,12 @@ void TDEngineKraken::req_order_insert(const LFInputOrderField* data, int account
     if(errorId != 0)
     {
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KRAKEN, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_BITTREX, 1, requestId, errorId, errorMsg.c_str());
     }
 }
 
-void TDEngineKraken::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time){
-    AccountUnitKraken& unit = account_units[account_index];
+void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time){
+    AccountUnitBittrex& unit = account_units[account_index];
     unit.userref=std::to_string(requestId);
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
@@ -929,7 +872,7 @@ void TDEngineKraken::req_order_action(const LFOrderActionField* data, int accoun
                                               << " (OrderRef)" << data->OrderRef
                                               << " (KfOrderID)" << data->KfOrderID);
 
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KRAKEN, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITTREX, 1, requestId);
 
     int errorId = 0;
     std::string errorMsg = "";
@@ -941,7 +884,7 @@ void TDEngineKraken::req_order_action(const LFOrderActionField* data, int accoun
         KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
                                                                                        errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KRAKEN, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITTREX, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
@@ -956,7 +899,7 @@ void TDEngineKraken::req_order_action(const LFOrderActionField* data, int accoun
         KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. "
                 << " (rid)" << requestId << " (orderRef)" << data->OrderRef << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KRAKEN, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITTREX, 1, requestId, errorId, errorMsg.c_str());
         return;
     } else {
         remoteOrderId = itr->second;
@@ -996,7 +939,7 @@ void TDEngineKraken::req_order_action(const LFOrderActionField* data, int accoun
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KRAKEN, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITTREX, 1, requestId, errorId, errorMsg.c_str());
 
     } else {
         
@@ -1004,7 +947,7 @@ void TDEngineKraken::req_order_action(const LFOrderActionField* data, int accoun
     }
 }
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
-void TDEngineKraken::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId){
+void TDEngineBittrex::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId){
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
 
     OrderActionSentTime newOrderActionSent;
@@ -1014,12 +957,12 @@ void TDEngineKraken::addRemoteOrderIdOrderActionSentTime(const LFOrderActionFiel
     remoteOrderIdOrderActionSentTime[remoteOrderId] = newOrderActionSent;
 }
 //cys no use
-void TDEngineKraken::GetAndHandleOrderTradeResponse(){
+void TDEngineBittrex::GetAndHandleOrderTradeResponse(){
     // KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse]" );
     //every account
     for (size_t idx = 0; idx < account_units.size(); idx++)
     {
-        AccountUnitKraken& unit = account_units[idx];
+        AccountUnitBittrex& unit = account_units[idx];
         if (!unit.logged_in)
         {
             continue;
@@ -1031,7 +974,7 @@ void TDEngineKraken::GetAndHandleOrderTradeResponse(){
 }
 
 //订单状态cys not use
-void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
+void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
 
     std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
     std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
@@ -1124,7 +1067,7 @@ void TDEngineKraken::retrieveOrderStatus(AccountUnitKraken& unit){
         }
     }
 }
-void TDEngineKraken::addNewQueryOrdersAndTrades(AccountUnitKraken& unit, PendingOrderStatus pOrderStatus, std::string& remoteOrderId){
+void TDEngineBittrex::addNewQueryOrdersAndTrades(AccountUnitBittrex& unit, PendingOrderStatus pOrderStatus, std::string& remoteOrderId){
     KF_LOG_DEBUG(logger, "[addNewQueryOrdersAndTrades]" );
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
@@ -1138,7 +1081,7 @@ void TDEngineKraken::addNewQueryOrdersAndTrades(AccountUnitKraken& unit, Pending
 }
 
 
-void TDEngineKraken::moveNewOrderStatusToPending(AccountUnitKraken& unit)
+void TDEngineBittrex::moveNewOrderStatusToPending(AccountUnitBittrex& unit)
 {
     std::lock_guard<std::mutex> pending_guard_mutex(*mutex_order_and_trade);
     std::lock_guard<std::mutex> response_guard_mutex(*mutex_response_order_status);
@@ -1152,18 +1095,18 @@ void TDEngineKraken::moveNewOrderStatusToPending(AccountUnitKraken& unit)
     }
 }
 //cys no use
-void TDEngineKraken::set_reader_thread()
+void TDEngineBittrex::set_reader_thread()
 {
     ITDEngine::set_reader_thread();
 
-    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineKraken::loop");
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineKraken::loop, this)));
+    KF_LOG_INFO(logger, "[set_reader_thread] rest_thread start on TDEngineBittrex::loop");
+    rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBittrex::loop, this)));
 
-    KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineKraken::loopOrderActionNoResponseTimeOut");
-    orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineKraken::loopOrderActionNoResponseTimeOut, this)));
+    KF_LOG_INFO(logger, "[set_reader_thread] orderaction_timeout_thread start on TDEngineBittrex::loopOrderActionNoResponseTimeOut");
+    orderaction_timeout_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBittrex::loopOrderActionNoResponseTimeOut, this)));
 }
 //cys no use
-void TDEngineKraken::loop()
+void TDEngineBittrex::loop()
 {
     KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
     while(isRunning)
@@ -1181,7 +1124,7 @@ void TDEngineKraken::loop()
 }
 
 
-void TDEngineKraken::loopOrderActionNoResponseTimeOut()
+void TDEngineBittrex::loopOrderActionNoResponseTimeOut()
 {
     KF_LOG_INFO(logger, "[loopOrderActionNoResponseTimeOut] (isRunning) " << isRunning);
     while(isRunning)
@@ -1191,7 +1134,7 @@ void TDEngineKraken::loopOrderActionNoResponseTimeOut()
     }
 }
 
-void TDEngineKraken::orderActionNoResponseTimeOut(){
+void TDEngineBittrex::orderActionNoResponseTimeOut(){
     //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut]");
     int errorId = 100;
     std::string errorMsg = "OrderAction has none response for a long time(" + std::to_string(orderaction_max_waiting_seconds) + " s), please send OrderAction again";
@@ -1216,14 +1159,14 @@ void TDEngineKraken::orderActionNoResponseTimeOut(){
     //    KF_LOG_DEBUG(logger, "[orderActionNoResponseTimeOut] (remoteOrderIdOrderActionSentTime.size)" << remoteOrderIdOrderActionSentTime.size());
 }
 
-void TDEngineKraken::printResponse(const Document& d){
+void TDEngineBittrex::printResponse(const Document& d){
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     d.Accept(writer);
     KF_LOG_INFO(logger, "[printResponse] ok (text) " << buffer.GetString());
 }
 
-void TDEngineKraken::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
+void TDEngineBittrex::getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json)
 {
     if(http_status_code >= HTTP_RESPONSE_OK && http_status_code <= 299)
     {
@@ -1253,17 +1196,17 @@ void TDEngineKraken::getResponse(int http_status_code, std::string responseText,
     }
 }
 
-void TDEngineKraken::get_account(AccountUnitKraken& unit, Document& json)
+void TDEngineBittrex::get_account(AccountUnitBittrex& unit, Document& json)
 {
     KF_LOG_INFO(logger, "[get_account]");
-    string path="/0/private/Balance";
+    string path="/account/getbalances";
 
-    const auto response = Post(path,"","",unit);
+    const auto response = Get(path,"","",unit);
     json.Parse(response.text.c_str());
     //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
 }
-std::string TDEngineKraken::createInsertOrdertring(string pair,string type,string ordertype,string price,string volume,
+std::string TDEngineBittrex::createInsertOrdertring(string pair,string type,string ordertype,string price,string volume,
         string oflags,string userref){
     string s="";
     s=s+"pair="+pair+"&"+
@@ -1275,7 +1218,7 @@ std::string TDEngineKraken::createInsertOrdertring(string pair,string type,strin
 
     return s;
 }
-void TDEngineKraken::send_order(AccountUnitKraken& unit, string userref, string code,
+void TDEngineBittrex::send_order(AccountUnitBittrex& unit, string userref, string code,
                         string side, string type, string volume, string price, Document& json){
     KF_LOG_INFO(logger, "[send_order]");
     KF_LOG_INFO(logger, "[send_order] (code) "<<code);
@@ -1308,7 +1251,7 @@ void TDEngineKraken::send_order(AccountUnitKraken& unit, string userref, string 
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-bool TDEngineKraken::shouldRetry(Document& doc)
+bool TDEngineBittrex::shouldRetry(Document& doc)
 {
     bool ret = false;
     int errLen = 0;
@@ -1323,7 +1266,7 @@ bool TDEngineKraken::shouldRetry(Document& doc)
     return ret;
 }
 
-void TDEngineKraken::cancel_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json)
+void TDEngineBittrex::cancel_order(AccountUnitBittrex& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[cancel_order]");
 
@@ -1355,10 +1298,10 @@ void TDEngineKraken::cancel_order(AccountUnitKraken& unit, std::string code, std
 
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
-void TDEngineKraken::query_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json)
+void TDEngineBittrex::query_order(AccountUnitBittrex& unit, std::string code, std::string orderId, Document& json)
 {
     KF_LOG_INFO(logger, "[query_order] start");
-    //kraken查询订单详情
+    //bittrex查询订单详情
     string getPath = "/0/private/QueryOrders";
     string s1="trades=",s2="userref=",s3="txid=";
     string postData=s1+"true&"+s2+unit.userref+"&"+s3+orderId;
@@ -1367,17 +1310,17 @@ void TDEngineKraken::query_order(AccountUnitKraken& unit, std::string code, std:
     json.Parse(response.text.c_str());
     KF_LOG_INFO(logger, "[query_order] end");
 }
-void TDEngineKraken::orderIsCanceled(AccountUnitKraken& unit, LFRtnOrderField* rtn_order){
+void TDEngineBittrex::orderIsCanceled(AccountUnitBittrex& unit, LFRtnOrderField* rtn_order){
     rtn_order->OrderStatus = LF_CHAR_Canceled;
     //累计成交数量
     //rtn_order.VolumeTraded;
     //剩余未成交数量
     //rtn_order->VolumeTotal = rtn_order.VolumeTotalOriginal-rtn_order->VolumeTraded;
     on_rtn_order(rtn_order);
-    raw_writer->write_frame(&(*rtn_order), sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,1, 
+    raw_writer->write_frame(&(*rtn_order), sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_BITTREX,1, 
             (rtn_order->RequestID > 0) ? rtn_order->RequestID: -1);
 }
-void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<PendingOrderStatus>::iterator itr,
+void TDEngineBittrex::handlerResponseOrderStatus(AccountUnitBittrex& unit, std::vector<PendingOrderStatus>::iterator itr,
          ResponsedOrderStatus& responsedOrderStatus)
 {
     KF_LOG_INFO(logger, "[handlerResponseOrderStatus]");
@@ -1410,13 +1353,13 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
     itr->rtn_order.VolumeTotal = itr->rtn_order.VolumeTotalOriginal-itr->rtn_order.VolumeTraded;
     itr->averagePrice = responsedOrderStatus.averagePrice;
     on_rtn_order(&(itr->rtn_order));
-    raw_writer->write_frame(&(itr->rtn_order), sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN,1, (itr->rtn_order.RequestID > 0) ? itr->rtn_order.RequestID: -1);
+    raw_writer->write_frame(&(itr->rtn_order), sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_TRADE_BITTREX,1, (itr->rtn_order.RequestID > 0) ? itr->rtn_order.RequestID: -1);
 
     if(oldVolumeTraded!=itr->rtn_order.VolumeTraded){
         //send OnRtnTrade
         LFRtnTradeField rtn_trade;
         memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-        strcpy(rtn_trade.ExchangeID, "kraken");
+        strcpy(rtn_trade.ExchangeID, "bittrex");
         strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
         strncpy(rtn_trade.InstrumentID, itr->rtn_order.InstrumentID, 31);
         strncpy(rtn_trade.OrderRef, itr->rtn_order.OrderRef, 13);
@@ -1429,7 +1372,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
         on_rtn_trade(&rtn_trade);
 
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-            source_id, MSG_TYPE_LF_RTN_TRADE_KRAKEN, 1, -1);
+            source_id, MSG_TYPE_LF_RTN_TRADE_BITTREX, 1, -1);
 
         KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction
                 << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
@@ -1437,7 +1380,7 @@ void TDEngineKraken::handlerResponseOrderStatus(AccountUnitKraken& unit, std::ve
 
 }
 
-std::string TDEngineKraken::parseJsonToString(Document &d){
+std::string TDEngineBittrex::parseJsonToString(Document &d){
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     d.Accept(writer);
@@ -1446,12 +1389,12 @@ std::string TDEngineKraken::parseJsonToString(Document &d){
 }
 
 
-inline int64_t TDEngineKraken::getTimestamp(){
+inline int64_t TDEngineBittrex::getTimestamp(){
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return timestamp;
 }
 
-void TDEngineKraken::genUniqueKey(){
+void TDEngineBittrex::genUniqueKey(){
     struct tm cur_time = getCurLocalTime();
     //SSMMHHDDN
     char key[11]{0};
@@ -1459,19 +1402,19 @@ void TDEngineKraken::genUniqueKey(){
     m_uniqueKey = key;
 }
 //clientid =  m_uniqueKey+orderRef
-std::string TDEngineKraken::genClinetid(const std::string &orderRef){
+std::string TDEngineBittrex::genClinetid(const std::string &orderRef){
     static int nIndex = 0;
     return m_uniqueKey + orderRef + std::to_string(nIndex++);
 }
 
 #define GBK2UTF8(msg) kungfu::yijinjing::gbk2utf8(string(msg))
-BOOST_PYTHON_MODULE(libkrakentd){
+BOOST_PYTHON_MODULE(libbittrextd){
     using namespace boost::python;
-    class_<TDEngineKraken, boost::shared_ptr<TDEngineKraken> >("Engine")
+    class_<TDEngineBittrex, boost::shared_ptr<TDEngineBittrex> >("Engine")
      .def(init<>())
-        .def("init", &TDEngineKraken::initialize)
-        .def("start", &TDEngineKraken::start)
-        .def("stop", &TDEngineKraken::stop)
-        .def("logout", &TDEngineKraken::logout)
-        .def("wait_for_stop", &TDEngineKraken::wait_for_stop);
+        .def("init", &TDEngineBittrex::initialize)
+        .def("start", &TDEngineBittrex::start)
+        .def("stop", &TDEngineBittrex::stop)
+        .def("logout", &TDEngineBittrex::logout)
+        .def("wait_for_stop", &TDEngineBittrex::wait_for_stop);
 }

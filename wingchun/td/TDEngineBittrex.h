@@ -1,6 +1,6 @@
 
-#ifndef PROJECT_TDENGINEKRAKEN_H
-#define PROJECT_TDENGINEKRAKEN_H
+#ifndef PROJECT_TDENGINEBITTREX_H
+#define PROJECT_TDENGINEBITTREX_H
 
 #include "ITDEngine.h"
 #include "longfist/LFConstants.h"
@@ -63,16 +63,16 @@ struct PriceVolumePrecision
     int amountPrecision=0;
     std::string symbol;
 };
-enum KrakenWsStatus{
+enum BittrexWsStatus{
     nothing,
-    kraken_auth,
+    bittrex_auth,
     accounts_sub,
     orders_sub,
     accounts_list_req,
     order_list_req,
     order_detail_req
 };
-struct AccountUnitKraken
+struct AccountUnitBittrex
 {
     string api_key;//uid
     string secret_key;
@@ -96,7 +96,7 @@ struct AccountUnitKraken
 /**
  * CTP trade engine
  */
-class TDEngineKraken: public ITDEngine
+class TDEngineBittrex: public ITDEngine
 {
 public:
     /** init internal journal writer (both raw and send) */
@@ -112,7 +112,7 @@ public:
     virtual void release_api();
     virtual bool is_connected() const;
     virtual bool is_logged_in() const;
-    virtual string name() const { return "TDEngineKraken"; };
+    virtual string name() const { return "TDEngineBittrex"; };
 
     // req functions
     virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
@@ -122,13 +122,13 @@ public:
 
 
 public:
-    TDEngineKraken();
-    ~TDEngineKraken();
+    TDEngineBittrex();
+    ~TDEngineBittrex();
 
 private:
     // journal writers
     yijinjing::JournalWriterPtr raw_writer;
-    vector<AccountUnitKraken> account_units;
+    vector<AccountUnitBittrex> account_units;
 
     std::string GetSide(const LfDirectionType& input);
     LfDirectionType GetDirection(std::string input);
@@ -140,24 +140,24 @@ private:
     virtual void set_reader_thread() override;
     void loop();
     void GetAndHandleOrderTradeResponse();
-    void addNewQueryOrdersAndTrades(AccountUnitKraken& unit, PendingOrderStatus pOrderStatus, std::string& remoteOrderId);
+    void addNewQueryOrdersAndTrades(AccountUnitBittrex& unit, PendingOrderStatus pOrderStatus, std::string& remoteOrderId);
 
-    void retrieveOrderStatus(AccountUnitKraken& unit);
-    void moveNewOrderStatusToPending(AccountUnitKraken& unit);
-    void handlerResponseOrderStatus(AccountUnitKraken& unit, std::vector<PendingOrderStatus>::iterator itr, 
+    void retrieveOrderStatus(AccountUnitBittrex& unit);
+    void moveNewOrderStatusToPending(AccountUnitBittrex& unit);
+    void handlerResponseOrderStatus(AccountUnitBittrex& unit, std::vector<PendingOrderStatus>::iterator itr, 
                                         ResponsedOrderStatus& responsedOrderStatus);
 
     void loopOrderActionNoResponseTimeOut();
     void orderActionNoResponseTimeOut();
-    void orderIsCanceled(AccountUnitKraken& unit, LFRtnOrderField* rtn_order);
+    void orderIsCanceled(AccountUnitBittrex& unit, LFRtnOrderField* rtn_order);
 
 private:
-    void get_account(AccountUnitKraken& unit, Document& json);
-    void send_order(AccountUnitKraken& unit, string userref, string code,
+    void get_account(AccountUnitBittrex& unit, Document& json);
+    void send_order(AccountUnitBittrex& unit, string userref, string code,
                         string side, string type, string volume, string price, Document& json);
 
-    void cancel_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json);
-    void query_order(AccountUnitKraken& unit, std::string code, std::string orderId, Document& json);
+    void cancel_order(AccountUnitBittrex& unit, std::string code, std::string orderId, Document& json);
+    void query_order(AccountUnitBittrex& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
 
@@ -166,35 +166,31 @@ private:
     std::string createInsertOrdertring(string pair,string type,string ordertype,string price,string volume,
         string oflags,string userref);
 
-    cpr::Response Get(const std::string& url,const std::string& body, std::string postData,AccountUnitKraken& unit);
-    cpr::Response Post(const std::string& url,const std::string& body, std::string postData,AccountUnitKraken& unit);
+    cpr::Response Get(const std::string& url,const std::string& body, std::string postData,AccountUnitBittrex& unit);
+    cpr::Response Post(const std::string& url,const std::string& body, std::string postData,AccountUnitBittrex& unit);
     void genUniqueKey();
     std::string genClinetid(const std::string& orderRef);
     //精度处理
-    void getPriceVolumePrecision(AccountUnitKraken& unit);
-    void dealPriceVolume(AccountUnitKraken& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,std::string& nDealPrice,std::string& nDealVome);
+    void getPriceVolumePrecision(AccountUnitBittrex& unit);
+    void dealPriceVolume(AccountUnitBittrex& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,std::string& nDealPrice,std::string& nDealVome);
 
     std::string parseJsonToString(Document &d);
     void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId);
     void Ping(struct lws* conn);
     void Pong(struct lws* conn,long long ping);
-    AccountUnitKraken& findAccountUnitKrakenByWebsocketConn(struct lws * websocketConn);
-    std::string makeSubscribeOrdersUpdate(AccountUnitKraken& unit);
+    AccountUnitBittrex& findAccountUnitBittrexByWebsocketConn(struct lws * websocketConn);
+    std::string makeSubscribeOrdersUpdate(AccountUnitBittrex& unit);
     int64_t getMSTime();
 public:
-    //cys add kraken websocket status
-    KrakenWsStatus wsStatus = nothing;
-    KrakenWsStatus isAuth = nothing,isOrders=nothing;
+    //cys add bittrex websocket status
+    BittrexWsStatus wsStatus = nothing;
+    BittrexWsStatus isAuth = nothing,isOrders=nothing;
     //当webSocket建立时
     void on_lws_open(struct lws* wsi);
-    std::string getKrakenSignature(std::string& path,std::string& nonce, std::string postdata,AccountUnitKraken& unit);
-    std::vector<unsigned char> sha256(string& data);
-    vector<unsigned char> hmac_sha512_kraken(vector<unsigned char>& data,vector<unsigned char> key);
-    std::string b64_encode(const std::vector<unsigned char>& data);
-    std::vector<unsigned char> b64_decode(const std::string& data) ;
+    std::string getBittrexSignature(std::string& message,std::string& secret,AccountUnitBittrex& unit);
 public:
     //websocket
-    void lws_login(AccountUnitKraken& unit, long timeout_nsec);
+    void lws_login(AccountUnitBittrex& unit, long timeout_nsec);
     void writeInfoLog(std::string strInfo);
     void writeErrorLog(std::string strError);
     //ws_service_cb回调函数
@@ -237,7 +233,7 @@ private:
 
 WC_NAMESPACE_END
 
-#endif //PROJECT_TDENGINEHuoTDEngineKraken_H
+#endif //PROJECT_TDENGINEHuoTDEngineBittrex_H
 
 
 
