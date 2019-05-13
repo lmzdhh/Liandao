@@ -306,9 +306,10 @@ void MDEnginePoloniex::on_lws_data(struct lws* conn, const char* data, size_t le
         return;
     }
 
+
     if(json.IsArray()){
-        int channelId = json.GetArray()[0].GetInt();
         KF_LOG_INFO(logger,"MDEnginePology::on_lws_data: getInfo: operation: "<<json.GetArray()[2].GetArray()[0].GetArray()[0].GetString());
+        int channelId = json.GetArray()[0].GetInt();
         //get initialization infomation
         if(channelId!=1010){
             if(strcmp(json.GetArray()[2].GetArray()[0].GetArray()[0].GetString(),"i")==0){
@@ -320,6 +321,9 @@ void MDEnginePoloniex::on_lws_data(struct lws* conn, const char* data, size_t le
                 GetINitializationInfomation(json,channelId,false);
             }
         }
+    }
+    else{
+        KF_LOG_INFO(logger,"MDEnginePology::on_lws_data: different data");
     }
 
 
