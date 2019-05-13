@@ -344,12 +344,12 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
         debug_print(websocketSubscribeChannel);
 
         for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["orderBook"].GetArray()[0].GetObject()){
-            priceBook20Assembler.UpdateAskPrice(ticker,m.name.GetString(),m.value.GetString());
+            priceBook20Assembler.UpdateAskPrice(ticker,ticker,std::round(std::stod(m.name.GetString())*scale_offset),std::round(std::stod(m.value.GetString())*scale_offset));
             KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : jsonAsk : price :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
         }
 
         for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["orderBook"].GetArray()[1].GetObject()){
-            priceBook20Assembler.UpdateBidPrice(ticker,m.name.GetString(),m.value.GetString());
+            priceBook20Assembler.UpdateBidPrice(ticker,std::round(std::stod(m.name.GetString())*scale_offset),std::round(std::stod(m.value.GetString())*scale_offset));
             KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : jsonBid : price :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
         }
 
