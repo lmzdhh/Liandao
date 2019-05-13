@@ -144,6 +144,7 @@
 		"poloniex":
 		{
 			"baseUrl": "api2.poloniex.com",
+			"path": "/",
 			"book_depth_count":20,
 			"trade_count":10,
 			"whiteLists":

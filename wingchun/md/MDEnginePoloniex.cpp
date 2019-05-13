@@ -124,6 +124,7 @@ void MDEnginePoloniex::load(const json& j_config)
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEnginePoloniex:: rest_get_interval_ms: " << rest_get_interval_ms);
     baseUrl = j_config["baseUrl"].get<std::string>();
+    path = j_config["path"].get<std::string>();
 
     coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     coinPairWhiteList.Debug_print();
@@ -209,13 +210,13 @@ void MDEnginePoloniex::login(long timeout_nsec) {
         return;
     }
 
-    int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
+    int logs = LLL_ERR | LLL_DEBUG | LLL_WARN |LLL_INFO;
     lws_set_log_level(logs, NULL);
 
     struct lws_client_connect_info ccinfo = {0};
 
     static std::string host  = baseUrl;
-    static std::string path = "";
+    static std::string path = path;
     static int port = 443;
 
     ccinfo.context 	= context;
