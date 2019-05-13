@@ -733,14 +733,14 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
             KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_as) " << len_as << " (len_bs) " << len_bs);
             for(int i = 0; i < len_as; i++)
             {
-                int64_t price = std::round(json.GetArray()[last_element]["as"].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
-                uint64_t volume = std::round(json.GetArray()[last_element]["as"].GetArray()[i].GetArray()[1].GetFloat() * scale_offset);
+                int64_t price = std::round(std::stod(json.GetArray()[last_element]["as"].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
+                uint64_t volume = std::round(std::stod(json.GetArray()[last_element]["as"].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
                 priceBook20Assembler.UpdateAskPrice(ticker, price, volume);
             }
             for(int i = 0; i < len_bs; i++)
             {
-                int64_t price = std::round(json.GetArray()[last_element]["bs"].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
-                uint64_t volume = std::round(json.GetArray()[last_element]["bs"].GetArray()[i].GetArray()[1].GetFloat() * scale_offset);
+                int64_t price = std::round(std::stod(json.GetArray()[last_element]["bs"].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
+                uint64_t volume = std::round(std::stod(json.GetArray()[last_element]["bs"].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
                 priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
             }
         } 
@@ -781,8 +781,8 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
                KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_a) " << len_a);
                for(int i = 0; i < len_a; i++)
                {
-                   int64_t price = std::round(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
-                   uint64_t volume = std::round(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[1].GetFloat() * scale_offset);
+                   int64_t price = std::round(std::stod(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
+                   uint64_t volume = std::round(std::stod(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
                    if(volume == 0)
                    {
                        priceBook20Assembler.EraseAskPrice(ticker, price);
@@ -799,8 +799,8 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
                KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_b) " << len_a);
                for(int i = 0; i < len_a; i++)
                {
-                   int64_t price = std::round(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
-                   uint64_t volume = std::round(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[1].GetFloat() * scale_offset);
+                   int64_t price = std::round(std::stod(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
+                   uint64_t volume = std::round(std::stod(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
                    if(volume == 0)
                    {
                        priceBook20Assembler.EraseBidPrice(ticker, price);
