@@ -345,7 +345,7 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
 
 
 
-        for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["OrderBook"].GetObject()){
+        for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["OrderBook"].GetArray()[0].GetObject()){
             KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : json :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
         }
 
