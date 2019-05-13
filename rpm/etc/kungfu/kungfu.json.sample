@@ -143,7 +143,7 @@
 		},
 		"poloniex":
 		{
-			"baseUrl": "https://poloniex.com/public",
+			"baseUrl": "api2.poloniex.com",
 			"book_depth_count":20,
 			"trade_count":10,
 			"whiteLists":

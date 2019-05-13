@@ -123,7 +123,7 @@ void MDEnginePoloniex::load(const json& j_config)
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEnginePoloniex:: rest_get_interval_ms: " << rest_get_interval_ms);
-
+    baseUrl = j_config["baseUrl"].get<std::string>();
 
     coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     coinPairWhiteList.Debug_print();
@@ -214,8 +214,8 @@ void MDEnginePoloniex::login(long timeout_nsec) {
 
     struct lws_client_connect_info ccinfo = {0};
 
-    static std::string host  = "wss://api2.poloniex.com";
-    static std::string path = "/";
+    static std::string host  = baseUrl;
+    static std::string path = "";
     static int port = 443;
 
     ccinfo.context 	= context;
