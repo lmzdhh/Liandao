@@ -96,6 +96,7 @@ TradeAccount TDEnginePoloniex::load_account(int idx, const json& j_config)
         "(response.text)" << r.text <<
         "(response.error.text)" << r.error.message);
         */
+
     //test ends here
     return account;
 }
@@ -282,8 +283,7 @@ cpr::Response TDEnginePoloniex::rest_withAuth(AccountUnitPoloniex& unit, string&
             Body{ body },
             Header{
             {"Key", key.c_str()},
-            {"Sign",sign.c_str()},
-            {"Content-Type", "application/json"}
+            {"Sign",sign.c_str()}
             },
             Timeout{ 10000 }
         );
@@ -295,8 +295,7 @@ cpr::Response TDEnginePoloniex::rest_withAuth(AccountUnitPoloniex& unit, string&
             Body{ body },
             Header{
             {"Key", key.c_str()},
-            {"Sign",sign.c_str()},
-            {"Content-Type", "application/json"}
+            {"Sign",sign.c_str()}
             },
             Timeout{ 10000 }
         );
