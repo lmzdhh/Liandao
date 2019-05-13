@@ -460,8 +460,10 @@ void MDEngineKraken::onSubscribed(Document& json)
         int chanId = json["channelID"].GetInt();
         std::string coinpair = json["pair"].GetString();
         rapidjson::Value data = json["subscription"].GetObject();
-        KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed (name) "<<data["name"].GetString());
-        if(data["name"].GetString() == "trades") {
+        string name = data["name"].GetString();
+        KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed (name) " << name );
+        if(name == "trade") {
+            KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed (trade) ");
             SubscribeChannel newChannel;
             newChannel.channelId = chanId;
             newChannel.subType = trade_channel;
@@ -469,7 +471,8 @@ void MDEngineKraken::onSubscribed(Document& json)
             websocketSubscribeChannel.push_back(newChannel);
         }
 
-        if(data["name"].GetString() == "book") {
+        if(name == "book") {
+            KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed (book) ");
             SubscribeChannel newChannel;
             newChannel.channelId = chanId;
             newChannel.subType = book_channel;
@@ -477,7 +480,8 @@ void MDEngineKraken::onSubscribed(Document& json)
             websocketSubscribeChannel.push_back(newChannel);
         }
 
-        if(data["name"].GetString() == "ohlc") {
+        if(name == "ohlc") {
+            KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed (ohlc) ");
             SubscribeChannel newChannel;
             newChannel.channelId = chanId;
             newChannel.subType = ohlc_channel;
