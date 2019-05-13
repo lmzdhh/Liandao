@@ -19,7 +19,6 @@ struct SubscribeChannel
 {
     int channelId;
     string exchange_coinpair;
-    strint inner_coinpair;
     //book or trade or ...
 };
 
@@ -53,7 +52,6 @@ private:
     void onInfo(Document& json);
 
     SubscribeChannel findByChannelID(int channelId);
-    SubscribeChannel findByExchangePair(int exchange_coinpair);
 
     std::string parseJsonToString(Document &d);
     std::string createBookJsonString(std::string exchange_coinpair);

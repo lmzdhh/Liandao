@@ -335,16 +335,17 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
 
     if(isInistial){
         std::string tickerB = json.GetArray()[2].GetArray()[0].GetArray()[1]["currencyPair"].GetString();
-        ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
-        if(ticker.length()==0) return;
 
-        KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation"<<ticker);
+        ticker = coinPairWhiteList.GetKeyByValue(tickerB);
+        if(ticker.length()==0) return;
 
         SubscribeChannel newChannel;
         newChannel.channelId = channlId;
-        newChannel.exchange_coinpair = ticker;
+        newChannel.exchange_coinpair = tickerB;
         websocketSubscribeChannel.push_back(newChannel);
         debug_print(websocketSubscribeChannel);
+
+        KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation"<<ticker);
 
         for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["orderBook"].GetArray()[0].GetObject()){
             priceBook20Assembler.UpdateAskPrice(ticker,std::round(std::stod(m.name.GetString())*scale_offset),std::round(std::stod(m.value.GetString())*scale_offset));
