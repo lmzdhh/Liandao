@@ -380,7 +380,7 @@ void MDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
             return;
         } else if (strcmp(json["event"].GetString(), "subscriptionStatus") == 0) {
             KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: is subscriptionStatus");
-            onSubscribed(json);
+            if(!json.HasMember("errorMessage"))onSubscribed(json);
             return;
         }else if(strcmp(json["event"].GetString(), "systemStatus") == 0){
             KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: is systemStatus");
@@ -451,7 +451,7 @@ int64_t MDEngineKraken::getTimestamp()
 }*/
 void MDEngineKraken::onSubscribed(Document& json)
 {
-    KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed: " << parseJsonToString(json));
+    KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed");
 
     if(json.HasMember("channelId") && json.HasMember("pair") && json.HasMember("subscription")) {
         int chanId = json["channelId"].GetInt();
