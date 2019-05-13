@@ -43,7 +43,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             print '-- got pos in initial --'
             context.print_pos(pos_handler)
             #context.stop()
-            context.buy_price = 98670000 #market_data.LowerLimitPrice
+            context.buy_price = 98830000 #market_data.LowerLimitPrice
             context.sell_price = 99999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 512.")
@@ -51,14 +51,14 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                          ticker=context.ticker,
                                                          price=context.buy_price,
                                                          exchange_id=context.exchange_id,
-                                                         volume=1000000000,
-                                                         direction=DIRECTION.Buy,
+                                                         volume=500000000,
+                                                         direction=DIRECTION.Sell,
                                                          offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
                 print('will cancel it')
-                #import time
-                #time.sleep(6)
-                #context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
+                import time
+                time.sleep(6)
+                context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
                 print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
 
 
@@ -88,7 +88,7 @@ def on_tick(context, market_data, source, rcv_time):
 
 def on_rtn_order(context, rtn_order, order_id, source, rcv_time):
     if order_id == context.order_rid and context.cancel_id < 0 and rtn_order.OrderStatus != 'a':
-        context.cancel_id = context.cancel_order(source=source, order_id=order_id)
+        #context.cancel_id = context.cancel_order(source=source, order_id=order_id)
         print 'cancel (order_id)', order_id, ' (request_id)', context.cancel_id
     if order_id == context.order_rid and rtn_order.OrderStatus == '5':
         print 'cancel successfully!'
