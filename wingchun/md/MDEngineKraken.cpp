@@ -241,7 +241,7 @@ void MDEngineKraken::login(long timeout_nsec) {
     ccinfo.address 	= host.c_str();
     ccinfo.port 	= 443;
     ccinfo.path 	= path.c_str();
-    ccinfo.host 	= path.c_str();
+    ccinfo.host 	= host.c_str();
     ccinfo.origin 	= path.c_str();
     ccinfo.protocol = protocols[0].name;
     //ccinfo.pwsi     = &wsi;
