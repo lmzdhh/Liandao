@@ -334,6 +334,8 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
     if(isInistial){
         ticker = json.GetArray()[2].GetArray()[0].GetArray()[1]["currencyPair"].GetString();
         if(ticker.length()==0) return;
+        Document jsonData;
+        jsonData.parse(json.GetArray()[2].GetArray()[0].GetArray()[1]["orderBook"].GetArray()[0]);
 
         KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation"<<ticker);
 
@@ -342,6 +344,12 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
         newChannel.exchange_coinpair = ticker;
         websocketSubscribeChannel.push_back(newChannel);
         debug_print(websocketSubscribeChannel);
+
+
+
+        for(Value::ConstMemberIterator itr = jsonData.MemberBegin();itr!=jsonData.MemberEnd(),++itr){
+            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : json :"<<name.GetString());
+        }
 
         LFPriceBook20Field md;
         memset(&md, 0, sizeof(md));
@@ -366,8 +374,9 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
             if(strcmp(json.GetArray()[2].GetArray()[i].GetArray()[0].GetString(),"o")==0){
                 KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o");
                 int isBookBuy = json.GetArray()[2].GetArray()[i].GetArray()[1].GetInt();
-                int64_t price = std::round(json.GetArray()[2].GetArray()[i].GetArray()[2].GetDouble()*scale_offset);
-                uint64_t amount = std::round(json.GetArray()[2].GetArray()[i].GetArray()[3].GetDouble()*scale_offset);
+                std::string priceString = json.GetArray()[2].GetArray()[i].GetArray()[2].GetString();
+                int64_t price = std::round(std::stod(priceString)*scale_offset);
+                uint64_t amount = std::round(std::stod(json.GetArray()[2].GetArray()[i].GetArray()[3].GetString())*scale_offset);
                 if(amount>0){
                     if(isBookBuy==1){
                         KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : o : buy & amount!=0");
@@ -404,9 +413,9 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
                 memset(&trade, 0, sizeof(trade));
                 strcpy(trade.InstrumentID, ticker.c_str());
                 strcpy(trade.ExchangeID, "poloniex");
-                trade.Price = std::round(json.GetArray()[2].GetArray()[i].GetArray()[3].GetDouble()*scale_offset);
+                trade.Price = std::round(std::stod(json.GetArray()[2].GetArray()[i].GetArray()[3].GetString())*scale_offset);
                 int isTradeBuy = json.GetArray()[2].GetArray()[i].GetArray()[2].GetInt();
-                uint64_t amount = std::round(json.GetArray()[2].GetArray()[i].GetArray()[4].GetDouble()*scale_offset);
+                uint64_t amount = std::round(std::stod(json.GetArray()[2].GetArray()[i].GetArray()[4].GetString())*scale_offset);
                 trade.Volume = amount;
                 trade.OrderBSFlag[0] = isTradeBuy == 1 ? 'B' : 'S';
                 KF_LOG_INFO(logger, "MDEnginePoloniex::[GetINitializationInfomation] (ticker)" << ticker <<
