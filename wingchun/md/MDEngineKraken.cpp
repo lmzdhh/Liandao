@@ -775,6 +775,7 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
                     }
                 ]
             */
+           KF_LOG_INFO(logger, "MDEngineKraken::onBook: (a and b) ");
            if(json.GetArray()[last_element].HasMember("a"))
            {
                int len_a = json.GetArray()[last_element]['a'].GetArray().Size();
