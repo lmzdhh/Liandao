@@ -265,9 +265,9 @@ void MDEngineKraken::login(long timeout_nsec) {
 
 void MDEngineKraken::set_reader_thread()
 {
-    IMDEngine::set_reader_thread();
+    //IMDEngine::set_reader_thread();
 
-    rest_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineKraken::loop, this)));
+    //rest_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineKraken::loop, this)));
 }
 
 void MDEngineKraken::logout()
