@@ -230,8 +230,6 @@ void MDEngineKraken::login(long timeout_nsec) {
         return;
     }
 
-    int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
-
     struct lws_client_connect_info ccinfo;
     memset(&ccinfo, 0, sizeof(ccinfo));
     struct lws *wsi = NULL;
@@ -243,8 +241,8 @@ void MDEngineKraken::login(long timeout_nsec) {
     ccinfo.address 	= host.c_str();
     ccinfo.port 	= 443;
     ccinfo.path 	= path.c_str();
-    ccinfo.host 	= host.c_str();
-    ccinfo.origin 	= host.c_str();
+    ccinfo.host 	= path.c_str();
+    ccinfo.origin 	= path.c_str();
     ccinfo.protocol = protocols[0].name;
     //ccinfo.pwsi     = &wsi;
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
@@ -265,9 +263,9 @@ void MDEngineKraken::login(long timeout_nsec) {
 
 void MDEngineKraken::set_reader_thread()
 {
-    //IMDEngine::set_reader_thread();
+    IMDEngine::set_reader_thread();
 
-    //rest_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineKraken::loop, this)));
+    rest_thread = ThreadPtr(new std::thread(boost::bind(&MDEngineKraken::loop, this)));
 }
 
 void MDEngineKraken::logout()
