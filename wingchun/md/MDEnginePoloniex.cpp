@@ -309,15 +309,16 @@ void MDEnginePoloniex::on_lws_data(struct lws* conn, const char* data, size_t le
     if(json.IsArray()){
         int channelId = json.GetArray()[0].GetInt();
         //get initialization infomation
-        if(strcmp(json.GetArray()[2].GetArray()[0].GetArray()[0].GetString(),"i")==0){
-            KF_LOG_INFO(logger,"MDEnginePology::on_lws_data: getInfo: inistial");
-            GetINitializationInfomation(json,channelId,true);
+        if(channelId!=1010){
+            if(strcmp(json.GetArray()[2].GetArray()[0].GetArray()[0].GetString(),"i")==0){
+                KF_LOG_INFO(logger,"MDEnginePology::on_lws_data: getInfo: inistial");
+                GetINitializationInfomation(json,channelId,true);
+            }
+            else{
+                KF_LOG_INFO(logger,"MDEnginePology::on_lws_data: getInfo: getchange");
+                GetINitializationInfomation(json,channelId,false);
+            }
         }
-        else{
-            KF_LOG_INFO(logger,"MDEnginePology::on_lws_data: getInfo: getchange");
-            GetINitializationInfomation(json,channelId,false);
-        }
-
     }
 
 
@@ -326,7 +327,7 @@ void MDEnginePoloniex::on_lws_data(struct lws* conn, const char* data, size_t le
 
 void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId, bool isInistial)
 {
-    KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation");
+    KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation::isInistial  :"<<isInistial);
     std::string ticker;
 
     if(isInistial){
@@ -351,6 +352,7 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
         }
     }
     else{
+        KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : onrun");
         SubscribeChannel channel = findByChannelID(channlId);
         ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
         if(ticker.length()==0) return;
