@@ -454,7 +454,7 @@ int64_t MDEngineKraken::getTimestamp()
 }*/
 void MDEngineKraken::onSubscribed(Document& json)
 {
-    KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed");
+    KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed (json) "<<parseJsonToString(json));
 
     if(json.HasMember("channelId") && json.HasMember("pair") && json.HasMember("subscription")) {
         int chanId = json["channelId"].GetInt();
