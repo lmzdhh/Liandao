@@ -394,11 +394,11 @@ void MDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
     //data
     if(json.IsArray()) {
         int chanId = json.GetArray()[0].GetInt();
-        KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: (chanId)" << chanId);
+        KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: (chanId) " << chanId);
 
         SubscribeChannel channel = findByChannelID( chanId );
         if (channel.channelId == 0) {
-            KF_LOG_ERROR(logger, "MDEngineKraken::on_lws_data: EMPTY_CHANNEL (chanId)" << chanId);
+            KF_LOG_ERROR(logger, "MDEngineKraken::on_lws_data: EMPTY_CHANNEL (chanId) " << chanId);
         } else {
             if (channel.subType == book_channel) {
                 KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: is book");
@@ -459,8 +459,8 @@ void MDEngineKraken::onSubscribed(Document& json)
     if(json.HasMember("channelId") && json.HasMember("pair") && json.HasMember("subscription")) {
         int chanId = json["channelId"].GetInt();
         std::string coinpair = json["pair"].GetString();
-
-        if(strcmp(json["subscription"]["name"].GetString(), "trades") == 0) {
+        rapidjson::Value data = json["subscription"].GetObject();
+        if(strcmp(data["name"].GetString(), "trades") == 0) {
             SubscribeChannel newChannel;
             newChannel.channelId = chanId;
             newChannel.subType = trade_channel;
@@ -468,7 +468,7 @@ void MDEngineKraken::onSubscribed(Document& json)
             websocketSubscribeChannel.push_back(newChannel);
         }
 
-        if(strcmp(json["subscription"]["name"].GetString(), "book") == 0) {
+        if(strcmp(data["name"].GetString(), "book") == 0) {
             SubscribeChannel newChannel;
             newChannel.channelId = chanId;
             newChannel.subType = book_channel;
@@ -476,7 +476,7 @@ void MDEngineKraken::onSubscribed(Document& json)
             websocketSubscribeChannel.push_back(newChannel);
         }
 
-        if(strcmp(json["subscription"]["name"].GetString(), "ohlc") == 0) {
+        if(strcmp(data["name"].GetString(), "ohlc") == 0) {
             SubscribeChannel newChannel;
             newChannel.channelId = chanId;
             newChannel.subType = ohlc_channel;
