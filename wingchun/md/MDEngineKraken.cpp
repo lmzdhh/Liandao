@@ -460,6 +460,7 @@ void MDEngineKraken::onSubscribed(Document& json)
         int chanId = json["channelId"].GetInt();
         std::string coinpair = json["pair"].GetString();
         rapidjson::Value data = json["subscription"].GetObject();
+        KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed (name) "<<data["name"].GetString());
         if(data["name"].GetString() == "trades") {
             SubscribeChannel newChannel;
             newChannel.channelId = chanId;
