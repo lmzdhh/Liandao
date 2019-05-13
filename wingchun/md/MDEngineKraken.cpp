@@ -460,7 +460,7 @@ void MDEngineKraken::onSubscribed(Document& json)
         int chanId = json["channelId"].GetInt();
         std::string coinpair = json["pair"].GetString();
         rapidjson::Value data = json["subscription"].GetObject();
-        if(strcmp(data["name"].GetString(), "trades") == 0) {
+        if(data["name"].GetString() == "trades") {
             SubscribeChannel newChannel;
             newChannel.channelId = chanId;
             newChannel.subType = trade_channel;
@@ -468,7 +468,7 @@ void MDEngineKraken::onSubscribed(Document& json)
             websocketSubscribeChannel.push_back(newChannel);
         }
 
-        if(strcmp(data["name"].GetString(), "book") == 0) {
+        if(data["name"].GetString() == "book") {
             SubscribeChannel newChannel;
             newChannel.channelId = chanId;
             newChannel.subType = book_channel;
@@ -476,7 +476,7 @@ void MDEngineKraken::onSubscribed(Document& json)
             websocketSubscribeChannel.push_back(newChannel);
         }
 
-        if(strcmp(data["name"].GetString(), "ohlc") == 0) {
+        if(data["name"].GetString() == "ohlc") {
             SubscribeChannel newChannel;
             newChannel.channelId = chanId;
             newChannel.subType = ohlc_channel;
