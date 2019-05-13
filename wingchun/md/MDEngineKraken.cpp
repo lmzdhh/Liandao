@@ -782,8 +782,8 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
                KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_a) " << len_a);
                for(int i = 0; i < len_a; i++)
                {
-                   int64_t price = std::round(std::stod(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
-                   uint64_t volume = std::round(std::stod(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
+                   int64_t price = std::round(std::stod(json.GetArray()[last_element]["a"].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
+                   uint64_t volume = std::round(std::stod(json.GetArray()[last_element]["a"].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
                    if(volume == 0)
                    {
                        priceBook20Assembler.EraseAskPrice(ticker, price);
@@ -796,12 +796,12 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
            }
            if(json.GetArray()[last_element].HasMember("b"))
            {
-               int len_a = json.GetArray()[last_element]["b"].GetArray().Size();
-               KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_b) " << len_a);
-               for(int i = 0; i < len_a; i++)
+               int len_b = json.GetArray()[last_element]["b"].GetArray().Size();
+               KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_b) " << len_b);
+               for(int i = 0; i < len_b; i++)
                {
-                   int64_t price = std::round(std::stod(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
-                   uint64_t volume = std::round(std::stod(json.GetArray()[last_element]['a'].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
+                   int64_t price = std::round(std::stod(json.GetArray()[last_element]["b"].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
+                   uint64_t volume = std::round(std::stod(json.GetArray()[last_element]["b"].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
                    if(volume == 0)
                    {
                        priceBook20Assembler.EraseBidPrice(ticker, price);
