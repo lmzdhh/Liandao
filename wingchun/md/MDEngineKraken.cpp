@@ -235,14 +235,14 @@ void MDEngineKraken::login(long timeout_nsec) {
     struct lws_client_connect_info ccinfo;
     memset(&ccinfo, 0, sizeof(ccinfo));
     struct lws *wsi = NULL;
-    std::string host = "wss://ws.kraken.com";
-    
-	//std::string path = "/ws/2";
+    std::string host = "ws.kraken.com";
+    //std::string path = "/ws/2";
+    std::string path = "";
 
     ccinfo.context 	= context;
     ccinfo.address 	= host.c_str();
     ccinfo.port 	= 443;
-    ccinfo.path 	= "";
+    ccinfo.path 	= path.c_str();
     ccinfo.host 	= host.c_str();
     ccinfo.origin 	= host.c_str();
     ccinfo.protocol = protocols[0].name;
