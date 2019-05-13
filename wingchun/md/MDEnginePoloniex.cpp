@@ -343,8 +343,10 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
         websocketSubscribeChannel.push_back(newChannel);
         debug_print(websocketSubscribeChannel);
 
-        for(Value::ConstMemberIterator itr = json.GetArray()[2].GetArray()[0].GetArray()[1]["OrderBook"].GetArray()[0].MemberBegin();itr!=json.GetArray()[2].GetArray()[0].GetArray()[1]["OrderBook"].GetArray()[0].MemberEnd(),++itr){
-            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : json :"<<itr->name.GetString());
+
+
+        for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["OrderBook"].GetObject()){
+            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : json :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
         }
 
         LFPriceBook20Field md;
