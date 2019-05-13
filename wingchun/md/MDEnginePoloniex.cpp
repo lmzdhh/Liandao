@@ -347,9 +347,6 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
 
 
 
-        for(Value::ConstMemberIterator itr = jsonData.MemberBegin();itr!=jsonData.MemberEnd(),++itr){
-            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : json :"<<name.GetString());
-        }
 
         LFPriceBook20Field md;
         memset(&md, 0, sizeof(md));
