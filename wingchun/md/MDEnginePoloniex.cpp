@@ -153,7 +153,7 @@ void MDEnginePoloniex::makeWebsocketSubscribeJsonString()
     while(map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
         KF_LOG_DEBUG(logger, "[makeWebsocketSubscribeJsonString] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) "<< map_itr->second);
 
-        std::string jsonBookString = createBookJsonString(map_itr->first,map_itr->second);
+        std::string jsonBookString = createBookJsonString(map_itr->second);
         websocketSubscribeJsonString.push_back(jsonBookString);
 
         map_itr++;
@@ -334,13 +334,16 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
     std::string ticker;
 
     if(isInistial){
-        ticker = json.GetArray()[2].GetArray()[0].GetArray()[1]["currencyPair"].GetString();
+        std::string tickerB = json.GetArray()[2].GetArray()[0].GetArray()[1]["currencyPair"].GetString();
+        ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
         if(ticker.length()==0) return;
 
         KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation"<<ticker);
 
-        SubscribeChannel updateStruct = findByExchangePair(ticker);
-        updateStruct.channelId = channelId;
+        SubscribeChannel newChannel;
+        newChannel.channelId = channlId;
+        newChannel.exchange_coinpair = ticker;
+        websocketSubscribeChannel.push_back(newChannel);
         debug_print(websocketSubscribeChannel);
 
         for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["orderBook"].GetArray()[0].GetObject()){
@@ -365,7 +368,7 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
     else{
         KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : onrun");
         SubscribeChannel channel = findByChannelID(channlId);
-        ticker = coinPairWhiteList.GetKeyByValue(channel.inner_coinpair);
+        ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
         KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : ticker :"<<ticker);
         if(ticker.length()==0) return;
 
@@ -487,8 +490,7 @@ void MDEnginePoloniex::debug_print(std::vector<SubscribeChannel> &websocketSubsc
     for (size_t i = 0; i < count; i++)
     {
         KF_LOG_INFO(logger,  " (exchange_coinpair)" << websocketSubscribeChannel[i].exchange_coinpair <<
-                            " (channelId)" << websocketSubscribeChannel[i].channelId<<
-                            " (inner_coinpair)" << websocketSubscribeChannel[i].inner_coinpair);
+                            " (channelId)" << websocketSubscribeChannel[i].channelId);
     }
 }
 
@@ -499,19 +501,6 @@ SubscribeChannel MDEnginePoloniex::findByChannelID(int channelId)
     for (size_t i = 0; i < count; i++)
     {
         if(channelId == websocketSubscribeChannel[i].channelId) {
-            return websocketSubscribeChannel[i];
-        }
-    }
-    return EMPTY_CHANNEL;
-}
-
-SubscribeChannel MDEnginePoloniex::findByExchangePair(std::string exchange_coinpair)
-{
-    size_t count = websocketSubscribeChannel.size();
-
-    for (size_t i = 0; i < count; i++)
-    {
-        if(strcmp(exchange_coinpair,websocketSubscribeChannel[i].exchange_coinpair)==0) {
             return websocketSubscribeChannel[i];
         }
     }
@@ -533,7 +522,7 @@ std::string MDEnginePoloniex::parseJsonToString(Document &d)
 
 
 //{ "command": "subscribe", "channel": "BTC_BTS" }
-std::string MDEnginePoloniex::createBookJsonString(std::string inner_coinpair ,std::string exchange_coinpair)
+std::string MDEnginePoloniex::createBookJsonString(std::string exchange_coinpair)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);
@@ -545,13 +534,6 @@ std::string MDEnginePoloniex::createBookJsonString(std::string inner_coinpair ,s
     writer.String(exchange_coinpair.c_str());
 
     writer.EndObject();
-
-    SubscribeChannel newChannel;
-    newChannel.channelId = -1;
-    newChannel.exchange_coinpair = exchange_coinpair;
-    newChannel.inner_coinpair = inner_coinpair;
-    websocketSubscribeChannel.push_back(newChannel);
-
     return s.GetString();
 }
 
