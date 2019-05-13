@@ -311,15 +311,13 @@ cpr::Response TDEngineBittrex::Post(const std::string& method_url,const std::str
     KF_LOG_INFO(logger,"[Post] (nonce) "<<nonceStr);
     postData=postData+"&apikey="+unit.api_key+"&nonce="+nonceStr;
     string message = unit.baseUrl+method_url+"?"+postData;
-    string path = method_url;
-    string strSignature=getBittrexSignature(path,nonceStr,postData,unit);
+    string strSignature=getBittrexSignature(message,unit.secret_key,unit);
     KF_LOG_INFO(logger,"[Post] (strSignature) "<<strSignature);
 
     string url = unit.baseUrl + method_url;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{
-                                {"API-Key", unit.api_key},
-                                {"API-Sign",strSignature}},Body{postData},Timeout{30000});
+                                {"apisign", strSignature}},Body{postData},Timeout{30000});
     lock.unlock();
     //if(response.text.length()<500){
     KF_LOG_INFO(logger, "[POST] (url) " << url <<" (body) "<< body<< " \n(response.status_code) " << response.status_code
