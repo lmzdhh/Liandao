@@ -91,12 +91,15 @@ TradeAccount TDEnginePoloniex::load_account(int idx, const json& j_config)
     strncpy(account.UserID, api_key.c_str(), 16);
     strncpy(account.Password, secret_key.c_str(), 21);
     //simply for rest api test
-   /* 
+    /*
+    string timestamp=to_string(get_timestamp());
+    string method="POST";
+    string command="command=returnBalances&nonce="+timestamp;
+    cpr::Response r=rest_withAuth(unit,method,command);  
     KF_LOG_DEBUG(logger, "[getbalance](status_code)" << r.status_code <<
         "(response.text)" << r.text <<
         "(response.error.text)" << r.error.message);
-        */
-
+    */
     //test ends here
     return account;
 }
@@ -149,17 +152,95 @@ bool TDEnginePoloniex::is_logged_in() const
     //占位
     KF_LOG_INFO(logger, "[is_logged_in]");
     /*for(auto &unit:account_units)  //启用多用户后，此处需修改
-    {
-        if(!unit.logged_in)
-            return false;
-    }*/
+      {
+      if(!unit.logged_in)
+      return false;
+      }*/
     return true;
 }
 
 void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int account_index, int requestId)
 {
     KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId);
-    //TODO;
+    AccountUnitPoloniex& unit = account_units[account_index];
+    KF_LOG_INFO(logger, "[req_investor_position]" << "(InstrumentID) " << data->InstrumentID);
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BITFINEX, 1, requestId);
+    int errorId = 0;
+    std::string errorMsg = "";
+
+    LFRspPositionField pos;
+    memset(&pos, 0, sizeof(LFRspPositionField));
+    strncpy(pos.BrokerID, data->BrokerID, 11);
+    strncpy(pos.InvestorID, data->InvestorID, 19);
+    strncpy(pos.InstrumentID, data->InstrumentID, 31);
+    pos.PosiDirection = LF_CHAR_Long;
+    pos.HedgeFlag = LF_CHAR_Speculation;
+    pos.Position = 0;
+    pos.YdPosition = 0;
+    pos.PositionCost = 0;
+
+    /*实现一个函数获得balance信息，一个函数解析并存储到positionHolder里面去*/
+    string timestamp = to_string(get_timestamp());
+    string command = "command=returnBalances&nonce="+timestamp;
+    string method = "POST";
+    cpr::Response r = rest_withAuth(unit, method, command);//获得账户余额消息
+    KF_LOG_DEBUG(logger, "[getbalance](status_code)" << r.status_code <<
+            "(response.text)" << r.text <<
+            "(response.error.text)" << r.error.message);
+    json js;
+    while (true)
+    {
+        if (r.status_code == 200)//获得余额信息的操作成功了
+        {
+            if (get_response_parsed_position(r))
+            {
+                /*解析response*/
+                /*若是解析成功则退出*/
+                break;
+            }
+            else
+            {
+                KF_LOG_ERROR(logger, "get balance response parsed error,quit");
+                return;
+            }
+        }
+        else
+        {
+            KF_LOG_ERROR(logger, "get balance failed,retry");
+            r = rest_withAuth(unit, method, command);
+            KF_LOG_DEBUG(logger, "[getbalance](status_code)" << r.status_code <<
+                    "(response.text)" << r.text <<
+                    "(response.error.text)" << r.error.message);
+        }
+    }
+    bool findSymbolInResult = false;
+    //send the filtered position
+    int position_count = unit.positionHolder.size();
+    for (int i = 0; i < position_count; i++)
+    {
+        pos.PosiDirection = LF_CHAR_Long;
+        strncpy(pos.InstrumentID, unit.positionHolder[i].ticker.c_str(), 31);
+        if (unit.positionHolder[i].isLong) {
+            pos.PosiDirection = LF_CHAR_Long;
+        }
+        else {
+            pos.PosiDirection = LF_CHAR_Short;
+        }
+        pos.Position = unit.positionHolder[i].amount;
+        on_rsp_position(&pos, i == (position_count - 1), requestId, errorId, errorMsg.c_str());
+        findSymbolInResult = true;
+    }
+
+    if (!findSymbolInResult)
+    {
+        KF_LOG_INFO(logger, "[req_investor_position] (!findSymbolInResult) (requestId)" << requestId);
+        on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
+    }
+
+    if (errorId != 0)
+    {
+        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+    }
 }
 
 void TDEnginePoloniex::req_qry_account(const LFQryAccountField* data, int account_index, int requestId)
@@ -228,6 +309,31 @@ string TDEnginePoloniex::get_order_side(LfDirectionType type)
         return "SELL";
     }
     return "false";
+}
+
+int TDEnginePoloniex::get_response_parsed_position(cpr::Response r)
+{
+    auto js = json::parse(r.text);
+    AccountUnitPoloniex& unit = account_units[0];
+    PositionSetting ps;
+    if (js.is_object())
+    {
+        std::unordered_map<std::string, std::string>& whitelist=unit.positionWhiteList.GetKeyIsStrategyCoinpairWhiteList();
+        std::unordered_map<std::string, std::string>::iterator it;
+        for (it = whitelist.begin(); it != whitelist.end(); ++it)
+        {
+            string exchange_coinpair = it->first;
+            ps.ticker = exchange_coinpair;
+            ps.amount = stod(js[exchange_coinpair].get<string>());
+            if (ps.amount > 0)
+                ps.isLong = true;
+            else ps.isLong = false;
+            unit.positionHolder.push_back(ps);
+        }
+        return 1;
+    }
+
+    return 0;
 }
 
 cpr::Response TDEnginePoloniex::rest_withoutAuth(string& method, string& command)
