@@ -289,7 +289,7 @@ void MDEngineKraken::subscribeMarketData(const vector<string>& instruments, cons
 
 int MDEngineKraken::lws_write_subscribe(struct lws* conn)
 {
-    KF_LOG_INFO(logger, "MDEngineKraken::lws_write_subscribe: (subscribe_index)" << subscribe_index);
+    //KF_LOG_INFO(logger, "MDEngineKraken::lws_write_subscribe: (subscribe_index)" << subscribe_index);
 
     //有待发送的数据，先把待发送的发完，在继续订阅逻辑。  ping?
     if(websocketPendingSendMsg.size() > 0) {
@@ -317,7 +317,7 @@ int MDEngineKraken::lws_write_subscribe(struct lws* conn)
     if(subscribe_index >= websocketSubscribeJsonString.size())
     {
         //subscribe_index = 0;
-        KF_LOG_INFO(logger, "MDEngineKraken::lws_write_subscribe: (none reset subscribe_index = 0, just return 0)");
+        //KF_LOG_INFO(logger, "MDEngineKraken::lws_write_subscribe: (none reset subscribe_index = 0, just return 0)");
 	    return 0;
     }
 
