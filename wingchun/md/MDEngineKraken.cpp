@@ -385,12 +385,15 @@ void MDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
         }else if(strcmp(json["event"].GetString(), "systemStatus") == 0){
             KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: is systemStatus");
             return;
+        }else if(strcmp(json["event"].GetString(), "heartbeat") == 0){
+            KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: is heartbeat");
+            return;
         }
     }
 
     //data
-    if(json.IsObject()) {
-        int chanId = json["channelID"].GetInt();
+    if(json.IsArray()) {
+        int chanId = json.GetArray()[0].GetInt();
         KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: (chanId)" << chanId);
 
         SubscribeChannel channel = findByChannelID( chanId );
