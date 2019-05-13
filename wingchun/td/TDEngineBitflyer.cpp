@@ -240,7 +240,7 @@ void TDEngineBitflyer::resize_accounts(int account_num)
 TradeAccount TDEngineBitflyer::load_account(int idx, const json & j_config)
 {
     KF_LOG_INFO(logger, "[load_account]");
-    AccountUnitBitflyer& unit = account_units[idx];
+    AccountUnitBitflyer& unit = account_units[0];
     //加载必要参数
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
