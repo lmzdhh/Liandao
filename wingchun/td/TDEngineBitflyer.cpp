@@ -379,7 +379,7 @@ void TDEngineBitflyer::req_investor_position(const LFQryPositionField * data, in
 
     AccountUnitBitflyer& unit = account_units[account_index];
     KF_LOG_INFO(logger, "[req_investor_position]" << "(InstrumentID) " << data->InstrumentID);
-    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BITFINEX, 1, requestId);
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BITFLYER, 1, requestId);
     int errorId = 0;
     std::string errorMsg = "";
 
@@ -454,7 +454,7 @@ void TDEngineBitflyer::req_investor_position(const LFQryPositionField * data, in
 
     if (errorId != 0)
     {
-        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITFLYER, 1, requestId, errorId, errorMsg.c_str());
     }
 
 }
@@ -625,7 +625,7 @@ void TDEngineBitflyer::req_order_action(const LFOrderActionField * data, int acc
         KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
             errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFLYER, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << product_code);
@@ -638,7 +638,7 @@ void TDEngineBitflyer::req_order_action(const LFOrderActionField * data, int acc
         errorMsg = "we do not find this order's child order id by requestId";
         KF_LOG_ERROR(logger, "[req_order_action]: " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_OCEANEX, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BITFLYER, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
     string child_order_id = it->second.child_order_acceptance_id;
