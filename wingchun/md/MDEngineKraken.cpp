@@ -376,14 +376,12 @@ void MDEngineKraken::on_lws_data(struct lws* conn, const char* data, size_t len)
         } else if (strcmp(json["event"].GetString(), "subscriptionStatus") == 0) {
             KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: is subscriptionStatus");
             onSubscribed(json);
-        } else {
-            KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: unknown event: " << data);
-        };
+        }
     }
 
     //data
     if(json.IsObject()) {
-        int chanId = json.GetArray()[0].GetInt();
+        int chanId = json["connectionID"].GetInt();
         KF_LOG_INFO(logger, "MDEngineKraken::on_lws_data: (chanId)" << chanId);
 
         SubscribeChannel channel = findByChannelID( chanId );
