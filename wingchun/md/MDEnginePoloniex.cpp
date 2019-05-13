@@ -216,7 +216,7 @@ void MDEnginePoloniex::login(long timeout_nsec) {
     struct lws_client_connect_info ccinfo = {0};
 
     static std::string host  = baseUrl;
-    static std::string path = path;
+    //static std::string path = path;
     static int port = 443;
 
     ccinfo.context 	= context;
