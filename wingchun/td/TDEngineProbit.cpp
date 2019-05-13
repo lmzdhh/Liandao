@@ -14,6 +14,10 @@
 #include <assert.h>
 #include <cpr/cpr.h>
 #include <chrono>
+#include "/liandao/utils/rapidjson/include/document.h"  
+#include "/liandao/utils/rapidjson/include/filewritestream.h"  
+#include "/liandao/utils/rapidjson/include/prettywriter.h"  
+#include "/liandao/utils/rapidjson/include/stringbuffer.h"  
 
 #include "../../utils/crypto/openssl_util.h"
 using cpr::Delete;
@@ -39,6 +43,8 @@ using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 
+using namespace std;  
+using namespace rapidjson;
 USING_WC_NAMESPACE
 USING_YJJ_NAMESPACE
 
@@ -185,7 +191,7 @@ TradeAccount TDEngineProbit::load_account(int idx, const json& j_config)
     unit.api_key = j_config["APIKey"].get<string>();
     unit.secret_key = j_config["SecretKey"].get<string>();
     unit.baseUrl = j_config["baseUrl"].get<string>();
-	unit.authUrl = j_config["acountUrl"].get<string>();
+    unit.authUrl = j_config["acountUrl"].get<string>();
     unit.wsUrl = j_config["wsUrl"].get<string>();
     KF_LOG_INFO(logger, "[load_account] (api_key)" << unit.api_key  << " (baseUrl)" << unit.baseUrl);
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
@@ -216,20 +222,97 @@ void TDEngineProbit::connect(long timeout_nsec)
             /*Document doc;
             get_products(unit, doc);
             printResponse(doc);*/
-            loadExchangeOrderFilters();
+            Document doc;
+            get_exchange_infos(unit, doc);
+            loadExchangeOrderFilters(unit, doc);
             debug_print(m_sendOrderFilters);
-			lws_login(unit, 0);
+            lws_login(unit, 0);
         }
     }
 }
 
-bool TDEngineProbit::loadExchangeOrderFilters()
+void TDEngineProbit::get_exchange_infos(AccountUnitProbit& unit, Document &json)
+{
+    KF_LOG_INFO(logger, "[get_exchange_infos]");
+    long recvWindow = 5000;
+//    std::string Timestamp = getTimestampString();
+    std::string Method = "GET";
+    std::string requestPath = "https://api.probit.com/api/exchange/v1/market";
+    std::string queryString("");
+    std::string body = "";
+
+    string url = requestPath + queryString;
+
+    const auto response = Get(Url{url},
+                              //Header{{"X-MBX-APIKEY", unit.api_key}},
+                              Body{body}, Timeout{100000});
+
+    KF_LOG_INFO(logger, "[get_exchange_infos] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                   " (response.error.message) " << response.error.message <<
+                                                   " (response.text) " << response.text.c_str());
+    return getResponse(response.status_code, response.text, response.error.message, json);
+}
+
+bool TDEngineProbit::loadExchangeOrderFilters(AccountUnitProbit& unit, Document &doc)
 {
     SendOrderFilter filter;
     m_sendOrderFilters[PROBIT_BTC_USDT] = {PROBIT_BTC_USDT, 1};
     m_sendOrderFilters[PROBIT_ETH_USDT] = {PROBIT_ETH_USDT, 2};
     m_sendOrderFilters[PROBIT_EOS_USDT] = {PROBIT_EOS_USDT, 4};
+
+    if(doc["data"].IsArray())
+    {
+        int len = doc["data"].Size();
+        Value &node = doc["data"];       
+        for (int i = 0; i < len; i++) {
+/*            const rapidjson::Value& sym = doc["data"].GetArray()[i];
+            std::string symbol = sym["data"].GetString();*/
+            std::string symbol = node.GetArray()[i]["id"].GetString();
+            SendOrderFilter afilter;
+            std::string tickSizeStr = node.GetArray()[i]["price_increment"].GetString();
+            unsigned int locStart = tickSizeStr.find( ".", 0 );
+            unsigned int locEnd = tickSizeStr.find( "1", 0 );
+            if( locStart != string::npos  && locEnd != string::npos ){
+            int num = locEnd - locStart;
+            afilter.ticksize = num;
+            afilter.stepsize = node.GetArray()[i]["quantity_precision"].GetInt();
+            afilter.costsize = node.GetArray()[i]["cost_precision"].GetInt();
+            unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
+            }
+            else{
+                int num = 0;
+                afilter.ticksize = num;
+                afilter.stepsize = node.GetArray()[i]["quantity_precision"].GetInt();
+                afilter.costsize = node.GetArray()[i]["cost_precision"].GetInt();
+                unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
+            }
+            //afilter.stepsize = node.GetArray()[i]["quantity_precision"].GetInt();
+            //afilter.costsize = node.GetArray()[i]["cost_precision"].GetInt();
+//            unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
+        
+        
+    }
+    }
+
+
     return true;
+}
+
+SendOrderFilter TDEngineProbit::getSendOrderFilter1(AccountUnitProbit& unit, const char *symbol)
+{
+    std::map<std::string, SendOrderFilter>::iterator map_itr = unit.sendOrderFilters.begin();
+    while(map_itr != unit.sendOrderFilters.end())
+    {
+        if(strcmp(map_itr->first.c_str(), symbol) == 0)
+        {
+            return map_itr->second;
+        }
+        map_itr++;
+    }
+    SendOrderFilter defaultFilter;
+    defaultFilter.ticksize = 8;
+   /* strcpy(defaultFilter.InstrumentID, "notfound");
+    return defaultFilter;*/
 }
 
 void TDEngineProbit::debug_print(const std::map<std::string, SendOrderFilter> &sendOrderFilters)
@@ -341,7 +424,7 @@ LfOrderPriceTypeType TDEngineProbit::GetPriceType(const std::string& type)
         return '0';
     }
 }
-//订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）
+//鐠併垹宕熼悩鑸碘偓渚婄礉閿樼釜pen閿涘牊婀幋鎰唉閿涘鈧公illed閿涘牆鍑＄€瑰本鍨氶敍澶堚偓涔nceled閿涘牆鍑￠幘銈夋敘閿?
 LfOrderStatusType TDEngineProbit::GetOrderStatus(const std::string& type)
 {
     if("open" == type)
@@ -364,7 +447,7 @@ LfOrderStatusType TDEngineProbit::GetOrderStatus(const std::string& type)
 
 LfTimeConditionType TDEngineProbit::GetTimeCondition(const std::string&)
 {
-	return LF_CHAR_GTC;
+    return LF_CHAR_GTC;
 }
 
 void TDEngineProbit::req_investor_position(const LFQryPositionField* data, int account_index, int requestId)
@@ -404,7 +487,7 @@ void TDEngineProbit::req_investor_position(const LFQryPositionField* data, int a
     std::vector<LFRspPositionField> tmp_vector;
     if(d.HasMember("data") && d["data"].IsArray())
     {
-		auto& dataArray = d["data"];
+        auto& dataArray = d["data"];
         size_t len = dataArray.Size();
         KF_LOG_DEBUG(logger, "[req_investor_position] (asset.length)" << len);
         for(size_t i = 0; i < len; i++)
@@ -445,7 +528,7 @@ void TDEngineProbit::req_qry_account(const LFQryAccountField *data, int account_
 {
     KF_LOG_INFO(logger, "[req_qry_account]");
 }
-
+/*
 int64_t TDEngineProbit::fixPriceTickSize(const std::string& ticker, int64_t price, bool isBuy)
 {
     auto filter = getSendOrderFilter(ticker);
@@ -461,7 +544,7 @@ int64_t TDEngineProbit::fixPriceTickSize(const std::string& ticker, int64_t pric
         new_price += 1;
     //}
     return new_price * cutter;
-}
+}*/
 
 int TDEngineProbit::Round(std::string tickSizeStr)
 {
@@ -479,13 +562,55 @@ int TDEngineProbit::Round(std::string tickSizeStr)
 
 std::string TDEngineProbit::TimeToFormatISO8601(int64_t timestamp)
 {
-	int ms = timestamp % 1000;
-	tm utc_time{};
-	time_t time = timestamp/1000;
-	gmtime_r(&time, &utc_time);
-	char timeStr[50]{};
-	sprintf(timeStr, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_time.tm_year + 1900, utc_time.tm_mon + 1, utc_time.tm_mday, utc_time.tm_hour, utc_time.tm_min, utc_time.tm_sec,ms);
-	return std::string(timeStr);
+    int ms = timestamp % 1000;
+    tm utc_time{};
+    time_t time = timestamp/1000;
+    gmtime_r(&time, &utc_time);
+    char timeStr[50]{};
+    sprintf(timeStr, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", utc_time.tm_year + 1900, utc_time.tm_mon + 1, utc_time.tm_mday, utc_time.tm_hour, utc_time.tm_min, utc_time.tm_sec,ms);
+    return std::string(timeStr);
+}
+
+int64_t TDEngineProbit::fixPrice(int keepPrecision, int64_t price, bool isBuy)
+{
+    //the 8 is come from 1e8.
+    if(keepPrecision == 8) return price;
+    int removePrecisions = (8 - keepPrecision);
+    double cutter =  pow(10, removePrecisions);
+    int64_t new_price = 0;
+    if(isBuy)
+    {
+        new_price = std::ceil(price / cutter) * cutter;
+    } else {
+        new_price = std::floor(price / cutter) * cutter;
+    }
+    return new_price;
+}
+
+int64_t TDEngineProbit::fixVolume(int keepPrecision,int64_t volume, bool isBuy)
+{
+    if(keepPrecision == 8) return volume;
+    int removePrecisions = (8 - keepPrecision);
+    double cutter = pow(10, removePrecisions);
+    int64_t new_volume = 0;
+    new_volume = std::ceil(volume / cutter)* cutter;
+    return new_volume;
+}
+
+int64_t TDEngineProbit::fixCost(int keepPrecision, int64_t price, bool isBuy)
+{
+    //the 8 is come from 1e8.
+    if(keepPrecision == 8) return price;
+    int removePrecisions = (8 - keepPrecision);
+    double cutter =  pow(10, removePrecisions);
+    int64_t new_price = 0;
+    if(isBuy)
+    {
+        new_price = std::ceil(price / cutter) * cutter;
+    } else {
+        new_price = std::floor(price / cutter) * cutter;
+    }
+    return new_price;
 }
 
 void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
@@ -508,6 +633,7 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
     OrderFieldEx order {};
     order.RequestID = requestId;
+    order.VolumeTotalOriginal = data->Volume;
 
     std::string clientId = genClinetid(data->OrderRef);
     {
@@ -515,22 +641,32 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
         unit.ordersMap[clientId] = order;
         on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
     }
-    int64_t fixedPrice = fixPriceTickSize(ticker, data->LimitPrice, LF_CHAR_Buy == data->Direction);
+/*    int64_t fixedPrice = fixPriceTickSize(ticker, data->LimitPrice, LF_CHAR_Buy == data->Direction);
     KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<" (LimitPrice)" << data->LimitPrice <<" (FixedPrice)" << fixedPrice);
+*/
+   // int64_t ExpectPrice=scale_offset;
+    uint64_t  cost1;
+    cost1 = (data->Volume*1.0)*(data->ExpectPrice*1.0);
+
+    SendOrderFilter filter = getSendOrderFilter1(unit, ticker.c_str());
+    int64_t fixedPrice = fixPrice(filter.ticksize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
+    int64_t fixedVolume = fixVolume(filter.stepsize, data->Volume, LF_CHAR_Buy == data->Direction);    
+    int64_t fixedCost = fixCost(filter.costsize, cost1, LF_CHAR_Buy == data->Direction);
+
     Document rspjson;
-	send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), data->Volume*1.0 / scale_offset , fixedPrice*1.0 / scale_offset, 0, clientId, rspjson);
+    send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),GetType(data->OrderPriceType).c_str(), fixedVolume*1.0 / scale_offset , fixedPrice*1.0 / scale_offset, fixedCost*1.0 / scale_offset/scale_offset, clientId, rspjson);
     if(rspjson.HasParseError() || !rspjson.IsObject())
     {
         errorId = 100;
         errorMsg = "send_order http response has parse error or is not json. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
     }
-	else if (rspjson.HasMember("data"))
-	{
-		auto& dataJson = rspjson["data"];
-		std::string remoteOrderId = dataJson["id"].GetString();
+    else if (rspjson.HasMember("data"))
+    {
+        auto& dataJson = rspjson["data"];
+        std::string remoteOrderId = dataJson["id"].GetString();
         KF_LOG_DEBUG(logger, "[req_order_insert] rsp  (rid)" << requestId << " (OrderRef) " << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
-	}
+    }
     else if (rspjson.HasMember("code") && rspjson["code"].IsNumber())
     {
         errorId = rspjson["code"].GetInt();
@@ -562,29 +698,29 @@ void TDEngineProbit::req_order_action(const LFOrderActionField* data, int accoun
 
 bool TDEngineProbit::OpenOrderToLFOrder(AccountUnitProbit& unit, rapidjson::Value& json, LFRtnOrderField& order)
 {
-	//memset(&order, 0, sizeof(LFRtnOrderField));
+    //memset(&order, 0, sizeof(LFRtnOrderField));
     KF_LOG_DEBUG(logger, "[OpenOrderToLFOrder] " << json.IsObject());
-	if (json.IsObject())
-	{
-		std::string marketID = json["market_id"].GetString();
-		std::string ticker = unit.coinPairWhiteList.GetKeyByValue(marketID);
-		if (ticker.length() == 0)
-		{
-			return false;
-		}
-		order.OrderStatus = GetOrderStatus(json["status"].GetString());
-		order.VolumeTraded = int64_t(atof(json["filled_quantity"].GetString())*scale_offset);
-		order.VolumeTotalOriginal = int64_t(atof(json["open_quantity"].GetString())*scale_offset);
-		order.VolumeTotal = order.VolumeTotalOriginal - order.VolumeTraded;
-		strncpy(order.OrderRef, json["client_order_id"].GetString(), 21);
-		strncpy(order.InstrumentID, ticker.c_str(), 31);
-		strcpy(order.ExchangeID, "Probit");
-		strncpy(order.UserID, unit.api_key.c_str(), 16);
-		order.TimeCondition = LF_CHAR_GTC;
+    if (json.IsObject())
+    {
+        std::string marketID = json["market_id"].GetString();
+        std::string ticker = unit.coinPairWhiteList.GetKeyByValue(marketID);
+        if (ticker.length() == 0)
+        {
+            return false;
+        }
+        order.OrderStatus = GetOrderStatus(json["status"].GetString());
+        order.VolumeTraded = int64_t(atof(json["filled_quantity"].GetString())*scale_offset);
+        order.VolumeTotalOriginal = int64_t(atof(json["open_quantity"].GetString())*scale_offset);
+        order.VolumeTotal = order.VolumeTotalOriginal - order.VolumeTraded;
+        strncpy(order.OrderRef, json["client_order_id"].GetString(), 21);
+        strncpy(order.InstrumentID, ticker.c_str(), 31);
+        strcpy(order.ExchangeID, "Probit");
+        strncpy(order.UserID, unit.api_key.c_str(), 16);
+        order.TimeCondition = LF_CHAR_GTC;
         KF_LOG_DEBUG(logger, "[OpenOrderToLFOrder] (InstrumentID) " << ticker.c_str());
-		return true;
-	}
-	return false;
+        return true;
+    }
+    return false;
 }
 
 void TDEngineProbit::set_reader_thread()
@@ -724,7 +860,7 @@ void TDEngineProbit::get_account(const AccountUnitProbit& unit, Document& json)
 void TDEngineProbit::get_products(const AccountUnitProbit& unit, Document& json)
 {
     KF_LOG_DEBUG(logger, "[get_products]");
-	return;
+    return;
 }
 
 void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code, const char *side, const char *type, double size, double price,double cost, const std::string& clientId,  Document& json)
@@ -739,57 +875,63 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
     convertSizeStream <<std::fixed << std::setprecision(8) << size;
     convertSizeStream >> sizeStr;
 
-	std::string costStr;
-	std::stringstream convertCostStream;
-	convertCostStream << std::fixed << std::setprecision(8) << cost;
-	convertCostStream >> costStr;
+    std::string costStr;
+    std::stringstream convertCostStream;
+    convertCostStream << std::fixed << std::setprecision(8) << cost;
+    convertCostStream >> costStr;
     Document document;
     document.SetObject();
     Document::AllocatorType& allocator = document.GetAllocator();
+
+    //Value document(kObjectType);
+
     document.AddMember("market_id", StringRef(code), allocator);
     document.AddMember("side", StringRef(side), allocator);
     document.AddMember("type", StringRef(type), allocator);
-	rapidjson::Value nullObject(rapidjson::kNullType);
-	if (strcmp(type, "limit") == 0)
-	{
-        document.AddMember("time_in_force", StringRef("gtc"), allocator);
-	    document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
-	    document.AddMember("cost", nullObject,allocator);
-	}
-	else
-	{
+    rapidjson::Value nullObject(rapidjson::kNullType);
+    if (strcmp(type, "limit") == 0)
+    {
+            document.AddMember("time_in_force", StringRef("gtc"), allocator);
+        document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
+       // document.AddMember("cost", nullObject,allocator);
+            document.AddMember("limit_price", StringRef(priceStr.c_str()), allocator);
+    }
+    else
+    {
         document.AddMember("time_in_force", StringRef("ioc"), allocator);
-		if (strcmp(side, "buy") == 0)
-		{
-			document.AddMember("quantity", StringRef(""), allocator);
-			document.AddMember("cost", StringRef(costStr.c_str()), allocator);
-		}
-		else
-		{
-			document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
-			document.AddMember("cost", StringRef(""), allocator);
-		}
-	}
-    document.AddMember("limit_price", StringRef(priceStr.c_str()), allocator);
+        if (strcmp(side, "buy") == 0)
+        {
+            //document.AddMember("quantity", StringRef(""), allocator);
+            document.AddMember("cost", StringRef(costStr.c_str()), allocator);
+        }
+        else
+        {
+            document.AddMember("quantity", StringRef(sizeStr.c_str()), allocator);
+            document.AddMember("cost", StringRef(costStr.c_str()), allocator);
+        }
+    }
+    //document.AddMember("limit_price", StringRef(priceStr.c_str()), allocator);
     std::string client_id = clientId;
     document.AddMember("client_order_id", StringRef(client_id.c_str()), allocator);
+    //document1.AddMember("data",document,allocator); 
+
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
     document.Accept(writer);
     std::string body = jsonStr.GetString();
-	std::string url = unit.baseUrl + std::string("/api/exchange/v1/new_order");
+    std::string url = unit.baseUrl + std::string("/api/exchange/v1/new_order");
     std::string authToken("Bearer ");
     authToken += getAuthToken(unit);
     auto retryCounts = m_retryCounts;
     do
     {
-	Document rspDoc;  
+    Document rspDoc;  
         if (PostRequest(url ,authToken , body, rspDoc))
         {
-	    json = std::move(rspDoc);
+        json = std::move(rspDoc);
             break;
         }
-	json = std::move(rspDoc);
+    json = std::move(rspDoc);
         KF_LOG_DEBUG(logger, "[send_order] try "<<retryCounts << " times,client_order_id:" << client_id);
         std::this_thread::sleep_for(std::chrono::milliseconds(m_retryIntervalMs));
     }while(retryCounts--);
@@ -799,22 +941,22 @@ void TDEngineProbit::cancel_order(const AccountUnitProbit& unit, const std::stri
 {
     KF_LOG_DEBUG(logger, "[cancel_order]");
     std::string requestPath = "/api/exchange/v1/cancel_order";
-	char strQuantity[20]{};
-	sprintf(strQuantity, "%.4f", quantity);
-	std::string body = "{\"market_id\":\"" + marketID + "\",\"order_id\":\"" + orderId + "\",\"limit_open_quantity\":\"0\"}";
+    char strQuantity[20]{};
+    sprintf(strQuantity, "%.4f", quantity);
+    std::string body = "{\"market_id\":\"" + marketID + "\",\"order_id\":\"" + orderId + "\",\"limit_open_quantity\":\"0\"}";
     std::string authToken("Bearer ");
     authToken += getAuthToken(unit);
     string url = unit.baseUrl + requestPath;
     auto retryCounts = m_retryCounts;
     do
     {
-	Document rspDoc;  
+    Document rspDoc;  
         if (PostRequest(url , authToken , body, rspDoc))
         {
-	    json = std::move(rspDoc);
+        json = std::move(rspDoc);
             break;
         }
-	json = std::move(rspDoc);
+    json = std::move(rspDoc);
         KF_LOG_DEBUG(logger, "[cancel_order] try "<<retryCounts << " times,remote_order_id:" << orderId);
         std::this_thread::sleep_for(std::chrono::milliseconds(m_retryIntervalMs));
     }while(retryCounts--);
@@ -860,12 +1002,12 @@ void TDEngineProbit::lws_login(AccountUnitProbit& unit, long timeout_nsec)
     int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
     lws_set_log_level(logs, NULL);
     struct lws_client_connect_info ccinfo = { 0 };
-    ccinfo.context 	= context;
-    ccinfo.address 	= unit.wsUrl.c_str();
-    ccinfo.port 	= 443;
-    ccinfo.path 	= "/api/exchange/v1/ws";
-    ccinfo.host 	= unit.wsUrl.c_str();
-    ccinfo.origin 	= unit.wsUrl.c_str();
+    ccinfo.context  = context;
+    ccinfo.address  = unit.wsUrl.c_str();
+    ccinfo.port     = 443;
+    ccinfo.path     = "/api/exchange/v1/ws";
+    ccinfo.host     = unit.wsUrl.c_str();
+    ccinfo.origin   = unit.wsUrl.c_str();
     ccinfo.ietf_version_or_minus_one = -1;
     ccinfo.protocol = "wss://";
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
@@ -947,7 +1089,7 @@ void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
         return;
     }
     if (json.HasMember("type") && json["type"].IsString())
-	{
+    {
         std::string type = json["type"].GetString();
         if(type != "authorization")
         {
@@ -968,7 +1110,7 @@ void TDEngineProbit::on_lws_data(struct lws* conn, const char* data, size_t len)
             return;
         }
         KF_LOG_ERROR(logger, "TDEngineProbit::on_lws_data, probit authorize failed,"<< data);
-	}
+    }
 }
 
 void TDEngineProbit::onOrder(struct lws* conn, Document& json)
@@ -979,26 +1121,26 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         return;
     }
 
-	bool isReset = false;
-	if (json.HasMember("reset") && json["reset"].IsBool())
-	{
-		isReset = json["reset"].GetBool();
-	}
+    bool isReset = false;
+    if (json.HasMember("reset") && json["reset"].IsBool())
+    {
+        isReset = json["reset"].GetBool();
+    }
     AccountUnitProbit &unit = findAccountUnitByWebsocketConn(conn);
     auto& orderData = json["data"];
-	for (SizeType index = 0; index < orderData.Size(); ++index)
-	{
-		auto& order = orderData[index];
-		if (isReset)
-		{
-			if (order.HasMember("id") && order["id"].IsString() && order.HasMember("market_id") && order["market_id"].IsString() && order.HasMember("open_quantity") && order["open_quantity"].IsString())
-			{
-				std::string order_id = order["id"].GetString();
-				std::string market_id = order["market_id"].GetString();
-				double open_quantity = atof(order["open_quantity"].GetString());
-				Document json;
-				cancel_order(unit, order_id, market_id, open_quantity, json);
-			}
+    for (SizeType index = 0; index < orderData.Size(); ++index)
+    {
+        auto& order = orderData[index];
+        if (isReset)
+        {
+            if (order.HasMember("id") && order["id"].IsString() && order.HasMember("market_id") && order["market_id"].IsString() && order.HasMember("open_quantity") && order["open_quantity"].IsString())
+            {
+                std::string order_id = order["id"].GetString();
+                std::string market_id = order["market_id"].GetString();
+                double open_quantity = atof(order["open_quantity"].GetString());
+                Document json;
+                cancel_order(unit, order_id, market_id, open_quantity, json);
+            }
             return;
         }
         if (!order.HasMember("client_order_id") || !order["client_order_id"].IsString())
@@ -1049,7 +1191,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         }
         rtnOrderEx.VolumeTotal = (uint64_t)((std::atof(order["open_quantity"].GetString()) + 0.000000001) * scale_offset);
         rtnOrderEx.RequestID = orderIter->second.RequestID;
-        if (!order.HasMember("cancelled_quantity") || !order["cancelled_quantity"].IsString())
+/*        if (!order.HasMember("cancelled_quantity") || !order["cancelled_quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"cancelled_quantity\"");
             return;
@@ -1058,7 +1200,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         if(cancelled_quantity > 0)
         {
             rtnOrderEx.OrderStatus = LF_CHAR_Canceled;
-        }
+        }*/
         //price
         if (!order.HasMember("limit_price") || !order["limit_price"].IsString())
         {
@@ -1088,10 +1230,12 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         if (!order.HasMember("quantity") || !order["quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"quantity\"");
-            return;
+           // return;
         }
+        else if(order.HasMember("quantity") && order["quantity"].IsString()){
         double quantity = std::atof(order["quantity"].GetString()) + 0.000000001;
         rtnOrderEx.VolumeTotalOriginal = (uint64_t)(quantity*scale_offset);
+        }
         //status
         if (!order.HasMember("status") || !order["status"].IsString())
         {
@@ -1131,7 +1275,7 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
             KF_LOG_DEBUG(logger, "TDEngineProbit::onOrder delete order, orderRef:"<< rtnOrderEx.OrderRef << ", remoteOrderRef:" << rtnOrderEx.remoteOrderRef <<", requestId:" << rtnOrderEx.RequestID);
             unit.ordersMap.erase(orderIter);
         }
-	}
+    }
 }
 
 void TDEngineProbit::onTrade(struct lws * conn, const char* orderRef, const char* api_key, const char* instrumentID, LfDirectionType direction, uint64_t volume, int64_t price, int requestid)
@@ -1167,56 +1311,56 @@ AccountUnitProbit& TDEngineProbit::findAccountUnitByWebsocketConn(struct lws * w
 bool TDEngineProbit::PostRequest(const std::string& url,const std::string& auth, const std::string& body, Document& json)
 {
     std::lock_guard<std::mutex> lck(g_postMutex);
-	const auto response = cpr::Post(Url{ url },cpr::VerifySsl(false),Header{{ "Content-Type", "application/json" },{ "authorization", auth }},Body{ body }, Timeout{ 30000 });
-	KF_LOG_DEBUG(logger, "[Post] (url) " << url << \
-	          " (body) " << body << \
-	          " (msg) " << auth <<  \
-	          " (response.status_code) " << response.status_code << \
-	          " (response.error.message) " << response.error.message << \
-	          " (response.text) " << response.text.c_str());
-	getResponse(response.status_code, response.text, response.error.message, json);
-	return response.status_code == HTTP_RESPONSE_OK ? true : false;
+    const auto response = cpr::Post(Url{ url },cpr::VerifySsl(false),Header{{ "Content-Type", "application/json" },{ "authorization", auth }},Body{ body }, Timeout{ 30000 });
+    KF_LOG_DEBUG(logger, "[Post] (url) " << url << \
+              " (body) " << body << \
+              " (msg) " << auth <<  \
+              " (response.status_code) " << response.status_code << \
+              " (response.error.message) " << response.error.message << \
+              " (response.text) " << response.text.c_str());
+    getResponse(response.status_code, response.text, response.error.message, json);
+    return response.status_code == HTTP_RESPONSE_OK ? true : false;
 }
 
 std::string TDEngineProbit::getAuthToken(const AccountUnitProbit& unit )
 {
    //TODO:if authToken is expired,get a new token 
-	if (m_tokenExpireTime < (getTimestamp() - 60000))
-	{
-		std::string requestPath = "/token ";
-		std::string body = R"({"grant_type":"client_credentials"})";
-		std::string msg = unit.api_key + ":" + unit.secret_key;
-		std::string authEncode = base64_encode((const unsigned char*)msg.c_str(), msg.length());
-		string url = unit.authUrl + requestPath;
-		Document json;
-		//getResponse(response.status_code, response.text, response.error.message, json);
+    if (m_tokenExpireTime < (getTimestamp() - 60000))
+    {
+        std::string requestPath = "/token ";
+        std::string body = R"({"grant_type":"client_credentials"})";
+        std::string msg = unit.api_key + ":" + unit.secret_key;
+        std::string authEncode = base64_encode((const unsigned char*)msg.c_str(), msg.length());
+        string url = unit.authUrl + requestPath;
+        Document json;
+        //getResponse(response.status_code, response.text, response.error.message, json);
         PostRequest(url, "Basic " + authEncode, body, json);
-		if (json.HasParseError() || !json.IsObject())
-		{
-			int errorId = 100;
-			std::string errorMsg = "getAuthToken http response has parse error or is not json. please check the log";
-			KF_LOG_ERROR(logger, "[getAuthToken]  error!  (errorId)" << errorId << " (errorMsg) " << errorMsg);
-		}
-		else if (json.HasMember("access_token") && json.HasMember("expires_in"))
-		{
+        if (json.HasParseError() || !json.IsObject())
+        {
+            int errorId = 100;
+            std::string errorMsg = "getAuthToken http response has parse error or is not json. please check the log";
+            KF_LOG_ERROR(logger, "[getAuthToken]  error!  (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        }
+        else if (json.HasMember("access_token") && json.HasMember("expires_in"))
+        {
 
-			m_authToken = json["access_token"].GetString();
-			//TODO ms or second???
-			m_tokenExpireTime = json["expires_in"].GetInt()*1000 + getTimestamp();
-		}
-		else if (json.HasMember("code") && json["code"].IsNumber())
-		{
-			//send error, example: http timeout.
-			std::string errorMsg;
-			int errorId = json["code"].GetInt();
-			if (json.HasMember("message") && json["message"].IsString())
-			{
-				errorMsg = json["message"].GetString();
-			}
-			KF_LOG_ERROR(logger, "[getAuthToken] failed! (errorId)" << errorId << " (errorMsg) " << errorMsg);
-		}
-	}
-	return m_authToken;
+            m_authToken = json["access_token"].GetString();
+            //TODO ms or second???
+            m_tokenExpireTime = json["expires_in"].GetInt()*1000 + getTimestamp();
+        }
+        else if (json.HasMember("code") && json["code"].IsNumber())
+        {
+            //send error, example: http timeout.
+            std::string errorMsg;
+            int errorId = json["code"].GetInt();
+            if (json.HasMember("message") && json["message"].IsString())
+            {
+                errorMsg = json["message"].GetString();
+            }
+            KF_LOG_ERROR(logger, "[getAuthToken] failed! (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        }
+    }
+    return m_authToken;
 }
 
 void TDEngineProbit::sendMessage(std::string &&msg, struct lws * conn)
@@ -1392,3 +1536,5 @@ BOOST_PYTHON_MODULE(libprobittd)
             .def("logout", &TDEngineProbit::logout)
             .def("wait_for_stop", &TDEngineProbit::wait_for_stop);
 }
+
+

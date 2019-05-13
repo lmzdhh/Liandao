@@ -21,6 +21,8 @@ struct SendOrderFilter
 {
     std::string InstrumentID;   //合约代码
     int ticksize; //for price round.
+    int stepsize;
+    int costsize;
 };
 enum class AccountStatus
 {
@@ -50,6 +52,7 @@ struct AccountUnitProbit
     struct lws*             websocketConn;
     volatile  AccountStatus status;
     std::map<std::string/*client_order_id*/, OrderFieldEx> ordersMap;
+    std::map<std::string, SendOrderFilter> sendOrderFilters;
 };
 struct CancelOrderReq
 {
@@ -134,13 +137,19 @@ private:
     void get_products(const AccountUnitProbit& unit, Document& json);
     void send_order(const AccountUnitProbit& unit, const char *code,const char *side, const char *type, double size, double price,double cost, const std::string& orderRef, Document& json);
     void cancel_order(const AccountUnitProbit& unit, const std::string& orderId, const std::string& marketID, double quantity, Document& json);
+    void get_exchange_infos(AccountUnitProbit& unit, Document &json);
     void getResponse(int http_status_code, const std::string& responseText, const std::string& errorMsg, Document& json);
     void printResponse(const Document& d);
     inline int64_t getTimestamp();
-    int64_t fixPriceTickSize(const std::string& ticker, int64_t price, bool isBuy);
+//    int64_t fixPriceTickSize(const std::string& ticker, int64_t price, bool isBuy);
+
+    int64_t fixPrice(int keepPrecision, int64_t price, bool isBuy);
+    int64_t fixVolume(int keepPrecision,int64_t volume, bool isBuy);
+    int64_t fixCost(int keepPrecision, int64_t price, bool isBuy);
     int64_t convert(const std::string& ticker, double price);
-    bool loadExchangeOrderFilters();
+    bool loadExchangeOrderFilters(AccountUnitProbit& unit, Document &doc);
     void debug_print(const std::map<std::string, SendOrderFilter>&);
+    SendOrderFilter getSendOrderFilter1(AccountUnitProbit& unit, const char *symbol);
     SendOrderFilter getSendOrderFilter(const std::string& symbol);
 	bool OpenOrderToLFOrder(AccountUnitProbit& unit, rapidjson::Value& json, LFRtnOrderField& order);
 private:
