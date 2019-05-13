@@ -343,10 +343,14 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
         websocketSubscribeChannel.push_back(newChannel);
         debug_print(websocketSubscribeChannel);
 
+        for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["orderBook"].GetArray()[0].GetObject()){
+            priceBook20Assembler.UpdateAskPrice(ticker,m.name.GetString(),m.value.GetString());
+            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : jsonAsk : price :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
+        }
 
-
-        for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["OrderBook"].GetArray()[0].GetObject()){
-            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : json :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
+        for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["orderBook"].GetArray()[1].GetObject()){
+            priceBook20Assembler.UpdateBidPrice(ticker,m.name.GetString(),m.value.GetString());
+            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : jsonBid : price :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
         }
 
         LFPriceBook20Field md;
