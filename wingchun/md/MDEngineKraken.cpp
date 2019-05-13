@@ -778,7 +778,7 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
            KF_LOG_INFO(logger, "MDEngineKraken::onBook: (a and b) ");
            if(json.GetArray()[last_element].HasMember("a"))
            {
-               int len_a = json.GetArray()[last_element]['a'].GetArray().Size();
+               int len_a = json.GetArray()[last_element]["a"].GetArray().Size();
                KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_a) " << len_a);
                for(int i = 0; i < len_a; i++)
                {
@@ -796,7 +796,7 @@ void MDEngineKraken::onBook(SubscribeChannel &channel, Document& json)
            }
            if(json.GetArray()[last_element].HasMember("b"))
            {
-               int len_a = json.GetArray()[last_element]['b'].GetArray().Size();
+               int len_a = json.GetArray()[last_element]["b"].GetArray().Size();
                KF_LOG_INFO(logger, "MDEngineKraken::onBook: (len_b) " << len_a);
                for(int i = 0; i < len_a; i++)
                {
