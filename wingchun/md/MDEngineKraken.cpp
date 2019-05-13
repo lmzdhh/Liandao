@@ -247,7 +247,7 @@ void MDEngineKraken::login(long timeout_nsec) {
     ccinfo.host 	= host.c_str();
     ccinfo.origin 	= host.c_str();
     ccinfo.protocol = protocols[0].name;
-    clientConnectInfo.pwsi = &wsi;
+    ccinfo.pwsi     = &wsi;
     ccinfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
     ccinfo.ietf_version_or_minus_one = -1;
 
