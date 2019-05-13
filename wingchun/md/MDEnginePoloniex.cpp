@@ -141,7 +141,7 @@ void MDEnginePoloniex::load(const json& j_config)
         KF_LOG_ERROR(logger, "     \"etc_eth\": \"tETCETH\"");
         KF_LOG_ERROR(logger, "},");
     }
-
+    PriceBook20Assembler.SetLevel(book_depth_count);
     KF_LOG_INFO(logger, "MDEnginePoloniex::load:  book_depth_count: "
             << book_depth_count << " trade_count: " << trade_count << " rest_get_interval_ms: " << rest_get_interval_ms);
 }
@@ -349,12 +349,12 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
 
         for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["orderBook"].GetArray()[0].GetObject()){
             priceBook20Assembler.UpdateAskPrice(ticker,std::round(std::stod(m.name.GetString())*scale_offset),std::round(std::stod(m.value.GetString())*scale_offset));
-            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : jsonAsk : price :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
+            //KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : jsonAsk : price :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
         }
 
         for(auto& m : json.GetArray()[2].GetArray()[0].GetArray()[1]["orderBook"].GetArray()[1].GetObject()){
             priceBook20Assembler.UpdateBidPrice(ticker,std::round(std::stod(m.name.GetString())*scale_offset),std::round(std::stod(m.value.GetString())*scale_offset));
-            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : jsonBid : price :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
+            //KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : jsonBid : price :"<<m.name.GetString()<<"   value :"<<m.value.GetString());
         }
 
         LFPriceBook20Field md;
