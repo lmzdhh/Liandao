@@ -545,9 +545,9 @@ void MDEngineKraken::onTrade(SubscribeChannel &channel, Document& json)
              * 
              * */
             for (int i = 0; i < len; i++) {
-               KF_LOG_INFO(logger, " (0)price" << json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetFloat() );
-               KF_LOG_INFO(logger, " (1)volume" << json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetFloat() );
-               KF_LOG_INFO(logger, " (2)time" << json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetFloat() );
+               KF_LOG_INFO(logger, " (0)price" << json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetString() );
+               KF_LOG_INFO(logger, " (1)volume" << json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetString() );
+               KF_LOG_INFO(logger, " (2)time" << json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetString() );
                KF_LOG_INFO(logger, " (3)side" << json.GetArray()[last_element].GetArray()[i].GetArray()[3].GetString() );
                KF_LOG_INFO(logger, " (4)orderType" << json.GetArray()[last_element].GetArray()[i].GetArray()[3].GetString() );
                KF_LOG_INFO(logger, " (5)misc" << json.GetArray()[last_element].GetArray()[i].GetArray()[3].GetString() );
@@ -558,7 +558,7 @@ void MDEngineKraken::onTrade(SubscribeChannel &channel, Document& json)
                 strcpy(trade.InstrumentID, ticker.c_str());
                 strcpy(trade.ExchangeID, "kraken");
 
-                trade.Price = std::round(json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetFloat() * scale_offset);
+                trade.Price = std::round(std::stod(json.GetArray()[last_element].GetArray()[i].GetArray()[0].GetString()) * scale_offset);
                 // double amount = json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble();
                 // uint64_t volume = 0;
                 // if(amount < 0) {
@@ -567,7 +567,7 @@ void MDEngineKraken::onTrade(SubscribeChannel &channel, Document& json)
                 //     volume = std::round( amount * scale_offset);
                 // }
 
-                trade.Volume = std::round(json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetFloat() * scale_offset);
+                trade.Volume = std::round(std::stod(json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetString()) * scale_offset);
                 //trade.OrderBSFlag[0] = amount < 0 ? 'B' : 'S';
                 if (strcmp(json.GetArray()[last_element].GetArray()[i].GetArray()[3].GetString() ,"b")==0) {
                     trade.OrderBSFlag[0] = 'B';
@@ -630,8 +630,8 @@ void MDEngineKraken::onOhlc(SubscribeChannel &channel, Document& json)
 		cur_tm = *localtime(&now);
 		strftime(market.TradingDay, 9, "%Y%m%d", &cur_tm);
 		
-        int64_t ttime = std::round(json.GetArray()[last_element].GetArray()[0].GetFloat() * 1000); 
-        int64_t endtime = std::round(json.GetArray()[last_element].GetArray()[1].GetFloat() * 1000);
+        int64_t ttime = std::round(std::stod(json.GetArray()[last_element].GetArray()[0].GetString()) * 1000); 
+        int64_t endtime = std::round(std::stod(json.GetArray()[last_element].GetArray()[1].GetString()) * 1000);
 		int64_t nStartTime = endtime - ttime;
 		int64_t nEndTime = endtime;
 		market.StartUpdateMillisec = nStartTime;
@@ -647,11 +647,11 @@ void MDEngineKraken::onOhlc(SubscribeChannel &channel, Document& json)
 		sprintf(market.EndUpdateTime,"%02d:%02d:%02d.%03d", end_tm.tm_hour,end_tm.tm_min,end_tm.tm_sec,ms);
 
 		market.PeriodMillisec = 60000;
-		market.Open = std::round(json.GetArray()[last_element].GetArray()[2].GetFloat() * scale_offset);
-		market.Close = std::round(json.GetArray()[last_element].GetArray()[5].GetFloat() * scale_offset);
-		market.Low = std::round(json.GetArray()[last_element].GetArray()[4].GetFloat() * scale_offset);
-		market.High = std::round(json.GetArray()[last_element].GetArray()[3].GetFloat() * scale_offset);		
-		market.Volume = std::round(json.GetArray()[last_element].GetArray()[7].GetFloat() * scale_offset);
+		market.Open = std::round(std::stod(json.GetArray()[last_element].GetArray()[2].GetString()) * scale_offset);
+		market.Close = std::round(std::stod(json.GetArray()[last_element].GetArray()[5].GetString()) * scale_offset);
+		market.Low = std::round(std::stod(json.GetArray()[last_element].GetArray()[4].GetString()) * scale_offset);
+		market.High = std::round(std::stod(json.GetArray()[last_element].GetArray()[3].GetString()) * scale_offset);		
+		market.Volume = std::round(std::stod(json.GetArray()[last_element].GetArray()[7].GetString()) * scale_offset);
 		auto itPrice = priceBook.find(channel.exchange_coinpair);
 		if(itPrice != priceBook.end())
 		{
