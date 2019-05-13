@@ -355,6 +355,7 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
         KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : onrun");
         SubscribeChannel channel = findByChannelID(channlId);
         ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
+        KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation: operation : ticker :"<<ticker);
         if(ticker.length()==0) return;
 
         int len = json.GetArray()[2].Size();
