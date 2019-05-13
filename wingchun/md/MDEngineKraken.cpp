@@ -456,8 +456,8 @@ void MDEngineKraken::onSubscribed(Document& json)
 {
     KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed (json) "<<parseJsonToString(json));
 
-    if(json.HasMember("channelId") && json.HasMember("pair") && json.HasMember("subscription")) {
-        int chanId = json["channelId"].GetInt();
+    if(json.HasMember("channelID") && json.HasMember("pair") && json.HasMember("subscription")) {
+        int chanId = json["channelID"].GetInt();
         std::string coinpair = json["pair"].GetString();
         rapidjson::Value data = json["subscription"].GetObject();
         KF_LOG_INFO(logger, "MDEngineKraken::onSubscribed (name) "<<data["name"].GetString());
