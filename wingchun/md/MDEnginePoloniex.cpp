@@ -334,8 +334,6 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
     if(isInistial){
         ticker = json.GetArray()[2].GetArray()[0].GetArray()[1]["currencyPair"].GetString();
         if(ticker.length()==0) return;
-        Document jsonData;
-        jsonData.parse(json.GetArray()[2].GetArray()[0].GetArray()[1]["orderBook"].GetArray()[0]);
 
         KF_LOG_INFO(logger,"MDEnginePoloniex::GetINitializationInfomation"<<ticker);
 
@@ -345,8 +343,9 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
         websocketSubscribeChannel.push_back(newChannel);
         debug_print(websocketSubscribeChannel);
 
-
-
+        for(Value::ConstMemberIterator itr = json.GetArray()[2].GetArray()[0].GetArray()[1]["OrderBook"].GetArray()[0].MemberBegin();itr!=json.GetArray()[2].GetArray()[0].GetArray()[1]["OrderBook"].GetArray()[0].MemberEnd(),++itr){
+            KF_LOG_INFO(logger, "MDEnginePoloniex::onDepth: on_price_book_update : json :"<<itr->name.GetString());
+        }
 
         LFPriceBook20Field md;
         memset(&md, 0, sizeof(md));
