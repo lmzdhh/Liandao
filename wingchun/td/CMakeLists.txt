@@ -95,3 +95,8 @@ SET(DAYBIT_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineDaybit.cpp TDEngineDaybit.h .
 ADD_LIBRARY(daybittd SHARED ${DAYBIT_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(daybittd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS daybittd DESTINATION "lib/wingchun")
+
+SET(BITTREX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBittrex.cpp TDEngineBittrex.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h ../base/InterfaceMgr.cpp ../base/InterfaceMgr.h)
+ADD_LIBRARY(bittrextd SHARED ${BITTREX_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(bittrextd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
+INSTALL(TARGETS bittrextd DESTINATION "lib/wingchun")

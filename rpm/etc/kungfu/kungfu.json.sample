@@ -631,6 +631,47 @@
 				},
 				"future_exotic": null
 			}
+		},
+		"bittrex": {
+			"accounts": [{
+				"info": {
+					"APIKey": "e9e6fdc4c9a64d84b3ef65818607d093",
+					"SecretKey": "9cda0797313249c089bf1cb913be6c94",
+					"passphrase": "your-passphrase",
+					"baseUrl": "https://api.bittrex.com/api/v1.1",
+					"whiteLists": {
+						"strategy_coinpair(base_quote)": "exchange_coinpair",
+						"btc_usdt": "btcusdt",
+						"eth_usdt": "ethusdt",
+						"vet_usdt": "vetusdt",
+						"eth_btc": "ethbtc",
+						"vet_btc": "vetbtc",
+						"vet_eth": "veteth"
+					},
+					"positionWhiteLists": {
+						"ETC": "ETC",
+						"BTC": "BTC"
+					},
+					"rest_get_interval_ms": 2000
+				},
+				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
+				"is_default": true
+			}],
+			"FeeSetup": {
+				"stock": {
+					"type": "amount",
+					"fee_multi": 0.0003,
+					"ctr_multi": 1,
+					"min_fee": 0
+				},
+				"future": {
+					"type": "amount",
+					"fee_multi": [0.000023, 0.00069, 0.000023],
+					"ctr_multi": 200,
+					"min_fee": 0
+				},
+				"future_exotic": null
+			}
 		}
 	}
 }

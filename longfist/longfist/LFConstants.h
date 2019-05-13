@@ -70,6 +70,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "bithumb";
         case SOURCE_DAYBIT:
             return "daybit";
+        case SOURCE_BITTREX:
+            return "bittrex";
 		default:
 			return "unknown";
 	}
@@ -145,6 +147,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
 		return SOURCE_BITHUMB;
     }
+    else if(exch_str == "bittrex")
+    {
+        return SOURCE_BITTREX;
+    }
     else 
     {
 		return SOURCE_UNKNOWN;
@@ -174,6 +180,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_PROBIT "PROBIT"
 #define EXCHANGE_BITHUMB "BITHUMB"
 #define EXCHANGE_DAYBIT "DAYBIT"
+#define EXCHANGE_BITTREX "BITTREX"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -368,7 +375,7 @@ const short MSG_TYPE_LF_RTN_TRADE_DAYBIT 	= 31206;
 const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
 
 //bittrex, idx=36
-const short MSG_TYPE_LF_MD_BITRREX        = 36101;
+const short MSG_TYPE_LF_MD_BITTREX        = 36101;
 const short MSG_TYPE_LF_QRY_POS_BITTREX   = 36201;
 const short MSG_TYPE_LF_RSP_POS_BITTREX   = 36202;
 const short MSG_TYPE_LF_ORDER_BITTREX     = 36204;
