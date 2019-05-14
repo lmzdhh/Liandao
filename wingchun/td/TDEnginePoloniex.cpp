@@ -64,7 +64,7 @@ TradeAccount TDEnginePoloniex::load_account(int idx, const json& j_config)
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
     string baseUrl = j_config["baseUrl"].get<string>();
-	KF_LOG_INFO(logger, "[load_account] (baseUrl_private_point)" << url_public_point);
+	KF_LOG_INFO(logger, "[load_account] (baseUrl_private_point)" << baseUrl);
     //币对白名单设置
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
@@ -111,6 +111,11 @@ TradeAccount TDEnginePoloniex::load_account(int idx, const json& j_config)
     strncpy(account.Password, secret_key.c_str(), 21);
     //simply for rest api test
     
+    string timestamp = to_string(get_timestamp());
+    string command = "command=returnBalances&nonce="+timestamp;
+    string method = "POST";
+	KF_LOG_DEBUG(logger, "[getbalance]" );
+    cpr::Response r = rest_withAuth(unit, method, command);//获得账户余额消息
     //test ends here
     return account;
 }
@@ -289,11 +294,13 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	string order_side = get_order_side(data->Direction);//买或者卖
 	std::stringstream ss;
 	double rate = data->LimitPrice * 1.0 / scale_offset;
-	ss.flush();
+    ss.str("");
+	ss.clear();
 	ss << rate;
 	string rate_str = ss.str();
 	double amount = data->Volume * 1.0 / scale_offset;
-	ss.flush();
+    ss.str("");
+    ss.clear();
 	ss << amount;
 	string amount_str = ss.str();
 	string method = "POST";
@@ -336,16 +343,15 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
             KF_LOG_ERROR(logger, "[req_order_insert](insert order error)");
             return;
 		}
-		order_info.order_number = stod(js["orderNumber"].get<string>());
+        order_info.order_number=stoll(js["orderNumber"].get<string>());
 	}
 	//获得订单信息，处理 order_info、rtn_order
 	unit.map_new_order.insert(std::make_pair(requestId, order_info));
 	LFRtnOrderField rtn_order;//返回order信息
 	memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+	string order_number_str = to_string(order_info.order_number);
 	//以下为必填项
-	ss.flush();
-	ss << order_info.order_number;
-	string order_number_str = ss.str();
+    strncpy(rtn_order.OrderRef, data->OrderRef, 13);
 	strncpy(rtn_order.BusinessUnit, order_number_str.c_str(), order_number_str.length());
 	rtn_order.OrderStatus = LF_CHAR_NotTouched;
 	rtn_order.LimitPrice = data->LimitPrice;
@@ -384,7 +390,6 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	}
 	else
 	{
-		KF_LOG_ERROR(logger, "could not find order by requestId");
 		//TODO:出错处理
 		return ;
 	}
@@ -587,11 +592,8 @@ cpr::Response TDEnginePoloniex::return_order_status(int requestId)
 	}
 	string method = "POST";
 	string timestamp = to_string(get_timestamp());
-	string command = "command=returnOrderStatus&orderNumber=";
-	std::stringstream ss;
-	ss.flush();
-	ss << order_info.order_number;
-	string order_number_str = ss.str();
+	string command = "command=returnOrderStatus&orderNumber=";	
+	string order_number_str = to_string(order_info.order_number);
 	command += order_number_str +
 		"&nonce=" + timestamp;
 	r=rest_withAuth(unit, method, command);
