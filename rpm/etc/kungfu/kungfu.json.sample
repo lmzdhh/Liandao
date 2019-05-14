@@ -154,9 +154,8 @@
 				"vet_btc": "VET-BTC",
 				"vet_eth": "VET-ETH"
 			}
-		}
-	},
-	"bitstamp": {
+		},
+		"bitstamp": {
 			"book_depth_count": 20,
 			"trade_count": 10,
 			"whiteLists": {
@@ -164,7 +163,9 @@
 				"btc_usd": "btcusd",
 			},
 			"rest_get_interval_ms": 500
-		},
+		}
+	},
+	
 	"td": {
 		"daybit":
 		{
