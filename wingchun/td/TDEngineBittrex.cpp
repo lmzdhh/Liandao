@@ -668,41 +668,37 @@ void TDEngineBittrex::req_investor_position(const LFQryPositionField* data, int 
     Document d;
     get_account(unit, d);
     KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
-    if(d.IsObject() && d.HasMember("error"))
+    if(d.IsObject() && d.HasMember("success"))
     {
-        size_t isError=d["error"].Size();
+        bool isSuccess=d["success"].GetBool();
         errorId = 0;
         KF_LOG_INFO(logger, "[req_investor_position] (errorId) " << errorId);
-        if(isError != 0) {
+        if(!isSuccess) {
             errorId=520;
-            if (d.HasMember("error") && d["error"].IsArray()) {
-                int i;
-                for(i=0;i<d["error"].Size();i++){
-                    errorMsg=errorMsg+d["error"].GetArray()[i].GetString()+"\n";
-                }
+            if (d.HasMember("message")) {
+                errorMsg=d["message"].GetString();
             }
-            KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid)" << requestId << " (errorId)" << errorId
+            KF_LOG_ERROR(logger, "[req_investor_position] failed!" << " (rid) " << requestId << " (errorId) " << errorId
                                                                    << " (errorMsg) " << errorMsg);
             raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITTREX, 1, requestId, errorId, errorMsg.c_str());
         }
     }
     send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BITTREX, 1, requestId);
-    //{"error":[],"result":{"ZEUR":"10.0000"}}
+
     std::vector<LFRspPositionField> tmp_vector;
     KF_LOG_INFO(logger, "[req_investor_position] (result)");
-    if(!d.HasParseError() && d.HasMember("result")&&d["result"].IsObject())
+    if(!d.HasParseError() && d.HasMember("result") && d["result"].IsArray())
     {
-        Value accounts = d["result"].GetObject();
-        for (rapidjson::Value::ConstMemberIterator itr = accounts.MemberBegin();itr != accounts.MemberEnd(); ++itr){
-            //itr->name.GetString(), itr->value.GetType()
-            std::string symbol = itr->name.GetString();
-            KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId << " (symbol) " << symbol);
-            pos.Position = std::round(std::stod(itr->value.GetString()) * scale_offset);
+        auto accounts = d["result"].GetArray();
+        int len = d["result"].Size(), i;
+        for(i = 0; i < len; i++){
+            rapidjson::Value account = accounts[i].GetObject();
+            string symbol = account["Currency"].GetString();
+            pos.Position = std::round(std::stod(account["Balance"].GetString()) * scale_offset);
             tmp_vector.push_back(pos);
             KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId 
                 << " (symbol) " << symbol << " (position) " << pos.Position);
         }
-        
     }
 
     //send the filtered position
@@ -1252,7 +1248,7 @@ void TDEngineBittrex::send_order(AccountUnitBittrex& unit, string userref, strin
     bool should_retry = false;
     do {
         should_retry = false;
-        string path = "/0/private/AddOrder";
+        string path = "/market/buylimit";
         string postData=createInsertOrdertring(code, side, type, price,volume,"",userref);
 
         response = Post(path,postData,postData,unit);

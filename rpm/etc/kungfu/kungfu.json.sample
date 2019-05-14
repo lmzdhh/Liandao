@@ -641,12 +641,9 @@
 					"baseUrl": "https://api.bittrex.com/api/v1.1",
 					"whiteLists": {
 						"strategy_coinpair(base_quote)": "exchange_coinpair",
-						"btc_usdt": "btcusdt",
-						"eth_usdt": "ethusdt",
-						"vet_usdt": "vetusdt",
-						"eth_btc": "ethbtc",
-						"vet_btc": "vetbtc",
-						"vet_eth": "veteth"
+						"usd_usdt": "USD-USDT",
+						"btc_usds": "BTC-USDS"
+
 					},
 					"positionWhiteLists": {
 						"ETC": "ETC",
