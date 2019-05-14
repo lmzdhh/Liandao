@@ -89,7 +89,6 @@ SET(PROBIT_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineProbit.cpp TDEngineProbit.h  
 ADD_LIBRARY(probittd SHARED ${PROBIT_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(probittd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS probittd DESTINATION "lib/wingchun")
-INSTALL(TARGETS oceanextd DESTINATION "lib/wingchun")
 
 SET(DAYBIT_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineDaybit.cpp TDEngineDaybit.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
 ADD_LIBRARY(daybittd SHARED ${DAYBIT_SOURCE_FILES})
