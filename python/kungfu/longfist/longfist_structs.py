@@ -926,7 +926,7 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_ORDER_POLONIEX: LFInputOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_POLONIEX: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_POLONIEX: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_POLONIEX: LFOrderActionField
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_POLONIEX: LFOrderActionField,
     
     lf.MsgTypes.MSG_TYPE_LF_MD_KUCOIN: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_KUCOIN: LFQryPositionField,
