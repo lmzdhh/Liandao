@@ -64,6 +64,7 @@ TradeAccount TDEnginePoloniex::load_account(int idx, const json& j_config)
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
     string baseUrl = j_config["baseUrl"].get<string>();
+	KF_LOG_INFO(logger, "[load_account] (baseUrl_private_point)" << url_public_point);
     //币对白名单设置
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
@@ -75,31 +76,41 @@ TradeAccount TDEnginePoloniex::load_account(int idx, const json& j_config)
     if (j_config.find("retry_interval_milliseconds") != j_config.end()) {
         retry_interval_milliseconds = j_config["retry_interval_milliseconds"].get<int>();
     }
-    else
-        retry_interval_milliseconds = 1000;//////////////////////////////
-    KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
+	else
+	{
+		retry_interval_milliseconds = 1000;
+	}
+
+	if (j_config.find("max_retry_times") != j_config.end()) {
+		max_retry_times = j_config["max_retry_times"].get<int>();
+	}
+	else
+	{
+		max_retry_times = 5;
+	}
+    KF_LOG_INFO(logger, "[load_account] (max_retry_times)" << max_retry_times);
+
+	if (j_config.find("url_public_point") != j_config.end()) {
+		url_public_point = j_config["url_public_point"].get<int>();
+	}
+	else
+	{
+		url_public_point = "https://poloniex.com/public";
+	}
+	KF_LOG_INFO(logger, "[load_account] (url_public_point)" << url_public_point);
 
     //账户设置
     unit.api_key = api_key;
     unit.secret_key = secret_key;
     unit.baseUrl = baseUrl;
     unit.positionHolder.clear();
-    KF_LOG_INFO(logger, "[load_account] (baseUrl)" << unit.baseUrl);
 
     //系统账户信息
     TradeAccount account = {};
     strncpy(account.UserID, api_key.c_str(), 16);
     strncpy(account.Password, secret_key.c_str(), 21);
     //simply for rest api test
-    /*
-    string timestamp=to_string(get_timestamp());
-    string method="POST";
-    string command="command=returnBalances&nonce="+timestamp;
-    cpr::Response r=rest_withAuth(unit,method,command);  
-    KF_LOG_DEBUG(logger, "[getbalance](status_code)" << r.status_code <<
-        "(response.text)" << r.text <<
-        "(response.error.text)" << r.error.message);
-    */
+    
     //test ends here
     return account;
 }
@@ -163,8 +174,8 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
 {
     KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId);
     AccountUnitPoloniex& unit = account_units[account_index];
-    KF_LOG_INFO(logger, "[req_investor_position]" << "(InstrumentID) " << data->InstrumentID);
-    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_BITFINEX, 1, requestId);
+    KF_LOG_INFO(logger, "[req_investor_position] (InstrumentID) " << data->InstrumentID);
+    send_writer->write_frame(data, sizeof(LFQryPositionField), source_id, MSG_TYPE_LF_QRY_POS_POLONIEX, 1, requestId);
     int errorId = 0;
     std::string errorMsg = "";
 
@@ -183,42 +194,58 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
     string timestamp = to_string(get_timestamp());
     string command = "command=returnBalances&nonce="+timestamp;
     string method = "POST";
+	int count = 1;
+	KF_LOG_DEBUG(logger, "[getbalance]" );
     cpr::Response r = rest_withAuth(unit, method, command);//获得账户余额消息
-    KF_LOG_DEBUG(logger, "[getbalance](status_code)" << r.status_code <<
-            "(response.text)" << r.text <<
-            "(response.error.text)" << r.error.message);
     json js;
     while (true)
     {
         if (r.status_code == 200)//获得余额信息的操作成功了
         {
-            if (get_response_parsed_position(r))
+			int ret = get_response_parsed_position(r);
+            if (ret==0)
             {
                 /*解析response*/
-                /*若是解析成功则退出*/
+                /*若是解析成功则返回1*/
                 break;
             }
-            else
+            else if(ret==1)
             {
-                KF_LOG_ERROR(logger, "get balance response parsed error,quit");
-                return;
+				errorId = 100;
+				errorMsg = "get balance response parsed error,it's not an object quit";
+				KF_LOG_ERROR(logger, errorId);
+				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+				return;
             }
+			else if(ret==2)
+			{
+				errorId = 200;
+				errorMsg = r.text;
+				KF_LOG_ERROR(logger, "get balance "<<r.text<<" quit");
+				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+				return;
+			}
         }
         else
         {
-            KF_LOG_ERROR(logger, "get balance failed,retry");
+			if (count > max_retry_times)
+			{
+				errorMsg = "after several retry,get balance still failed";
+				KF_LOG_ERROR(logger, errorMsg);
+				errorId = 300;
+				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+			}
+            KF_LOG_ERROR(logger, "get balance failed,retry after retry_interval_milliseconds");
+			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
+			KF_LOG_DEBUG(logger, "[getbalance]");
             r = rest_withAuth(unit, method, command);
-            KF_LOG_DEBUG(logger, "[getbalance](status_code)" << r.status_code <<
-                    "(response.text)" << r.text <<
-                    "(response.error.text)" << r.error.message);
         }
     }
     bool findSymbolInResult = false;
     //send the filtered position
     int position_count = unit.positionHolder.size();
-    for (int i = 0; i < position_count; i++)
+    for (int i = 0; i < position_count; i++)//逐个将获得的ticker存入pos
     {
-        pos.PosiDirection = LF_CHAR_Long;
         strncpy(pos.InstrumentID, unit.positionHolder[i].ticker.c_str(), 31);
         if (unit.positionHolder[i].isLong) {
             pos.PosiDirection = LF_CHAR_Long;
@@ -234,12 +261,9 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
     if (!findSymbolInResult)
     {
         KF_LOG_INFO(logger, "[req_investor_position] (!findSymbolInResult) (requestId)" << requestId);
+		errorId = 400;
+		errorMsg = "!findSymbolInResult";
         on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
-    }
-
-    if (errorId != 0)
-    {
-        raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
     }
 }
 
@@ -251,16 +275,123 @@ void TDEnginePoloniex::req_qry_account(const LFQryAccountField* data, int accoun
 void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     KF_LOG_INFO(logger, "[req_order_insert]");
+	send_writer->write_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_POLONIEX, 1, requestId);
+	on_rsp_order_insert(data, requestId, 0, "");
+
+	AccountUnitPoloniex& unit = account_units[0];
+	int errorId = 0;
+	string errorMsg="";
+	string currency_pair = unit.coinPairWhiteList.GetValueByKey(string(data->InstrumentID));
+	string order_type = get_order_type(data->OrderPriceType);//市价单或限价单
+	string order_side = get_order_side(data->Direction);//买或者卖
+	std::stringstream ss;
+	double rate = data->LimitPrice * 1.0 / scale_offset;
+	ss.flush();
+	ss << rate;
+	string rate_str = ss.str();
+	double amount = data->Volume * 1.0 / scale_offset;
+	ss.flush();
+	ss << amount;
+	string amount_str = ss.str();
+	string method = "POST";
+	string timestamp = to_string(get_timestamp());
+	//"command=buy&currencyPair=BTC_ETH&rate=0.01&amount=1&nonce=154264078495300"
+	string command = "command=";
+	if (data->OrderPriceType == LF_CHAR_LimitPrice)//说明是限价单
+	{
+		command += order_side +
+			"&currencyPair=" + currency_pair +
+			"&rate=" + rate_str +
+			"&amount=" + amount_str +
+			"&nonce=" + timestamp;
+	}
+	else
+	{
+		//若是市价单，，暂时还没有办法处理，先出错处理吧
+		KF_LOG_ERROR(logger, "[req_order_insert](market order error)");
+		errorId = 100;
+		errorMsg = "market order error";
+		on_rsp_order_insert(data, requestId, errorId, errorMsg);
+		return;
+	}
+	OrderInfo order_info;
+	order_info.requestId = requestId;
+	order_info.timestamp = timestamp;
+	order_info.currency_pair = currency_pair;
+	cpr::Response r;
+	json js;
+	r=rest_withAuth(unit, method, command);
+	//TODO:发单错误或者异常状况处理
+
+	//
+	js = json::parse(r.text);
+	if (js.is_object())
+	{
+		if (js.find("error") != js.end()||js.find("orderNumber")==js.end)//错误回报，或者回报中没有orderNumber（可省略）
+		{
+			//TODO:出错处理
+		}
+		order_info.order_number = stod(js["orderNumber"].get<string>());
+	}
+	//获得订单信息，处理 order_info、rtn_order
+	unit.map_new_order.insert(std::make_pair(requestId, order_info));
+	LFRtnOrderField rtn_order;//返回order信息
+	memset(&rtn_order, 0, sizeof(LFRtnOrderField));
+	//以下为必填项
+	ss.flush();
+	ss << order_info.order_number;
+	string order_number_str = ss.str();
+	strncpy(rtn_order.BusinessUnit, order_number_str.c_str(), order_number_str.length());
+	rtn_order.OrderStatus = LF_CHAR_NotTouched;
+	rtn_order.LimitPrice = data->LimitPrice;
+	rtn_order.VolumeTotalOriginal = data->Volume;
+	rtn_order.VolumeTraded = 0;//刚刚发单，看作没有成交，等后面更新订单状态时再逐渐写入
+	rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
+	//以下为可填项，尽量补全
+	strncpy(rtn_order.UserID, data->UserID, 16);
+	strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
+	strncpy(rtn_order.ExchangeID, "poloniex", 8);
+	rtn_order.RequestID = requestId;
+	rtn_order.Direction = data->Direction;
+	rtn_order.TimeCondition = data->TimeCondition;
+	rtn_order.OrderPriceType = data->OrderPriceType;
+	on_rtn_order(&rtn_order);
+	//TODO:后续跟踪处理trade
 }
 
 void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
 {
-    AccountUnitPoloniex& unit = account_units[0];
-    KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
-        << " (APIKey)" << unit.api_key
-        << " (Iid)" << data->InvestorID
-        << " (OrderRef)" << data->OrderRef
-        << " (KfOrderID)" << data->KfOrderID);
+	KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
+		<< " (account_index)" << account_index);
+	send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_POLONIEX, 1, requestId);
+	AccountUnitPoloniex& unit = account_units[0];
+	//get order status
+	cpr::Response r;
+	r=return_order_status(requestId);
+	//TODO:解析这个response
+
+	//
+	//cancel order
+	OrderInfo order_info;
+	if (unit.map_new_order.count(requestId))
+	{
+		order_info = unit.map_new_order[requestId];
+	}
+	else
+	{
+		KF_LOG_ERROR(logger, "could not find order by requestId");
+		//TODO:出错处理
+		return ;
+	}
+	string method = "POST";
+	string timestamp = to_string(get_timestamp());
+	string command = "command=cancelOrder&orderNumber=" + to_string(order_info.order_number) +
+		"&nonce=" + timestamp;
+	r=rest_withAuth(unit, method, command);
+	//TODO:出错及异常处理
+
+	//
+	//on_rsp_order_action
 }
 
 TDEnginePoloniex::TDEnginePoloniex():ITDEngine(SOURCE_POLONIEX)
@@ -269,8 +400,8 @@ TDEnginePoloniex::TDEnginePoloniex():ITDEngine(SOURCE_POLONIEX)
     KF_LOG_INFO(logger, "[TDEnginePoloniex]");
 
     mutex_order_and_trade = new std::mutex();
-    //mutex_response_order_status = new std::mutex();
-    //mutex_orderaction_waiting_response = new std::mutex();
+    mutex_response_order_status = new std::mutex();
+    mutex_orderaction_waiting_response = new std::mutex();
 }
 
 TDEnginePoloniex::~TDEnginePoloniex()
@@ -302,11 +433,11 @@ string TDEnginePoloniex::get_order_side(LfDirectionType type)
 {
     if (type == LF_CHAR_Buy)
     {
-        return "BUY";
+        return "buy";
     }
     else if (type == LF_CHAR_Sell)
     {
-        return "SELL";
+        return "sell";
     }
     return "false";
 }
@@ -318,6 +449,10 @@ int TDEnginePoloniex::get_response_parsed_position(cpr::Response r)
     PositionSetting ps;
     if (js.is_object())
     {
+		if (js.find("error") != js.end())
+		{
+			return 2;
+		}
         std::unordered_map<std::string, std::string>& whitelist=unit.positionWhiteList.GetKeyIsStrategyCoinpairWhiteList();
         std::unordered_map<std::string, std::string>::iterator it;
         for (it = whitelist.begin(); it != whitelist.end(); ++it)
@@ -330,16 +465,16 @@ int TDEnginePoloniex::get_response_parsed_position(cpr::Response r)
             else ps.isLong = false;
             unit.positionHolder.push_back(ps);
         }
-        return 1;
+        return 0;
     }
 
-    return 0;
+    return 1;
 }
 
 cpr::Response TDEnginePoloniex::rest_withoutAuth(string& method, string& command)
 {
     string Timestamp = to_string(get_timestamp());
-    string url = "https://poloniex.com/public";
+    string url = url_public_point;
     url += "?"+command;
     // command= "command = returnOrderBook & currencyPair = BTC_ETH & depth = 10";
     cpr::Response response;
@@ -422,6 +557,43 @@ cpr::Response TDEnginePoloniex::rest_withAuth(AccountUnitPoloniex& unit, string&
         " (response.error.message) " << response.error.message <<
         " (response.text) " << response.text.c_str());
     return response;
+}
+
+cpr::Response TDEnginePoloniex::return_orderbook()
+{
+	return cpr::Response();
+}
+
+cpr::Response TDEnginePoloniex::return_order_status(int requestId)
+{
+	KF_LOG_INFO(logger, "[return_order_status](rid)"<<requestId);
+	cpr::Response r;
+	AccountUnitPoloniex& unit = account_units[0];
+	OrderInfo order_info;
+	if (unit.map_new_order.count(requestId))
+	{
+		order_info = unit.map_new_order[requestId];
+	}
+	else
+	{
+		r.status_code = 404;
+		KF_LOG_ERROR(logger, "could not find order by requestId");
+		return r;
+	}
+	string method = "POST";
+	string timestamp = to_string(get_timestamp());
+	string command = "command=returnOrderStatus&orderNumber=";
+	std::stringstream ss;
+	ss.flush();
+	ss << order_info.order_number;
+	string order_number_str = ss.str();
+	command += order_number_str +
+		"&nonce=" + timestamp;
+	r=rest_withAuth(unit, method, command);
+	//TODO:出错处理
+
+	//
+	return r;
 }
 
 BOOST_PYTHON_MODULE(libpoloniextd)

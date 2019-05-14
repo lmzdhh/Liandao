@@ -18,7 +18,10 @@
 /*using rapidjson::Document;*/
 
 WC_NAMESPACE_START
-
+/*
+命名格式基本采用xxx_xxx
+命名名称基本采用交易所对应名词
+*/
 struct PositionSetting
 {
     string ticker;
@@ -27,10 +30,10 @@ struct PositionSetting
 };
 struct OrderInfo
 {
-    string child_order_acceptance_id;
+	int64_t requestId;
+	int64_t order_number;
     int64_t timestamp;
-    int64_t requestId;
-    string product_code;
+    string currency_pair;
 };
 struct AccountUnitPoloniex
 {
@@ -43,7 +46,7 @@ struct AccountUnitPoloniex
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
 
-    map<int, OrderInfo> map_new_order;
+    map<int, OrderInfo> map_new_order;//记录账户已经发出去的单，凭requestID进行查找
     std::vector<PositionSetting> positionHolder;//记录每种持仓币种的情况，需要函数来更新
 };
 class TDEnginePoloniex : public ITDEngine
@@ -89,12 +92,14 @@ private:
     cpr::Response rest_withAuth(AccountUnitPoloniex& unit, string& method, string& command);
 
     cpr::Response return_orderbook();//可用来测试接口实现是否有问题
-    cpr::Response get_order_status(int requestId);
+    cpr::Response return_order_status(int requestId);
 
 private:
 
     static constexpr int scale_offset = 1e8;
     int retry_interval_milliseconds;
+	int max_retry_times;
+	string url_public_point;
     ThreadPtr rest_thread;
 
 
