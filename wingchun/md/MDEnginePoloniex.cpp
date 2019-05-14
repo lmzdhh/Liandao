@@ -432,7 +432,7 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
                 struct tm *gmt;
                 gmt = gmtime(&t);
                 char timeChar[9];
-                if(gmt.tm_hour>10){
+                if(gmt->tm_hour>10){
                     timeChar[0] = '0'+gmt->tm_hour/10;
                     timeChar[1] = '0'+gmt->tm_hour%10;
                 }
@@ -441,7 +441,7 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
                     timeChar[1] = '0'+gmt->tm_hour;
                 }
                 timeChar[2] = ':';
-                if(gmt.tm_min>10){
+                if(gmt->tm_min>10){
                     timeChar[3] = '0'+gmt->tm_min/10;
                     timeChar[4] = '0'+gmt->tm_min%10;
                 }
@@ -450,7 +450,7 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
                     timeChar[4] = '0'+gmt->tm_min;
                 }
                 timeChar[5] = ':';
-                if(gmt.tm_sec>10){
+                if(gmt->tm_sec>10){
                     timeChar[6] = '0'+gmt->tm_sec/10;
                     timeChar[7] = '0'+gmt->tm_sec%10;
                 }
