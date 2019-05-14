@@ -488,7 +488,7 @@ void MDEngineBitstamp::onTrade(Document& json)
             trade.Volume = volume;
             trade.OrderBSFlag[0] = json["data"].GetObject()["type"].GetInt() == 0 ? 'B' : 'S';
             strcpy(trade.TradeID,std::to_string(json["data"].GetObject()["id"].GetInt()).c_str());
-            strcpy(trade.TradeTime,json["data"].GetObject()["microtimestamp"].GetString().c_str());
+            strcpy(trade.TradeTime,((std::string)json["data"].GetObject()["microtimestamp"].GetString()).c_str());
 
             KF_LOG_INFO(logger, "MDEngineBitstamp::[onTrade]"  <<
                                                                 " (Price)" << trade.Price <<
