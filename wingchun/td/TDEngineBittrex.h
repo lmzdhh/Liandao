@@ -181,6 +181,7 @@ private:
     AccountUnitBittrex& findAccountUnitBittrexByWebsocketConn(struct lws * websocketConn);
     std::string makeSubscribeOrdersUpdate(AccountUnitBittrex& unit);
     int64_t getMSTime();
+    std::string hmac_sha512_bittrex(const std::string &uri, const std::string &secret);
 public:
     //cys add bittrex websocket status
     BittrexWsStatus wsStatus = nothing;

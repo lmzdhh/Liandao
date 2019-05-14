@@ -273,10 +273,22 @@ int64_t TDEngineBittrex::getMSTime(){
     long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return  timestamp;
 }
+std::string TDEngineBittrex::hmac_sha512_bittrex(const std::string &uri, const std::string &secret) {
+    unsigned char *digest;
+    digest = HMAC(EVP_sha512(),
+                  reinterpret_cast<const unsigned char *>(secret.c_str()), secret.length(),
+                  reinterpret_cast<const unsigned char *>(uri.c_str()), uri.length(),
+                  NULL, NULL);
 
+    char sha512_str[HMAC_MAX_MD_CBLOCK];
+    for (int i = 0; i < 64; i++)
+        sprintf(&sha512_str[i * 2], "%02x", (unsigned int) digest[i]);
+
+    return std::move(std::string(sha512_str));
+}
 std::string TDEngineBittrex::getBittrexSignature(std::string& message,std::string& secret,AccountUnitBittrex& unit){
     KF_LOG_INFO(logger,"[getBittrexSignature] (message) " << message << " (secret) " << secret);
-    string hash = hmac_sha512(secret.c_str(),message.c_str());
+    string hash = hmac_sha512_bittrex(message,secret);
     KF_LOG_INFO(logger,"[getBittrexSignature] (hash) " << hash);
     return hash;
 }
