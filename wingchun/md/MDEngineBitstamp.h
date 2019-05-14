@@ -1,5 +1,5 @@
-// #ifndef WINGCHUN_MDENGINEBITFINEX_H
-// #define WINGCHUN_MDENGINEBITFINEX_H
+#ifndef WINGCHUN_MDENGINEBITSTAMP_H
+#define WINGCHUN_MDENGINEBITSTAMP_H
 
 #include "IMDEngine.h"
 #include "longfist/LFConstants.h"
@@ -24,7 +24,7 @@ struct SubscribeChannel
 };
 
 
-class MDEngineBittrex: public IMDEngine
+class MDEngineBitstamp: public IMDEngine
 {
 public:
     /** load internal information from config json */
@@ -36,10 +36,10 @@ public:
     virtual void subscribeMarketData(const vector<string>& instruments, const vector<string>& markets);
     virtual bool is_connected() const { return connected; };
     virtual bool is_logged_in() const { return logged_in; };
-    virtual string name() const { return "MDEngineBittrex"; };
+    virtual string name() const { return "MDEngineBitstamp"; };
 
 public:
-    MDEngineBittrex();
+    MDEngineBitstamp();
 
 
     void on_lws_data(struct lws* conn, const char* data, size_t len);
@@ -53,8 +53,8 @@ private:
     //void onInfo(Document& json);
    // void onSubscribed(Document& json);
 
-    void onOrderBook(SubscribeChannel& channel, Document& json);
-   // void onTrade(SubscribeChannel& channel, Document& json);
+    void onBook(Document& json);
+    void onTrade(Document& json);
 
     //SubscribeChannel findByChannelID(int channelId);
 
@@ -76,7 +76,7 @@ private:
     bool connected = false;
     bool logged_in = false;
 
-    int book_depth_count = 25;
+    int book_depth_count = 20;
     int trade_count = 10;
     int rest_get_interval_ms = 500;
 
@@ -103,7 +103,7 @@ private:
     CoinPairWhiteList coinPairWhiteList;
  };
 
-DECLARE_PTR(MDEngineBittrex);
+DECLARE_PTR(MDEngineBitstamp);
 
 WC_NAMESPACE_END
 

@@ -346,10 +346,10 @@ void MDEngineBitstamp::on_lws_data(struct lws* conn, const char* data, size_t le
     if(strcmp(json["event"].GetString(),"data") == 0){
             onBook(json);
     }
-    else if(json["event"].GetString(),"trade") == 0){
+    else if(strcmp(json["event"].GetString(),"trade") == 0){
             onTrade(json);
     }
-    KF_LOG_INFO(logger, "MDEngineBitstamp::on_lws_data: unknown data: " << json.c_str());
+    KF_LOG_INFO(logger, "MDEngineBitstamp::on_lws_data: unknown data: " << json["event"].GetString().c_str());
 }
 
 
@@ -410,8 +410,9 @@ void MDEngineBitstamp::debug_print(std::vector<SubscribeChannel> &websocketSubsc
 void MDEngineBitstamp::onTrade(Document& json)
 {
 
-    vector<String> data = split(json["channel"].GetString(),"_"); // btcusd
-    std::string ticker = data[3]+data[4]+data[5]+"_"+data[0]+data[1]+data[2]; //usd_btc
+    // vector<String> data = split(json["channel"].GetString(),"_"); // btcusd
+    // std::string ticker = data[3]+data[4]+data[5]+"_"+data[0]+data[1]+data[2]; //usd_btc
+    std::string ticker = "usd_btc";
      KF_LOG_INFO(logger, "MDEngineBitstamp::onTrade: (symbol) " << ticker.c_str());
         LFL2TradeField trade;
         memset(&trade, 0, sizeof(trade));
@@ -459,8 +460,9 @@ void MDEngineBitstamp::onTrade(Document& json)
 void MDEngineBitstamp::onBook(Document& json)
 {
     
-    vector<String> data = split(json["channel"].GetString(),"_"); // btcusd
-    std::string ticker = data[3]+data[4]+data[5]+"_"+data[0]+data[1]+data[2]; //usd_btc
+    //vector<String> data = split(json["channel"].GetString(),"_"); // btcusd
+    //std::string ticker = data[3]+data[4]+data[5]+"_"+data[0]+data[1]+data[2]; //usd_btc
+    std::string ticker = "usd_btc";
     KF_LOG_INFO(logger, "MDEngineBitstamp::onBook: (symbol) " << ticker.c_str());
     try
     {
@@ -487,7 +489,7 @@ void MDEngineBitstamp::onBook(Document& json)
         if(bids.IsArray())
         {
             int i = 0;
-            for(i = 0; i < std::min((int)bids.Size(),m_priceBookNum); i++)
+            for(i = 0; i < std::min((int)bids.Size(),book_depth_count); i++)
             {
                 priceBook.BidLevels[i].price = std::round(bids[i][0].GetDouble() * SCALE_OFFSET);
                 priceBook.BidLevels[i].volume = std::round(bids[i][1].GetDouble() * SCALE_OFFSET);
@@ -497,7 +499,7 @@ void MDEngineBitstamp::onBook(Document& json)
         if (asks.IsArray())
         {
             int i = 0;
-            for(i = 0; i < std::min((int)asks.Size(),m_priceBookNum); ++i)
+            for(i = 0; i < std::min((int)asks.Size(),book_depth_count); ++i)
             {
                 priceBook.AskLevels[i].price = std::round(asks[i][0].GetDouble() * SCALE_OFFSET);
                 priceBook.AskLevels[i].volume = std::round(asks[i][1].GetDouble() * SCALE_OFFSET);
@@ -571,43 +573,43 @@ std::string MDEngineBitstamp::createTradeJsonString(std::string exchange_coinpai
     return s.GetString();
 }
 
-vector<string> split(const string &s, const string &seperator){  //字符串分割
-  vector<string> result;
-  typedef string::size_type string_size;
-  string_size i = 0;
+// vector<string> split(const string &s, const string &seperator){  //字符串分割
+//   vector<string> result;
+//   typedef string::size_type string_size;
+//   string_size i = 0;
   
-  while(i != s.size()){
-    //找到字符串中首个不等于分隔符的字母；
-    int flag = 0;
-    while(i != s.size() && flag == 0){
-      flag = 1;
-      for(string_size x = 0; x < seperator.size(); ++x)
-    　　if(s[i] == seperator[x]){
-      　　++i;
-      　　flag = 0;
-     　　 break;
-    　　}
-    }
+//   while(i != s.size()){
+//     //找到字符串中首个不等于分隔符的字母；
+//     int flag = 0;
+//     while(i != s.size() && flag == 0){
+//       flag = 1;
+//       for(string_size x = 0; x < seperator.size(); ++x)
+//     　　if(s[i] == seperator[x]){
+//       　　++i;
+//       　　flag = 0;
+//      　　 break;
+//     　　}
+//     }
     
-    //找到又一个分隔符，将两个分隔符之间的字符串取出；
-    flag = 0;
-    string_size j = i;
-    while(j != s.size() && flag == 0){
-      for(string_size x = 0; x < seperator.size(); ++x)
-    　　if(s[j] == seperator[x]){
-      　　flag = 1;
-     　　 break;
-    　　}
-      if(flag == 0) 
-    　　++j;
-    }
-    if(i != j){
-      result.push_back(s.substr(i, j-i));
-      i = j;
-    }
-  }
-  return result;
-}
+//     //找到又一个分隔符，将两个分隔符之间的字符串取出；
+//     flag = 0;
+//     string_size j = i;
+//     while(j != s.size() && flag == 0){
+//       for(string_size x = 0; x < seperator.size(); ++x)
+//     　　if(s[j] == seperator[x]){
+//       　　flag = 1;
+//      　　 break;
+//     　　}
+//       if(flag == 0) 
+//     　　++j;
+//     }
+//     if(i != j){
+//       result.push_back(s.substr(i, j-i));
+//       i = j;
+//     }
+//   }
+//   return result;
+// }
 
 void MDEngineBitstamp::loop()
 {
