@@ -649,7 +649,6 @@ void TDEngineBittrex::req_investor_position(const LFQryPositionField* data, int 
     KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId);
 
     AccountUnitBittrex& unit = account_units[account_index];
-    unit.userref=std::to_string(requestId);
     KF_LOG_INFO(logger, "[req_investor_position] (api_key)" << unit.api_key << " (InstrumentID) " << data->InstrumentID);
 
     LFRspPositionField pos;
@@ -759,7 +758,6 @@ void TDEngineBittrex::dealPriceVolume(AccountUnitBittrex& unit,const std::string
 void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time){
     //on_rtn_order(NULL);
     AccountUnitBittrex& unit = account_units[account_index];
-    unit.userref=std::to_string(requestId);
     KF_LOG_DEBUG(logger, "[req_order_insert]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Tid)" << data->InstrumentID
@@ -797,21 +795,21 @@ void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int accoun
     }
     KF_LOG_INFO(logger,"[req_order_insert] cys_ticker "<<ticker.c_str());
     //lock
-    send_order(unit, unit.userref, ticker, GetSide(data->Direction),GetType(data->OrderPriceType), fixedVolume, fixedPrice, d);
+    send_order(unit, ticker, GetSide(data->Direction),GetType(data->OrderPriceType), fixedVolume, fixedPrice, d);
     //not expected response
     if(!d.IsObject()){
         errorId = 100;
         errorMsg = "send_order http response has parse error or is not json. please check the log";
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                                                                            errorId << " (errorMsg) " << errorMsg);
-    } else  if(d.HasMember("error")&&d.HasMember("result")&&d["result"].IsObject()){//发单成功
+    } else  if(d.HasMember("success")&&d.HasMember("result")&&d["success"].GetBool()){//发单成功
         
-        rapidjson::Value result=d["result"].GetObject();
-        int errLen=d["error"].Size();
-        KF_LOG_INFO(logger,"[req_order_insert] (errorLen) "<<errLen);
-        if(errLen == 0) {
+        rapidjson::Value result = d["result"].GetArray();
+        bool isSuccess = d["success"].GetBool();
+        KF_LOG_INFO(logger,"[req_order_insert] (isSuccess) "<< isSuccess);
+        if(isSuccess) {
             //if send successful and the exchange has received ok, then add to  pending query order list
-            std::string remoteOrderId = result["txid"].GetArray()[0].GetString();
+            std::string remoteOrderId = result["uuid"].GetString();
             //fix defect of use the old value
             localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
@@ -855,23 +853,17 @@ void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int accoun
         }else {
             //errorId = std::round(std::stod(d["id"].GetString()));
             errorId=520;
-            if (d.HasMember("error") && d["error"].IsArray()) {
-                int i;
-                for(i=0;i<d["error"].Size();i++){
-                    errorMsg=errorMsg+d["error"].GetArray()[i].GetString()+"\t";
-                }
+            if (d.HasMember("message") && d["message"].GetString()!="") {
+                errorMsg = d["message"].GetString();
             }
             KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
                 errorId << " (errorMsg) " << errorMsg);
         }
-    }else if(d.HasMember("error")&&!d.HasMember("result")){
+    }else if(d.HasMember("success")&&!d["success"].GetBool()){
         //errorId = std::round(std::stod(d["id"].GetString()));
         errorId=520;
-        if (d.HasMember("error") && d["error"].IsArray()) {
-            int i;
-            for(i=0;i<d["error"].Size();i++){
-                errorMsg=errorMsg+d["error"].GetArray()[i].GetString()+"\t";
-            }
+        if (d.HasMember("message") && d["message"].GetString()!="") {
+            errorMsg = d["message"].GetString();
         }
         KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
             errorId << " (errorMsg) " << errorMsg);
@@ -886,7 +878,6 @@ void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int accoun
 
 void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time){
     AccountUnitBittrex& unit = account_units[account_index];
-    unit.userref=std::to_string(requestId);
     KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
                                               << " (APIKey)" << unit.api_key
                                               << " (Iid)" << data->InvestorID
@@ -931,28 +922,24 @@ void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int accou
     Document d;
     cancel_order(unit, ticker, remoteOrderId, d);
 
-    if(!d.HasParseError() && d.HasMember("error")&&d["error"].Size()==0&&d["result"].IsObject()) {
+    if(!d.HasParseError() && d.HasMember("success")&&d["success"].GetBool()) {
         errorId = 0;
         rapidjson::Value result = d["result"].GetObject();
-        int count = result["count"].GetInt();
         std::vector<PendingOrderStatus>::iterator itr;
         for(itr = unit.pendingOrderStatus.begin(); itr != unit.pendingOrderStatus.end();){
             string oldRemoteOrderId=itr->rtn_order.BusinessUnit;
-            if(remoteOrderId == oldRemoteOrderId&&count>=1){
+            if(remoteOrderId == oldRemoteOrderId){
                 orderIsCanceled(unit,&(itr->rtn_order));
                 unit.pendingOrderStatus.erase(itr);
             }else{
                 itr++;
             }
         }
-        KF_LOG_INFO(logger,"[req_order_action] (canceled order counts) "<<count);
+        KF_LOG_INFO(logger,"[req_order_action] (canceled order id) " << remoteOrderId);
     }else{
         errorId = 520;
-        if (d.HasMember("error") && d["error"].IsArray()) {
-            int i;
-            for(i=0;i<d["error"].Size();i++){
-                errorMsg=errorMsg+d["error"].GetArray()[i].GetString()+"\n";
-            }
+        if (d.HasMember("message") && d["message"].GetString()!="") {
+            errorMsg = d["message"].GetString();
         }
         KF_LOG_ERROR(logger, "[req_order_action] cancel_order failed!" << " (rid)" << requestId
                                                                        << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
@@ -1010,12 +997,12 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
             orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
             continue;
         }
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "( account.api_key) " << unit.api_key
-                                                               << "  (account.pendingOrderStatus.InstrumentID) " << orderStatusIterator->rtn_order.InstrumentID
-                                                               << "  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->rtn_order.OrderRef
-                                                               << "  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->rtn_order.BusinessUnit
-                                                               << "  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->rtn_order.OrderStatus
-                                                               << "  (exchange_ticker)" << ticker
+        KF_LOG_INFO(logger, "[retrieveOrderStatus] (get_order)" << "  (account.api_key) " << unit.api_key
+            << "  (account.pendingOrderStatus.InstrumentID) " << orderStatusIterator->rtn_order.InstrumentID
+            << "  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->rtn_order.OrderRef
+            << "  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->rtn_order.BusinessUnit
+            << "  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->rtn_order.OrderStatus
+            << "  (exchange_ticker)" << ticker
         );
         string remoteOrderId = orderStatusIterator->rtn_order.BusinessUnit;
         Document d;
@@ -1029,47 +1016,49 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
             continue;
         }
         KF_LOG_INFO(logger, "[retrieveOrderStatus] query_order:");
-        if(d.HasMember("error") && d["error"].Size()==0&&d["result"].IsObject())
-        {
-            rapidjson::Value tmp1 = d["result"].GetObject();
-            for (rapidjson::Value::ConstMemberIterator itr = tmp1.MemberBegin();itr != tmp1.MemberEnd(); itr++){
-                auto key = (itr->name).GetString();//order id
-                if(!tmp1[key].IsObject()||remoteOrderId!=(itr->name).GetString()){
+        if(d.HasMember("success") && d["success"].GetBool()){
+            int len = d["result"].Size(), i;
+            for (i = 0; i < len; i++){
+                rapidjson::Value data = d["result"].GetArray()[i].GetObject();
+                if(!data.HasMember("OrderUuid")||remoteOrderId!=data["OrderUuid"].GetString()){
                     continue;
                 }
-                rapidjson::Value data=tmp1[key].GetObject();
                 KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
                 ResponsedOrderStatus responsedOrderStatus;
                 responsedOrderStatus.ticker = ticker;
                 //平均价格
-                responsedOrderStatus.averagePrice = std::round(std::stod(data["price"].GetString()) * scale_offset);
+                responsedOrderStatus.averagePrice = std::round(data["PricePerUnit"].GetDouble() * scale_offset);
                 //累计成交价格
-                responsedOrderStatus.PriceTraded = std::round(std::stod(data["cost"].GetString()) * scale_offset);
+                responsedOrderStatus.PriceTraded = std::round(data["Price"].GetDouble() * scale_offset);
                 //总量
-                responsedOrderStatus.volume = std::round(std::stod(data["vol"].GetString()) * scale_offset);
-                //累计成交数量
-                responsedOrderStatus.VolumeTraded = std::round(std::stod(data["vol_exec"].GetString()) * scale_offset);
+                responsedOrderStatus.volume = std::round(data["Quantity"].GetDouble() * scale_offset);
                 //未成交数量
-                responsedOrderStatus.openVolume =  responsedOrderStatus.volume - orderStatusIterator->rtn_order.VolumeTraded;
+                responsedOrderStatus.openVolume =  std::round(data["QuantityRemaining"].GetDouble() * scale_offset);
+                //累计成交数量
+                responsedOrderStatus.VolumeTraded = responsedOrderStatus.volume - responsedOrderStatus.openVolume;
                 //订单状态
-                responsedOrderStatus.OrderStatus = GetOrderStatus(data["status"].GetString());
+                bool Closed = false,CancelInitiated = false;
+                Closed = data["Closed"].GetBool();
+                CancelInitiated = data["CancelInitiated"].GetBool();
+                if(Closed){
+                    responsedOrderStatus.OrderStatus = LF_CHAR_Error;
+                }else if(CancelInitiated){
+                    responsedOrderStatus.OrderStatus = LF_CHAR_Canceled;
+                }else{
+                    responsedOrderStatus.OrderStatus = LF_CHAR_NoTradeQueueing;
+                }
                 //订单信息处理
                 handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
 
                 //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
                 remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->rtn_order.BusinessUnit);
             }
-        } else if(d.HasMember("error") && d["error"].Size()==0&&!d["result"].IsObject()){
-            orderIsCanceled(unit,&(orderStatusIterator->rtn_order));
         }else{
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
-            std::string errorMsg;
+            std::string errorMsg = "";
             std::string errorId = "520";
-            if (d.HasMember("error") && d["error"].IsArray()) {
-                int i;
-                for(i=0;i<d["error"].Size();i++){
-                    errorMsg=errorMsg+d["error"].GetArray()[i].GetString()+"\t";
-                }
+            if (d.HasMember("message") && d["message"].GetString()!=""){
+                errorMsg = d["message"].GetString();
             }
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->rtn_order.InstrumentID
                                                                          << " (orderRef)" << orderStatusIterator->rtn_order.OrderRef
@@ -1227,31 +1216,32 @@ void TDEngineBittrex::get_account(AccountUnitBittrex& unit, Document& json)
     //KF_LOG_INFO(logger, "[get_account] (account info) "<<response.text.c_str());
     return ;
 }
-std::string TDEngineBittrex::createInsertOrdertring(string pair,string type,string ordertype,string price,string volume,
-        string oflags,string userref){
+std::string TDEngineBittrex::createInsertOrdertring(string pair,string price,string volume){
     string s="";
-    s=s+"pair="+pair+"&"+
-        "type="+type+"&"+
-        "ordertype="+ordertype+"&"+
-        "price="+price+"&"+
-        "volume="+volume+"&"+
-        "userref="+userref;
+    s=s+"market="+pair+"&"+
+        "quantity="+type+"&"+
+        "rate="+ordertype;
 
     return s;
 }
-void TDEngineBittrex::send_order(AccountUnitBittrex& unit, string userref, string code,
+void TDEngineBittrex::send_order(AccountUnitBittrex& unit, string code,
                         string side, string type, string volume, string price, Document& json){
     KF_LOG_INFO(logger, "[send_order]");
     KF_LOG_INFO(logger, "[send_order] (code) "<<code);
+    if(type != "limit"){
+        KF_LOG_INFO(logger,"[send_order] bittrex doesn't support other type orders except limit.");
+        return;
+    }
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
     do {
         should_retry = false;
-        string path = "/market/buylimit";
-        string postData=createInsertOrdertring(code, side, type, price,volume,"",userref);
+        string path = "/market/";
+        path = path + side+type;
+        string postData=createInsertOrdertring(code, price,volume);
 
-        response = Post(path,postData,postData,unit);
+        response = Get(path,"",postData,unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << path << " (response.status_code) " << response.status_code 
                                                   << " (response.error.message) " << response.error.message 
@@ -1275,15 +1265,15 @@ void TDEngineBittrex::send_order(AccountUnitBittrex& unit, string userref, strin
 bool TDEngineBittrex::shouldRetry(Document& doc)
 {
     bool ret = false;
-    int errLen = 0;
-    if(doc.HasMember("error"))
+    bool isSuccess = true;
+    if(doc.HasMember("success"))
     {
-        errLen = doc["error"].Size();
+        isSuccess = doc["success"].GetBool();
     }
-    if(!doc.IsObject()||(errLen==0&&!doc["result"].IsObject())){
+    if(!doc.IsObject()||(!isSuccess)){
         ret = true;
     }
-    KF_LOG_INFO(logger, "[shouldRetry] ret = " << ret << ", errLen = " << errLen);
+    KF_LOG_INFO(logger, "[shouldRetry] ret = " << ret << ", isSuccess = " << isSuccess);
     return ret;
 }
 
@@ -1296,15 +1286,14 @@ void TDEngineBittrex::cancel_order(AccountUnitBittrex& unit, std::string code, s
     bool should_retry = false;
     do {
         should_retry = false;
-        std::string path="/0/private/CancelOrder";
-        std::string postData="txid=";
+        std::string path="/market/cancel";
+        std::string postData="uuid=";
         postData=postData+orderId;
 
-        response = Post(path,postData,postData,unit);
+        response = Get(path,"",postData,unit);
 
-        //json.Clear();
         getResponse(response.status_code, response.text, response.error.message, json);
-        //has error and find the 'error setting certificate verify locations' error, should retry
+
         if(shouldRetry(json)) {
             should_retry = true;
             retry_times++;
@@ -1323,11 +1312,11 @@ void TDEngineBittrex::query_order(AccountUnitBittrex& unit, std::string code, st
 {
     KF_LOG_INFO(logger, "[query_order] start");
     //bittrex查询订单详情
-    string getPath = "/0/private/QueryOrders";
-    string s1="trades=",s2="userref=",s3="txid=";
-    string postData=s1+"true&"+s2+unit.userref+"&"+s3+orderId;
+    string getPath = "/market/getopenorders";
+    string s1="market=";
+    string postData=s1+code;
 
-    auto response = Post(getPath,postData,postData,unit);
+    auto response = Get(getPath,"",postData,unit);
     json.Parse(response.text.c_str());
     KF_LOG_INFO(logger, "[query_order] end");
 }

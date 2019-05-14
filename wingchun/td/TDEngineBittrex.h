@@ -88,7 +88,7 @@ struct AccountUnitBittrex
     CoinPairWhiteList positionWhiteList;
     std::string spotAccountId;
     std::string marginAccountId;
-    std::string userref;
+
     struct lws* webSocketConn;
     map<string,LFRtnOrderField> restOrderStatusMap;
     vector<string> websocketOrderStatusMap;
@@ -153,7 +153,7 @@ private:
 
 private:
     void get_account(AccountUnitBittrex& unit, Document& json);
-    void send_order(AccountUnitBittrex& unit, string userref, string code,
+    void send_order(AccountUnitBittrex& unit, string code,
                         string side, string type, string volume, string price, Document& json);
 
     void cancel_order(AccountUnitBittrex& unit, std::string code, std::string orderId, Document& json);
@@ -163,8 +163,7 @@ private:
 
     bool shouldRetry(Document& d);
     
-    std::string createInsertOrdertring(string pair,string type,string ordertype,string price,string volume,
-        string oflags,string userref);
+    std::string createInsertOrdertring(string pair,string price,string volume);
 
     cpr::Response Get(const std::string& url,const std::string& body, std::string postData,AccountUnitBittrex& unit);
     cpr::Response Post(const std::string& url,const std::string& body, std::string postData,AccountUnitBittrex& unit);
