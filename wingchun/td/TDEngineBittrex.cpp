@@ -1219,8 +1219,8 @@ void TDEngineBittrex::get_account(AccountUnitBittrex& unit, Document& json)
 std::string TDEngineBittrex::createInsertOrdertring(string pair,string price,string volume){
     string s="";
     s=s+"market="+pair+"&"+
-        "quantity="+type+"&"+
-        "rate="+ordertype;
+        "quantity="+volume+"&"+
+        "rate="+price;
 
     return s;
 }
