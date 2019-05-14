@@ -285,10 +285,15 @@ cpr::Response TDEngineBittrex::Get(const std::string& method_url,const std::stri
 {
     int64_t nonce = getTimestamp();
     string nonceStr=std::to_string(nonce);
-    KF_LOG_INFO(logger,"[Post] (nonce) "<<nonceStr);
-    postData=postData+"&apikey="+unit.api_key+"&nonce="+nonceStr;
+    KF_LOG_INFO(logger,"[Get] (nonce) "<<nonceStr);
+    if(postData == ""){
+        postData=postData+"apikey="+unit.api_key+"&nonce="+nonceStr;
+    }else{
+        postData=postData+"&apikey="+unit.api_key+"&nonce="+nonceStr;
+    }
+    
     string message = unit.baseUrl+method_url+"?"+postData;
-
+ 
     string strSignature=getBittrexSignature(message,unit.secret_key,unit);
 
     string url = unit.baseUrl + method_url+"?"+postData;
@@ -309,7 +314,11 @@ cpr::Response TDEngineBittrex::Post(const std::string& method_url,const std::str
     int64_t nonce = getTimestamp();
     string nonceStr=std::to_string(nonce);
     KF_LOG_INFO(logger,"[Post] (nonce) "<<nonceStr);
-    postData=postData+"&apikey="+unit.api_key+"&nonce="+nonceStr;
+    if(postData == ""){
+        postData=postData+"apikey="+unit.api_key+"&nonce="+nonceStr;
+    }else{
+        postData=postData+"&apikey="+unit.api_key+"&nonce="+nonceStr;
+    }
     string message = unit.baseUrl+method_url+"?"+postData;
     string strSignature=getBittrexSignature(message,unit.secret_key,unit);
     KF_LOG_INFO(logger,"[Post] (strSignature) "<<strSignature);
