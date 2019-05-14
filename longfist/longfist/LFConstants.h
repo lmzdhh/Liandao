@@ -29,7 +29,7 @@ enum exchange_source_index : short
     SOURCE_PROBIT = 28,
     SOURCE_BITHUMB = 29,
     SOURCE_DAYBIT = 31,
-    SOURCE_POLONIEX = 37
+    SOURCE_POLONIEX = 37,
     SOURCE_KUCOIN = 32
 };
 
