@@ -428,6 +428,8 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
                                                                            " (Price)" << trade.Price <<
                                                                            " (trade.Volume)" << trade.Volume);
                 time_t t;
+                double tdouble = json.GetArray()[2].GetArray()[i].GetArray()[5].GetDouble();
+                t = static_cast<long>(tdouble);
                 tzset();
                 struct tm *gmt;
                 gmt = gmtime(&t);
