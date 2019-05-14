@@ -427,11 +427,46 @@ void MDEnginePoloniex::GetINitializationInfomation(Document& json, int channlId,
                 KF_LOG_INFO(logger, "MDEnginePoloniex::[GetINitializationInfomation] (ticker)" << ticker <<
                                                                            " (Price)" << trade.Price <<
                                                                            " (trade.Volume)" << trade.Volume);
+                time_t t;
+                tzset();
+                struct tm *gmt;
+                gmt = gmtime(&t);
+                char timeChar[9];
+                if(gmt.tm_hour>10){
+                    timeChar[0] = '0'+gmt.tm_hour/10;
+                    timeChar[1] = '0'+gmt.tm_hour%10;
+                }
+                else{
+                    timeChar[0] = '0';
+                    timeChar[1] = '0'+gmt.tm_hour;
+                }
+                timeChar[2] = ':';
+                if(gmt.tm_min>10){
+                    timeChar[3] = '0'+gmt.tm_min/10;
+                    timeChar[4] = '0'+gmt.tm_min%10;
+                }
+                else{
+                    timeChar[3] = '0';
+                    timeChar[4] = '0'+gmt.tm_min;
+                }
+                timeChar[5] = ':';
+                if(gmt.tm_sec>10){
+                    timeChar[6] = '0'+gmt.tm_sec/10;
+                    timeChar[7] = '0'+gmt.tm_sec%10;
+                }
+                else{
+                    timeChar[6] = '0';
+                    timeChar[7] = '0'+gmt.tm_sec;
+                }
+                strcpy(trade.TradeTime,timeChar);
+                KF_LOG_INFO(logger, "GMT is: %s"<<asctime(gmt));
+                
                 on_trade(&trade);
             }
         }
     }
 }
+
 
 
 void MDEnginePoloniex::on_lws_connection_error(struct lws* conn)
