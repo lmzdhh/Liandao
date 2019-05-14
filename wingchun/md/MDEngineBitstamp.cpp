@@ -349,7 +349,7 @@ void MDEngineBitstamp::on_lws_data(struct lws* conn, const char* data, size_t le
     else if(strcmp(json["event"].GetString(),"trade") == 0){
             onTrade(json);
     }
-    KF_LOG_INFO(logger, "MDEngineBitstamp::on_lws_data: unknown data: " << parseJsonToString(json);
+    KF_LOG_INFO(logger, "MDEngineBitstamp::on_lws_data: unknown data: " << parseJsonToString(json));
 }
 
 
