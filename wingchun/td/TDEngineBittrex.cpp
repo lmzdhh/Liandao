@@ -279,15 +279,16 @@ int64_t TDEngineBittrex::getMSTime(){
 }
 std::string TDEngineBittrex::hmac_sha512_bittrex(const std::string &uri, const std::string &secret) {
     unsigned char *digest;
+    KF_LOG_INFO(logger,"[hmac_sha512_bittrex] (digest) ");
     digest = HMAC(EVP_sha512(),
                   reinterpret_cast<const unsigned char *>(secret.c_str()), secret.length(),
                   reinterpret_cast<const unsigned char *>(uri.c_str()), uri.length(),
                   NULL, NULL);
-
+    KF_LOG_INFO(logger,"[hmac_sha512_bittrex] (hmac) ");
     char sha512_str[HMAC_MAX_MD_CBLOCK];
     for (int i = 0; i < 64; i++)
         sprintf(&sha512_str[i * 2], "%02x", (unsigned int) digest[i]);
-
+    KF_LOG_INFO(logger,"[hmac_sha512_bittrex] (sprintf) ");
     return std::move(std::string(sha512_str));
 }
 std::string TDEngineBittrex::getBittrexSignature(std::string& message,std::string& secret,AccountUnitBittrex& unit){
