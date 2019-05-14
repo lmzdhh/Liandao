@@ -640,13 +640,14 @@
                         "baseUrl": "https://poloniex.com/tradingApi",
                         "whiteLists": {
                             "strategy_coinpair(base_quote)": "exchange_coinpair",
-                            "btc_jpy": "BTC_JPY",
+                            "btc_usdt": "USDT_BTC",
                             "fx_btc_jpy": "FX_BTC_JPY",
-                            "eth_btc": "ETH_BTC"
+                            "eth_btc": "BTC_ETH"
                         },
                         "positionWhiteLists": {
-                            "ETC": "ETC",
-                            "BTC": "BTC"
+                          "ETC": "ETC",
+                          "BTC": "BTC",
+                          "USDT": "USDT"
                         },
                         "rest_get_interval_ms": 2000
                 },
