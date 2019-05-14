@@ -43,7 +43,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             print '-- got pos in initial --'
             context.print_pos(pos_handler)
             #context.stop()
-            context.buy_price = 98830000 #market_data.LowerLimitPrice
+            context.buy_price = 100190000 #market_data.LowerLimitPrice
             context.sell_price = 99999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 512.")
