@@ -59,7 +59,7 @@ private:
     //SubscribeChannel findByChannelID(int channelId);
 
     std::string parseJsonToString(Document &d);
-    std::string createBookJsonString(std::string exchange_coinpair);
+    std::string createOrderJsonString(std::string exchange_coinpair);
     std::string createTradeJsonString(std::string exchange_coinpair);
 
     void loop();

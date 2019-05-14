@@ -155,6 +155,55 @@ void MDEngineBitstamp::load(const json& j_config)
             << book_depth_count << " trade_count: " << trade_count << " rest_get_interval_ms: " << rest_get_interval_ms);
 }
 
+
+// {
+//     "event": "bts:subscribe",
+//     "data": {
+//         "channel": "live_orders_btcusd"
+//     }
+// }
+std::string MDEngineBitstamp::createOrderJsonString(std::string exchange_coinpair)
+{
+    string data = "order_book_"+exchange_coinpair;
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("event");
+    writer.String("bts:subscribe");
+    writer.Key("data");
+    writer.StartObject();
+    writer.Key("channel");
+    writer.String(data);
+    writer.EndObject();
+    
+    writer.EndObject();
+    return s.GetString();
+}
+
+// {
+//     "event": "bts:subscribe",
+//     "data": {
+//         "channel": "live_trades_btcusd"
+//     }
+// }
+std::string MDEngineBitstamp::createTradeJsonString(std::string exchange_coinpair)
+{
+    string data = "live_trades_"+exchange_coinpair;
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("event");
+    writer.String("bts:subscribe");
+    writer.Key("data");
+    writer.StartObject();
+    writer.Key("channel");
+    writer.String(data);
+    writer.EndObject();
+    
+    writer.EndObject();
+    return s.GetString();
+}
+
 void MDEngineBitstamp::makeWebsocketSubscribeJsonString()//创建请求
 {
     std::unordered_map<std::string, std::string>::iterator map_itr;
@@ -429,17 +478,17 @@ void MDEngineBitstamp::onTrade(Document& json)
              }
 
             if(json["data"].GetObject()["type"].GetInt() == 0){
-                strcpy(trade.MakerOrderID,json["data"].GetObject()["buy_order_id"].GetString().c_str());
-                strcpy(trade.TakerOrderID,json["data"].GetObject()["sell_order_id"].GetString().c_str());
+                strcpy(trade.MakerOrderID,json["data"].GetObject()["buy_order_id"].GetString()->c_str());
+                strcpy(trade.TakerOrderID,json["data"].GetObject()["sell_order_id"].GetString()->c_str());
             }
             else{
-                strcpy(trade.MakerOrderID,json["data"].GetObject()["sell_order_id"].GetString().c_str());
-                strcpy(trade.TakerOrderID,json["data"].GetObject()["buy_order_id"].GetString().c_str());
+                strcpy(trade.MakerOrderID,json["data"].GetObject()["sell_order_id"].GetString()->c_str());
+                strcpy(trade.TakerOrderID,json["data"].GetObject()["buy_order_id"].GetString()->c_str());
             };
             trade.Volume = volume;
             trade.OrderBSFlag[0] = json["data"].GetObject()["type"].GetInt() == 0 ? 'B' : 'S';
-            strcpy(trade.TradeID,json["data"].GetObject()["id"].GetString().c_str());
-            strcpy(trade.TradeTime,json["data"].GetObject()["microtimestamp"].GetString().c_str());
+            strcpy(trade.TradeID,json["data"].GetObject()["id"].GetString()->c_str());
+            strcpy(trade.TradeTime,json["data"].GetObject()["microtimestamp"].GetString()->c_str());
 
             KF_LOG_INFO(logger, "MDEngineBitstamp::[onTrade]"  <<
                                                                 " (Price)" << trade.Price <<
@@ -525,53 +574,6 @@ std::string MDEngineBitstamp::parseJsonToString(Document &d)
 }
 
 
-// {
-//     "event": "bts:subscribe",
-//     "data": {
-//         "channel": "live_orders_btcusd"
-//     }
-// }
-std::string MDEngineBitstamp::createOrderJsonString(std::string exchange_coinpair) //参数对应白名单第二列
-{
-    std::string data = "order_book_"+exchange_coinpai.c_str();
-    StringBuffer s;
-    Writer<StringBuffer> writer(s);
-    writer.StartObject();
-    writer.Key("event");
-    writer.String("bts:subscribe");
-    writer.Key("data");
-    writer.StartObject();
-    writer.Key("channel");
-    writer.String(data);
-    writer.EndObject();
-    
-    writer.EndObject();
-    return s.GetString();
-}
-
-// {
-//     "event": "bts:subscribe",
-//     "data": {
-//         "channel": "live_trades_btcusd"
-//     }
-// }
-std::string MDEngineBitstamp::createTradeJsonString(std::string exchange_coinpair)
-{
-    std::string data = "live_trades_"+exchange_coinpai.c_str();
-    StringBuffer s;
-    Writer<StringBuffer> writer(s);
-    writer.StartObject();
-    writer.Key("event");
-    writer.String("bts:subscribe");
-    writer.Key("data");
-    writer.StartObject();
-    writer.Key("channel");
-    writer.String(data);
-    writer.EndObject();
-    
-    writer.EndObject();
-    return s.GetString();
-}
 
 // vector<string> split(const string &s, const string &seperator){  //字符串分割
 //   vector<string> result;
