@@ -46,7 +46,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.sell_price = 999999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
-                context.order_rid = context.insert_limit_order(source=SOURCE.BITFINEX,
+                context.order_rid = context.insert_limit_order(source=SOURCE.POLONIEX,
                                                                ticker=context.ticker,
                                                                price=context.buy_price,
                                                                exchange_id=context.exchange_id,

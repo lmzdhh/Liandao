@@ -32,7 +32,7 @@ struct OrderInfo
 {
 	int64_t requestId;
 	int64_t order_number;
-    int64_t timestamp;
+    string timestamp;
     string currency_pair;
 };
 struct AccountUnitPoloniex

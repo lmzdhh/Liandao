@@ -214,7 +214,8 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
 				errorId = 100;
 				errorMsg = "get balance response parsed error,it's not an object quit";
 				KF_LOG_ERROR(logger, errorId);
-				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), 
+                        source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
 				return;
             }
 			else if(ret==2)
@@ -222,7 +223,8 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
 				errorId = 200;
 				errorMsg = r.text;
 				KF_LOG_ERROR(logger, "get balance "<<r.text<<" quit");
-				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), 
+                        source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
 				return;
 			}
         }
@@ -233,7 +235,8 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
 				errorMsg = "after several retry,get balance still failed";
 				KF_LOG_ERROR(logger, errorMsg);
 				errorId = 300;
-				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), 
+                        source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
 			}
             KF_LOG_ERROR(logger, "get balance failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
@@ -311,7 +314,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 		KF_LOG_ERROR(logger, "[req_order_insert](market order error)");
 		errorId = 100;
 		errorMsg = "market order error";
-		on_rsp_order_insert(data, requestId, errorId, errorMsg);
+		on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
 		return;
 	}
 	OrderInfo order_info;
@@ -327,9 +330,11 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	js = json::parse(r.text);
 	if (js.is_object())
 	{
-		if (js.find("error") != js.end()||js.find("orderNumber")==js.end)//错误回报，或者回报中没有orderNumber（可省略）
+		if (js.find("error") != js.end()||js.find("orderNumber")==js.end())//错误回报，或者回报中没有orderNumber（可省略）
 		{
 			//TODO:出错处理
+            KF_LOG_ERROR(logger, "[req_order_insert](insert order error)");
+            return;
 		}
 		order_info.order_number = stod(js["orderNumber"].get<string>());
 	}
