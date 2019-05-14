@@ -95,3 +95,13 @@ SET(POLONIEX_SOURCE_FILES ${TD_SOURCE_FILES} TDEnginePoloniex.cpp TDEnginePoloni
 ADD_LIBRARY(poloniextd SHARED ${POLONIEX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(poloniextd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS poloniextd DESTINATION "lib/wingchun")
+
+SET(KUCOIN_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineKuCoin.cpp TDEngineKuCoin.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
+ADD_LIBRARY(kucointd SHARED ${KUCOIN_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(kucointd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS kucointd DESTINATION "lib/wingchun")
+
+SET(HUOBI_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineHuobi.cpp TDEngineHuobi.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h ../base/InterfaceMgr.cpp ../base/InterfaceMgr.h)
+ADD_LIBRARY(huobitd SHARED ${HUOBI_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(huobitd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
+INSTALL(TARGETS huobitd DESTINATION "lib/wingchun")

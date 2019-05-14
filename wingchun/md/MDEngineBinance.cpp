@@ -87,11 +87,22 @@ static struct lws_protocols protocols[] =
 MDEngineBinance::MDEngineBinance(): IMDEngine(SOURCE_BINANCE)
 {
     logger = yijinjing::KfLog::getLogger("MdEngine.Binance");
+    timer[0] = getTimestamp();/*quest3 edited by fxw*/
+    timer[1] = timer[2] = timer[0];/*quest3 edited by fxw*/
 }
 
 void MDEngineBinance::load(const json& j_config)
 {
     book_depth_count = j_config["book_depth_count"].get<int>();
+    /*level_threshold = j_config["level_threshold"].get<int>();//quest3 edited by fxw ,need edit the kungfu.json*/
+    /*quest3v4 fxw starts*/
+    if(j_config.find("refresh_normal_check_book_s") != j_config.end()) {
+        refresh_normal_check_book_s = j_config["refresh_normal_check_book_s"].get<int>();
+    }
+    if(j_config.find("refresh_normal_check_kline_s") != j_config.end()) {
+        refresh_normal_check_kline_s = j_config["refresh_normal_check_kline_s"].get<int>();
+    }
+    /*quest3v4 fxw ends*/
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
@@ -261,6 +272,7 @@ void MDEngineBinance::on_lws_market_trade(const char* data, size_t len)
 	trade.Volume = std::round(std::stod(d["q"].GetString()) * scale_offset);
 	//"m": true,        // Is the buyer the market maker?
 	trade.OrderBSFlag[0] = d["m"].GetBool() ? 'B' : 'S';
+    timer[0] = getTimestamp();/*quest3 edited by fxw*/
 	on_trade(&trade);
 }
 
@@ -285,8 +297,9 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 		
 			for(int i = 0; i < size; ++i)
 			{
-				md.BidLevels[i].price = stod(bids.GetArray()[i][0].GetString()) * scale_offset;
-				md.BidLevels[i].volume = stod(bids.GetArray()[i][1].GetString()) * scale_offset;
+				//CYS add std::round
+                                md.BidLevels[i].price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
+				md.BidLevels[i].volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
 			}
 			md.BidLevelCount = size;
 
@@ -304,8 +317,9 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 		
 			for(int i = 0; i < size; ++i)
 			{
-				md.AskLevels[i].price = stod(asks.GetArray()[i][0].GetString()) * scale_offset;
-				md.AskLevels[i].volume = stod(asks.GetArray()[i][1].GetString()) * scale_offset;
+				//CYS edit std::round
+				md.AskLevels[i].price = std::round(stod(asks.GetArray()[i][0].GetString()) * scale_offset);
+				md.AskLevels[i].volume = std::round(stod(asks.GetArray()[i][1].GetString()) * scale_offset);
 			}
 			md.AskLevelCount = size;
 
@@ -323,7 +337,13 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 
         strcpy(md.InstrumentID, strategy_ticker.c_str());
 	    strcpy(md.ExchangeID, "binance");
-		priceBook[ticker]=md;
+        priceBook[ticker]=md;
+        /*quest3 edited by fxw,starts here*/
+        timer[1] = getTimestamp();
+        if (md.BidLevels[0].price > md.AskLevels[0].price)
+            md.Status = 2;
+        else md.Status = 0;
+        /*quest3 edited by fxw,ends here*/
 	    on_price_book_update(&md);
 	} 
 }
@@ -374,6 +394,7 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 		sprintf(market.EndUpdateTime,"%02d:%02d:%02d.%03d", end_tm.tm_hour,end_tm.tm_min,end_tm.tm_sec,ms);
 
 		market.PeriodMillisec = 60000;
+		//CYS edit std::round
 		market.Open = std::round(std::stod(data["o"].GetString()) * scale_offset);
 		market.Close = std::round(std::stod(data["c"].GetString()) * scale_offset);
 		market.Low = std::round(std::stod(data["l"].GetString()) * scale_offset);
@@ -384,7 +405,9 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 		{
 			market.BestBidPrice = itPrice->second.BidLevels[0].price;
 			market.BestAskPrice = itPrice->second.AskLevels[0].price;
-		}
+        }
+        timer[2] = getTimestamp();/*quest3 edited by fxw*/
+        market.Status = 0;/*quest3 edited by fxw*/
 		on_market_bar_data(&market);
 	}
 }
@@ -426,32 +449,32 @@ void MDEngineBinance::GetAndHandleDepthResponse(const std::string& symbol, int l
     bool has_update = false;	    	
 	if(d.HasMember("bids") && d["bids"].IsArray() && d["bids"].Size() >= limit)
 	{
-		md.BidPrice1 = stod(d["bids"].GetArray()[0][0].GetString()) * scale_offset;
-		md.BidVolume1 = stod(d["bids"].GetArray()[0][1].GetString()) * scale_offset;
-		md.BidPrice2 = stod(d["bids"].GetArray()[1][0].GetString()) * scale_offset;
-		md.BidVolume2 = stod(d["bids"].GetArray()[1][1].GetString()) * scale_offset;
-		md.BidPrice3 = stod(d["bids"].GetArray()[2][0].GetString()) * scale_offset;
-		md.BidVolume3 = stod(d["bids"].GetArray()[2][1].GetString()) * scale_offset;
-		md.BidPrice4 = stod(d["bids"].GetArray()[3][0].GetString()) * scale_offset;
-		md.BidVolume4 = stod(d["bids"].GetArray()[3][1].GetString()) * scale_offset;
-		md.BidPrice5 = stod(d["bids"].GetArray()[4][0].GetString()) * scale_offset;
-		md.BidVolume5 = stod(d["bids"].GetArray()[4][1].GetString()) * scale_offset;
+		md.BidPrice1 = std::round(stod(d["bids"].GetArray()[0][0].GetString()) * scale_offset);
+		md.BidVolume1 = std::round(stod(d["bids"].GetArray()[0][1].GetString()) * scale_offset);
+		md.BidPrice2 = std::round(stod(d["bids"].GetArray()[1][0].GetString()) * scale_offset);
+		md.BidVolume2 = std::round(stod(d["bids"].GetArray()[1][1].GetString()) * scale_offset);
+		md.BidPrice3 = std::round(stod(d["bids"].GetArray()[2][0].GetString()) * scale_offset);
+		md.BidVolume3 = std::round(stod(d["bids"].GetArray()[2][1].GetString()) * scale_offset);
+		md.BidPrice4 = std::round(stod(d["bids"].GetArray()[3][0].GetString()) * scale_offset);
+		md.BidVolume4 = std::round(stod(d["bids"].GetArray()[3][1].GetString()) * scale_offset);
+		md.BidPrice5 = std::round(stod(d["bids"].GetArray()[4][0].GetString()) * scale_offset);
+		md.BidVolume5 = std::round(stod(d["bids"].GetArray()[4][1].GetString()) * scale_offset);
 		
 		has_update = true;
 	}
 
 	if(d.HasMember("asks") && d["asks"].IsArray() && d["asks"].Size() >= limit)
 	{
-		md.AskPrice1 = stod(d["asks"].GetArray()[0][0].GetString()) * scale_offset;
-		md.AskVolume1 = stod(d["asks"].GetArray()[0][1].GetString()) * scale_offset;
-		md.AskPrice2 = stod(d["asks"].GetArray()[1][0].GetString()) * scale_offset;
-		md.AskVolume2 = stod(d["asks"].GetArray()[1][1].GetString()) * scale_offset;
-		md.AskPrice3 = stod(d["asks"].GetArray()[2][0].GetString()) * scale_offset;
-		md.AskVolume3 = stod(d["asks"].GetArray()[2][1].GetString()) * scale_offset;
-		md.AskPrice4 = stod(d["asks"].GetArray()[3][0].GetString()) * scale_offset;
-		md.AskVolume4 = stod(d["asks"].GetArray()[3][1].GetString()) * scale_offset;
-		md.AskPrice5 = stod(d["asks"].GetArray()[4][0].GetString()) * scale_offset;
-		md.AskVolume5 = stod(d["asks"].GetArray()[4][1].GetString()) * scale_offset;
+		md.AskPrice1 = std::round(stod(d["asks"].GetArray()[0][0].GetString()) * scale_offset);
+		md.AskVolume1 = std::round(stod(d["asks"].GetArray()[0][1].GetString()) * scale_offset);
+		md.AskPrice2 = std::round(stod(d["asks"].GetArray()[1][0].GetString()) * scale_offset);
+		md.AskVolume2 = std::round(stod(d["asks"].GetArray()[1][1].GetString()) * scale_offset);
+		md.AskPrice3 = std::round(stod(d["asks"].GetArray()[2][0].GetString()) * scale_offset);
+		md.AskVolume3 = std::round(stod(d["asks"].GetArray()[2][1].GetString()) * scale_offset);
+		md.AskPrice4 = std::round(stod(d["asks"].GetArray()[3][0].GetString()) * scale_offset);
+		md.AskVolume4 = std::round(stod(d["asks"].GetArray()[3][1].GetString()) * scale_offset);
+		md.AskPrice5 = std::round(stod(d["asks"].GetArray()[4][0].GetString()) * scale_offset);
+		md.AskVolume5 = std::round(stod(d["asks"].GetArray()[4][1].GetString()) * scale_offset);
 		
 		has_update = true;
 	}
@@ -498,8 +521,8 @@ void MDEngineBinance::GetAndHandleTradeResponse(const std::string& symbol, int l
 		    last_trade_id = trade_id;
 		    if(ele.HasMember("price") && ele.HasMember("qty") && ele.HasMember("isBuyerMaker") && ele.HasMember("isBestMatch"))
 		    {
-			    trade.Price = std::stod(ele["price"].GetString()) * scale_offset;
-			    trade.Volume = std::stod(ele["qty"].GetString()) * scale_offset;
+			    trade.Price = std::round(std::stod(ele["price"].GetString()) * scale_offset);
+			    trade.Volume = std::round(std::stod(ele["qty"].GetString()) * scale_offset);
 			    trade.OrderKind[0] = ele["isBestMatch"].GetBool() ? 'B' : 'N';
 			    trade.OrderBSFlag[0] = ele["isBuyerMaker"].GetBool() ? 'B' : 'S';
 			    on_trade(&trade);
@@ -530,10 +553,46 @@ void MDEngineBinance::loop()
 						GetAndHandleTradeResponse(symbol, trade_count);
 				}	
 			    */
+            /*quest3 edited by fxw starts here*/
+            /*判断是否在设定时间内更新与否，*/
+            int64_t now = getTimestamp();
+            KF_LOG_INFO(logger, "quest3: update check ");
+            if ((now - timer[1]) > refresh_normal_check_book_s * 1000)
+            {
+                LFPriceBook20Field md;
+                memset(&md, 0, sizeof(md));
+                md.Status = 3;
+                on_price_book_update(&md);
+                KF_LOG_INFO(logger, "quest3:failed price book update");
+            }
+            if ((now - timer[2]) > refresh_normal_check_kline_s * 1000)
+            {
+                LFBarMarketDataField market;
+                memset(&market, 0, sizeof(market));
+                market.Status = 3;
+                on_market_bar_data(&market);
+                KF_LOG_INFO(logger, "quest3:failed kline update");
+            }
+            /*quest3 edited by fxw ends here*/
 	
 				lws_service( context, rest_get_interval_ms );
-		}
+        }
 }
+/*quest3 edited by fxw,starts here*/
+int MDEngineBinance::Get_refresh_normal_check_book_s()
+{
+    return refresh_normal_check_book_s;
+}
+int MDEngineBinance::Get_refresh_normal_check_kline_s()
+{
+    return refresh_normal_check_kline_s;
+}
+inline int64_t MDEngineBinance::getTimestamp()
+{   /*返回的是毫秒*/
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return timestamp;
+}
+/*quest3 edited by fxw,ends here*/
 
 BOOST_PYTHON_MODULE(libbinancemd)
 {

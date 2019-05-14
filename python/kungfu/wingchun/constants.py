@@ -31,7 +31,9 @@ class SOURCE:
     PROBIT = 28
     BITHUMB = 29
     DAYBIT = 31
+    KUCOIN = 32
     POLONIEX = 37
+
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所

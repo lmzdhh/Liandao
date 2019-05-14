@@ -111,7 +111,7 @@ int WCStrategyUtil::insert_market_order(short source,
                                         string exchange_id,
                                         uint64_t volume,
                                         LfDirectionType direction,
-                                        LfOffsetFlagType offset,string misc_info)
+                                        LfOffsetFlagType offset,string misc_info,int64_t expect_price)
 {
     int rid = get_rid();
     LFInputOrderField order = {};
@@ -130,8 +130,9 @@ int WCStrategyUtil::insert_market_order(short source,
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.BusinessUnit, strategy_name.c_str(),64);
     strncpy(order.MiscInfo, misc_info.c_str(),64);
+    order.ExpectPrice = expect_price;
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
@@ -155,7 +156,7 @@ int WCStrategyUtil::insert_limit_order(short source, string instrument_id, strin
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.BusinessUnit, strategy_name.c_str(),64);
     strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
@@ -180,7 +181,7 @@ int WCStrategyUtil::insert_fok_order(short source, string instrument_id, string 
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.BusinessUnit, strategy_name.c_str(),64);
     strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
@@ -205,7 +206,7 @@ int WCStrategyUtil::insert_fak_order(short source, string instrument_id, string 
     order.StopPrice = 0;
     order.IsAutoSuspend = true;
     order.ContingentCondition = LF_CHAR_Immediately;
-    strncpy(order.BusinessUnit, strategy_name.c_str(),21);
+    strncpy(order.BusinessUnit, strategy_name.c_str(),64);
     strncpy(order.MiscInfo, misc_info.c_str(),64);
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
@@ -242,27 +243,27 @@ void WCStrategyUtil::set_pos_back(short source, const char* pos_str)
 }
 
 #define TAG_LEN 64
-string WCStrategyUtil::gen_md_trigger_tag(long time,short source_id,bool is_hedge)
+string WCStrategyUtil::gen_md_trigger_tag(long time,short source_id,bool is_hedge,bool is_post_only)
 {
     char strTag[TAG_LEN]={};
-    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),0,source_id,time);
+    sprintf(strTag,"%d%d%02hd%ld%08d%08d%d",(is_hedge?1:0),0,source_id,time,0,0,(is_post_only?1:0));
     return strTag;
 }
-string WCStrategyUtil::gen_trade_trigger_tag(long time,short source_id,bool is_hedge)
+string WCStrategyUtil::gen_trade_trigger_tag(long time,short source_id,bool is_hedge,bool is_post_only)
 {
     char strTag[TAG_LEN]={};
-    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),1,source_id,time);
+    sprintf(strTag,"%d%d%02hd%ld%08d%08d%d",(is_hedge?1:0),1,source_id,time,0,0,(is_post_only?1:0));
     return strTag;
 }
-string WCStrategyUtil::gen_cancel_trigger_tag(long time,short source_id,int trigger_order_ref,int trigger_request_id,bool is_hedge)
+string WCStrategyUtil::gen_cancel_trigger_tag(long time,short source_id,int trigger_order_ref,int trigger_request_id,bool is_hedge,bool is_post_only)
 {
     char strTag[TAG_LEN]={};
-    sprintf(strTag,"%d%d%02hd%ld%08d%08d",(is_hedge?1:0),2,source_id,time,trigger_request_id,trigger_order_ref);
+    sprintf(strTag,"%d%d%02hd%ld%08d%08d%d",(is_hedge?1:0),2,source_id,time,trigger_request_id,trigger_order_ref,(is_post_only?1:0));
     return strTag;
 }
-string WCStrategyUtil::gen_timeout_trigger_tag(long time,short source_id,bool is_hedge)
+string WCStrategyUtil::gen_timeout_trigger_tag(long time,short source_id,bool is_hedge,bool is_post_only)
 {
     char strTag[TAG_LEN]={};
-    sprintf(strTag,"%d%d%02hd%ld",(is_hedge?1:0),3,source_id,time);
+    sprintf(strTag,"%d%d%02hd%ld%08d%08d%d",(is_hedge?1:0),3,source_id,time,0,0,(is_post_only?1:0));
     return strTag;
 }

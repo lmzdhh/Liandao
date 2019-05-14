@@ -25,11 +25,12 @@ enum exchange_source_index : short
     SOURCE_HITBTC = 24,
     SOURCE_OCEANEX = 25,
     SOURCE_HUOBI = 26,
-	SOURCE_OCEANEXB = 27,
+    SOURCE_OCEANEXB = 27,
     SOURCE_PROBIT = 28,
     SOURCE_BITHUMB = 29,
     SOURCE_DAYBIT = 31,
-    SOURCE_POLONIEX = 37
+    SOURCE_POLONIEX = 37,
+    SOURCE_KUCOIN = 32
 };
 
 inline const char* get_str_from_source_index(exchange_source_index source)
@@ -72,6 +73,8 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "daybit";
         case SOURCE_POLONIEX:
             return "poloniex";
+         case SOURCE_KUCOIN:
+            return "kucoin";
 		default:
 			return "unknown";
 	}
@@ -151,6 +154,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_POLONIEX;
     }
+     else if(exch_str == "kucoin")
+    {
+		return SOURCE_KUCOIN;
+    }
     else 
     {
 		return SOURCE_UNKNOWN;
@@ -181,6 +188,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_BITHUMB "BITHUMB"
 #define EXCHANGE_DAYBIT "DAYBIT"
 #define EXCHANGE_POLONIEX "POLONIEX"
+#define EXCHANGE_KUCOIN "KUCOIN"
 
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
@@ -205,6 +213,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_BITHUMB  29
 #define EXCHANGE_ID_DAYBIT  31
 #define EXCHANGE_ID_POLONIEX  37
+#define EXCHANGE_ID_KUCOIN  32
 // MsgTypes that used for LF data structure...
 const short MSG_TYPE_LF_MD            = 101;
 const short MSG_TYPE_LF_L2_MD         = 102;
@@ -374,6 +383,15 @@ const short MSG_TYPE_LF_RTN_ORDER_DAYBIT 	= 31205;
 const short MSG_TYPE_LF_RTN_TRADE_DAYBIT 	= 31206;
 const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
 
+//KUCOIN, idx=32
+const short MSG_TYPE_LF_MD_KUCOIN       	= 32101;
+const short MSG_TYPE_LF_QRY_POS_KUCOIN  	= 32201;
+const short MSG_TYPE_LF_RSP_POS_KUCOIN  	= 32202;
+const short MSG_TYPE_LF_ORDER_KUCOIN   	= 32204;
+const short MSG_TYPE_LF_RTN_ORDER_KUCOIN 	= 32205;
+const short MSG_TYPE_LF_RTN_TRADE_KUCOIN	= 32206;
+const short MSG_TYPE_LF_ORDER_ACTION_KUCOIN = 32207;
+
 //POLONIEX, idx=37
 const short MSG_TYPE_LF_MD_POLONIEX        	= 37101;
 const short MSG_TYPE_LF_QRY_POS_POLONIEX   	= 37201;
@@ -382,6 +400,7 @@ const short MSG_TYPE_LF_ORDER_POLONIEX     	= 37204;
 const short MSG_TYPE_LF_RTN_ORDER_POLONIEX 	= 37205;
 const short MSG_TYPE_LF_RTN_TRADE_POLONIEX 	= 37206;
 const short MSG_TYPE_LF_ORDER_ACTION_POLONIEX = 37207;
+
 
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
