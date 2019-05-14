@@ -278,6 +278,7 @@ std::string TDEngineBittrex::getBittrexSignature(std::string& message,std::strin
     KF_LOG_INFO(logger,"[getBittrexSignature] (message) " << message << " (secret) " << secret);
     string hash = hmac_sha512(secret.c_str(),message.c_str());
     KF_LOG_INFO(logger,"[getBittrexSignature] (hash) " << hash);
+    return hash;
 }
 //cys edit from bittrex api
 std::mutex g_httpMutex;
