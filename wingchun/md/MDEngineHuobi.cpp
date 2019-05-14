@@ -165,6 +165,7 @@ void MDEngineHuobi::createConnection()
     conn_info.path 	= m_exchUrl.path.c_str();
     conn_info.host 	= conn_info.address;
     conn_info.origin = conn_info.address;
+    conn_info.ietf_version_or_minus_one = -1;
     conn_info.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
     m_lwsConnection = lws_client_connect_via_info(&conn_info);
     if(!m_lwsConnection)
@@ -172,7 +173,7 @@ void MDEngineHuobi::createConnection()
         KF_LOG_INFO(logger, "create connect error");
         return ;
     }
-    KF_LOG_INFO(logger, "connect to "<< conn_info.protocol<< conn_info.address<< ":"<< conn_info.port<< "/"<<conn_info.path <<" success");
+    KF_LOG_INFO(logger, "connect to "<< conn_info.protocol<< "://" << conn_info.address <<conn_info.path<< ":"<< conn_info.port <<" success");
     m_logged_in = true;
 }
 
@@ -387,19 +388,23 @@ void MDEngineHuobi::onWrite(struct lws* conn)
         strncpy(priceBook.InstrumentID, instrument.c_str(),std::min(sizeof(priceBook.InstrumentID)-1, instrument.size()));
         if(bids.IsArray())
         {
-            for(auto i = 0; i < std::min((int)bids.Size(),m_priceBookNum); ++i)
+            int i = 0;
+            for(i = 0; i < std::min((int)bids.Size(),m_priceBookNum); ++i)
             {
                 priceBook.BidLevels[i].price = std::round(bids[i][0].GetDouble() * SCALE_OFFSET);
                 priceBook.BidLevels[i].volume = std::round(bids[i][1].GetDouble() * SCALE_OFFSET);
             }
+            priceBook.BidLevelCount = i;
         }
         if (asks.IsArray())
         {
-            for(auto i = 0; i < std::min((int)asks.Size(),m_priceBookNum); ++i)
+            int i = 0;
+            for(i = 0; i < std::min((int)asks.Size(),m_priceBookNum); ++i)
             {
                 priceBook.AskLevels[i].price = std::round(asks[i][0].GetDouble() * SCALE_OFFSET);
                 priceBook.AskLevels[i].volume = std::round(asks[i][1].GetDouble() * SCALE_OFFSET);
             }
+            priceBook.AskLevelCount = i;
         }
         on_price_book_update(&priceBook);
     }
@@ -450,18 +455,18 @@ bool MDEngineHuobi::parseAddress(const std::string& exch_url)
 {
     try
     {
-        //url format is xxx://xxx.xxx.xxx:xxx/
+        //url format is xxx.xxx.xxx/xxx
         std::vector<std::string> result;
-        boost::split(result, exch_url, boost::is_any_of("//:/"));
-        if (result.size() != 6)
+        boost::split(result, exch_url, boost::is_any_of("/"));
+        if (result.size() != 2)
         {
             KF_LOG_INFO(logger, "parse exchange url error, must be xxx://xxx.xxx.xxx:xxx/");
             return false;
         }
-        m_exchUrl.protocol = result[0] + "://";
-        m_exchUrl.ip = result[3];
-        m_exchUrl.port = std::atoi(result[4].c_str());
-        m_exchUrl.path = result[5];
+        m_exchUrl.protocol = "wss";
+        m_exchUrl.ip = result[0];
+        m_exchUrl.port = 443;
+        m_exchUrl.path = "/" + result[1];
         return  true;
     }
     catch (std::exception& e)

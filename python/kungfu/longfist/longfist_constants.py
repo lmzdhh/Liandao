@@ -17,7 +17,11 @@ class SOURCE:
     PROBIT = 28
     BITHUMB = 29
     DAYBIT = 31
+<<<<<<< HEAD
     POLONIEX = 37
+=======
+    KUCOIN = 32
+>>>>>>> KuCoin
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
@@ -180,6 +184,13 @@ class MsgTypes:
     MSG_TYPE_LF_RTN_TRADE_POLONIEX 		= 37206
     MSG_TYPE_LF_ORDER_ACTION_POLONIEX		= 37207
 
+    MSG_TYPE_LF_MD_KUCOIN       		= 32101
+    MSG_TYPE_LF_QRY_POS_KUCOIN   		= 32201
+    MSG_TYPE_LF_RSP_POS_KUCOIN   		= 32202
+    MSG_TYPE_LF_ORDER_KUCOIN     		= 32204
+    MSG_TYPE_LF_RTN_ORDER_KUCOIN 		= 32205
+    MSG_TYPE_LF_RTN_TRADE_KUCOIN  		= 32206
+    MSG_TYPE_LF_ORDER_ACTION_KUCOIN 	= 32207
 ###################################
 # LfActionFlagType: 报单操作标志
 ###################################
