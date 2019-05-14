@@ -349,7 +349,7 @@ void MDEngineBitstamp::on_lws_data(struct lws* conn, const char* data, size_t le
     else if(strcmp(json["event"].GetString(),"trade") == 0){
             onTrade(json);
     }
-    KF_LOG_INFO(logger, "MDEngineBitstamp::on_lws_data: unknown data: " << json["event"].GetString().c_str());
+    KF_LOG_INFO(logger, "MDEngineBitstamp::on_lws_data: unknown data: " << parseJsonToString(json);
 }
 
 
@@ -429,17 +429,17 @@ void MDEngineBitstamp::onTrade(Document& json)
              }
 
             if(json["data"].GetObject()["type"].GetInt() == 0){
-                trade.MakerOrderID = json["data"].GetObject()["buy_order_id"].GetString();
-                trade.TakerOrderID = json["data"].GetObject()["sell_order_id"].GetString();
+                strcpy(trade.MakerOrderID,json["data"].GetObject()["buy_order_id"].GetString().c_str());
+                strcpy(trade.TakerOrderID,json["data"].GetObject()["sell_order_id"].GetString().c_str());
             }
             else{
-                trade.MakerOrderID = json["data"].GetObject()["sell_order_id"].GetString();
-                trade.TakerOrderID = json["data"].GetObject()["buy_order_id"].GetString();
-            }
+                strcpy(trade.MakerOrderID,json["data"].GetObject()["sell_order_id"].GetString().c_str());
+                strcpy(trade.TakerOrderID,json["data"].GetObject()["buy_order_id"].GetString().c_str());
+            };
             trade.Volume = volume;
             trade.OrderBSFlag[0] = json["data"].GetObject()["type"].GetInt() == 0 ? 'B' : 'S';
-            trade.TradeID = json["data"].GetObject()["id"].GetString();
-            trade.TradeTime = json["data"].GetObject()["microtimestamp"].GetString();
+            strcpy(trade.TradeID,json["data"].GetObject()["id"].GetString().c_str());
+            strcpy(trade.TradeTime,json["data"].GetObject()["microtimestamp"].GetString().c_str());
 
             KF_LOG_INFO(logger, "MDEngineBitstamp::[onTrade]"  <<
                                                                 " (Price)" << trade.Price <<
@@ -484,8 +484,8 @@ void MDEngineBitstamp::onBook(Document& json)
         }
         auto& asks = data["asks"];
         LFPriceBook20Field priceBook {0};
-        strncpy(priceBook.ExchangeID, "bitstamp", std::min<size_t>(sizeof(priceBook.ExchangeID)-1, 5));
-        strncpy(priceBook.InstrumentID, ticker.c_str());
+        strcpy(priceBook.ExchangeID, "bitstamp", std::min<size_t>(sizeof(priceBook.ExchangeID)-1, 5));
+        strcpy(priceBook.InstrumentID, ticker.c_str());
         if(bids.IsArray())
         {
             int i = 0;
@@ -533,7 +533,7 @@ std::string MDEngineBitstamp::parseJsonToString(Document &d)
 // }
 std::string MDEngineBitstamp::createOrderJsonString(std::string exchange_coinpair) //参数对应白名单第二列
 {
-    String data1 = "order_book_"+exchange_coinpai.c_str();
+    std::string data = "order_book_"+exchange_coinpai.c_str();
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
@@ -542,7 +542,7 @@ std::string MDEngineBitstamp::createOrderJsonString(std::string exchange_coinpai
     writer.Key("data");
     writer.StartObject();
     writer.Key("channel");
-    writer.String(data1);
+    writer.String(data);
     writer.EndObject();
     
     writer.EndObject();
@@ -557,7 +557,7 @@ std::string MDEngineBitstamp::createOrderJsonString(std::string exchange_coinpai
 // }
 std::string MDEngineBitstamp::createTradeJsonString(std::string exchange_coinpair)
 {
-    String data1 = "live_trades_"+exchange_coinpai.c_str();
+    std::string data = "live_trades_"+exchange_coinpai.c_str();
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
@@ -566,7 +566,7 @@ std::string MDEngineBitstamp::createTradeJsonString(std::string exchange_coinpai
     writer.Key("data");
     writer.StartObject();
     writer.Key("channel");
-    writer.String(data1);
+    writer.String(data);
     writer.EndObject();
     
     writer.EndObject();

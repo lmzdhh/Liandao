@@ -86,7 +86,7 @@ private:
 
     size_t subscribe_index = 0;
 
-    subscribe_channel
+    //subscribe_channel
     std::vector<SubscribeChannel> websocketSubscribeChannel;
     SubscribeChannel EMPTY_CHANNEL = {0};
 
