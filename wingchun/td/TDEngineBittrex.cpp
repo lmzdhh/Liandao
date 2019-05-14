@@ -21,6 +21,9 @@
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
 #include <openssl/bio.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/evp.h>
 #include "../../utils/crypto/openssl_util.h"
 
 using cpr::Post;
@@ -42,6 +45,7 @@ using std::string;
 using std::to_string;
 using std::stod;
 using std::stoi;
+using std::move;
 using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::hmac_sha512;
