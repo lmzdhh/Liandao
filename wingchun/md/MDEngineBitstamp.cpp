@@ -277,7 +277,7 @@ void MDEngineBitstamp::login(long timeout_nsec) {//连接到服务器
     struct lws_client_connect_info ccinfo = {0};
 
     static std::string host  = "wss://ws.bitstamp.net";
-    static std::string path = "/ws/2";
+    static std::string path = "";
     static int port = 443;
 
     ccinfo.context 	= context;
