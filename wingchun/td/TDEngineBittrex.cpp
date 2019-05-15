@@ -933,6 +933,7 @@ void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int accou
         std::vector<PendingOrderStatus>::iterator itr;
         for(itr = unit.pendingOrderStatus.begin(); itr != unit.pendingOrderStatus.end();){
             string oldRemoteOrderId=itr->remoteOrderId;
+            KF_LOG_INFO(logger,"[req_order_action] (oldRemoteOrderId) " << oldRemoteOrderId <<" (remoteOrderId) "<<remoteOrderId)
             if(remoteOrderId == oldRemoteOrderId){
                 orderIsCanceled(unit,&(itr->rtn_order));
                 unit.pendingOrderStatus.erase(itr);
