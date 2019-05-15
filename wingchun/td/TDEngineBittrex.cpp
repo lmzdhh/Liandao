@@ -825,7 +825,7 @@ void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int accoun
             memset(&pOrderStatus, 0, sizeof(PendingOrderStatus));
             LFRtnOrderField *rtn_order = &pOrderStatus.rtn_order;
             pOrderStatus.remoteOrderId = remoteOrderId;
-            strncpy(rtn_order->BusinessUnit,remoteOrderId.c_str(),21);
+            strncpy(rtn_order->BusinessUnit,remoteOrderId.c_str(),64);
             rtn_order->OrderStatus = LF_CHAR_NotTouched;
             rtn_order->VolumeTraded = 0;
             rtn_order->VolumeTotalOriginal = data->Volume;
@@ -1383,7 +1383,7 @@ void TDEngineBittrex::handlerResponseOrderStatus(AccountUnitBittrex& unit, std::
         rtn_trade.Volume = singleVolume;
         //单次成交价格
         rtn_trade.Price = std::round(singlePrice*scale_offset);
-        strncpy(rtn_trade.OrderSysID,itr->rtn_order.BusinessUnit,31);
+        strncpy(rtn_trade.OrderSysID,itr->rtn_order.BusinessUnit,64);
         on_rtn_trade(&rtn_trade);
 
         raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
