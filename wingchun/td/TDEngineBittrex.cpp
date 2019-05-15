@@ -929,7 +929,6 @@ void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int accou
 
     if(!d.HasParseError() && d.HasMember("success")&&d["success"].GetBool()) {
         errorId = 0;
-        rapidjson::Value result = d["result"].GetObject();
         std::vector<PendingOrderStatus>::iterator itr;
         for(itr = unit.pendingOrderStatus.begin(); itr != unit.pendingOrderStatus.end();){
             string oldRemoteOrderId=itr->rtn_order.BusinessUnit;
