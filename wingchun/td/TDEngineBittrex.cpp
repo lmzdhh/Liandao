@@ -466,8 +466,8 @@ void TDEngineBittrex::getPriceVolumePrecision(AccountUnitBittrex& unit){
     const auto response = Get("/public/getmarkets","","",unit);
     json.Parse(response.text.c_str());
     if(json.HasMember("success") && json["success"].GetBool() && json.HasMember("result") && json["result"].IsArray()){
-        int len = d["result"].Size(),i;
-        auto result = d["result"].GetArray();
+        int len = json["result"].Size(),i;
+        auto result = json["result"].GetArray();
         for (i = 0; i < len; i++){
             rapidjson::Value account=result[i].GetObject();
             PriceVolumePrecision stPriceVolumePrecision;
@@ -808,7 +808,7 @@ void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int accoun
                                                                            errorId << " (errorMsg) " << errorMsg);
     } else  if(d.HasMember("success")&&d.HasMember("result")&&d["success"].GetBool()){//发单成功
         
-        rapidjson::Value result = d["result"].GetObject());
+        rapidjson::Value result = d["result"].GetObject();
         bool isSuccess = d["success"].GetBool();
         KF_LOG_INFO(logger,"[req_order_insert] (isSuccess) "<< isSuccess);
         if(isSuccess) {
