@@ -429,7 +429,7 @@ TradeAccount TDEngineBittrex::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     //printResponse(json);
-    //cancel_order(unit,"code","OCITZY-JMMFG-AT2MB3",json);
+    cancel_order(unit,"code","c678c350-bc67-4f51-8ce7-6a79e9b7a018",json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
     // set up
@@ -824,7 +824,6 @@ void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int accoun
             //初始化
             memset(&pOrderStatus, 0, sizeof(PendingOrderStatus));
             LFRtnOrderField *rtn_order = &pOrderStatus.rtn_order;
-            pOrderStatus.remoteOrderId = remoteOrderId;
             strncpy(rtn_order->BusinessUnit,remoteOrderId.c_str(),64);
             rtn_order->OrderStatus = LF_CHAR_NotTouched;
             rtn_order->VolumeTraded = 0;
@@ -932,7 +931,7 @@ void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int accou
         errorId = 0;
         std::vector<PendingOrderStatus>::iterator itr;
         for(itr = unit.pendingOrderStatus.begin(); itr != unit.pendingOrderStatus.end();){
-            string oldRemoteOrderId=itr->remoteOrderId;
+            string oldRemoteOrderId=itr->rtn_order.BusinessUnit;
             KF_LOG_INFO(logger,"[req_order_action] (oldRemoteOrderId) " << oldRemoteOrderId <<" (remoteOrderId) "<<remoteOrderId);
             if(remoteOrderId == oldRemoteOrderId){
                 orderIsCanceled(unit,&(itr->rtn_order));
@@ -1006,7 +1005,7 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
         KF_LOG_INFO(logger, "[retrieveOrderStatus] (get_order)" << "  (account.api_key) " << unit.api_key
             << "  (account.pendingOrderStatus.InstrumentID) " << orderStatusIterator->rtn_order.InstrumentID
             << "  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->rtn_order.OrderRef
-            << "  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->remoteOrderId
+            << "  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->rtn_order.BusinessUnit
             << "  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->rtn_order.OrderStatus
             << "  (exchange_ticker)" << ticker
         );
@@ -1092,7 +1091,7 @@ void TDEngineBittrex::addNewQueryOrdersAndTrades(AccountUnitBittrex& unit, Pendi
 
     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << pOrderStatus.rtn_order.InstrumentID
                                                                        << " (OrderRef) " << pOrderStatus.rtn_order.OrderRef
-                                                                       << " (remoteOrderId) " << pOrderStatus.remoteOrderId
+                                                                       << " (remoteOrderId) " << pOrderStatus.rtn_order.BusinessUnit
                                                                        << "(VolumeTraded)" << pOrderStatus.rtn_order.VolumeTraded);
 }
 

@@ -25,7 +25,6 @@ WC_NAMESPACE_START
 struct PendingOrderStatus
 {
     LFRtnOrderField rtn_order;
-    string remoteOrderId;
     int64_t averagePrice;
 };
 struct OrderActionSentTime
