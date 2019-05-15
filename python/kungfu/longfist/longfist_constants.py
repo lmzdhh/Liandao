@@ -17,12 +17,9 @@ class SOURCE:
     PROBIT = 28
     BITHUMB = 29
     DAYBIT = 31
-<<<<<<< HEAD
-    BITTREX = 36
-=======
     KUCOIN = 32
+    BITTREX = 36
 
->>>>>>> KuCoin
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
     SZE = 'SZE' #深圳证券交易所
