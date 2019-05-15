@@ -429,7 +429,7 @@ TradeAccount TDEngineBittrex::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     //printResponse(json);
-    cancel_order(unit,"code","c678c350-bc67-4f51-8ce7-6a79e9b7a018",json);
+    cancel_order(unit,"code","02215ed4-5f72-48bd-9402-f58269102643",json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
     // set up
@@ -1032,7 +1032,7 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
                 ResponsedOrderStatus responsedOrderStatus;
                 responsedOrderStatus.ticker = ticker;
                 //平均价格
-                responsedOrderStatus.averagePrice = std::round(data["PricePerUnit"].GetDouble() * scale_offset);
+                responsedOrderStatus.averagePrice = std::round((data["PricePerUnit"].IsNumber()?data["PricePerUnit"].GetDouble():0) * scale_offset);
                 //累计成交价格
                 responsedOrderStatus.PriceTraded = std::round(data["Price"].GetDouble() * scale_offset);
                 //总量
