@@ -17,7 +17,7 @@ class LFMarketDataField(Structure):
         ("LastPrice", c_double),	# 最新价 
         ("PreSettlementPrice", c_double),	# 上次结算价 
         ("PreClosePrice", c_double),	# 昨收盘 
-        ("PreOpenInterest", c_double),	# 昨持仓量 
+        ("PreOpenInterest", c_double),	# 昨持仓量
         ("OpenPrice", c_double),	# 今开盘 
         ("HighestPrice", c_double),	# 最高价 
         ("LowestPrice", c_double),	# 最低价 
