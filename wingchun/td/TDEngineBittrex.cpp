@@ -824,6 +824,7 @@ void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int accoun
             //初始化
             memset(&pOrderStatus, 0, sizeof(PendingOrderStatus));
             LFRtnOrderField *rtn_order = &pOrderStatus.rtn_order;
+            pOrderStatus.remoteOrderId = remoteOrderId;
             strncpy(rtn_order->BusinessUnit,remoteOrderId.c_str(),21);
             rtn_order->OrderStatus = LF_CHAR_NotTouched;
             rtn_order->VolumeTraded = 0;
@@ -931,7 +932,7 @@ void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int accou
         errorId = 0;
         std::vector<PendingOrderStatus>::iterator itr;
         for(itr = unit.pendingOrderStatus.begin(); itr != unit.pendingOrderStatus.end();){
-            string oldRemoteOrderId=itr->rtn_order.BusinessUnit;
+            string oldRemoteOrderId=itr->remoteOrderId;
             if(remoteOrderId == oldRemoteOrderId){
                 orderIsCanceled(unit,&(itr->rtn_order));
                 unit.pendingOrderStatus.erase(itr);
@@ -1004,11 +1005,11 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
         KF_LOG_INFO(logger, "[retrieveOrderStatus] (get_order)" << "  (account.api_key) " << unit.api_key
             << "  (account.pendingOrderStatus.InstrumentID) " << orderStatusIterator->rtn_order.InstrumentID
             << "  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->rtn_order.OrderRef
-            << "  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->rtn_order.BusinessUnit
+            << "  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->remoteOrderId
             << "  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->rtn_order.OrderStatus
             << "  (exchange_ticker)" << ticker
         );
-        string remoteOrderId = orderStatusIterator->rtn_order.BusinessUnit;
+        string remoteOrderId = orderStatusIterator->remoteOrderId;
         Document d;
         query_order(unit, ticker,remoteOrderId, d);
         //订单状态，pending 提交, open 成交, canceled 已撤销, expired已失效, closed 
@@ -1055,7 +1056,7 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
                 handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
 
                 //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
-                remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->rtn_order.BusinessUnit);
+                remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
             }
         }else{
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
@@ -1090,7 +1091,7 @@ void TDEngineBittrex::addNewQueryOrdersAndTrades(AccountUnitBittrex& unit, Pendi
 
     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << pOrderStatus.rtn_order.InstrumentID
                                                                        << " (OrderRef) " << pOrderStatus.rtn_order.OrderRef
-                                                                       << " (remoteOrderId) " << pOrderStatus.rtn_order.BusinessUnit
+                                                                       << " (remoteOrderId) " << pOrderStatus.remoteOrderId
                                                                        << "(VolumeTraded)" << pOrderStatus.rtn_order.VolumeTraded);
 }
 
