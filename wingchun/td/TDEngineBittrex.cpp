@@ -429,7 +429,7 @@ TradeAccount TDEngineBittrex::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     //printResponse(json);
-    cancel_order(unit,"code","02215ed4-5f72-48bd-9402-f58269102643",json);
+    cancel_order(unit,"code","e1751360-a64c-458a-aaa8-ff9834ca6a28",json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
     // set up
@@ -1043,11 +1043,8 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
                 responsedOrderStatus.VolumeTraded = responsedOrderStatus.volume - responsedOrderStatus.openVolume;
                 //订单状态
                 bool Closed = false,CancelInitiated = false;
-                Closed = data["Closed"].GetBool();
                 CancelInitiated = data["CancelInitiated"].GetBool();
-                if(Closed){
-                    responsedOrderStatus.OrderStatus = LF_CHAR_Error;
-                }else if(CancelInitiated){
+                if(CancelInitiated){
                     responsedOrderStatus.OrderStatus = LF_CHAR_Canceled;
                 }else{
                     responsedOrderStatus.OrderStatus = LF_CHAR_NoTradeQueueing;
