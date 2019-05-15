@@ -274,7 +274,39 @@ int PriceBook20Assembler::GetLevel()
 {
     return m_level;
 }
-
+void PriceBook20Assembler::SetLeastLevel(int level)/*FXW's edits*/
+{
+    if (level > 0 && level <= GetLevel())
+    {
+        l_level = level;
+    }
+}
+int PriceBook20Assembler::GetLeastLevel()/*FXW's edits*/
+{
+    return l_level;
+}
+int PriceBook20Assembler::GetNumberOfLevels_bids(std::string ticker)/*FXW's edits*/
+{
+    auto iter = tickerPriceMap.find(ticker);
+    int counts = 0;
+    if (iter != tickerPriceMap.end()) {
+        std::vector<PriceAndVolume>::iterator itr;
+        std::vector<PriceAndVolume>* priceBooks = iter->second->bidsPriceAndVolumes;
+        return priceBooks->size();
+    }
+    return -1;
+}
+int PriceBook20Assembler::GetNumberOfLevels_asks(std::string ticker)/*FXW's edits*/
+{
+    auto iter = tickerPriceMap.find(ticker);
+    int counts = 0;
+    if (iter != tickerPriceMap.end()) {
+        std::vector<PriceAndVolume>::iterator itr;
+        std::vector<PriceAndVolume>* priceBooks = iter->second->asksPriceAndVolumes;
+        return priceBooks->size();
+    }
+    return -1;
+}
 void PriceBook20Assembler::testPriceBook20Assembler() {
 
     //test clear
@@ -288,7 +320,7 @@ void PriceBook20Assembler::testPriceBook20Assembler() {
     priceBook20Assembler.clearPriceBook();
 
 
-    LFPriceBook20Field md = {0};
+    LFPriceBook20Field md={0};
     //test data
     for(int i=0; i < 25; i++) {
         priceBook20Assembler.UpdateAskPrice(ticker, (int64_t) (i * 10), (uint64_t)99);

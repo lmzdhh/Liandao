@@ -55,6 +55,8 @@ inline std::string getExchangeName(short exchange_id)
 			return EXCHANGE_BITHUMB;
 		case EXCHANGE_ID_DAYBIT:
 			return EXCHANGE_DAYBIT;
+		case EXCHANGE_ID_KUCOIN:
+			return EXCHANGE_KUCOIN;
 		default:
 			return "";
 	}
@@ -107,6 +109,8 @@ inline int getExchangeId(std::string exchange_name)
 		return EXCHANGE_ID_DAYBIT;
 	else if (exchange_name.compare(EXCHANGE_BITTREX) == 0)
 	    return EXCHANGE_ID_BITTREX;
+	else if (exchange_name.compare(EXCHANGE_KUCOIN) == 0) 
+		return EXCHANGE_ID_KUCOIN;
 	return -1;
 }
 
@@ -148,6 +152,8 @@ inline JournalPair getMdJournalPair(short source)
 			return{ "/shared/kungfu/journal/MD/DAYBIT/", "MD_DAYBIT" };
 		case 36:
 		    return{ "/shared/kungfu/journal/MD/BITTREX/", "MD_BITTREX" };
+		case 32:
+			return{ "/shared/kungfu/journal/MD/KUCOIN/", "MD_KUCOIN" };
 		default:
 			return {"", ""};
 	}
@@ -187,6 +193,8 @@ inline JournalPair getMdRawJournalPair(short source)
 			return{ "/shared/kungfu/journal/MD_RAW/DAYBIT/", "MDRAW_DAYBIT" };
 		case 36:
 		    return{ "/shared/kungfu/journal/MD_RAW/BITTREX/", "MDRAW_BITTREX" };
+		case 32:
+			return{ "/shared/kungfu/journal/MD_RAW/KUCOIN/", "MDRAW_KUCOIN" };
 		default:
 			return {"", ""};
 	}
@@ -228,6 +236,8 @@ inline JournalPair getTdJournalPair(short source)
 			return {"/shared/kungfu/journal/TD/DAYBIT/", "TD_DAYBIT"};
 		case 36:
 		    return {"/shared/kungfu/journal/TD/BITTREX/", "TD_BITTREX"};
+		case 32:
+			return {"/shared/kungfu/journal/TD/KUCOIN/", "TD_KUCOIN"};
 		default:
 			return {"", ""};
 	}
@@ -269,6 +279,8 @@ inline JournalPair getTdSendJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_SEND/DAYBIT/", "TD_SEND_DAYBIT"};
 		case 36:
 			return {"/shared/kungfu/journal/TD_SEND/BITTREX/", "TD_SEND_BITTREX"};
+		case 32:
+			return {"/shared/kungfu/journal/TD_SEND/KUCOIN/", "TD_SEND_KUCOIN"};
 		default:
 			return {"", ""};
 	}
@@ -310,6 +322,8 @@ inline JournalPair getTdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_RAW/DAYBIT/", "TD_RAW_DAYBIT"};
 		case 36:
 			return {"/shared/kungfu/journal/TD_RAW/BITTREX/", "TD_RAW_BITTREX"};
+		case 32:
+			return {"/shared/kungfu/journal/TD_RAW/KUCOIN/", "TD_RAW_KUCOIN"};
 		default:
 			return {"", ""};
 	}
@@ -351,6 +365,8 @@ inline JournalPair getTdQJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_Q/DAYBIT/", "TD_Q_DAYBIT"};
 		case 36:
 			return {"/shared/kungfu/journal/TD_Q/BITTREX/", "TD_Q_BITTREX"};
+		case 32:
+			return {"/shared/kungfu/journal/TD_Q/KUCOIN/", "TD_Q_KUCOIN"};
 		default:
 			return {"", ""};
 	}

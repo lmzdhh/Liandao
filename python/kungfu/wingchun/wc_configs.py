@@ -136,16 +136,16 @@ context_usage = \
         # tag
         ('gen_md_trigger_tag', lambda strategy: strategy.get_strategy_util().gen_md_trigger_tag,
          'generate a tag,triggered by market date',
-         ('str', [('int','time'),('int', 'source'), ('bool', 'is_hedge')])),
+         ('str', [('int','time'),('int', 'source'), ('bool', 'is_hedge'), ('bool', 'is_post_only')])),
         ('gen_trade_trigger_tag', lambda strategy: strategy.get_strategy_util().gen_trade_trigger_tag,
          'generate a tag,triggered by traded order',
-         ('str', [('int','time'),('int', 'source'), ('bool', 'is_hedge')])),
+         ('str', [('int','time'),('int', 'source'), ('bool', 'is_hedge'), ('bool', 'is_post_only')])),
         ('gen_timeout_trigger_tag', lambda strategy: strategy.get_strategy_util().gen_timeout_trigger_tag,
          'generate a tag,triggered by timeout sig',
-         ('str', [('int','time'),('int', 'source'), ('bool', 'is_hedge')])),
+         ('str', [('int','time'),('int', 'source'), ('bool', 'is_hedge'), ('bool', 'is_post_only')])),
         ('gen_cancel_trigger_tag', lambda strategy: strategy.get_strategy_util().gen_cancel_trigger_tag,
          'generate a tag,triggered by cancled order',
-         ('str', [('int','time'),('int', 'source'),('int','order_ref'),('int', 'request_id'), ('bool', 'is_hedge')])),
+         ('str', [('int','time'),('int', 'source'),('int','order_ref'),('int', 'request_id'), ('bool', 'is_hedge'), ('bool', 'is_post_only')])),
         # log
         ('log_debug', lambda strategy: lambda x: strategy.log_debug(str(x)),
          'print in log & console with DEBUG tag',
@@ -363,6 +363,7 @@ wingchun_constants = [
                        ('BITHUMB', 29, ''),
                        ('DAYBIT', 31, ''),
                        ('BITTREX', 36, '')
+                       ('KUCOIN', 32, '')
                        ],'source index'),
     ('DIRECTION', 'char', [('Buy', '0', '买'),
                            ('Sell', '1', '卖')],

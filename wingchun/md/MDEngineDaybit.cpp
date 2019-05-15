@@ -561,8 +561,7 @@ void MDEngineDaybit::orderbookInsertNotify(const rapidjson::Value& data, const s
 void MDEngineDaybit::orderbookInitNotify(const rapidjson::Value& data, const std::string& instrument)
 {
 	double sellVol, buyVol, minPrice, maxPrice;
-	LFPriceBook20Field priceBook {0};
-
+    LFPriceBook20Field priceBook {0};
 	KF_LOG_DEBUG(logger, "orderbook size: " << data.Size() << " priceBookNum: " << m_priceBookNum);
 		
 	strncpy(priceBook.ExchangeID, "daybit", std::min<size_t>(sizeof(priceBook.ExchangeID)-1, 6));

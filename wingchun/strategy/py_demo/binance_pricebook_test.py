@@ -22,7 +22,7 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 
 def initialize(context):
     context.add_md(source=SOURCE.BINANCE)
-    context.ticker = 'trx_btc'
+    context.ticker = 'btc_usdt'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
@@ -36,3 +36,14 @@ def on_price_book(context, price_book, source, rcv_time):
     print 'ExchangeID' , price_book.ExchangeID
     print 'BidLevels' , price_book.BidLevels
     print 'AskLevels' , price_book.BidLevels
+    
+    #print 'symbol' , price_book.InstrumentID
+    #print 'ExchangeID' , price_book.ExchangeID
+    #print 'BidLevels' , price_book.BidLevels
+    #print 'AskLevels' , price_book.BidLevels
+    file_name="/code/binance.txt"
+    with open(file_name,'a') as file_object:
+        file_object.write('symbol '+ str(price_book.InstrumentID)+'\n')
+        file_object.write('ExchangeID '+str(price_book.ExchangeID)+'\n')
+        file_object.write('BidLevels '+str(price_book.BidLevels)+'\n')
+        file_object.write('AskLevels '+str(price_book.BidLevels)+'\n')

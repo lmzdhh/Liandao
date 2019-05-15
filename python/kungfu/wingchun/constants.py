@@ -32,6 +32,7 @@ class SOURCE:
     BITHUMB = 29
     DAYBIT = 31
     BITTREX = 36
+    KUCOIN = 32
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
