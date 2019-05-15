@@ -1009,7 +1009,7 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
             << "  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->rtn_order.OrderStatus
             << "  (exchange_ticker)" << ticker
         );
-        string remoteOrderId = orderStatusIterator->remoteOrderId;
+        string remoteOrderId = orderStatusIterator->rtn_order.BusinessUnit;
         Document d;
         query_order(unit, ticker,remoteOrderId, d);
         //订单状态，pending 提交, open 成交, canceled 已撤销, expired已失效, closed 
@@ -1056,7 +1056,7 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
                 handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
 
                 //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
-                remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
+                remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->rtn_order.BusinessUnit);
             }
         }else{
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
