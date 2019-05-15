@@ -61,6 +61,7 @@ struct PriceVolumePrecision
     std::string quoteCurrency;
     int pricePrecision=0;
     int amountPrecision=0;
+    double minTradeSize=0;
     std::string symbol;
 };
 enum BittrexWsStatus{

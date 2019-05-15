@@ -431,7 +431,7 @@ TradeAccount TDEngineBittrex::load_account(int idx, const json& j_config)
     //printResponse(json);
     //cancel_order(unit,"code","OCITZY-JMMFG-AT2MB3",json);
     //printResponse(json);
-    //getPriceVolumePrecision(unit);
+    getPriceVolumePrecision(unit);
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -463,25 +463,25 @@ void TDEngineBittrex::connect(long timeout_nsec)
 void TDEngineBittrex::getPriceVolumePrecision(AccountUnitBittrex& unit){
     KF_LOG_INFO(logger,"[getPriceVolumePrecision]");
     Document json;
-    const auto response = Get("/0/public/AssetPairs","","",unit);
+    const auto response = Get("/public/getmarkets","","",unit);
     json.Parse(response.text.c_str());
-    int errLen=json["error"].Size();
-    if(json.HasMember("result") && errLen == 0 &&json["result"].IsObject()){
-        rapidjson::Value result=json["result"].GetObject();
-        for (rapidjson::Value::ConstMemberIterator itr = result.MemberBegin();itr != result.MemberEnd(); ++itr){
-            auto key = (itr->name).GetString();
-            rapidjson::Value account=result[key].GetObject();
+    if(json.HasMember("success") && json["success"].GetBool() && json.HasMember("result") && json["result"].IsArray()){
+        int len = d["result"].Size(),i;
+        auto result = d["result"].GetArray();
+        for (i = 0; i < len; i++){
+            rapidjson::Value account=result[i].GetObject();
             PriceVolumePrecision stPriceVolumePrecision;
-            stPriceVolumePrecision.symbol=account["altname"].GetString();
+            stPriceVolumePrecision.symbol=account["MarketName"].GetString();
             std::string ticker = unit.coinPairWhiteList.GetKeyByValue(stPriceVolumePrecision.symbol);
             if(ticker.length()==0){
                 //KF_LOG_ERROR(logger,"[getPriceVolumePrecision] (No such symbol in whitelist) "<<stPriceVolumePrecision.symbol);
                 continue;
             }
-            stPriceVolumePrecision.baseCurrency=account["base"].GetString();
-            stPriceVolumePrecision.quoteCurrency=account["quote"].GetString();
-            stPriceVolumePrecision.pricePrecision=account["pair_decimals"].GetInt();
-            stPriceVolumePrecision.amountPrecision=account["lot_decimals"].GetInt();
+            stPriceVolumePrecision.baseCurrency=account["BaseCurrency"].GetString();
+            stPriceVolumePrecision.quoteCurrency=account["MarketCurrency"].GetString();
+            //stPriceVolumePrecision.pricePrecision=account["pair_decimals"].GetInt();
+            //stPriceVolumePrecision.amountPrecision=account["lot_decimals"].GetInt();
+            stPriceVolumePrecision.minTradeSize = account["MinTradeSize"].GetDouble();
             unit.mapPriceVolumePrecision.insert(std::make_pair(stPriceVolumePrecision.symbol,stPriceVolumePrecision));
             KF_LOG_INFO(logger,"[getPriceVolumePrecision] symbol "<<stPriceVolumePrecision.symbol);
         }
@@ -721,9 +721,9 @@ void TDEngineBittrex::req_qry_account(const LFQryAccountField *data, int account
 
 void TDEngineBittrex::dealPriceVolume(AccountUnitBittrex& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,
             std::string& nDealPrice,std::string& nDealVolume){
-    KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol)" << symbol);
-    KF_LOG_DEBUG(logger, "[dealPriceVolume] (price)" << nPrice);
-    KF_LOG_DEBUG(logger, "[dealPriceVolume] (volume)" << nVolume);
+    KF_LOG_DEBUG(logger, "[dealPriceVolume] (symbol) " << symbol);
+    KF_LOG_DEBUG(logger, "[dealPriceVolume] (price) " << nPrice);
+    KF_LOG_DEBUG(logger, "[dealPriceVolume] (volume) " << nVolume);
     std::string ticker = unit.coinPairWhiteList.GetValueByKey(symbol);
     auto it = unit.mapPriceVolumePrecision.find(ticker);
     if(it == unit.mapPriceVolumePrecision.end())
@@ -741,15 +741,19 @@ void TDEngineBittrex::dealPriceVolume(AccountUnitBittrex& unit,const std::string
         double tDealPrice=nPrice*1.0/scale_offset;
         double tDealVolume=nVolume*1.0/scale_offset;
         KF_LOG_INFO(logger,"[dealPriceVolume] (tDealPrice) "<<tDealPrice<<" (tDealVolume) "<<tDealVolume);
+        if(tDealVolume < it->second.minTradeSize){
+            KF_LOG_INFO(logger,"[dealPriceVolume] volume is too low to trade.");
+            return;
+        }
         char chP[16],chV[16];
         sprintf(chP,"%.8lf",nPrice*1.0/scale_offset);
         sprintf(chV,"%.8lf",nVolume*1.0/scale_offset);
         nDealPrice=chP;
         KF_LOG_INFO(logger,"[dealPriceVolume] (chP) "<<chP<<" (nDealPrice) "<<nDealPrice);
-        nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+(pPrecision==0?pPrecision:(pPrecision+1)));
+        //nDealPrice=nDealPrice.substr(0,nDealPrice.find(".")+(pPrecision==0?pPrecision:(pPrecision+1)));
         nDealVolume=chV;
          KF_LOG_INFO(logger,"[dealPriceVolume]  (chP) "<<chV<<" (nDealVolume) "<<nDealVolume);
-        nDealVolume=nDealVolume.substr(0,nDealVolume.find(".")+(vPrecision==0?vPrecision:(vPrecision+1)));
+        //nDealVolume=nDealVolume.substr(0,nDealVolume.find(".")+(vPrecision==0?vPrecision:(vPrecision+1)));
     }
     KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << ticker << " (Volume)" << nVolume << " (Price)" << nPrice
                                                       << " (FixedVolume)" << nDealVolume << " (FixedPrice)" << nDealPrice);
@@ -781,10 +785,10 @@ void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int accoun
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
     Document d;
-    std::string fixedPrice;
-    std::string fixedVolume;
+    std::string fixedPrice="0";
+    std::string fixedVolume="0";
     dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
-    if(fixedVolume == "0"){
+    if(fixedVolume == "0" || fixedPrice == "0"){
         KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error (no ticker)" << ticker);
         errorId = 200;
         errorMsg = data->InstrumentID;
@@ -804,7 +808,7 @@ void TDEngineBittrex::req_order_insert(const LFInputOrderField* data, int accoun
                                                                            errorId << " (errorMsg) " << errorMsg);
     } else  if(d.HasMember("success")&&d.HasMember("result")&&d["success"].GetBool()){//发单成功
         
-        rapidjson::Value result = d["result"].GetArray();
+        rapidjson::Value result = d["result"].GetObject());
         bool isSuccess = d["success"].GetBool();
         KF_LOG_INFO(logger,"[req_order_insert] (isSuccess) "<< isSuccess);
         if(isSuccess) {
