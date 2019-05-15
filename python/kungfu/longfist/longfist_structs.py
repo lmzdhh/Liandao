@@ -77,6 +77,7 @@ class LFPriceBook20Field(Structure):
         ("AskLevelCount", c_int),
         ("BidLevels", LFPriceLevel20Field),	
         ("AskLevels", LFPriceLevel20Field),	
+        ("Status", c_int),#FXW's edits
         ]
 class LFFundingField(Structure):
     _field_=[
@@ -235,7 +236,7 @@ class LFL2OrderField(Structure):
 
 class LFL2TradeField(Structure):
     _fields_ = [
-        ("TradeTime", c_char * 9),	# 成交时间（秒） 
+        ("TradeTime", c_char * 32),	# 成交时间（秒） 
         ("ExchangeID", c_char * 9),	# 交易所代码 
         ("InstrumentID", c_char * 31),	# 合约代码 
         ("Price", c_int64),	# 成交价格 
@@ -244,7 +245,9 @@ class LFL2TradeField(Structure):
         ("OrderBSFlag", c_char * 2),	# 内外盘标志 
         ("MakerOrderID",c_char*64),
         ("TakerOrderID",c_char*64),
-        ("TradeID",c_char*64)
+        ("TradeID",c_char*64),
+        ("Sequence",c_char*32),
+        ("Status",c_int),           #状态码 quest3 edited by fxw
         ]
 
 class LFBarMarketDataField(Structure):
@@ -266,7 +269,8 @@ class LFBarMarketDataField(Structure):
         ("Volume", c_uint64),	# 区间交易量 
         ("StartVolume", c_uint64),	# 初始总交易量 
         ("BestBidPrice", c_int64),	 
-        ("BestAskPrice", c_int64)	
+        ("BestAskPrice", c_int64),
+        ("Status",c_int),   #状态码/*quest3 edited by fxw*/
         ]
 
 class LFQryPositionField(Structure):
@@ -315,6 +319,7 @@ class LFInputOrderField(Structure):
         ("MassOrderSeqId", c_uint64),	
         ("MassOrderIndex", c_int),	
         ("MassOrderTotalNum", c_int),	
+        ("ExpectPrice", c_int64),	# 期望价格 
         ]
 
 class LFRtnOrderField(Structure):
@@ -357,7 +362,7 @@ class LFRtnTradeField(Structure):
         ("Price", c_int64),	# 价格 
         ("Volume", c_uint64),	# 数量 
         ("TradingDay", c_char * 13),	# 交易日 
-        ("TradeTime", c_char * 13),	# 成交时间 
+        ("TradeTime", c_char * 32),	# 成交时间 
         ("Direction", c_char),	# 买卖方向 LfDirectionType
         ("OffsetFlag", c_char),	# 开平标志 LfOffsetFlagType
         ("HedgeFlag", c_char),	# 投机套保标志 LfHedgeFlagType
@@ -558,7 +563,7 @@ DataFieldMap = {
 		'InvestorID': 'c19',
 		'BrokerID': 'c11',
 		'OrderSysID': 'c64',
-		'TradeTime': 'c13',
+		'TradeTime': 'c32',
 		'OffsetFlag': lf.LfOffsetFlagTypeMap,
 	},
 	'LFRspAccountField': {
@@ -646,6 +651,7 @@ DataFieldMap = {
         'MassOrderSeqId':'i64',
 	    'MassOrderIndex':'i',
 	    'MassOrderTotalNum':'i',
+        'ExpectPrice':'i64'
 	},
 	'LFRtnOrderField': {
 		'InstrumentID': 'c31',
@@ -725,6 +731,7 @@ DataFieldMap = {
         'AskLevelCount' : 'i',
         'BidLevels' : [],	
         'AskLevels' : [],	
+        'Status' : 'i',#FXW's edits
 	},
     'LFFundingField': {
 		'InstrumentID' : 'c31',	 
@@ -762,7 +769,8 @@ DataFieldMap = {
         'Volume': 'i64',	# 区间交易量 
         'StartVolume': 'i64',	# 初始总交易量 
         'BestBidPrice':'i64',	 
-        'BestAskPrice':'i64'	
+        'BestAskPrice':'i64',	
+        'Status':'i',#状态码 /*quest3 edited by fxw*/
 	},
 	'LFL2TradeField': {
 		'InstrumentID': 'c31',
@@ -771,10 +779,12 @@ DataFieldMap = {
 		'OrderBSFlag': 'c2',
 		'Price': 'd',
 		'Volume': 'd',
-		'TradeTime': 'c9',
+		'TradeTime': 'c32',
         'MakerOrderID':'c64',
         'TakerOrderID':'c64',
-        'TradeID':'c64'
+        'TradeID':'c64',
+        'Sequence':'c32',
+        'Status':'i',#quest3 edited by fxw
 	},
 	'LFOrderActionField': {
 		'InstrumentID': 'c31',

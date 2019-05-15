@@ -629,7 +629,17 @@ void MDEngineKuCoin::onFills(Document& json)
     memset(&trade, 0, sizeof(trade));
     strcpy(trade.InstrumentID, strInstrumentID.c_str());
     strcpy(trade.ExchangeID, "kucoin");
-
+    std::string strTime = jsonData["time"].GetString();
+    std::string strTakerOrderId = jsonData["takerOrderId"].GetString();
+    std::string strMakerOrderId = jsonData["makerOrderId"].GetString();
+    std::string strTradeId = jsonData["tradeId"].GetString();
+    std::string strSequence = jsonData["sequence"].GetString();
+    strncpy(trade.TradeTime, strTime.c_str(),sizeof(trade.TradeTime));
+    strncpy(trade.MakerOrderID, strMakerOrderId.c_str(),sizeof(trade.MakerOrderID));
+    strncpy(trade.TakerOrderID, strTakerOrderId.c_str(),sizeof(trade.TakerOrderID));
+    strncpy(trade.TradeID, strTradeId.c_str(),sizeof(trade.TradeID));
+     strncpy(trade.Sequence, strSequence.c_str(),sizeof(trade.Sequence));
+    //strncpy(trade.MakerOrderID, strMakerOrderId.c_str(),sizeof(trade.MakerOrderID));
     trade.Price = std::round(std::stod(jsonData["price"].GetString()) * scale_offset);
     trade.Volume = std::round(std::stod(jsonData["size"].GetString()) * scale_offset);
     static const string strBuy = "buy" ;

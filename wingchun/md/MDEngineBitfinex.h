@@ -76,13 +76,20 @@ private:
     bool logged_in = false;
 
     int book_depth_count = 25;
+    int level_threshold=20;/*FXW's edits*/
+    int refresh_normal_check_book_s = 120;/*quest2 fxw's edits v3 starts here*/
+    /*quest3 fxw v4 starts{*/
+    int once = 1;
+    int GetSnapShotAndRtn(std::string ticker);
+    /*quest3 fxw v4 starts}*/
+    int64_t timer;/*quest2 fxw's edits v3 ends here*/
     int trade_count = 10;
     int rest_get_interval_ms = 500;
 
     static constexpr int scale_offset = 1e8;
 
     struct lws_context *context = nullptr;
-
+    void setContextNull() { context = nullptr; };/*quest2 fxw's edits v2*/
     size_t subscribe_index = 0;
 
     //subscribe_channel
