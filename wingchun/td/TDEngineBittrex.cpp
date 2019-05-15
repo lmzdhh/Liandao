@@ -692,8 +692,8 @@ void TDEngineBittrex::req_investor_position(const LFQryPositionField* data, int 
         int len = d["result"].Size(), i;
         for(i = 0; i < len; i++){
             rapidjson::Value account = accounts[i].GetObject();
-            string symbol = account["Currency"].GetString();
-            pos.Position = std::round(std::stod(account["Balance"].GetString()) * scale_offset);
+            string symbol = account["Currency"].GetDouble();
+            pos.Position = std::round(account["Balance"].GetDouble() * scale_offset);
             tmp_vector.push_back(pos);
             KF_LOG_INFO(logger, "[req_investor_position] (requestId)" << requestId 
                 << " (symbol) " << symbol << " (position) " << pos.Position);
