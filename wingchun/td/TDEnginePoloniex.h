@@ -30,10 +30,10 @@ struct PositionSetting
 };
 struct OrderInfo
 {
-	int64_t requestId;
 	int64_t order_number;
-    string timestamp;
+	string timestamp;
     string currency_pair;
+	uint64_t volume_total_original;
 };
 struct AccountUnitPoloniex
 {
@@ -91,8 +91,10 @@ private:
     cpr::Response rest_withoutAuth(string& method, string& command);
     cpr::Response rest_withAuth(AccountUnitPoloniex& unit, string& method, string& command);
 
-    cpr::Response return_orderbook();//可用来测试接口实现是否有问题
+    cpr::Response return_orderbook(string& currency_pair,int level);//可用来测试接口实现是否有问题
     cpr::Response return_order_status(string& OrderRef);
+	cpr::Response return_order_trades(string& OrderRef);
+	void* updating_order_status(const LFInputOrderField* data);
 
 private:
 
@@ -100,7 +102,7 @@ private:
     int retry_interval_milliseconds;
 	int max_retry_times;
 	string url_public_point;
-    ThreadPtr rest_thread;
+    //ThreadPtr rest_thread;
 
 
 
