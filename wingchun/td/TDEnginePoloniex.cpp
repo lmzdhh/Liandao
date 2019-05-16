@@ -346,7 +346,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
         order_info.order_number=stoll(js["orderNumber"].get<string>());
 	}
 	//获得订单信息，处理 order_info、rtn_order
-	unit.map_new_order.insert(std::make_pair(requestId, order_info));
+	unit.map_new_order.insert(std::make_pair(data->OrderRef, order_info));
 	LFRtnOrderField rtn_order;//返回order信息
 	memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 	string order_number_str = to_string(order_info.order_number);
@@ -378,15 +378,15 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	AccountUnitPoloniex& unit = account_units[0];
 	//get order status
 	cpr::Response r;
-	r=return_order_status(requestId);
+	r=return_order_status(data->OrderRef);
 	//TODO:解析这个response
 
 	//
 	//cancel order
 	OrderInfo order_info;
-	if (unit.map_new_order.count(requestId))
+	if (unit.map_new_order.count(data->OrderRef))
 	{
-		order_info = unit.map_new_order[requestId];
+		order_info = unit.map_new_order[data->OrderRef];
 	}
 	else
 	{
@@ -574,15 +574,15 @@ cpr::Response TDEnginePoloniex::return_orderbook()
 	return cpr::Response();
 }
 
-cpr::Response TDEnginePoloniex::return_order_status(int requestId)
+cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 {
-	KF_LOG_INFO(logger, "[return_order_status](rid)"<<requestId);
+	KF_LOG_INFO(logger, "[return_order_status](OrderRef)"<<OrderRef);
 	cpr::Response r;
 	AccountUnitPoloniex& unit = account_units[0];
 	OrderInfo order_info;
-	if (unit.map_new_order.count(requestId))
+	if (unit.map_new_order.count(OrderRef))
 	{
-		order_info = unit.map_new_order[requestId];
+		order_info = unit.map_new_order[OrderRef];
 	}
 	else
 	{

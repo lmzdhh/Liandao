@@ -46,7 +46,7 @@ struct AccountUnitPoloniex
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
 
-    map<int, OrderInfo> map_new_order;//记录账户已经发出去的单，凭requestID进行查找
+    map<string, OrderInfo> map_new_order;//记录账户已经发出去的单，凭requestID进行查找
     std::vector<PositionSetting> positionHolder;//记录每种持仓币种的情况，需要函数来更新
 };
 class TDEnginePoloniex : public ITDEngine
@@ -92,7 +92,7 @@ private:
     cpr::Response rest_withAuth(AccountUnitPoloniex& unit, string& method, string& command);
 
     cpr::Response return_orderbook();//可用来测试接口实现是否有问题
-    cpr::Response return_order_status(int requestId);
+    cpr::Response return_order_status(string& OrderRef);
 
 private:
 
