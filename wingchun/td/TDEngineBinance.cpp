@@ -3065,9 +3065,9 @@ void TDEngineBinance::lws_login(AccountUnitBinance& unit, long timeout_nsec) {
 
     struct lws_client_connect_info ccinfo = {0};
 
-    static std::string host  = wsBaseUrl;
-    static std::string path = "/ws/"+unit.listenKey;
-    static int port = 9443;
+    std::string host  = wsBaseUrl;
+    std::string path = "/ws/"+unit.listenKey;
+    int port = 9443;
 
     ccinfo.context 	= unit.context;
     ccinfo.address 	= host.c_str();
