@@ -362,7 +362,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 				errorMsg = "after several retry,get balance still failed";
 				KF_LOG_ERROR(logger, errorMsg<<"(count)"<<count);
 				errorId = 300;
-				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField),
+				raw_writer->write_error_frame(data, sizeof(LFInputOrderField),
 					source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 				return;
 			}
@@ -425,7 +425,7 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 		errorMsg = "couldn't find this order by OrderRef";
 		errorId = 404;
 		on_rsp_order_action(data, requestId, 404, errorMsg.c_str());
-		raw_writer->write_error_frame(&pos, sizeof(LFOrderActionField),
+		raw_writer->write_error_frame(data, sizeof(LFOrderActionField),
 			source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 		return ;
 	}
@@ -436,6 +436,8 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	r=rest_withAuth(unit, method, command);
 	//出错及异常处理
 	//需要特别注意单订单不存在或者已经成交了的话会返回错误码422
+	json js;
+	int count;
 	while (true)
 	{
 		if (r.status_code == 200||r.status_code==422)//操作发送成功，但不代表操作生效，可能有参数错误等,或者订单已经被撤销了
@@ -452,7 +454,7 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
 					KF_LOG_ERROR(logger, "[req_order_action](cancel error）" << r.text);
-					raw_writer->write_error_frame(&pos, sizeof(LFOrderActionField),
+					raw_writer->write_error_frame(&data, sizeof(LFOrderActionField),
 						source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 					break;
 				}
@@ -466,7 +468,7 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 				errorMsg = "after several retry,req order action still failed";
 				KF_LOG_ERROR(logger, errorMsg << "(count)" << count);
 				errorId = 300;
-				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField),
+				raw_writer->write_error_frame(data, sizeof(LFOrderActionField),
 					source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 				break;
 			}
@@ -675,6 +677,7 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 	r=rest_withAuth(unit, method, command);
 	//出错处理
 	int count;
+	json js;
 	while (true)
 	{
 		if (r.status_code == 200)//操作发送成功，但不代表操作生效，可能有参数错误等
@@ -685,11 +688,15 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 				if (js.find("error") != js.end())//错误回报
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
-					KF_LOG_ERROR(logger, "[return_order_status](insert order error)（might because we don't set a right parameter）" << r.text);
-					return;
+					KF_LOG_ERROR(logger, "[return_order_status]（might because we don't set a right parameter）" << r.text);
 				}
 				//TODO:订单信息更新，可能也许需要这么一步
 
+				break;
+			}
+			else
+			{
+				KF_LOG_ERROR(logger, "[return_order_status](it's not a object）" << r.text);
 				break;
 			}
 		}
