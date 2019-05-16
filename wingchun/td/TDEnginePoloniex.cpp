@@ -42,6 +42,13 @@ using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
 using utils::crypto::hmac_sha512;
 USING_WC_NAMESPACE
+
+#define JUST_ERROR 400
+#define PARSE_ERROR 401
+#define EXEC_ERROR 402
+#define PARA_ERROR 403
+#define NOT_FOUND 404
+
 void TDEnginePoloniex::init()
 {
     ITDEngine::init();
@@ -216,7 +223,7 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
             }
             else if(ret==1)
             {
-				errorId = 100;
+				errorId = PARSE_ERROR;
 				errorMsg = "req investor position response parsed error,it's not an object, quit";
 				KF_LOG_ERROR(logger, errorId);
 				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), 
@@ -225,7 +232,7 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
             }
 			else if(ret==2)
 			{
-				errorId = 200;
+				errorId = JUST_ERROR;
 				errorMsg = r.text;
 				KF_LOG_ERROR(logger, "req investor position "<<r.text<<" quit");
 				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), 
@@ -240,7 +247,7 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
 			{
 				errorMsg = "after several retry,req investor position still failed";
 				KF_LOG_ERROR(logger, errorMsg);
-				errorId = 300;
+				errorId = EXEC_ERROR;
 				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), 
                         source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 				on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
@@ -265,14 +272,14 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
             pos.PosiDirection = LF_CHAR_Short;
         }
         pos.Position = unit.positionHolder[i].amount;
-        on_rsp_position(&pos, i == (position_count - 1), requestId, errorId, errorMsg.c_str());
+        on_rsp_position(&pos, i == (position_count - 1), requestId, 0, errorMsg.c_str());
         findSymbolInResult = true;
     }
 
     if (!findSymbolInResult)
     {
         KF_LOG_INFO(logger, "[req_investor_position] (!findSymbolInResult) (requestId)" << requestId);
-		errorId = 400;
+		errorId = NOT_FOUND;
 		errorMsg = "!findSymbolInResult";
         on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
     }
@@ -348,6 +355,10 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
 					KF_LOG_ERROR(logger, "[req_order_insert](insert order error)（might because we don't set a right parameter）"<<r.text);
+					errorId = PARA_ERROR;
+					errorMsg = r.text;
+					raw_writer->write_error_frame(data, sizeof(LFInputOrderField),
+						source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 					return;
 				}
 				order_info.order_number = stoll(js["orderNumber"].get<string>());
@@ -361,7 +372,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 			{
 				errorMsg = "after several retry,get balance still failed";
 				KF_LOG_ERROR(logger, errorMsg<<"(count)"<<count);
-				errorId = 300;
+				errorId = EXEC_ERROR;
 				raw_writer->write_error_frame(data, sizeof(LFInputOrderField),
 					source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 				return;
@@ -423,8 +434,8 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	{
 		//出错处理
 		errorMsg = "couldn't find this order by OrderRef";
-		errorId = 404;
-		on_rsp_order_action(data, requestId, 404, errorMsg.c_str());
+		errorId = NOT_FOUND;
+		on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
 		raw_writer->write_error_frame(data, sizeof(LFOrderActionField),
 			source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 		return ;
@@ -453,6 +464,7 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 				if (js.find("error") != js.end())//错误回报，或者回报中没有orderNumber（可省略）
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
+					errorId = PARA_ERROR;
 					KF_LOG_ERROR(logger, "[req_order_action](cancel error）" << r.text);
 					raw_writer->write_error_frame(&data, sizeof(LFOrderActionField),
 						source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
@@ -467,7 +479,7 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 			{
 				errorMsg = "after several retry,req order action still failed";
 				KF_LOG_ERROR(logger, errorMsg << "(count)" << count);
-				errorId = 300;
+				errorId = EXEC_ERROR;
 				raw_writer->write_error_frame(data, sizeof(LFOrderActionField),
 					source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 				break;
@@ -677,6 +689,7 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 	r=rest_withAuth(unit, method, command);
 	//出错处理
 	int count;
+	string errorMsg = "";
 	json js;
 	while (true)
 	{
@@ -689,6 +702,7 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
 					KF_LOG_ERROR(logger, "[return_order_status]（might because we don't set a right parameter）" << r.text);
+					r.status_code = PARA_ERROR;
 				}
 				//TODO:订单信息更新，可能也许需要这么一步
 
@@ -697,6 +711,7 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 			else
 			{
 				KF_LOG_ERROR(logger, "[return_order_status](it's not a object）" << r.text);
+				r.status_code = PARSE_ERROR;
 				break;
 			}
 		}
@@ -707,6 +722,7 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 			{
 				errorMsg = "after several retry,return order status still failed";
 				KF_LOG_ERROR(logger, errorMsg << "(count)" << count);
+				errorId = EXEC_ERROR;
 				break;
 			}
 			KF_LOG_ERROR(logger, "return order status failed,retry after retry_interval_milliseconds");
