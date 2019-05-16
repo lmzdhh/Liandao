@@ -217,35 +217,38 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
             else if(ret==1)
             {
 				errorId = 100;
-				errorMsg = "get balance response parsed error,it's not an object quit";
+				errorMsg = "req investor position response parsed error,it's not an object, quit";
 				KF_LOG_ERROR(logger, errorId);
 				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), 
-                        source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+                        source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 				return;
             }
 			else if(ret==2)
 			{
 				errorId = 200;
 				errorMsg = r.text;
-				KF_LOG_ERROR(logger, "get balance "<<r.text<<" quit");
+				KF_LOG_ERROR(logger, "req investor position "<<r.text<<" quit");
 				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), 
-                        source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+                        source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 				return;
 			}
         }
         else
         {
+			count++;
 			if (count > max_retry_times)
 			{
-				errorMsg = "after several retry,get balance still failed";
+				errorMsg = "after several retry,req investor position still failed";
 				KF_LOG_ERROR(logger, errorMsg);
 				errorId = 300;
 				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField), 
-                        source_id, MSG_TYPE_LF_RSP_POS_BITFINEX, 1, requestId, errorId, errorMsg.c_str());
+                        source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
+				on_rsp_position(&pos, 1, requestId, errorId, errorMsg.c_str());
+				return;
 			}
-            KF_LOG_ERROR(logger, "get balance failed,retry after retry_interval_milliseconds");
+            KF_LOG_ERROR(logger, "req investor position failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
-			KF_LOG_DEBUG(logger, "[getbalance]");
+			KF_LOG_DEBUG(logger, "[req_investor_position]");
             r = rest_withAuth(unit, method, command);
         }
     }
@@ -318,6 +321,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	else
 	{
 		//若是市价单，，暂时还没有办法处理，先出错处理吧
+		//TODO::
 		KF_LOG_ERROR(logger, "[req_order_insert](market order error)");
 		errorId = 100;
 		errorMsg = "market order error";
@@ -330,28 +334,52 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	order_info.currency_pair = currency_pair;
 	cpr::Response r;
 	json js;
+	int count = 1;
 	r=rest_withAuth(unit, method, command);
-	//TODO:发单错误或者异常状况处理
-
-	//
-	js = json::parse(r.text);
-	if (js.is_object())
+	//发单错误或者异常状况处理
+	while (true)
 	{
-		if (js.find("error") != js.end()||js.find("orderNumber")==js.end())//错误回报，或者回报中没有orderNumber（可省略）
+		if (r.status_code == 200)//操作发送成功，但不代表操作生效，可能有参数错误等
 		{
-			//TODO:出错处理
-            KF_LOG_ERROR(logger, "[req_order_insert](insert order error)");
-            return;
+			js = json::parse(r.text);//解析
+			if (js.is_object())
+			{
+				if (js.find("error") != js.end() || js.find("orderNumber") == js.end())//错误回报，或者回报中没有orderNumber（可省略）
+				{
+					//出错处理，此种情况一般为参数错误，，，需要修改参数
+					KF_LOG_ERROR(logger, "[req_order_insert](insert order error)（might because we don't set a right parameter）"<<r.text);
+					return;
+				}
+				order_info.order_number = stoll(js["orderNumber"].get<string>());
+				break;
+			}
 		}
-        order_info.order_number=stoll(js["orderNumber"].get<string>());
+		else
+		{
+			count++;
+			if (count > max_retry_times)
+			{
+				errorMsg = "after several retry,get balance still failed";
+				KF_LOG_ERROR(logger, errorMsg<<"(count)"<<count);
+				errorId = 300;
+				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField),
+					source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
+				return;
+			}
+			KF_LOG_ERROR(logger, "req order insert failed,retry after retry_interval_milliseconds");
+			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
+			KF_LOG_DEBUG(logger, "[req_order_insert]");
+			r = rest_withAuth(unit, method, command);
+		}
 	}
 	//获得订单信息，处理 order_info、rtn_order
-	unit.map_new_order.insert(std::make_pair(data->OrderRef, order_info));
+	string order_ref = string(data->OrderRef);
+	unit.map_new_order.insert(std::make_pair(order_ref, order_info));
 	LFRtnOrderField rtn_order;//返回order信息
 	memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 	string order_number_str = to_string(order_info.order_number);
 	//以下为必填项
-    strncpy(rtn_order.OrderRef, data->OrderRef, 13);
+    strncpy(rtn_order.OrderRef, data->OrderRef, 21);
 	strncpy(rtn_order.BusinessUnit, order_number_str.c_str(), order_number_str.length());
 	rtn_order.OrderStatus = LF_CHAR_NotTouched;
 	rtn_order.LimitPrice = data->LimitPrice;
@@ -378,19 +406,27 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	AccountUnitPoloniex& unit = account_units[0];
 	//get order status
 	cpr::Response r;
-	r=return_order_status(data->OrderRef);
-	//TODO:解析这个response
-
-	//
+	int errorId=0;
+	string errorMsg = "";
+	string order_ref = string(data->OrderRef);
+	/*
+	r = return_order_status(order_ref);
+	//需要解析 判断订单状态
+	*/
 	//cancel order
 	OrderInfo order_info;
-	if (unit.map_new_order.count(data->OrderRef))
+	if (unit.map_new_order.count(order_ref))
 	{
-		order_info = unit.map_new_order[data->OrderRef];
+		order_info = unit.map_new_order[order_ref];
 	}
 	else
 	{
-		//TODO:出错处理
+		//出错处理
+		errorMsg = "couldn't find this order by OrderRef";
+		errorId = 404;
+		on_rsp_order_action(data, requestId, 404, errorMsg.c_str());
+		raw_writer->write_error_frame(&pos, sizeof(LFOrderActionField),
+			source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 		return ;
 	}
 	string method = "POST";
@@ -398,10 +434,50 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	string command = "command=cancelOrder&orderNumber=" + to_string(order_info.order_number) +
 		"&nonce=" + timestamp;
 	r=rest_withAuth(unit, method, command);
-	//TODO:出错及异常处理
-
+	//出错及异常处理
+	//需要特别注意单订单不存在或者已经成交了的话会返回错误码422
+	while (true)
+	{
+		if (r.status_code == 200||r.status_code==422)//操作发送成功，但不代表操作生效，可能有参数错误等,或者订单已经被撤销了
+		{
+			js = json::parse(r.text);//解析
+			if (js.is_object())
+			{
+				if (js.find("success") != js.end())
+				{
+					KF_LOG_INFO(logger, "[req_order_action](order cancelled）" << r.text);
+					break;
+				}
+				if (js.find("error") != js.end())//错误回报，或者回报中没有orderNumber（可省略）
+				{
+					//出错处理，此种情况一般为参数错误，，，需要修改参数
+					KF_LOG_ERROR(logger, "[req_order_action](cancel error）" << r.text);
+					raw_writer->write_error_frame(&pos, sizeof(LFOrderActionField),
+						source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
+					break;
+				}
+			}
+		}
+		else
+		{
+			count++;
+			if (count > max_retry_times)
+			{
+				errorMsg = "after several retry,req order action still failed";
+				KF_LOG_ERROR(logger, errorMsg << "(count)" << count);
+				errorId = 300;
+				raw_writer->write_error_frame(&pos, sizeof(LFRspPositionField),
+					source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
+				break;
+			}
+			KF_LOG_ERROR(logger, "req order action failed,retry after retry_interval_milliseconds");
+			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
+			KF_LOG_DEBUG(logger, "[req_order_action]");
+			r = rest_withAuth(unit, method, command);
+		}
+	}
 	//
-	//on_rsp_order_action
+	on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
 }
 
 TDEnginePoloniex::TDEnginePoloniex():ITDEngine(SOURCE_POLONIEX)
@@ -597,9 +673,41 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 	command += order_number_str +
 		"&nonce=" + timestamp;
 	r=rest_withAuth(unit, method, command);
-	//TODO:出错处理
+	//出错处理
+	int count;
+	while (true)
+	{
+		if (r.status_code == 200)//操作发送成功，但不代表操作生效，可能有参数错误等
+		{
+			js = json::parse(r.text);//解析
+			if (js.is_object())
+			{
+				if (js.find("error") != js.end())//错误回报
+				{
+					//出错处理，此种情况一般为参数错误，，，需要修改参数
+					KF_LOG_ERROR(logger, "[return_order_status](insert order error)（might because we don't set a right parameter）" << r.text);
+					return;
+				}
+				//TODO:订单信息更新，可能也许需要这么一步
 
-	//
+				break;
+			}
+		}
+		else
+		{
+			count++;
+			if (count > max_retry_times)
+			{
+				errorMsg = "after several retry,return order status still failed";
+				KF_LOG_ERROR(logger, errorMsg << "(count)" << count);
+				break;
+			}
+			KF_LOG_ERROR(logger, "return order status failed,retry after retry_interval_milliseconds");
+			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
+			KF_LOG_DEBUG(logger, "[return_order_status]");
+			r = rest_withAuth(unit, method, command);
+		}
+	}
 	return r;
 }
 
