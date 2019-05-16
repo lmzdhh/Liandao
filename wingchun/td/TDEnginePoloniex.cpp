@@ -690,6 +690,7 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 	//出错处理
 	int count;
 	string errorMsg = "";
+	int errorId = 0;
 	json js;
 	while (true)
 	{
