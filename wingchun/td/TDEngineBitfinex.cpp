@@ -1751,8 +1751,11 @@ void TDEngineBitfinex::req_order_insert(const LFInputOrderField* data, int accou
 	KF_LOG_INFO(logger, "[send_order] (ticker) " << ticker << " (type) " <<
 		type << " (size) " << sizeStr << " (price) " << priceStr
 		<< " (cid) " << cid << " (dateStr) " << dateStr);
-
-	std::string insertOrderJsonString = createInsertOrderJsonString(0, cid, type, ticker, sizeStr, priceStr);
+    int flags=0;
+    if(is_post_only(data))
+        flags=4096;
+    //flags=4096;
+	std::string insertOrderJsonString = createInsertOrderJsonString(0, cid, type, ticker, sizeStr, priceStr,flags);
 	addPendingSendMsg(unit, insertOrderJsonString);
 	//emit e event for websocket callback
 	lws_callback_on_writable(unit.websocketConn);
@@ -2039,7 +2042,7 @@ std::string TDEngineBitfinex::createAuthJsonString(AccountUnitBitfinex& unit)
   }
 ]
  * */
-std::string TDEngineBitfinex::createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr)
+std::string TDEngineBitfinex::createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr,int flags)
 {
 
 	StringBuffer s;
@@ -2068,6 +2071,12 @@ std::string TDEngineBitfinex::createInsertOrderJsonString(int gid, int cid, std:
 
 	writer.Key("price");
 	writer.String(priceStr.c_str());
+
+    if(flags!=0)
+    {
+        writer.Key("flags");
+        writer.Int(flags);
+    }
 
 	writer.EndObject();
 	writer.EndArray();

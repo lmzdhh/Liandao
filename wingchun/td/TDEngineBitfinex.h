@@ -121,7 +121,7 @@ private:
 
     std::string createAuthJsonString(AccountUnitBitfinex& unit );
     std::string parseJsonToString(Document &d);
-    std::string createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr);
+    std::string createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr,int flags);
     std::string createCancelOrderIdJsonString(int64_t orderId);
     std::string createCancelOrderCIdJsonString(int cid, std::string dateStr);
     std::string getDateStr();

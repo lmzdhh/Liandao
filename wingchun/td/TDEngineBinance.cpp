@@ -3163,6 +3163,7 @@ void TDEngineBinance::onOrder(AccountUnitBinance& unit, Document& json) {
         rtn_order.OrderStatus = status;
         std::string strTradeVolume = json["l"].GetString();
         uint64_t volumeTraded = std::round(std::stod(strTradeVolume)*scale_offset);
+        uint64_t oldVolumeTraded = rtn_order.VolumeTraded;
 		rtn_order.VolumeTraded += volumeTraded;
         rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
 		KF_LOG_INFO(logger, "TDEngineBinance::onOrder,rtn_order");
@@ -3219,8 +3220,10 @@ void TDEngineBinance::onOrder(AccountUnitBinance& unit, Document& json) {
         //---------------成交总量---------------------------
 
 		KF_LOG_INFO(logger, "TDEngineBinance::onOrder,rtn_trade");
-		on_rtn_trade(&rtn_trade);
-		raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),source_id, MSG_TYPE_LF_RTN_TRADE_BITMEX, 1, -1);
+        if(oldVolumeTraded != rtn_order.VolumeTraded){
+		    on_rtn_trade(&rtn_trade);
+		    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),source_id, MSG_TYPE_LF_RTN_TRADE_BITMEX, 1, -1);
+        }
 
 
         if (rtn_order.OrderStatus == LF_CHAR_AllTraded || rtn_order.OrderStatus == LF_CHAR_PartTradedNotQueueing ||

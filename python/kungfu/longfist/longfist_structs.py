@@ -651,6 +651,7 @@ DataFieldMap = {
         'MassOrderSeqId':'i64',
 	    'MassOrderIndex':'i',
 	    'MassOrderTotalNum':'i',
+        'ExpectPrice':'i64'
 	},
 	'LFRtnOrderField': {
 		'InstrumentID': 'c31',
@@ -925,7 +926,15 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_ORDER_KUCOIN: LFInputOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_KUCOIN: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_KUCOIN: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_KUCOIN: LFOrderActionField
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_KUCOIN: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_BITSTAMP: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITSTAMP: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITSTAMP: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BITSTAMP: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITSTAMP: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITSTAMP: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITSTAMP: LFOrderActionField
 }
 
 MsgType2LFStruct.update(SnifferMsgType2Struct)
