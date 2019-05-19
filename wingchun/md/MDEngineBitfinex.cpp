@@ -209,6 +209,8 @@ void MDEngineBitfinex::load(const json& j_config)
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineBitfinex:: rest_get_interval_ms: " << rest_get_interval_ms);
 
+	refresh_normal_check_book_s = j_config["refresh_normal_check_book_s"].get<int>();
+	KF_LOG_INFO(logger, "MDEngineBitfinex:: refresh_normal_check_book_s: " << refresh_normal_check_book_s);
 
     coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     coinPairWhiteList.Debug_print();
@@ -715,8 +717,9 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 {
     KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (symbol) " << channel.exchange_coinpair);
 
-    std::string ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
+    std::string ticker = coinPairWhiteList.GetValueByKey(channel.exchange_coinpair);
     if(ticker.length() == 0) {
+		KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex onbook error ticker.length()==0 ");
         return;
     }
 
@@ -884,6 +887,12 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 
         /*quest2 FXW's edits end here*/
     }
+	else//*quest2 FXW's edits v5
+	{
+		timer = getTimestamp();
+		GetSnapShotAndRtn(ticker);
+		KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update,priceBook20Assembler.Assembler(ticker, md) failed\n(ticker)" << ticker);
+	}
 
 }
 
