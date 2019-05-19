@@ -337,7 +337,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 		return;
 	}
 	if (is_post_only(data)) command += "&postOnly=1";
-	if (data->TimeCondition == LF_CHAR_IOC) command += "&immediateOrCancel=1";
+	if (data->TimeCondition == LF_CHAR_FAK) command += "&immediateOrCancel=1";
 	if (data->TimeCondition == LF_CHAR_FOK) command += "&fillOrKill=1";
 	OrderInfo order_info;
 	order_info.timestamp = timestamp;
@@ -346,7 +346,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	cpr::Response r;
 	json js;
 	int count = 1;
-	r=rest_withAuth(unit, method, command);
+	r = rest_withAuth(unit, method, command);
 	//发单错误或者异常状况处理
 	while (true)
 	{
@@ -853,7 +853,7 @@ void* TDEnginePoloniex::updating_order_status(const LFInputOrderField* data)
 		}
 	}
 
-	return ;
+	return nullptr;
 }
 
 BOOST_PYTHON_MODULE(libpoloniextd)
