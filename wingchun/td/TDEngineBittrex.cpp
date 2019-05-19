@@ -1022,39 +1022,37 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
         }
         KF_LOG_INFO(logger, "[retrieveOrderStatus] query_order:");
         if(d.HasMember("success") && d["success"].GetBool()){
-            int len = d["result"].Size(), i;
-            for (i = 0; i < len; i++){
-                rapidjson::Value data = d["result"].GetArray()[i].GetObject();
-                if(!data.HasMember("OrderUuid")||remoteOrderId!=data["OrderUuid"].GetString()){
-                    continue;
-                }
-                KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
-                ResponsedOrderStatus responsedOrderStatus;
-                responsedOrderStatus.ticker = ticker;
-                //平均价格
-                responsedOrderStatus.averagePrice = std::round((data["PricePerUnit"].IsNumber()?data["PricePerUnit"].GetDouble():0) * scale_offset);
-                //累计成交价格
-                responsedOrderStatus.PriceTraded = std::round(data["Price"].GetDouble() * scale_offset);
-                //总量
-                responsedOrderStatus.volume = std::round(data["Quantity"].GetDouble() * scale_offset);
-                //未成交数量
-                responsedOrderStatus.openVolume =  std::round(data["QuantityRemaining"].GetDouble() * scale_offset);
-                //累计成交数量
-                responsedOrderStatus.VolumeTraded = responsedOrderStatus.volume - responsedOrderStatus.openVolume;
-                //订单状态
-                bool Closed = false,CancelInitiated = false;
-                CancelInitiated = data["CancelInitiated"].GetBool();
-                if(CancelInitiated){
-                    responsedOrderStatus.OrderStatus = LF_CHAR_Canceled;
-                }else{
-                    responsedOrderStatus.OrderStatus = LF_CHAR_NoTradeQueueing;
-                }
-                //订单信息处理
-                handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
-
-                //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
-                remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->rtn_order.BusinessUnit);
+            rapidjson::Value data = d["result"].GetObject();
+            if(!data.HasMember("OrderUuid")||remoteOrderId!=data["OrderUuid"].GetString()){
+                KF_LOG_INFO(logger,"[retrieveOrderStatus] no OrderUuid segment");
+                return;
             }
+            KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
+            ResponsedOrderStatus responsedOrderStatus;
+            responsedOrderStatus.ticker = ticker;
+            //平均价格
+            responsedOrderStatus.averagePrice = std::round((data["PricePerUnit"].IsNumber()?data["PricePerUnit"].GetDouble():0) * scale_offset);
+            //累计成交价格
+            responsedOrderStatus.PriceTraded = std::round(data["Price"].GetDouble() * scale_offset);
+            //总量
+            responsedOrderStatus.volume = std::round(data["Quantity"].GetDouble() * scale_offset);
+            //未成交数量
+            responsedOrderStatus.openVolume =  std::round(data["QuantityRemaining"].GetDouble() * scale_offset);
+            //累计成交数量
+            responsedOrderStatus.VolumeTraded = responsedOrderStatus.volume - responsedOrderStatus.openVolume;
+            //订单状态
+            bool Closed = false,CancelInitiated = false;
+            CancelInitiated = data["CancelInitiated"].GetBool();
+            if(CancelInitiated){
+                responsedOrderStatus.OrderStatus = LF_CHAR_Canceled;
+            }else{
+                responsedOrderStatus.OrderStatus = LF_CHAR_NoTradeQueueing;
+            }
+            //订单信息处理
+            handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
+
+            //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
+            remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->rtn_order.BusinessUnit);
         }else{
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
             std::string errorMsg = "";
