@@ -348,7 +348,7 @@ int TDEngineHuobi::subscribeTopic(struct lws* conn,string strSubscribe){
     unsigned char msg[1024];
     memset(&msg[LWS_PRE], 0, 1024-LWS_PRE);
     int length = strSubscribe.length();
-    KF_LOG_INFO(logger, "[on_lws_write_subscribe] " << strSubscribe.c_str() << " ,len = " << length);
+    KF_LOG_INFO(logger, "[subscribeTopic] " << strSubscribe.c_str() << " ,len = " << length);
     strncpy((char *)msg+LWS_PRE, strSubscribe.c_str(), length);
     //请求
     int ret = lws_write(conn, &msg[LWS_PRE], length,LWS_WRITE_TEXT);
@@ -363,6 +363,11 @@ int TDEngineHuobi::on_lws_write_subscribe(struct lws* conn){
         isOrders=orders_sub;
         std::unordered_map<std::string, std::string>::iterator map_itr;
         map_itr = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+        if(map_itr == unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()){
+            KF_LOG_ERROR(logger,"[on_lws_write_subscribe] whitelist is null, subscribe topic none.");
+            return ret;
+        }
+        map_itr++;
         while(map_itr != unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()){
             string ticker = map_itr->second.c_str();
             KF_LOG_INFO(logger,"[on_lws_write_subscribe] (ticker) "<<ticker);
