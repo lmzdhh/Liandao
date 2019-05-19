@@ -1223,7 +1223,7 @@ void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int accoun
         //TODO:   onRtn order/on rtn trade
 
     }
-    }
+}
 
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
 void TDEngineKuCoin::addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId)
