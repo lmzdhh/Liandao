@@ -685,7 +685,8 @@
 					"min_fee": 0
 				},
 				"future_exotic": null
-			},
+			}
+		},
 		"huobi": {
 			"accounts": [{
 				"info": {
