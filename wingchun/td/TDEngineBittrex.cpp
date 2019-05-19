@@ -1314,9 +1314,9 @@ void TDEngineBittrex::query_order(AccountUnitBittrex& unit, std::string code, st
 {
     KF_LOG_INFO(logger, "[query_order] start");
     //bittrex查询订单详情
-    string getPath = "/market/getopenorders";
-    string s1="market=";
-    string postData=s1+code;
+    string getPath = "/account/getorder";
+    string s1="uuid=";
+    string postData=s1+orderId;
 
     auto response = Get(getPath,"",postData,unit);
     json.Parse(response.text.c_str());
