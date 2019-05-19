@@ -929,7 +929,7 @@ void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int accou
 
     if(!d.HasParseError() && d.HasMember("success")&&d["success"].GetBool()) {
         errorId = 0;
-        std::vector<PendingOrderStatus>::iterator itr;
+        /*std::vector<PendingOrderStatus>::iterator itr;
         for(itr = unit.pendingOrderStatus.begin(); itr != unit.pendingOrderStatus.end();){
             string oldRemoteOrderId=itr->rtn_order.BusinessUnit;
             KF_LOG_INFO(logger,"[req_order_action] (oldRemoteOrderId) " << oldRemoteOrderId <<" (remoteOrderId) "<<remoteOrderId);
@@ -939,7 +939,7 @@ void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int accou
             }else{
                 itr++;
             }
-        }
+        }*/
         KF_LOG_INFO(logger,"[req_order_action] (canceled order id) " << remoteOrderId);
     }else{
         errorId = 520;
