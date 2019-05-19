@@ -317,7 +317,7 @@ void TDEngineHuobi::on_lws_data(struct lws* conn, const char* data, size_t len)
     }
 
 }
-std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit){
+std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit, string ticker){
     StringBuffer sbUpdate;
     Writer<StringBuffer> writer(sbUpdate);
     writer.StartObject();
@@ -326,7 +326,9 @@ std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit){
     writer.Key("cid");
     writer.String(unit.spotAccountId.c_str());
     writer.Key("topic");
-    writer.String("orders.*");
+    string topic = "orders.";
+    topic = topic + ticker + ".update";
+    writer.String(topic.c_str());
     writer.Key("model");
     writer.String("0");
     writer.EndObject();
@@ -359,8 +361,15 @@ int TDEngineHuobi::on_lws_write_subscribe(struct lws* conn){
     AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
     if(isAuth==huobi_auth&&isOrders != orders_sub){
         isOrders=orders_sub;
-        string strSubscribe = makeSubscribeOrdersUpdate(unit);
-        ret=subscribeTopic(conn,strSubscribe);
+        std::unordered_map<std::string, std::string>::iterator map_itr;
+        map_itr = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+        while(map_itr != unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()){
+            string ticker = map_itr->second.c_str();
+            KF_LOG_INFO(logger,"[on_lws_write_subscribe] (ticker) "<<ticker);
+            string strSubscribe = makeSubscribeOrdersUpdate(unit,ticker);
+            ret = subscribeTopic(conn,strSubscribe);
+            map_itr++;
+        }
     }
     return ret;
 }

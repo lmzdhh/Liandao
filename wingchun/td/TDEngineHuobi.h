@@ -199,7 +199,7 @@ private:
     void Ping(struct lws* conn);
     void Pong(struct lws* conn,long long ping);
     AccountUnitHuobi& findAccountUnitHuobiByWebsocketConn(struct lws * websocketConn);
-    std::string makeSubscribeOrdersUpdate(AccountUnitHuobi& unit);
+    std::string makeSubscribeOrdersUpdate(AccountUnitHuobi& unit, string ticker);
     int64_t getMSTime();
 public:
     //cys add huobi websocket status
