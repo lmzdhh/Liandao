@@ -1024,7 +1024,7 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
         if(d.HasMember("success") && d["success"].GetBool()){
             rapidjson::Value data = d["result"].GetObject();
             if(!data.HasMember("OrderUuid")||remoteOrderId!=data["OrderUuid"].GetString()){
-                KF_LOG_INFO(logger,"[retrieveOrderStatus] no OrderUuid segment");
+                KF_LOG_INFO(logger,"[retrieveOrderStatus] no OrderUuid");
                 return;
             }
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
@@ -1057,7 +1057,7 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
             KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
             std::string errorMsg = "";
             std::string errorId = "520";
-            if (d.HasMember("message") && d["message"].GetString()!=""){
+            if (d.HasMember("message") && d["message"].GetString() != ""){
                 errorMsg = d["message"].GetString();
             }
             KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->rtn_order.InstrumentID
