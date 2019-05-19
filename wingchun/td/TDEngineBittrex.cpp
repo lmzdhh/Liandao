@@ -1094,7 +1094,7 @@ void TDEngineBittrex::addNewQueryOrdersAndTrades(AccountUnitBittrex& unit, Pendi
 
 void TDEngineBittrex::moveNewOrderStatusToPending(AccountUnitBittrex& unit)
 {
-    KF_LOG_DEBUG(logger, "[moveNewOrderStatusToPending]" );
+    //KF_LOG_DEBUG(logger, "[moveNewOrderStatusToPending]" );
     std::lock_guard<std::mutex> pending_guard_mutex(*mutex_order_and_trade);
     std::lock_guard<std::mutex> response_guard_mutex(*mutex_response_order_status);
 
@@ -1105,7 +1105,7 @@ void TDEngineBittrex::moveNewOrderStatusToPending(AccountUnitBittrex& unit)
         unit.pendingOrderStatus.push_back(*newOrderStatusIterator);
         newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
     }
-    KF_LOG_DEBUG(logger, "[moveNewOrderStatusToPending] (pendingOrderStatus size) " << unit.pendingOrderStatus.size());
+    //KF_LOG_DEBUG(logger, "[moveNewOrderStatusToPending] (pendingOrderStatus size) " << unit.pendingOrderStatus.size());
 }
 //cys no use
 void TDEngineBittrex::set_reader_thread()
