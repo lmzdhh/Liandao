@@ -717,9 +717,9 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 {
     KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (symbol) " << channel.exchange_coinpair);
 
-    std::string ticker = coinPairWhiteList.GetValueByKey(channel.exchange_coinpair);
+    std::string ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
     if(ticker.length() == 0) {
-		KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex onbook error ticker.length()==0 ");
+		KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex onbook error ticker.length()==0");
         return;
     }
 
