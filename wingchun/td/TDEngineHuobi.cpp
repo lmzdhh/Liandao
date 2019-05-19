@@ -323,8 +323,8 @@ std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit, str
     writer.StartObject();
     writer.Key("op");
     writer.String("sub");
-    writer.Key("cid");
-    writer.String(unit.spotAccountId.c_str());
+    /*writer.Key("cid");
+    writer.String(unit.spotAccountId.c_str());*/
     writer.Key("topic");
     string topic = "orders.";
     topic = topic + ticker + ".update";
