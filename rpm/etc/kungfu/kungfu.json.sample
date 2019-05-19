@@ -668,7 +668,11 @@
 					"whiteLists": {
 						"strategy_coinpair(base_quote)": "exchange_coinpair",
 						"usd_usdt": "USD-USDT",
-						"btc_usds": "BTC-USDS"
+						"btc_usds": "BTC-USDS",
+						"usdt_btt": "USDT-BTT",
+						"usdt_trx": "USDT-TRX",
+						"usdt_xvg": "USDT-XVG",
+						"usdt_rvn": "USDT-RVN"
 
 					},
 					"positionWhiteLists": {
@@ -694,7 +698,7 @@
 					"min_fee": 0
 				},
 				"future_exotic": null
-			},
+			}
 		},
 		"kucoin": {
 			"accounts": [{
@@ -735,7 +739,7 @@
 					"min_fee": 0
 				},
 				"future_exotic": null
-			},
+			}
 		},
 		"huobi": {
 			"accounts": [{
