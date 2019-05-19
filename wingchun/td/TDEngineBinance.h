@@ -163,19 +163,32 @@ struct OrderActionInfo
     int request_id;
 };
 
-//----UFR_data_map-----
-struct UFRUnit
+//----rate_limit_data_map-----
+struct RateLimitUnit
 {
+    //UFR
     std::atomic<uint64_t> order_total; //委托总量
     std::atomic<uint64_t> trade_total; //成交总量
-
-    UFRUnit(const UFRUnit& src){
+    //GCR
+    std::atomic<uint64_t> gtc_canceled_order_total;//已撤单GTC委托总量
+    std::map<std::string,int64_t> mapOrderTime;//GTC发单时间
+    RateLimitUnit(const RateLimitUnit& src){
          order_total = src.order_total.load();
          trade_total = src.trade_total.load();
+         gtc_canceled_order_total = src.gtc_canceled_order_total.load();
+         mapOrderTime = src.mapOrderTime;
     };
-    UFRUnit(){
+    RateLimitUnit(){
          order_total = 0;
          trade_total = 0;
+         gtc_canceled_order_total=0;
+    };
+    void Reset()
+    {
+        order_total = 0;
+        trade_total = 0;
+        gtc_canceled_order_total=0;
+        mapOrderTime.clear();
     };
 };
 
@@ -321,15 +334,19 @@ private:
     
 
     ////////////// last UTC time  /////////////////////
-    uint64_t last_UTC_timestamp = 0;
+    int64_t last_UTC_timestamp = 0;
   //  uint64_t last_test_timestamp = 0;
 
     ////////////// UFR /////////////////////
-    float UFR_limit = 0.998;    //触发条件·未成交率上限
+    double UFR_limit = 0.998;    //触发条件·未成交率上限
     int UFR_order_lower_limit = 300;  //触发条件·委托单数量下限
-    std::map<string, UFRUnit> UFR_data_map;    //< 合约代码， {委托总量，成交总量} >
-    uint64_t last_UFR_timestamp = 0;    //
-    std::map<string, bool> UFR_orderRef_status_map;
+    //GCR
+    double GCR_limit = 0.998;    //触发条件·GTC撤单率上限
+    int GCR_order_lower_limit = 150;  //触发条件·GTC委托单数量下限
+
+    std::map<std::string, RateLimitUnit> rate_limit_data_map;
+    int64_t last_rate_limit_timestamp = 0;    //
+    std::map<std::string, bool> UFR_orderRef_status_map;
 
     /////////////// request weight ////////////////
     //<=0，do nothing even meet 429
