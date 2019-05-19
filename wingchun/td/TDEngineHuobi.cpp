@@ -327,7 +327,7 @@ std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit, str
     writer.String(unit.spotAccountId.c_str());
     writer.Key("topic");
     string topic = "orders.";
-    topic = topic + ticker + ".update";
+    topic = topic + ticker;
     writer.String(topic.c_str());
     writer.EndObject();
     std::string strUpdate = sbUpdate.GetString();
@@ -892,7 +892,7 @@ LfOrderStatusType TDEngineHuobi::GetOrderStatus(std::string state) {
     }else if(state == "submitted"){
         return LF_CHAR_NotTouched;
     }else if(state == "partial-canceled"){
-        return LF_CHAR_PartTradedNotQueueing;
+        return LF_CHAR_PartTradedQueueing;
     }else if(state == "filled"){
         return LF_CHAR_AllTraded;
     }
@@ -2021,6 +2021,7 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
         KF_LOG_ERROR(logger,"[handleResponseOrderStatus] no child segment");
         return;
     }
+    string role = data["role"].GetString();
     //单次成交总金额
     double dDealFunds = std::stod(data["filled-cash-amount"].GetString());
     //单次成交数量
@@ -2029,9 +2030,7 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     int64_t nDealSize = std::round(dDealSize * scale_offset);
     int64_t averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
     //单次未成交数量
-    double unfilledAmount=std::stod(data["unfilled-amount"].GetString());
-    //单次未成交数量
-    int64_t nUnfilledAmount = std::round(unfilledAmount * scale_offset);
+    int64_t nUnfilledAmount = std::round(std::stod(data["unfilled-amount"].GetString()) * scale_offset);
     //报单价格条件
     LfOrderPriceTypeType orderPriceType = GetPriceType(data["order-type"].GetString());
     //买卖方向
@@ -2042,6 +2041,11 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     LfOrderStatusType orderStatus=GetOrderStatus(data["order-state"].GetString());
     //总价
     int64_t price = std::round(std::stod(data["order-price"].GetString()) * scale_offset);
+    
+    if(role == "maker"){
+        nUnfilledAmount = nVolume - rtn_order.VolumeTraded - nDealSize;
+    }
+
     int64_t volumeTraded = nVolume-nUnfilledAmount;
     if(orderStatus == LF_CHAR_NotTouched && volumeTraded == rtn_order.VolumeTraded){//no change
         KF_LOG_INFO(logger, "[handleResponseOrderStatus] status is not changed");
