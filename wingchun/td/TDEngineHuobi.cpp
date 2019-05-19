@@ -2073,7 +2073,7 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
         rtn_trade.Direction = rtn_order.Direction;
         //单次成交数量
         rtn_trade.Volume = nDealSize;
-        rtn_trade.Price =std::round(std::stod(data["price"].GetString())*scale_offset);//(newAmount - oldAmount)/(rtn_trade.Volume);
+        rtn_trade.Price =std::round(dDealFunds * scale_offset);//(newAmount - oldAmount)/(rtn_trade.Volume);
         strncpy(rtn_trade.OrderSysID,rtn_order.BusinessUnit,31);
         on_rtn_trade(&rtn_trade);
 
