@@ -22,7 +22,7 @@ wingchun strategy -n my_test -p bittrex_order.py
 
 def initialize(context):
     context.add_md(source=SOURCE.BITTREX)
-    context.ticker = 'usdt_xvg'
+    context.ticker = 'usdt_rvn'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
@@ -43,7 +43,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             print '-- got pos in initial --'
             context.print_pos(pos_handler)
             #context.stop()
-            context.buy_price = 970000 #market_data.LowerLimitPrice
+            context.buy_price = 5575474 #market_data.LowerLimitPrice
             context.sell_price = 960065 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 512.")
@@ -51,8 +51,8 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                          ticker=context.ticker,
                                                          price=context.buy_price,
                                                          exchange_id=context.exchange_id,
-                                                         volume=50000000000,
-                                                         direction=DIRECTION.Buy,
+                                                         volume=53000000000,
+                                                         direction=DIRECTION.Sell,
                                                          offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
                 print('will cancel it')
