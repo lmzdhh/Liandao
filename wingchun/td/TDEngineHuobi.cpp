@@ -323,8 +323,8 @@ std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit, str
     writer.StartObject();
     writer.Key("op");
     writer.String("sub");
-    /*writer.Key("cid");
-    writer.String(unit.spotAccountId.c_str());*/
+    writer.Key("cid");
+    writer.String(unit.spotAccountId.c_str());
     writer.Key("topic");
     string topic = "orders.";
     topic = topic + ticker + ".update";
@@ -359,7 +359,7 @@ int TDEngineHuobi::on_lws_write_subscribe(struct lws* conn){
     AccountUnitHuobi& unit=findAccountUnitHuobiByWebsocketConn(conn);
     if(isAuth==huobi_auth&&isOrders != orders_sub){
         isOrders=orders_sub;
-        std::unordered_map<std::string, std::string>::iterator map_itr;
+        /*std::unordered_map<std::string, std::string>::iterator map_itr;
         map_itr = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
         if(map_itr == unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()){
             KF_LOG_ERROR(logger,"[on_lws_write_subscribe] whitelist is null, subscribe topic none.");
@@ -372,7 +372,9 @@ int TDEngineHuobi::on_lws_write_subscribe(struct lws* conn){
             string strSubscribe = makeSubscribeOrdersUpdate(unit,ticker);
             ret = subscribeTopic(conn,strSubscribe);
             map_itr++;
-        }
+        }*/
+        string strSubscribe = makeSubscribeOrdersUpdate(unit,"*");
+        ret = subscribeTopic(conn,strSubscribe);
     }
     return ret;
 }
