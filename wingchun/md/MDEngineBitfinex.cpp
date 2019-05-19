@@ -41,8 +41,7 @@ static MDEngineBitfinex* global_md = nullptr;
 /*quest3 fxw v4 starts*/
 int MDEngineBitfinex::GetSnapShotAndRtn(std::string ticker)//v1
 {
-    std::string symbol=ticker;
-    symbol.erase(3,1);
+    std::string symbol = coinPairWhiteList.GetValueByKey(ticker);
     std::string requestPath = "/v1/book/";
     std::string body="";
     string url = "https://api.bitfinex.com" + requestPath +symbol;//complete url
