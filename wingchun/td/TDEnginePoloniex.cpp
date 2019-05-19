@@ -313,8 +313,6 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
     ss.clear();
 	ss << amount;
 	string amount_str = ss.str();
-	if(data->TimeCondition==LF_CHAR_IOC)
-	string method = "POST";
 	string timestamp = to_string(get_timestamp());
 	//"command=buy&currencyPair=BTC_ETH&rate=0.01&amount=1&nonce=154264078495300"
 	string command = "command=";
@@ -346,6 +344,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	cpr::Response r;
 	json js;
 	int count = 1;
+	string method = "POST";
 	r = rest_withAuth(unit, method, command);
 	//发单错误或者异常状况处理
 	while (true)
@@ -464,7 +463,7 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 				{
 					KF_LOG_INFO(logger, "[req_order_action] (order cancelled) " << r.text);
 					//需要处理一下数量变化
-					data->VolumeChange = order_info.volume_total_original - (stoll(js["amount"].get<string>())) * scale_offset;
+					//data->VolumeChange = order_info.volume_total_original - (stoll(js["amount"].get<string>())) * scale_offset;
 					//需要on rtn order 订单若是被撤单了就查不到了
 					LFRtnOrderField rtn_order;//返回order信息
 					memset(&rtn_order, 0, sizeof(LFRtnOrderField));
