@@ -329,8 +329,6 @@ std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit, str
     string topic = "orders.";
     topic = topic + ticker + ".update";
     writer.String(topic.c_str());
-    writer.Key("model");
-    writer.String("0");
     writer.EndObject();
     std::string strUpdate = sbUpdate.GetString();
     return strUpdate;
