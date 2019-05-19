@@ -999,7 +999,7 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
         std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->rtn_order.InstrumentID));
         if(ticker.length() == 0) {
             KF_LOG_INFO(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->rtn_order.InstrumentID);
-            orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
+            unit.pendingOrderStatus.erase(orderStatusIterator);
             continue;
         }
         KF_LOG_INFO(logger, "[retrieveOrderStatus] (get_order)" << "  (account.api_key) " << unit.api_key
@@ -1067,7 +1067,8 @@ void TDEngineBittrex::retrieveOrderStatus(AccountUnitBittrex& unit){
         }
 
         //remove order when finish
-        if(orderStatusIterator->rtn_order.OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->rtn_order.OrderStatus == LF_CHAR_Canceled
+        if(orderStatusIterator->rtn_order.OrderStatus == LF_CHAR_AllTraded  
+           || orderStatusIterator->rtn_order.OrderStatus == LF_CHAR_Canceled
            || orderStatusIterator->rtn_order.OrderStatus == LF_CHAR_Error)
         {
             KF_LOG_INFO(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
@@ -1093,6 +1094,7 @@ void TDEngineBittrex::addNewQueryOrdersAndTrades(AccountUnitBittrex& unit, Pendi
 
 void TDEngineBittrex::moveNewOrderStatusToPending(AccountUnitBittrex& unit)
 {
+    KF_LOG_DEBUG(logger, "[moveNewOrderStatusToPending]" );
     std::lock_guard<std::mutex> pending_guard_mutex(*mutex_order_and_trade);
     std::lock_guard<std::mutex> response_guard_mutex(*mutex_response_order_status);
 
@@ -1103,6 +1105,7 @@ void TDEngineBittrex::moveNewOrderStatusToPending(AccountUnitBittrex& unit)
         unit.pendingOrderStatus.push_back(*newOrderStatusIterator);
         newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
     }
+    KF_LOG_DEBUG(logger, "[moveNewOrderStatusToPending] (pendingOrderStatus size) " << unit.pendingOrderStatus.size());
 }
 //cys no use
 void TDEngineBittrex::set_reader_thread()
