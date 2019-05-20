@@ -76,7 +76,7 @@ public:
     int insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info = "");
     int req_position(short source);
     int cancel_order(short source, int order_id,string misc_info = "");
-    int withdraw_currency(string currency,int64_t volume,string address,string tag);
+    int withdraw_currency(short source, string currency,int64_t volume,string address,string tag);
 
     /** callback */
     /** process callback functions that match time, return number of functions that executed */

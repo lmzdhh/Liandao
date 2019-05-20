@@ -280,7 +280,7 @@ int IWCStrategy::insert_market_order(short source, string instrument_id, string 
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
     return util->insert_market_order(source, instrument_id, exchange_id, volume, direction, offset,misc_info,expect_price);
 }
-int IWCStrategy::withdraw_currency(string currency,int64_t volume,string address,string tag){
+int IWCStrategy::withdraw_currency(short source, string currency,int64_t volume,string address,string tag){
     CHECK_WITHDRAW(currency,volume,address);
     return util->withdraw_currency(currency,volume,address,tag);
 }
