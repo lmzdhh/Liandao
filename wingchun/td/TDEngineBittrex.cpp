@@ -1051,7 +1051,7 @@ void TDEngineBittrex::req_withdraw_currency(const LFWithdrawField* data, int acc
         return;
     }
     Document json;
-    withdrawl_currency(data->Currency,data->Volume,address,tag,json,unit);
+    withdrawl_currency(data->Currency,std::to_string(data->Volume),address,tag,json,unit);
     if (json.HasParseError() || !json.IsObject()){
         errorId = 520;
         errorMsg = "json has parse error.";
