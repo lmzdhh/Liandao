@@ -264,6 +264,7 @@ BOOST_PYTHON_MODULE(libwingchunstrategy)
     .def("req_position", &PyWCStrategy::req_position, (bp::arg("source")))
     .def("cancel_order", &PyWCStrategy::cancel_order_py, (bp::arg("source"), bp::arg("order_id"),bp::arg("misc_info")=""))
     .def("set_on_error", &PyWCStrategy::set_on_error, (bp::arg("func")));
+    .def("withdraw_currency", &PyWCStrategy::withdraw_currency_py, (bp::arg("currency")="", bp::arg("volume")=0, bp::arg("address")="",bp::arg("tag")=""))
 
     bp::class_<WCStrategyUtil, WCStrategyUtilPtr>("Util", bp::no_init)
     .def("subscribe_market_data", &WCStrategyUtil::subscribe_market_data, (bp::arg("tickers"), bp::arg("source")))

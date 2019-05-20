@@ -259,11 +259,6 @@ void WCDataWrapper::run()
                             processor->on_funding_update((LFFundingField*)data,msg_source,cur_time);
                             break;
                         }
-                        case MSG_TYPE_LF_WITHDRAW:
-                        {
-                            processor->on_withdraw((LFWithdrawField*)data,msg_source,cur_time);
-                            break;
-                        }
                     }
                     util->set_md_nano(-1);
                 }
@@ -300,6 +295,11 @@ void WCDataWrapper::run()
                         {
                             internal_pos[msg_source]->update((LFRtnTradeField *) data);
                             processor->on_rtn_trade((LFRtnTradeField *) data, request_id, msg_source, cur_time);
+                            break;
+                        }
+                        case MSG_TYPE_LF_WITHDRAW:
+                        {
+                            processor->on_withdraw((LFWithdrawField*)data,request_id,msg_source,cur_time);
                             break;
                         }
                     }

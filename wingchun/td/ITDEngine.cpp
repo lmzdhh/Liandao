@@ -250,7 +250,12 @@ void ITDEngine::listening()
                     }
                     case MSG_TYPE_LF_WITHDRAW:
                     {
-
+                        LFWithdrawField* withdraw = (LFWithdrawField*)fdata;
+                        req_withdraw_currency(withdraw, idx, requestId, cur_time);
+                        KF_LOG_DEBUG(logger, "[withdraw_currency] (rid)" << requestId << " (currency) " 
+                            << withdraw->Currency << " (volume) " << withdraw->Volume
+                            <<" (address) "<<withdraw->Address<<" (tag) "<<withdraw->Tag );
+                        break;
                     }
                     default:
                         KF_LOG_DEBUG(logger, "[Unexpected] frame found: (msg_type)" << msg_type << ", (name)" << name);
@@ -319,6 +324,19 @@ void ITDEngine::on_rsp_order_action(const LFOrderActionField *action, int reques
     else
     {
         writer->write_error_frame(action, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION, true, requestId, errorId, errorMsg);
+        KF_LOG_ERROR(logger, "[RspAction] fail!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
+    }
+}
+void ITDEngine::on_rsp_withdraw(const LFWithdrawField* action, int requestId,int errorId=0, const char* errorMsg=nullptr){
+    if (errorId == 0)
+    {
+        writer->write_frame(action, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW, true, requestId);
+        KF_LOG_DEBUG(logger, "[RspAction]" << " (rid)" << requestId << " (currency) " << action->Currency,
+            << " (volume) " << action->Volume << " (address) " << action->Address << " (tag) " << action->Tag);
+    }
+    else
+    {
+        writer->write_error_frame(action, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW, true, requestId, errorId, errorMsg);
         KF_LOG_ERROR(logger, "[RspAction] fail!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
     }
 }

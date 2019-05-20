@@ -154,6 +154,9 @@ public:
     /** on rsp order action, engine (on_data) */
     void on_rsp_order_action(const LFOrderActionField* action, int requestId,
                              int errorId=0, const char* errorMsg=nullptr);
+    /** on rsp withdraw, engine (on_data) */
+    void on_rsp_withdraw(const LFWithdrawField* action, int requestId,
+                             int errorId=0, const char* errorMsg=nullptr);
     /** on rsp account info, engine (on_data) */
     void on_rsp_account(const LFRspAccountField* account, bool isLast, int requestId,
                         int errorId=0, const char* errorMsg=nullptr);
@@ -161,6 +164,7 @@ public:
     void on_rtn_order(const LFRtnOrderField* rtn_order);
     /** on rtn trade, engine (on_data) */
     void on_rtn_trade(const LFRtnTradeField* rtn_trade);
+    void 
     /* check is_post_only from misc_info in LFInputOrderField*/
     bool is_post_only(const LFInputOrderField* data);
 };

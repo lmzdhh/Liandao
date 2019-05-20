@@ -159,6 +159,10 @@ context_usage = \
         ('log_fatal', lambda strategy: lambda x: strategy.log_fatal(str(x)),
          'print in log & console with FATAL tag',
          (None, [('str', 'msg')])),
+        # withdraw
+        ('withdraw_currency', lambda strategy: strategy.withdraw_currency,
+         'withdraw currency',
+         ('int', [('str', 'currency'), ('int', 'volume'), ('str', 'address'),('str', 'tag')])),
     ]
 
 CONTEXT_COMMENT = 'wrap system-defined functions and internal data'
