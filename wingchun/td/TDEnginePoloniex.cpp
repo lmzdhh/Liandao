@@ -419,11 +419,12 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	rtn_order.TimeCondition = data->TimeCondition;
 	rtn_order.OrderPriceType = data->OrderPriceType;
 
-	mutex_order_and_trade->lock();
 	on_rtn_order(&rtn_order);
-	mutex_order_and_trade->unlock();
 
-	map_order.insert(std::make_pair(order_ref, rtn_order));//插入map，方便后续订单状态跟踪
+	std::unique_lock<std::mutex> otlock(*mutex_order_and_trade);
+	map_order.insert(std::make_pair(order_ref, rtn_order));
+	otlock.unlock()
+	//插入map，方便后续订单状态跟踪
 	/*//后续跟踪处理trade
 	std::thread rest_thread(updating_order_status,&rtn_order);
 	//rest_thread.join();
@@ -871,7 +872,7 @@ void TDEnginePoloniex::updating_order_status()
 		if (map_order.size() == 0)//目前无订单需要更新状态
 		{
 			//KF_LOG_INFO(logger, "[updating_order_status] thread idle for some seconds just for test");
-			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds*5));//日后是要被注释掉的可怜语句
+			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));//日后是要被注释掉的可怜语句
 		}
 		else
 		{
@@ -917,30 +918,23 @@ void TDEnginePoloniex::updating_order_status()
 						string price = to_string(stod(ob["rate"].get<string>()) * scale_offset);
 						rtn_trade.Price = stoll(price);
 						string volume = to_string(stod(ob["amount"].get<string>()) * scale_offset);
-						rtn_trade.Volume = stoll(volume);
-						mutex_order_and_trade->lock();
-						on_rtn_trade(&rtn_trade);
-						mutex_order_and_trade->unlock();
+						rtn_trade.Volume = stoll(volume);						
+						on_rtn_trade(&rtn_trade);					
 						rtn_order.VolumeTraded += rtn_trade.Volume;
 						rtn_order.VolumeTotal -= rtn_trade.Volume;
 						if (rtn_order.VolumeTotal <= 0)//判断数量
 						{
 							rtn_order.OrderStatus = LF_CHAR_AllTraded;//已经完全成交了
 							order_info.is_open = false;
-							//该订单处理结束
-							mutex_order_and_trade->lock();
-							on_rtn_order(&rtn_order);//TODO:给它加锁
-							mutex_order_and_trade->unlock();
-							
+							//该订单处理结束							
+							on_rtn_order(&rtn_order);														
 							break;
 						}
 						else
 						{
 							rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
 						}
-						mutex_order_and_trade->lock();
 						on_rtn_order(&rtn_order);
-						mutex_order_and_trade->unlock();
 					}
 					no--;
 				}//更新完所有trade了，判断这个单是否关闭，若是关闭了，则删除这个元素
@@ -958,11 +952,9 @@ void TDEnginePoloniex::updating_order_status()
 				{
 					if (rtn_order.OrderStatus == LF_CHAR_Canceled)//无新的成交更新,这是一个撤单
 					{
-						mutex_order_and_trade->lock();
 						on_rtn_order(&rtn_order);//TODO:给它加锁
-						mutex_order_and_trade->unlock();
 					}
-
+					std::unique_lock<std::mutex> otlock(*mutex_order_and_trade);
 					map_order.erase(order_ref);//删除这个元素，它已经处理完了
 				}
 				
