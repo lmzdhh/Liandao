@@ -108,7 +108,7 @@ private:
 	string url_public_point;
     ThreadPtr rest_thread;
 
-	map<OrderInfo, LFRtnOrderField> map_order;
+	map<string, LFRtnOrderField> map_order;
 
     std::mutex* mutex_order_and_trade = nullptr;
     std::mutex* mutex_response_order_status = nullptr;

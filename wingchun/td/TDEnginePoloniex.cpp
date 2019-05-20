@@ -37,6 +37,7 @@ using std::string;
 using std::to_string;
 using std::stod;
 using std::stoi;
+using std::stoll;
 using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
@@ -421,7 +422,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	on_rtn_order(&rtn_order);
 	mutex_order_and_trade->unlock();
 
-	map_order.insert(std::make_pair(order_info, rtn_order));//插入map，方便后续订单状态跟踪
+	map_order.insert(std::make_pair(order_ref, rtn_order));//插入map，方便后续订单状态跟踪
 	/*//后续跟踪处理trade
 	std::thread rest_thread(updating_order_status,&rtn_order);
 	//rest_thread.join();
@@ -959,12 +960,13 @@ void TDEnginePoloniex::updating_order_status(LFRtnOrderField* data)
 void TDEnginePoloniex::updating_order_status()
 {
 	KF_LOG_INFO(logger, "[updating_order_status] thread starts");
+	AccountUnitPoloniex& unit = account_units[0];
 	cpr::Response r;
 	LFRtnTradeField rtn_trade;
-	map<OrderInfo, LFRtnOrderField>::iterator it=map_order.begin();//循环更新每一个订单的状态
+	map<string, LFRtnOrderField>::iterator it=map_order.begin();//循环更新每一个订单的状态
 	while (true)//这将是个死循环，时刻准备更新订单状态
 	{
-		if (map_order.size == 0)//目前无订单需要更新状态
+		if (map_order.size() == 0)//目前无订单需要更新状态
 		{
 			KF_LOG_INFO(logger, "[updating_order_status] thread idle for some seconds just for test");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds*5));//日后是要被注释掉的可怜语句
@@ -972,7 +974,15 @@ void TDEnginePoloniex::updating_order_status()
 		else
 		{
 			LFRtnOrderField &rtn_order=it->second;//获得rtn order
-			OrderInfo& order_info = it->first;
+			string order_ref = it->first;
+			if (!unit.map_new_order.count(order_ref))
+			{
+				KF_LOG_ERROR(logger, "[updating_order_status] no order refed by order_ref" << order_ref);
+				map_order.erase(order_ref);
+				continue;
+			}
+			OrderInfo& order_info = unit.map_new_order[order_ref];
+
 			memset(&rtn_trade, 0, sizeof(LFRtnTradeField));//填充rtn trade的各个成员
 			strcpy(rtn_trade.ExchangeID, "poloniex");
 			strncpy(rtn_trade.UserID, rtn_order.UserID, 16);
@@ -1000,6 +1010,7 @@ void TDEnginePoloniex::updating_order_status()
 					if (tradeID > tradeID_last)//如果不是更新的trade就放弃
 					{
 						tradeID_last = tradeID;
+						order_info.tradeID = tradeID;
 						strcpy(rtn_trade.TradeID, std::to_string(tradeID).c_str());
 						price = to_string(stod(ob["rate"].get<string>()) * scale_offset);
 						rtn_trade.Price = stoll(price);
@@ -1049,7 +1060,7 @@ void TDEnginePoloniex::updating_order_status()
 						mutex_order_and_trade->unlock();
 					}
 
-					map_order.erase(order_info);//删除这个元素，它已经处理完了
+					map_order.erase(order_ref);//删除这个元素，它已经处理完了
 				}
 				
 			}//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
