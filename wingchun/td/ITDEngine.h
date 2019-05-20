@@ -164,7 +164,6 @@ public:
     void on_rtn_order(const LFRtnOrderField* rtn_order);
     /** on rtn trade, engine (on_data) */
     void on_rtn_trade(const LFRtnTradeField* rtn_trade);
-    void 
     /* check is_post_only from misc_info in LFInputOrderField*/
     bool is_post_only(const LFInputOrderField* data);
 };

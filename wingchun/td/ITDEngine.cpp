@@ -327,11 +327,11 @@ void ITDEngine::on_rsp_order_action(const LFOrderActionField *action, int reques
         KF_LOG_ERROR(logger, "[RspAction] fail!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
     }
 }
-void ITDEngine::on_rsp_withdraw(const LFWithdrawField* action, int requestId,int errorId=0, const char* errorMsg=nullptr){
+void ITDEngine::on_rsp_withdraw(const LFWithdrawField* action, int requestId,int errorId, const char* errorMsg){
     if (errorId == 0)
     {
         writer->write_frame(action, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW, true, requestId);
-        KF_LOG_DEBUG(logger, "[RspAction]" << " (rid)" << requestId << " (currency) " << action->Currency,
+        KF_LOG_DEBUG(logger, "[RspAction]" << " (rid)" << requestId << " (currency) " << action->Currency
             << " (volume) " << action->Volume << " (address) " << action->Address << " (tag) " << action->Tag);
     }
     else
