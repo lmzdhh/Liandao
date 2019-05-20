@@ -1066,7 +1066,7 @@ void TDEngineBittrex::req_withdraw_currency(const LFWithdrawField* data, int acc
         string uuid = result["uuid"].GetString();
         KF_LOG_INFO(logger, "[withdrawl_currency] (uuid) " << uuid);
         KF_LOG_INFO(logger, "[withdrawl_currency] withdrawl success.");
-        on_rsp_withdraw(data,request_id,errorId,errorMsg)
+        on_rsp_withdraw(data,request_id,errorId,errorMsg);
     }else if(json.HasMember("success") && !json["success"].GetBool()){
         
         string message = json["message"].GetString();
