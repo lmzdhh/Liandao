@@ -49,16 +49,18 @@
 		},
 		"bitfinex": {
 			"book_depth_count": 25,
+            "level_threshold":5,
 			"trade_count": 10,
-			"whiteLists": {
+			"whiteLists_websocket": {
 				"strategy_coinpair(base_quote)": "exchange_coinpair",
-				"eth_btc": "tETHBTC",
-				"bch_btc": "tBCHBTC",
-				"ltc_btc": "tLTCBTC",
-				"bch_eth": "tBCHETH",
-				"ltc_eth": "tLTCETH"
-			},
-			"rest_get_interval_ms": 500
+				"bch_usdt": "tBABUST"
+            },
+            "whiteLists_rest": {
+                "strategy_coinpair(base_quote)": "exchange_coinpair",
+                "bch_usdt": "babust"
+            },
+            "rest_get_interval_ms": 500,
+            "refresh_normal_check_book_s":10
 		},
 		"bitmex": {
 			"book_depth_count": 5,
@@ -148,23 +150,10 @@
 			"trade_count":10,
 			"whiteLists":
 			{
-				"eth_btc":"BTC_ETH"，
+				"strategy_coinpair(base_quote)": "quote;base",
+				"eth_btc":"BTC_ETH"
 			},
 			"rest_get_interval_ms": 500
-		}
-		"kucoin":
-		{
-			"book_depth_count": 5,
-			"rest_get_interval_ms": 500,
-			"rest_try_count":5,
-			"whiteLists": {
-				"btc_usdt": "BTC-USDT",
-				"eth_usdt": "ETH-USDT",
-				"vet_usdt": "VET-USDT",
-				"eth_btc": "ETH-BTC",
-				"vet_btc": "VET-BTC",
-				"vet_eth": "VET-ETH"
-			}
 		}
 	},
 	"td": {
@@ -175,8 +164,8 @@
 				{
 				"info":
 				{
-					"APIKey": "6nIg0pkRWfb0JhFtUsO9bM1GTpTYfgJs",
-					"SecretKey": "kQ4eMfse0TKsCe838iP_6AAw7gZNMpUh",
+					"APIKey": "GTpTYfgJs",
+					"SecretKey": "NMpUh",
 					"baseUrl": "api.staging.daybit.com",
 							"path":"/v1/user_api_socket/websocket",
 					"sys_id":1,
@@ -220,8 +209,8 @@
 			"name": "td_probit",
 			"accounts": [{
 				"info": {
-					"APIKey": "D81508AB2EE22C68",
-					"SecretKey": "412D577DF51116A653B56A2AD4A9",
+					"APIKey": "C68",
+					"SecretKey": "56A2AD4A9",
 					"passphrase": "EFF9EBF0",
 					"baseUrl": "https://demo-api.probit.com",
 					"acountUrl": "https://demo-accounts.probit.com",
@@ -254,26 +243,16 @@
 			}
 		},
 		"binance": {
-      "accounts": [{
-        "info": {
-            "interfaces": "10.0.0.22-10.0.0.193-10.0.0.104",
-            "interface_timeout_ms": 30000,
-            "interface_switch": 1,
-            "users":[
-              {
-                "APIKey": "nNyyrOmKNk9KPp2c6XjxNNhgt5RwkR3W5U0DuooBISM5LWHXlx2zWVuCPm11wYxo",
-                "SecretKey": "SYE2vviOXHutnDhua42txo39XXBUyq8TxaKzT6oF8IokfKXSfXnOhDqzi79FuJ7G"
-              },
-              {
-                "APIKey": "5SxLPrucIKa42XghQbptPNjbHei1yFral8BAfJ1fpVL5sH1FiD42pobgyCC9LDlx",
-                "SecretKey": "0vUJKnuXRAggLtvNaYysumjZYNxOLNWC20pWETxPNMWK5Us3MCEtsffENntSSF73"
-              }
-          ],
+			"accounts": [{
+				"info": {
+					"interfaces": "10.0.0.22-10.0.0.193-10.0.0.104",
+					"interface_timeout_ms": 30000,
+					"interface_switch": 1,
+					"APIKey": "your-api-key",
+					"SecretKey": "your-secret-key",
 					"whiteLists": {
 						"etc_eth": "ETCETH",
-						"trx_btc": "TRXBTC",
-						"eos_btc":"EOSBTC",
-            "btt_btc":"BTTBTC"
+						"trx_btc": "TRXBTC"
 					},
 					"positionWhiteLists": {
 						"ETC": "ETC",
@@ -289,9 +268,7 @@
           "order_count_per_second":5,
           "request_weight_per_minute":1000,
           "prohibit_order_ms":10000,
-          "default_429_rest_interval_ms":1000,
-          "UFR_limit":0.998,
-          "UFR_order_lower_limit":300
+          "default_429_rest_interval_ms":1000
 				},
 				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
 				"is_default": true
@@ -315,8 +292,8 @@
 		"coinmex": {
 			"accounts": [{
 				"info": {
-					"APIKey": "cmx-ee744311de9a1f52e3e75837f0847dfe",
-					"SecretKey": "99369bb84b9916624236b06a15396dd27b3b1c16f0a8c7cd55dfa72235fb6b23",
+					"APIKey": "e3e75837f0847dfe",
+					"SecretKey": "a15396dd27b3b1c16f0a8c7cd55dfa72235fb6b23",
 					"passphrase": "qGr547re3",
 					"baseUrl": "https://www.coinmex.com",
 					"whiteLists": {
@@ -485,8 +462,8 @@
 		"bitmex": {
 			"accounts": [{
 				"info": {
-					"APIKey": "fHDwOC4W8PZezvNHkibrdKkY",
-					"SecretKey": "o7ihEtQth_2kEF_fRDT7UkOdEO3PFESWVarwy6S4Ljirz9Z2",
+					"APIKey": "NHkibrdKkY",
+					"SecretKey": "PFESWVarwy6S4Ljirz9Z2",
 					"passphrase": "your-passphrase",
 					"baseUrl": "https://www.bitmex.com",
 					"whiteLists": {
@@ -561,8 +538,8 @@
 		"oceanex": {
 			"accounts": [{
 				"info": {
-					"APIKey": "ID6EFBCC1AD7",
-					"SecretKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEA458porjF1U171LWTBjl5RU9qJn7rebcsaUPWERPPXooybNnu\nleluEEzmXRXKtIcPNUCfRCfoSgfTwDl1s/t3QaPh4BTjEzWMQCU27xMCmXZodpml\ncFVWVkLcRypHJmVg1o6JhOJZq0CEhcZBovnhHi6ucD192rJRL8oImjKy6JpgSFZ+\nLadJvcF/eEcj5muWObQNI7wBPb72DsEGA2VwPLx5Xv+HadgUo/n73dBHAB0/HvaX\npcDhGB4c/E7NkuAZdssgbNwqPyUVgGedNL7DseGHC0S/9HBjr5/LflqPAIGMn98a\nbYDRYgT8lmFBHM1dZPjkUlPG8RLFOpwv89klQQIDAQABAoIBAA5gH/YJ61ykTxzI\n9ucevBz3fgG+ZErEmcZwJVXgxWj4G2UqglnvaycWZDoexTWPjhNT6Hsadh4uzl3G\ngzuBty9rFTnct9afvCLU9to0fiaJBuHupDcq/I/oGxdXgTTYlDwYtnCxBu683WHB\neqW7WE9arWOjTo6AUoZNISvz5b6w2sJMH7gHbO48POs9V9ekyKyFFk4NHn3MyT4d\nZLTlbqYFn0J83yamwKzeqIUqPzN2qrUxYXlQe2fzkmu+LEkQ37JmfZzczPaxJJiL\nd6t+Qn0K18o5hXpMENqm+aPTu5zvS75mZIH/rVcRbcSLJPlpjjGrq5569lF0sntN\nCsiLwJ0CgYEA9q8EldEKUGhMrP8GcdgF87n9aG5v6ZEnfDHmPEJW6ca2J2SeWnS/\nbYNhXpmMmPzKDVBZEw6jldfQw8Wc5A7ec3qgLqr9xAjjcb7P4yTJpuaOoFx+Nehz\nlTs2Dld9AO8QL0IM9pLEvW6/invlEDterukizMAXHFDphmyxapJlHMsCgYEA7DfZ\nuxPeKsYDoDiqFYNRY9NJ297VrTvxxoB447aoQJp/9o5RfOXjEeesQju+TphksA2S\n5nT5v0GaNLPIPQ+ny0OX/H9ai1qOYOo5g9JbySdGer/D5egExp38vWlU9h8eElxE\nIvbdhKhyPFtfNnl9jNKu3F7tQz9NTuK6dd29cKMCgYA8Wzgw+9OdNtfD4CYQhr12\nE8S334WMTVKu5XqitcyUKGV7H/hKw5Pu1J1nSwSGjhtVxJn2urc1u3c930Ty29x7\nvr4gjP/IDjCwLPKqbd7U8kZlYBwVTomxMqqYObnBF70LAwsu7VwryUQeOxAht5UE\nENDN7hX5fKaWmFOUcrtAnwKBgAtfKPEzpKdkfvowoCeG+d0XZ9/Y22qKjzoiJy+3\nNGRfy7c/5LZhjsvm3kkV/TRla7t5+89yZC+L5fORkBs4bLiBWYjDTMWWp3IM9JXf\nA6IsbN0t7C1ePRSeuHMZ5ggvOVBi9rjEL6faQB2dvHiv4pZr8hUT0NJC8uLQUW+p\nLByHAoGASw/by1ukxLNHR711jCBgJMpAJZtYT8D6uNSPSaC8xwpS5eeTWIiANU3O\n5HepCIpv9aT8PRkv5V8iLa9BCsSUHnTgTxFYzzqZAl7nBRB1oBeFy/WR2zq+Y46y\nco2fTziiNA7RbZxTM7sX/667ZAVUgEXGdU5ZhKpuHu2CwE+pUQQ=\n-----END RSA PRIVATE KEY-----\n",
+					"APIKey": "C1AD7",
+					"SecretKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAcZBovnhHi6ucD192rJRL8oImjKy6JpgSFZ+\nLadJvcF/eEcj5muWObQNI7wBPb72DsEGA2VwPLx5Xv+HadgUo/n73dBHAB0/HvaX\npcDhGB4c/E7NkuAZdssgbNwqPyUVgGedNL7DseGHC0S/9HBjr5/LflqPAIGMn98a\nbYDRYgT8lmFBHM1dZPjkUlPG8RLFOpwv89klQQIDAQABAoIBAA5gH/YJ61ykTxzI\n9ucevBz3fgG+ZErEmcZwJVXgxWj4G2UqglnvaycWZDoexTWPjhNT6Hsadh4uzl3G\ngzuBty9rFTnct9afvCLU9to0fiaJBuHupDcq/I/oGxdXgTTYlDwYtnCxBu683WHB\neqW7WE9arWOjTo6AUoZNISvz5b6w2sJMH7gHbO48POs9V9ekyKyFFk4NHn3MyT4d\nZLTlbqYFn0J83yamwKzeqIUqPzN2qrUxYXlQe2fzkmu+LEkQ37JmfZzczPaxJJiL\nd6t+Qn0K18o5hXpMENqm+aPTu5zvS75mZIH/rVcRbcSLJPlpjjGrq5569lF0sntN\nCsiLwJ0CgYEA9q8EldEKUGhMrP8GcdgF87n9aG5v6ZEnfDHmPEJW6ca2J2SeWnS/\nbYNhXpmMmPzKDVBZEw6jldfQw8Wc5A7ec3qgLqr9xAjjcb7P4yTJpuaOoFx+Nehz\nlTs2Dld9AO8QL0IM9pLEvW6/invlEDterukizMAXHFDphmyxapJlHMsCgYEA7DfZ\nuxPeKsYDoDiqFYNRY9NJ297VrTvxxoB447aoQJp/9o5RfOXjEeesQju+TphksA2S\n5nT5v0GaNLPIPQ+ny0OX/H9ai1qOYOo5g9JbySdGer/D5egExp38vWlU9h8eElxE\nIvbdhKhyPFtfNnl9jNKu3F7tQz9NTuK6dd29cKMCgYA8Wzgw+9OdNtfD4CYQhr12\nE8S334WMTVKu5XqitcyUKGV7H/hKw5Pu1J1nSwSGjhtVxJn2urc1u3c930Ty29x7\nvr4gjP/IDjCwLPKqbd7U8kZlYBwVTomxMqqYObnBF70LAwsu7VwryUQeOxAht5UE\nENDN7hX5fKaWmFOUcrtAnwKBgAtfKPEzpKdkfvowoCeG+d0XZ9/Y22qKjzoiJy+3\nNGRfy7c/5LZhjsvm3kkV/TRla7t5+89yZC+L5fORkBs4bLiBWYjDTMWWp3IM9JXf\nA6IsbN0t7C1ePRSeuHMZ5ggvOVBi9rjEL6faQB2dvHiv4pZr8hUT0NJC8uLQUW+p\nLByHAoGASw/by1ukxLNHR711jCBgJMpAJZtYT8D6uNSPSaC8xwpS5eeTWIiANU3O\n5Heq+Y46y\nco2fTziiNA7RbZxTM7sX/667ZAVUgEXGdU5ZhKpuHu2CwE+pUQQ=\n-----END RSA PRIVATE KEY-----\n",
 					"passphrase": "your-passphrase",
 					"baseUrl": "https://api.oceanex.pro/v1",
 					"whiteLists": {
@@ -610,8 +587,8 @@
 		"oceanexb": {
 			"accounts": [{
 				"info": {
-					"APIKey": "ID6EFBCC1AD7",
-					"SecretKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEA458porjF1U171LWTBjl5RU9qJn7rebcsaUPWERPPXooybNnu\nleluEEzmXRXKtIcPNUCfRCfoSgfTwDl1s/t3QaPh4BTjEzWMQCU27xMCmXZodpml\ncFVWVkLcRypHJmVg1o6JhOJZq0CEhcZBovnhHi6ucD192rJRL8oImjKy6JpgSFZ+\nLadJvcF/eEcj5muWObQNI7wBPb72DsEGA2VwPLx5Xv+HadgUo/n73dBHAB0/HvaX\npcDhGB4c/E7NkuAZdssgbNwqPyUVgGedNL7DseGHC0S/9HBjr5/LflqPAIGMn98a\nbYDRYgT8lmFBHM1dZPjkUlPG8RLFOpwv89klQQIDAQABAoIBAA5gH/YJ61ykTxzI\n9ucevBz3fgG+ZErEmcZwJVXgxWj4G2UqglnvaycWZDoexTWPjhNT6Hsadh4uzl3G\ngzuBty9rFTnct9afvCLU9to0fiaJBuHupDcq/I/oGxdXgTTYlDwYtnCxBu683WHB\neqW7WE9arWOjTo6AUoZNISvz5b6w2sJMH7gHbO48POs9V9ekyKyFFk4NHn3MyT4d\nZLTlbqYFn0J83yamwKzeqIUqPzN2qrUxYXlQe2fzkmu+LEkQ37JmfZzczPaxJJiL\nd6t+Qn0K18o5hXpMENqm+aPTu5zvS75mZIH/rVcRbcSLJPlpjjGrq5569lF0sntN\nCsiLwJ0CgYEA9q8EldEKUGhMrP8GcdgF87n9aG5v6ZEnfDHmPEJW6ca2J2SeWnS/\nbYNhXpmMmPzKDVBZEw6jldfQw8Wc5A7ec3qgLqr9xAjjcb7P4yTJpuaOoFx+Nehz\nlTs2Dld9AO8QL0IM9pLEvW6/invlEDterukizMAXHFDphmyxapJlHMsCgYEA7DfZ\nuxPeKsYDoDiqFYNRY9NJ297VrTvxxoB447aoQJp/9o5RfOXjEeesQju+TphksA2S\n5nT5v0GaNLPIPQ+ny0OX/H9ai1qOYOo5g9JbySdGer/D5egExp38vWlU9h8eElxE\nIvbdhKhyPFtfNnl9jNKu3F7tQz9NTuK6dd29cKMCgYA8Wzgw+9OdNtfD4CYQhr12\nE8S334WMTVKu5XqitcyUKGV7H/hKw5Pu1J1nSwSGjhtVxJn2urc1u3c930Ty29x7\nvr4gjP/IDjCwLPKqbd7U8kZlYBwVTomxMqqYObnBF70LAwsu7VwryUQeOxAht5UE\nENDN7hX5fKaWmFOUcrtAnwKBgAtfKPEzpKdkfvowoCeG+d0XZ9/Y22qKjzoiJy+3\nNGRfy7c/5LZhjsvm3kkV/TRla7t5+89yZC+L5fORkBs4bLiBWYjDTMWWp3IM9JXf\nA6IsbN0t7C1ePRSeuHMZ5ggvOVBi9rjEL6faQB2dvHiv4pZr8hUT0NJC8uLQUW+p\nLByHAoGASw/by1ukxLNHR711jCBgJMpAJZtYT8D6uNSPSaC8xwpS5eeTWIiANU3O\n5HepCIpv9aT8PRkv5V8iLa9BCsSUHnTgTxFYzzqZAl7nBRB1oBeFy/WR2zq+Y46y\nco2fTziiNA7RbZxTM7sX/667ZAVUgEXGdU5ZhKpuHu2CwE+pUQQ=\n-----END RSA PRIVATE KEY-----\n",
+					"APIKey": "IFBCC1AD7",
+					"SecretKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEA4cRypHJmVg1o6JhOJZq0CEhcZBovnhHi6ucD192rJRL8oImjKy6JpgSFZ+\nLadJvcF/eEcj5muWObQNI7wBPb72DsEGA2VwPLx5Xv+HadgUo/n73dBHAB0/HvaX\npcDhGB4c/E7NkuAZdssgbNwqPyUVgGedNL7DseGHC0S/9HBjr5/LflqPAIGMn98a\nbYDRYgT8lmFBHM1dZPjkUlPG8RLFOpwv89klQQIDAQABAoIBAA5gH/YJ61ykTxzI\n9ucevBz3fgG+ZErEmcZwJVXgxWj4G2UqglnvaycWZDoexTWPjhNT6Hsadh4uzl3G\ngzuBty9rFTnct9afvCLU9to0fiaJBuHupDcq/I/oGxdXgTTYlDwYtnCxBu683WHB\neqW7WE9arWOjTo6AUoZNISvz5b6w2sJMH7gHbO48POs9V9ekyKyFFk4NHn3MyT4d\nZLTlbqYFn0J83yamwKzeqIUqPzN2qrUxYXlQe2fzkmu+LEkQ37JmfZzczPaxJJiL\nd6t+Qn0K18o5hXpMENqm+aPTu5zvS75mZIH/rVcRbcSLJPlpjjGrq5569lF0sntN\nCsiLwJ0CgYEA9q8EldEKUGhMrP8GcdgF87n9aG5v6ZEnfDHmPEJW6ca2J2SeWnS/\nbYNhXpmMmPzKDVBZEw6jldfQw8Wc5A7ec3qgLqr9xAjjcb7P4yTJpuaOoFx+Nehz\nlTs2Dld9AO8QL0IM9pLEvW6/invlEDterukizMAXHFDphmyxapJlHMsCgYEA7DfZ\nuxPeKsYDoDiqFYNRY9NJ297VrTvxxoB447aoQJp/9o5RfOXjEeesQju+TphksA2S\n5nT5v0GaNLPIPQ+ny0OX/H9ai1qOYOo5g9JbySdGer/D5egExp38vWlU9h8eElxE\nIvbdhKhyPFtfNnl9jNKu3F7tQz9NTuK6dd29cKMCgYA8Wzgw+9OdNtfD4CYQhr12\nE8S334WMTVKu5XqitcyUKGV7H/hKw5Pu1J1nSwSGjhtVxJn2urc1u3c930Ty29x7\nvr4gjP/IDjCwLPKqbd7U8kZlYBwVTomxMqqYObnBF70LAwsu7VwryUQeOxAht5UE\nENDN7hX5fKaWmFOUcrtAnwKBgAtfKPEzpKdkfvowoCeG+d0XZ9/Y22qKjzoiJy+3\nNGRfy7c/5LZhjsvm3kkV/TRla7t5+89yZC+L5fORkBs4bLiBWYjDTMWWp3IM9JXf\nA6IsbN0t7C1ePRSeuHMZ5ggvOVBi9rjEL6faQB2dvHiv4pZr8hUT0NJC8uLQUW+p\nLByHAoGASw/by1ukxLNHR711jCBgJMpAJZtYT8D6uNSPSaC8xwpS5eeTWIiANU3O\n5HepCIpv9aT8PRkv5V8iLa9BCsSUHnTgTxFYzzqZAl7nBRB1oBeFy/WR2zq+Y46y\nco2fTziiNA7RbZxTM7sX/667ZAVUgEXGdU5ZhKpuHu2CwE+pUQQ=\n-----END RSA PRIVATE KEY-----\n",
 					"passphrase": "your-passphrase",
 					"baseUrl": "https://api.oceanex.pro/v1",
 					"whiteLists": {
@@ -667,13 +644,12 @@
                         "whiteLists": {
                             "strategy_coinpair(base_quote)": "exchange_coinpair",
                             "btc_usdt": "USDT_BTC",
-                            "fx_btc_jpy": "FX_BTC_JPY",
                             "eth_btc": "BTC_ETH"
                         },
                         "positionWhiteLists": {
-                          "ETC": "ETC",
-                          "BTC": "BTC",
-                          "USDT": "USDT"
+                            "ETC": "ETC",
+                            "BTC": "BTC",
+                            "USDT":"USDT"
                         },
                         "rest_get_interval_ms": 2000
                 },
@@ -695,84 +671,6 @@
                     },
                     "future_exotic": null
                 }
-
-		},
-		"kucoin": {
-			"accounts": [{
-				"info": {
-					"APIKey": "5c8a6f9f38300c0cdc2d58f2",
-					"SecretKey": "34d0a97a-5eb6-40e6-8090-b19d6b571c2d",
-					"passphrase": "passphrase",
-					"baseUrl": "https://api.kucoin.com",
-					"whiteLists": {
-						"btc_usdt": "BTC-USDT",
-						"eth_usdt": "ETH-USDT",
-						"vet_usdt": "VET-USDT",
-						"eth_btc": "ETH-BTC",
-						"vet_btc": "VET-BTC",
-						"vet_eth": "VET-ETH"
-					},
-					"positionWhiteLists": {
-						"ETC": "ETC",
-						"BTC": "BTC",
-						"ETH": "ETH"
-					},
-					"rest_get_interval_ms": 2000
-				},
-				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
-				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-		},
-		"huobi": {
-			"accounts": [{
-				"info": {
-					"APIKey": "1c574897-588985ef-4b53184b-69e48",
-					"SecretKey": "6fae0be0-d8985c81-fe49a4c1-3f47d",
-					"passphrase": "your-passphrase",
-					"baseUrl": "https://api.huobi.pro",
-					"whiteLists": {
-						"strategy_coinpair(base_quote)": "exchange_coinpair",
-						"btc_usd": "btcusdt",
-				    "eth_usd": "etcusdt",
-						"eos_btc": "eosbtc",
-						"hit_btc": "hitbtc",
-						"edu_btc": "edubtc"
-					},
-					"is_margin": false,
-					"rest_get_interval_ms": 2000
-				},
-				"clients": ["YOUR_STRATEGY1", "YOUR_STRATEGY2", "YOUR_STRATEGY3"],
-				"is_default": true
-			}],
-			"FeeSetup": {
-				"stock": {
-					"type": "amount",
-					"fee_multi": 0.0003,
-					"ctr_multi": 1,
-					"min_fee": 0
-				},
-				"future": {
-					"type": "amount",
-					"fee_multi": [0.000023, 0.00069, 0.000023],
-					"ctr_multi": 200,
-					"min_fee": 0
-				},
-				"future_exotic": null
-			}
-		}
+        }
 	}
 }
