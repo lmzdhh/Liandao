@@ -223,15 +223,22 @@ void MDEngineBitfinex::load(const json & j_config)
 	debug_print(websocketSubscribeJsonString);
 
 	//display usage:
-	if (coinPairWhiteList.Size() == 0) {
-		KF_LOG_ERROR(logger, "MDEngineBitfinex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
-		KF_LOG_ERROR(logger, "\"whiteLists\":{");
+	if (coinPairWhiteList_websocket.Size() == 0) {
+		KF_LOG_ERROR(logger, "MDEngineBitfinex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists_websocket in kungfu.json like this :");
+		KF_LOG_ERROR(logger, "\"whiteLists_websocket\":{");
 		KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
 		KF_LOG_ERROR(logger, "    \"btc_usdt\": \"tBTCUSDT\",");
 		KF_LOG_ERROR(logger, "     \"etc_eth\": \"tETCETH\"");
 		KF_LOG_ERROR(logger, "},");
 	}
-
+	if (coinPairWhiteList_rest.Size() == 0) {
+		KF_LOG_ERROR(logger, "MDEngineBitfinex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists_rest in kungfu.json like this :");
+		KF_LOG_ERROR(logger, "\"whiteLists_rest\":{");
+		KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
+		KF_LOG_ERROR(logger, "    \"btc_usdt\": \"tBTCUSDT\",");
+		KF_LOG_ERROR(logger, "     \"etc_eth\": \"tETCETH\"");
+		KF_LOG_ERROR(logger, "},");
+	}
 	KF_LOG_INFO(logger, "MDEngineBitfinex::load:  book_depth_count: "
 		<< book_depth_count << " trade_count: " << trade_count << " rest_get_interval_ms: " << rest_get_interval_ms);
 }
@@ -239,8 +246,8 @@ void MDEngineBitfinex::load(const json & j_config)
 void MDEngineBitfinex::makeWebsocketSubscribeJsonString()
 {
 	std::unordered_map<std::string, std::string>::iterator map_itr;
-	map_itr = coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
-	while (map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
+	map_itr = coinPairWhiteList_webosocket.GetKeyIsStrategyCoinpairWhiteList().begin();
+	while (map_itr != coinPairWhiteList_webosocket.GetKeyIsStrategyCoinpairWhiteList().end()) {
 		KF_LOG_DEBUG(logger, "[makeWebsocketSubscribeJsonString] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
 
 		std::string jsonBookString = createBookJsonString(map_itr->second);
@@ -616,7 +623,7 @@ void MDEngineBitfinex::onTrade(SubscribeChannel & channel, Document & json)
 {
 	KF_LOG_INFO(logger, "MDEngineBitfinex::onTrade: (symbol) " << channel.exchange_coinpair);
 
-	std::string ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
+	std::string ticker = coinPairWhiteList_webosocket.GetKeyByValue(channel.exchange_coinpair);
 	if (ticker.length() == 0) {
 		return;
 	}
@@ -730,7 +737,7 @@ void MDEngineBitfinex::onBook(SubscribeChannel & channel, Document & json)
 {
 	KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (symbol) " << channel.exchange_coinpair);
 
-	std::string ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
+	std::string ticker = coinPairWhiteList_webosocket.GetKeyByValue(channel.exchange_coinpair);
 	if (ticker.length() == 0) {
 		KF_LOG_DEBUG(logger, "MDEngineBitfinex::onBook: (ticker.length==0) " << ticker);
 		return;
