@@ -21,22 +21,22 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 '''
 
 def initialize(context):
-    context.add_md(source=SOURCE.HUOBI)
+    context.add_md(source=SOURCE.BITTREX)
     context.ticker = 'USDT'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
     context.order_rid = -1
     context.cancel_id = -1
-    context.add_td(source=SOURCE.HUOBI)
-    context.subscribe(tickers=[context.ticker], source=SOURCE.HUOBI)
+    context.add_td(source=SOURCE.BITTREX)
+    context.subscribe(tickers=[context.ticker], source=SOURCE.BITTREX)
 
 def on_pos(context, pos_handler, request_id, source, rcv_time):
     print("on_pos,", pos_handler, request_id, source, rcv_time)
     if request_id == -1:
         if pos_handler is None:
             print '-- got no pos in initial, so req pos --'
-            context.req_pos(source=SOURCE.HUOBI)
+            context.req_pos(source=SOURCE.BITTREX)
             context.pos_set = False
             return
         else:
@@ -48,7 +48,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.sell_price = 20 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
-                context.order_rid = context.withdraw_currency(source=SOURCE.HUOBI,
+                context.order_rid = context.withdraw_currency(source=SOURCE.BITTREX,
                                                                currency="USDT",
                                                                volume=10,
                                                                address="1DEKiiXaoQv9abK5PCCwHFPg86XVsm2cpi",
