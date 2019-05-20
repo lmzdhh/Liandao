@@ -263,13 +263,13 @@ bool IWCStrategy::td_is_connected(short source) const
 
 #define CHECK_WITHDRAW(currency,volume,address) \
     {\
-        if(currency == null || currency == ""){\
+        if(currency == ""){\
             return -1; \
         } \
         if(volume <= 0){ \
             return -1; \
         } \
-        if(address == null || address == ""){\
+        if(address == ""){\
             return -1; \
         } \
     }
