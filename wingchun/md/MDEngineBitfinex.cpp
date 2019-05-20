@@ -212,6 +212,7 @@ void MDEngineBitfinex::load(const json & j_config)
 	refresh_normal_check_book_s = j_config["refresh_normal_check_book_s"].get<int>();
 	KF_LOG_INFO(logger, "MDEngineBitfinex:: refresh_normal_check_book_s: " << refresh_normal_check_book_s);
 
+	KF_LOG_INFO(logger, "MDEngineBitfinex:: there shall be \"whiteLists_websocket\":{} and \"whiteLists_rest\":{}");
 
 	coinPairWhiteList_websocket.ReadWhiteLists(j_config, "whiteLists_websocket");
 	coinPairWhiteList_websocket.Debug_print();
@@ -246,8 +247,8 @@ void MDEngineBitfinex::load(const json & j_config)
 void MDEngineBitfinex::makeWebsocketSubscribeJsonString()
 {
 	std::unordered_map<std::string, std::string>::iterator map_itr;
-	map_itr = coinPairWhiteList_webosocket.GetKeyIsStrategyCoinpairWhiteList().begin();
-	while (map_itr != coinPairWhiteList_webosocket.GetKeyIsStrategyCoinpairWhiteList().end()) {
+	map_itr = coinPairWhiteList_websocket.GetKeyIsStrategyCoinpairWhiteList().begin();
+	while (map_itr != coinPairWhiteList_websocket.GetKeyIsStrategyCoinpairWhiteList().end()) {
 		KF_LOG_DEBUG(logger, "[makeWebsocketSubscribeJsonString] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) " << map_itr->second);
 
 		std::string jsonBookString = createBookJsonString(map_itr->second);
@@ -623,7 +624,7 @@ void MDEngineBitfinex::onTrade(SubscribeChannel & channel, Document & json)
 {
 	KF_LOG_INFO(logger, "MDEngineBitfinex::onTrade: (symbol) " << channel.exchange_coinpair);
 
-	std::string ticker = coinPairWhiteList_webosocket.GetKeyByValue(channel.exchange_coinpair);
+	std::string ticker = coinPairWhiteList_websocket.GetKeyByValue(channel.exchange_coinpair);
 	if (ticker.length() == 0) {
 		return;
 	}
@@ -737,7 +738,7 @@ void MDEngineBitfinex::onBook(SubscribeChannel & channel, Document & json)
 {
 	KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (symbol) " << channel.exchange_coinpair);
 
-	std::string ticker = coinPairWhiteList_webosocket.GetKeyByValue(channel.exchange_coinpair);
+	std::string ticker = coinPairWhiteList_websocket.GetKeyByValue(channel.exchange_coinpair);
 	if (ticker.length() == 0) {
 		KF_LOG_DEBUG(logger, "MDEngineBitfinex::onBook: (ticker.length==0) " << ticker);
 		return;
