@@ -82,6 +82,7 @@ void PyWCStrategy::on_funding_update(const LFFundingField* data, short source, l
     }
 }
 void PyWCStrategy::on_withdraw(const LFWithdrawField* data, int request_id, short source, long rcv_time){
+    KF_LOG_INFO(logger, "[on_withdraw] on_withdraw started");
     bp::object& obj = py_on_data[MSG_TYPE_LF_WITHDRAW];
     if (obj != bp::object() && IWCDataProcessor::signal_received <= 0)
     {
