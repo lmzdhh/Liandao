@@ -123,8 +123,8 @@ TradeAccount TDEnginePoloniex::load_account(int idx, const json& j_config)
     string method = "POST";
 	KF_LOG_DEBUG(logger, "[getbalance]" );
     cpr::Response r = rest_withAuth(unit, method, command);//获得账户余额消息
-
-	return_orderbook("BTC_ETH", 1);//测试一下，，，
+	string currencyPair = "BTC_ETH";
+	return_orderbook(currencyPair, 1);//测试一下，，，
     //test ends here
     return account;
 }
@@ -841,7 +841,7 @@ cpr::Response TDEnginePoloniex::return_order_trades(string& OrderRef)
 	return r;
 }
 
-void *TDEnginePoloniex::updating_order_status(const LFRtnOrderField* data)
+void TDEnginePoloniex::updating_order_status(LFRtnOrderField* data)
 {
 	//order 订单状态改变
 	data->OrderStatus = LF_CHAR_PartTradedQueueing;
@@ -931,7 +931,6 @@ void *TDEnginePoloniex::updating_order_status(const LFRtnOrderField* data)
 		}
 	}
 
-	return ;
 }
 
 BOOST_PYTHON_MODULE(libpoloniextd)
