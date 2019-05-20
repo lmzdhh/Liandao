@@ -1,4 +1,4 @@
 build/*
 strategy_build/*
 cmake-build-debug/*
-.vscode
+.vscode/*
