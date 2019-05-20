@@ -31,9 +31,12 @@ struct PositionSetting
 struct OrderInfo
 {
 	int64_t order_number;
+	string order_ref;
 	string timestamp;
     string currency_pair;
 	uint64_t volume_total_original;
+	int64_t tradeID;//订单的最新trade
+	bool is_open;
 };
 struct AccountUnitPoloniex
 {
@@ -94,7 +97,8 @@ private:
     cpr::Response return_orderbook(string& currency_pair,int level);//可用来测试接口实现是否有问题
     cpr::Response return_order_status(string& OrderRef);
 	cpr::Response return_order_trades(string& OrderRef);
-	void updating_order_status(LFRtnOrderField* data);
+	//void updating_order_status(LFRtnOrderField* data);//弃置
+	void updating_order_status();//订单状态追踪
 
 private:
 
@@ -102,9 +106,9 @@ private:
     int retry_interval_milliseconds;
 	int max_retry_times;
 	string url_public_point;
-    //ThreadPtr rest_thread;
+    ThreadPtr rest_thread;
 
-
+	map<OrderInfo, LFRtnOrderField> map_order;
 
     std::mutex* mutex_order_and_trade = nullptr;
     std::mutex* mutex_response_order_status = nullptr;
