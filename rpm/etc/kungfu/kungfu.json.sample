@@ -49,16 +49,18 @@
 		},
 		"bitfinex": {
 			"book_depth_count": 25,
+            "level_threshold":5,
 			"trade_count": 10,
-			"whiteLists": {
+			"whiteLists_websocket": {
 				"strategy_coinpair(base_quote)": "exchange_coinpair",
-				"eth_btc": "tETHBTC",
-				"bch_btc": "tBCHBTC",
-				"ltc_btc": "tLTCBTC",
-				"bch_eth": "tBCHETH",
-				"ltc_eth": "tLTCETH"
-			},
-			"rest_get_interval_ms": 500
+				"bch_usdt": "tBABUST"
+            },
+            "whiteLists_rest": {
+                "strategy_coinpair(base_quote)": "exchange_coinpair",
+                "bch_usdt": "babust"
+            },
+            "rest_get_interval_ms": 500,
+            "refresh_normal_check_book_s":10
 		},
 		"bitmex": {
 			"book_depth_count": 5,
