@@ -465,7 +465,7 @@ TradeAccount TDEngineBittrex::load_account(int idx, const json& j_config)
     //cancel_order(unit,"code","e1751360-a64c-458a-aaa8-ff9834ca6a28",json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
-    withdrawl_currency("USDT", "20",unit);
+    withdrawl_currency("XRP", "20",unit);
     // set up
     TradeAccount account = {};
     //partly copy this fields
