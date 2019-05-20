@@ -41,8 +41,7 @@ static MDEngineBitfinex* global_md = nullptr;
 /*quest3 fxw v4 starts*/
 int MDEngineBitfinex::GetSnapShotAndRtn(std::string ticker)//v1
 {
-	std::string symbol = ticker;
-	symbol.erase(3, 1);
+	std::string symbol = coinPairWhiteList_rest.GetValueByKey(ticker);
 	std::string requestPath = "/v1/book/";
 	std::string body = "";
 	string url = "https://api.bitfinex.com" + requestPath + symbol;//complete url
@@ -214,8 +213,11 @@ void MDEngineBitfinex::load(const json & j_config)
 	KF_LOG_INFO(logger, "MDEngineBitfinex:: refresh_normal_check_book_s: " << refresh_normal_check_book_s);
 
 
-	coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
-	coinPairWhiteList.Debug_print();
+	coinPairWhiteList_websocket.ReadWhiteLists(j_config, "whiteLists_websocket");
+	coinPairWhiteList_websocket.Debug_print();
+
+	coinPairWhiteList_rest.ReadWhiteLists(j_config, "whiteLists_rest");
+	coinPairWhiteList_rest.Debug_print();
 
 	makeWebsocketSubscribeJsonString();
 	debug_print(websocketSubscribeJsonString);
@@ -730,6 +732,7 @@ void MDEngineBitfinex::onBook(SubscribeChannel & channel, Document & json)
 
 	std::string ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
 	if (ticker.length() == 0) {
+		KF_LOG_DEBUG(logger, "MDEngineBitfinex::onBook: (ticker.length==0) " << ticker);
 		return;
 	}
 
