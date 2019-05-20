@@ -263,8 +263,8 @@ BOOST_PYTHON_MODULE(libwingchunstrategy)
     .def("insert_fak_order", &PyWCStrategy::insert_fak_order_py, (bp::arg("source"), bp::arg("ticker"), bp::arg("exchange_id"), bp::arg("price"), bp::arg("volume"), bp::arg("direction"), bp::arg("offset"), bp::arg("misc_info")=""))
     .def("req_position", &PyWCStrategy::req_position, (bp::arg("source")))
     .def("cancel_order", &PyWCStrategy::cancel_order_py, (bp::arg("source"), bp::arg("order_id"),bp::arg("misc_info")=""))
-    .def("set_on_error", &PyWCStrategy::set_on_error, (bp::arg("func")));
-    .def("withdraw_currency", &PyWCStrategy::withdraw_currency_py, (bp::arg("source"), bp::arg("currency")="", bp::arg("volume")=0, bp::arg("address")="",bp::arg("tag")=""))
+    .def("set_on_error", &PyWCStrategy::set_on_error, (bp::arg("func")))
+    .def("withdraw_currency", &PyWCStrategy::withdraw_currency_py, (bp::arg("source"), bp::arg("currency")="", bp::arg("volume")=0, bp::arg("address")="",bp::arg("tag")=""));
 
     bp::class_<WCStrategyUtil, WCStrategyUtilPtr>("Util", bp::no_init)
     .def("subscribe_market_data", &WCStrategyUtil::subscribe_market_data, (bp::arg("tickers"), bp::arg("source")))
