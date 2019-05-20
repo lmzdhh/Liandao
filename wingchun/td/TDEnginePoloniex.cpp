@@ -433,7 +433,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 
 void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
 {
-	KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid) " << requestId << " this order has been done  ");
+	KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid) " << requestId);
 	send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_POLONIEX, 1, requestId);
 	AccountUnitPoloniex& unit = account_units[0];
 	//get order status
@@ -479,7 +479,7 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 			{
 				if (js.find("success") != js.end())
 				{
-					KF_LOG_INFO(logger, "[req_order_action] (order cancelled) " << r.text);
+					KF_LOG_INFO(logger, "[req_order_action] (order cancelled) ");
 					//需要处理一下数量变化-》此部分交给订单状态追踪来处理
 					//data->VolumeChange = order_info.volume_total_original - (stoll(js["amount"].get<string>())) * scale_offset;
 					/*//需要on rtn order 订单若是被撤单了就查不到了
