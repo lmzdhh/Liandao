@@ -1111,8 +1111,8 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
                                                                        << remoteOrderId);
 
             PendingOrderStatus stPendingOrderStatus;
-            stPendingOrderStatus.nVolume = data->Volume;
-            stPendingOrderStatus.nPrice = data->LimitPrice;;
+            stPendingOrderStatus.nVolume = std::round(fixedVolume*scale_offset);
+            stPendingOrderStatus.nPrice = std::round(fixedPrice*scale_offset);
             strncpy(stPendingOrderStatus.InstrumentID, data->InstrumentID, sizeof(stPendingOrderStatus.InstrumentID));
             strncpy(stPendingOrderStatus.OrderRef, data->OrderRef, sizeof(stPendingOrderStatus.OrderRef));
             stPendingOrderStatus.strUserID = unit.api_key;
