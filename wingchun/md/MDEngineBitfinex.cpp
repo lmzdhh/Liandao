@@ -41,8 +41,7 @@ static MDEngineBitfinex* global_md = nullptr;
 /*quest3 fxw v4 starts*/
 int MDEngineBitfinex::GetSnapShotAndRtn(std::string ticker)//v1
 {
-    std::string symbol=ticker;
-    symbol.erase(3,1);
+    std::string symbol = coinPairWhiteList_rest.GetValueByKey(ticker);
     std::string requestPath = "/v1/book/";
     std::string body="";
     string url = "https://api.bitfinex.com" + requestPath +symbol;//complete url
@@ -209,24 +208,38 @@ void MDEngineBitfinex::load(const json& j_config)
     trade_count = j_config["trade_count"].get<int>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     KF_LOG_INFO(logger, "MDEngineBitfinex:: rest_get_interval_ms: " << rest_get_interval_ms);
+	
+    refresh_normal_check_book_s = j_config["refresh_normal_check_book_s"].get<int>();
+	KF_LOG_INFO(logger, "MDEngineBitfinex:: refresh_normal_check_book_s: " << refresh_normal_check_book_s);
 
+	KF_LOG_INFO(logger, "MDEngineBitfinex:: there shall be \"whiteLists_websocket\":{} and \"whiteLists_rest\":{}");
 
-    coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
-    coinPairWhiteList.Debug_print();
+	coinPairWhiteList_websocket.ReadWhiteLists(j_config, "whiteLists_websocket");
+	coinPairWhiteList_websocket.Debug_print();
+
+	coinPairWhiteList_rest.ReadWhiteLists(j_config, "whiteLists_rest");
+	coinPairWhiteList_rest.Debug_print();
 
     makeWebsocketSubscribeJsonString();
     debug_print(websocketSubscribeJsonString);
 
     //display usage:
-    if(coinPairWhiteList.Size() == 0) {
-        KF_LOG_ERROR(logger, "MDEngineBitfinex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists in kungfu.json like this :");
-        KF_LOG_ERROR(logger, "\"whiteLists\":{");
-        KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
-        KF_LOG_ERROR(logger, "    \"btc_usdt\": \"tBTCUSDT\",");
-        KF_LOG_ERROR(logger, "     \"etc_eth\": \"tETCETH\"");
-        KF_LOG_ERROR(logger, "},");
-    }
-
+    if (coinPairWhiteList_websocket.Size() == 0) {
+		KF_LOG_ERROR(logger, "MDEngineBitfinex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists_websocket in kungfu.json like this :");
+		KF_LOG_ERROR(logger, "\"whiteLists_websocket\":{");
+		KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
+		KF_LOG_ERROR(logger, "    \"btc_usdt\": \"tBTCUSDT\",");
+		KF_LOG_ERROR(logger, "     \"etc_eth\": \"tETCETH\"");
+		KF_LOG_ERROR(logger, "},");
+	}
+	if (coinPairWhiteList_rest.Size() == 0) {
+		KF_LOG_ERROR(logger, "MDEngineBitfinex::lws_write_subscribe: subscribeCoinBaseQuote is empty. please add whiteLists_rest in kungfu.json like this :");
+		KF_LOG_ERROR(logger, "\"whiteLists_rest\":{");
+		KF_LOG_ERROR(logger, "    \"strategy_coinpair(base_quote)\": \"exchange_coinpair\",");
+		KF_LOG_ERROR(logger, "    \"btc_usdt\": \"tBTCUSDT\",");
+		KF_LOG_ERROR(logger, "     \"etc_eth\": \"tETCETH\"");
+		KF_LOG_ERROR(logger, "},");
+	}
     KF_LOG_INFO(logger, "MDEngineBitfinex::load:  book_depth_count: "
             << book_depth_count << " trade_count: " << trade_count << " rest_get_interval_ms: " << rest_get_interval_ms);
 }
@@ -421,13 +434,16 @@ void MDEngineBitfinex::on_lws_data(struct lws* conn, const char* data, size_t le
         if (strcmp(json["event"].GetString(), "info") == 0) {
             KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is info");
             onInfo(json);
-        } else if (strcmp(json["event"].GetString(), "ping") == 0) {
+        } 
+		else if (strcmp(json["event"].GetString(), "ping") == 0) {
             KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is ping");
             onPing(conn, json);
-        } else if (strcmp(json["event"].GetString(), "subscribed") == 0) {
+        } 
+		else if (strcmp(json["event"].GetString(), "subscribed") == 0) {
             KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is subscribed");
             onSubscribed(json);
-        } else {
+        } 
+		else {
             KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: unknown event: " << data);
         };
     }
@@ -440,14 +456,17 @@ void MDEngineBitfinex::on_lws_data(struct lws* conn, const char* data, size_t le
         SubscribeChannel channel = findByChannelID( chanId );
         if (channel.channelId == 0) {
             KF_LOG_ERROR(logger, "MDEngineBitfinex::on_lws_data: EMPTY_CHANNEL (chanId)" << chanId);
-        } else {
+        } 
+		else {
             if (channel.subType == book_channel) {
                 KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is book");
                 onBook(channel, json);
-            } else if (channel.subType == trade_channel) {
+            } 
+			else if (channel.subType == trade_channel) {
                 KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: is trade");
                 onTrade(channel, json);
-            } else {
+            } 
+			else {
                 KF_LOG_INFO(logger, "MDEngineBitfinex::on_lws_data: unknown array data: " << data);
             }
         }
@@ -605,7 +624,7 @@ void MDEngineBitfinex::onTrade(SubscribeChannel &channel, Document& json)
 {
     KF_LOG_INFO(logger, "MDEngineBitfinex::onTrade: (symbol) " << channel.exchange_coinpair);
 
-    std::string ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
+    std::string ticker = coinPairWhiteList_websocket.GetKeyByValue(channel.exchange_coinpair);
     if(ticker.length() == 0) {
         return;
     }
@@ -654,7 +673,8 @@ void MDEngineBitfinex::onTrade(SubscribeChannel &channel, Document& json)
                 uint64_t volume = 0;
                 if(amount < 0) {
                     volume = std::round(-1 * amount * scale_offset);
-                } else {
+                }
+				else {
                     volume = std::round( amount * scale_offset);
                 }
 
@@ -666,7 +686,8 @@ void MDEngineBitfinex::onTrade(SubscribeChannel &channel, Document& json)
                 on_trade(&trade);
 
             }
-        } else {
+        } 
+		else {
             /*update
              * [
               CHANNEL_ID,
@@ -698,7 +719,8 @@ void MDEngineBitfinex::onTrade(SubscribeChannel &channel, Document& json)
             uint64_t volume = 0;
             if(amount < 0) {
                 volume = std::round(-1 * amount * scale_offset);
-            } else {
+            } 
+			else {
                 volume = std::round( amount * scale_offset);
             }
             trade.Volume = volume;
@@ -716,7 +738,7 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 {
     KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (symbol) " << channel.exchange_coinpair);
 
-    std::string ticker = coinPairWhiteList.GetKeyByValue(channel.exchange_coinpair);
+    std::string ticker = coinPairWhiteList_websocket.GetKeyByValue(channel.exchange_coinpair);
     if(ticker.length() == 0) {
         return;
     }
@@ -778,7 +800,8 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
                     if(dAmount == -1 ) {
                         priceBook20Assembler.EraseAskPrice(ticker, price);
                     }
-                } else if (count > 0) {
+                } 
+				else if (count > 0) {
                     if(dAmount > 0) {
                         priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
                     } else if(dAmount <= 0 ) {
@@ -789,7 +812,8 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 //                KF_LOG_INFO(logger, " (1)" << json.GetArray()[last_element].GetArray()[i].GetArray()[1].GetInt() );
 //                KF_LOG_INFO(logger, " (2)" << json.GetArray()[last_element].GetArray()[i].GetArray()[2].GetDouble() );
             }
-        } else {
+        } 
+		else {
             /*update
              * [
                   CHANNEL_ID,
@@ -809,7 +833,8 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
             uint64_t amount = 0;
             if(dAmount < 0) {
                 amount = std::round(-1 * dAmount * scale_offset);
-            } else {
+            } 
+			else {
                 amount = std::round( dAmount * scale_offset);
             }
 
@@ -822,10 +847,12 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
                 if(dAmount == -1 ) {
                     priceBook20Assembler.EraseAskPrice(ticker, price);
                 }
-            } else if (count > 0) {
+            } 
+			else if (count > 0) {
                 if(dAmount > 0) {
                     priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
-                } else if(dAmount <= 0 ) {
+                } 
+				else if(dAmount <= 0 ) {
                     priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
                 }
             }
@@ -885,6 +912,12 @@ void MDEngineBitfinex::onBook(SubscribeChannel &channel, Document& json)
 
         /*quest2 FXW's edits end here*/
     }
+	else//*quest2 FXW's edits v5 
+	{
+		timer = getTimestamp();
+		//GetSnapShotAndRtn(ticker);
+		KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update,priceBook20Assembler.Assembler(ticker, md) failed\n(ticker)" << ticker);
+	}
 
 }
 
