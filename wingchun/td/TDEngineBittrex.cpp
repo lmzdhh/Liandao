@@ -1046,6 +1046,7 @@ void TDEngineBittrex::req_withdraw_currency(const LFWithdrawField* data, int acc
         errorMsg = "address is null";
         KF_LOG_ERROR(logger,"[req_withdraw_currency] address is null");
         //on_withdraw(data, requestId, errorId, errorMsg.c_str());
+        on_rsp_withdraw(data,request_id,errorId,errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW_BITTREX, 1, 
             requestId, errorId, errorMsg.c_str());
         return;
@@ -1056,6 +1057,7 @@ void TDEngineBittrex::req_withdraw_currency(const LFWithdrawField* data, int acc
         errorId = 520;
         errorMsg = "json has parse error.";
         KF_LOG_ERROR(logger,"[withdrawl_currency] json has parse error.");
+        on_rsp_withdraw(data,request_id,errorId,errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW_BITTREX, 1, 
             requestId, errorId, errorMsg.c_str());
         return;
@@ -1074,6 +1076,7 @@ void TDEngineBittrex::req_withdraw_currency(const LFWithdrawField* data, int acc
         KF_LOG_INFO(logger, "[withdrawl_currency] withdrawl faild!");
         errorId = 520;
         errorMsg = message;
+        on_rsp_withdraw(data,request_id,errorId,errorMsg.c_str());
         raw_writer->write_error_frame(data, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW_BITTREX, 1, 
             requestId, errorId, errorMsg.c_str());
     }
