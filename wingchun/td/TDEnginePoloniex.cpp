@@ -997,7 +997,7 @@ void TDEnginePoloniex::updating_order_status()
 			//若是all traded ，订单关闭，从map中删除元素
 			//若不是all traded，查询order，订单又是关闭的，订单状态设为关闭，等待下一次查traded 防止错过某个单，然后删除这个元素
 
-			r = return_order_trades(string(rtn_order.OrderRef));//查询trade
+			r = return_order_trades(order_ref);//查询trade
 			if (r.status_code < 400)//操作成功，错误处理已在return order trades函数中处理
 			{
 				json js = json::parse(r.text);
@@ -1012,9 +1012,9 @@ void TDEnginePoloniex::updating_order_status()
 						tradeID_last = tradeID;
 						order_info.tradeID = tradeID;
 						strcpy(rtn_trade.TradeID, std::to_string(tradeID).c_str());
-						price = to_string(stod(ob["rate"].get<string>()) * scale_offset);
+						string price = to_string(stod(ob["rate"].get<string>()) * scale_offset);
 						rtn_trade.Price = stoll(price);
-						volume = to_string(stod(ob["amount"].get<string>()) * scale_offset);
+						string volume = to_string(stod(ob["amount"].get<string>()) * scale_offset);
 						rtn_trade.Volume = stoll(volume);
 						mutex_order_and_trade->lock();
 						on_rtn_trade(&rtn_trade);
@@ -1044,7 +1044,7 @@ void TDEnginePoloniex::updating_order_status()
 				}//更新完所有trade了，判断这个单是否关闭，若是关闭了，则删除这个元素
 				if (order_info.is_open)
 				{
-					r = return_order_status(string(rtn_order.OrderRef));
+					r = return_order_status(order_ref);
 					if (r.status_code == 422)//错误处理已在函数中完成，status code==422时表示这个单已经被撤单或者完全成交了，
 					{
 						rtn_order.OrderStatus = LF_CHAR_Canceled;
@@ -1066,7 +1066,7 @@ void TDEnginePoloniex::updating_order_status()
 			}//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
 			//开始准备下一个订单
 			it++;
-			if (it = map_order.end())
+			if (it == map_order.end())
 			{
 				it = map_order.begin();
 			}
