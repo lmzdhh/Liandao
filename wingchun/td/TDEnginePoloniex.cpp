@@ -398,7 +398,11 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	order_info.order_ref = order_ref;
 	order_info.tradeID = 0;
 	order_info.is_open = true;
+
+	std::unique_lock<std::mutex> rilock(*mutex_order_and_trade);
 	unit.map_new_order.insert(std::make_pair(order_ref, order_info));
+	rilock.unlock();
+
 	LFRtnOrderField rtn_order;//返回order信息
 	memset(&rtn_order, 0, sizeof(LFRtnOrderField));
 	string order_number_str = to_string(order_info.order_number);
@@ -421,9 +425,9 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 
 	on_rtn_order(&rtn_order);
 
-	std::unique_lock<std::mutex> otlock(*mutex_order_and_trade);
+	std::unique_lock<std::mutex> rolock(*mutex_order_and_trade);
 	map_order.insert(std::make_pair(order_ref, rtn_order));
-	otlock.unlock();
+	rolock.unlock();
 	//插入map，方便后续订单状态跟踪
 	/*//后续跟踪处理trade
 	std::thread rest_thread(updating_order_status,&rtn_order);
@@ -448,7 +452,11 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	*/
 	//cancel order
 	OrderInfo order_info;
-	if (unit.map_new_order.count(order_ref))
+	int y;
+	std::unique_lock<std::mutex> oilock(*mutex_order_and_trade);
+	y = unit.map_new_order.count(order_ref);
+	oilock.unlock();
+	if (y==1)
 	{
 		order_info = unit.map_new_order[order_ref];
 	}
@@ -597,6 +605,7 @@ int TDEnginePoloniex::get_response_parsed_position(cpr::Response r)
 		{
 			return 2;
 		}
+		std::unique_lock<std::mutex> lock(*mutex_order_and_trade);
         std::unordered_map<std::string, std::string>& whitelist=unit.positionWhiteList.GetKeyIsStrategyCoinpairWhiteList();
         std::unordered_map<std::string, std::string>::iterator it;
         for (it = whitelist.begin(); it != whitelist.end(); ++it)
@@ -723,7 +732,11 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 	cpr::Response r;
 	AccountUnitPoloniex& unit = account_units[0];
 	OrderInfo order_info;
-	if (unit.map_new_order.count(OrderRef))
+	int y = 0;
+	std::unique_lock<std::mutex> rilock(*mutex_order_and_trade);
+	y = unit.map_new_order.count(OrderRef);
+	rilock.unlock();
+	if (y==1)
 	{
 		order_info = unit.map_new_order[OrderRef];
 	}
@@ -866,15 +879,10 @@ void TDEnginePoloniex::updating_order_status()
 	AccountUnitPoloniex& unit = account_units[0];
 	cpr::Response r;
 	LFRtnTradeField rtn_trade;
-	map<string, LFRtnOrderField>::iterator it=map_order.begin();//循环更新每一个订单的状态
-	while (true)//这将是个死循环，时刻准备更新订单状态
+	while (isRunning)//这将是个死循环，时刻准备更新订单状态
 	{
-		if (map_order.size() == 0)//目前无订单需要更新状态
-		{
-			//KF_LOG_INFO(logger, "[updating_order_status] thread idle for some seconds just for test");
-			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));//日后是要被注释掉的可怜语句
-		}
-		else
+		std::unique_lock<std::mutex> otlock(*mutex_order_and_trade);//lock
+		for(auto it:map_order)//遍历 map
 		{
 			LFRtnOrderField &rtn_order=it->second;//获得rtn order
 			string order_ref = it->first;
@@ -882,10 +890,16 @@ void TDEnginePoloniex::updating_order_status()
 			{
 				KF_LOG_ERROR(logger, "[updating_order_status] no order refed by order_ref" << order_ref);
 				map_order.erase(order_ref);
+				it++;
+				if (it == map_order.end())
+				{
+					it = map_order.begin();
+				}
 				//continue;
 			}
 			else
 			{
+
 				OrderInfo& order_info = unit.map_new_order[order_ref];
 				KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref);
 				memset(&rtn_trade, 0, sizeof(LFRtnTradeField));//填充rtn trade的各个成员
@@ -956,20 +970,14 @@ void TDEnginePoloniex::updating_order_status()
 						{
 							on_rtn_order(&rtn_order);
 						}
-						std::unique_lock<std::mutex> otlock(*mutex_order_and_trade);
 						map_order.erase(order_ref);//删除这个元素，它已经处理完了
 					}
 
 				}//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
-				//开始准备下一个订单
-				it++;
-				if (it == map_order.end())
-				{
-					it = map_order.begin();
-				}
 			}
 			
 		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 	}
 }
 
