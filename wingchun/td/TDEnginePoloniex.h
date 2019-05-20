@@ -94,7 +94,7 @@ private:
     cpr::Response return_orderbook(string& currency_pair,int level);//可用来测试接口实现是否有问题
     cpr::Response return_order_status(string& OrderRef);
 	cpr::Response return_order_trades(string& OrderRef);
-	void* updating_order_status(const LFInputOrderField* data);
+	void *updating_order_status(const LFRtnOrderField* data);
 
 private:
 
