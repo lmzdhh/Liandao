@@ -423,7 +423,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 
 	std::unique_lock<std::mutex> otlock(*mutex_order_and_trade);
 	map_order.insert(std::make_pair(order_ref, rtn_order));
-	otlock.unlock()
+	otlock.unlock();
 	//插入map，方便后续订单状态跟踪
 	/*//后续跟踪处理trade
 	std::thread rest_thread(updating_order_status,&rtn_order);
@@ -882,89 +882,93 @@ void TDEnginePoloniex::updating_order_status()
 			{
 				KF_LOG_ERROR(logger, "[updating_order_status] no order refed by order_ref" << order_ref);
 				map_order.erase(order_ref);
-				continue;
+				//continue;
 			}
-			OrderInfo& order_info = unit.map_new_order[order_ref];
-			KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) "<<order_ref);
-			memset(&rtn_trade, 0, sizeof(LFRtnTradeField));//填充rtn trade的各个成员
-			strcpy(rtn_trade.ExchangeID, "poloniex");
-			strncpy(rtn_trade.UserID, rtn_order.UserID, 16);
-			strncpy(rtn_trade.InstrumentID, rtn_order.InstrumentID, 31);
-			strncpy(rtn_trade.OrderRef, rtn_order.OrderRef, 21);
-			rtn_trade.Direction = rtn_order.Direction;
-
-			int64_t tradeID = 0, tradeID_last;
-			tradeID_last = order_info.tradeID;//上次更新到这个tradeID
-
-			//查询trade 更新trade 更新order 
-			//若是all traded ，订单关闭，从map中删除元素
-			//若不是all traded，查询order，订单又是关闭的，订单状态设为关闭，等待下一次查traded 防止错过某个单，然后删除这个元素
-			KF_LOG_DEBUG(logger, "[updating_order_status] [return_order_trades] (order_ref)" << order_ref);
-			r = return_order_trades(order_ref);//查询trade
-			if (r.status_code < 400)//操作成功，错误处理已在return order trades函数中处理
+			else
 			{
-				json js = json::parse(r.text);
-				int no = js.size();
-				no--;//反向开始遍历
-				while (no >= 0)
+				OrderInfo& order_info = unit.map_new_order[order_ref];
+				KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref);
+				memset(&rtn_trade, 0, sizeof(LFRtnTradeField));//填充rtn trade的各个成员
+				strcpy(rtn_trade.ExchangeID, "poloniex");
+				strncpy(rtn_trade.UserID, rtn_order.UserID, 16);
+				strncpy(rtn_trade.InstrumentID, rtn_order.InstrumentID, 31);
+				strncpy(rtn_trade.OrderRef, rtn_order.OrderRef, 21);
+				rtn_trade.Direction = rtn_order.Direction;
+
+				int64_t tradeID = 0, tradeID_last;
+				tradeID_last = order_info.tradeID;//上次更新到这个tradeID
+
+				//查询trade 更新trade 更新order 
+				//若是all traded ，订单关闭，从map中删除元素
+				//若不是all traded，查询order，订单又是关闭的，订单状态设为关闭，等待下一次查traded 防止错过某个单，然后删除这个元素
+				KF_LOG_DEBUG(logger, "[updating_order_status] [return_order_trades] (order_ref)" << order_ref);
+				r = return_order_trades(order_ref);//查询trade
+				if (r.status_code < 400)//操作成功，错误处理已在return order trades函数中处理
 				{
-					auto ob = js[no];//获得这个object
-					tradeID = ob["globalTradeID"].get<int64_t>();//int64_t 还是 int？
-					if (tradeID > tradeID_last)//如果不是更新的trade就放弃
+					json js = json::parse(r.text);
+					int no = js.size();
+					no--;//反向开始遍历
+					while (no >= 0)
 					{
-						tradeID_last = tradeID;
-						order_info.tradeID = tradeID;
-						strcpy(rtn_trade.TradeID, std::to_string(tradeID).c_str());
-						string price = to_string(stod(ob["rate"].get<string>()) * scale_offset);
-						rtn_trade.Price = stoll(price);
-						string volume = to_string(stod(ob["amount"].get<string>()) * scale_offset);
-						rtn_trade.Volume = stoll(volume);						
-						on_rtn_trade(&rtn_trade);					
-						rtn_order.VolumeTraded += rtn_trade.Volume;
-						rtn_order.VolumeTotal -= rtn_trade.Volume;
-						if (rtn_order.VolumeTotal <= 0)//判断数量
+						auto ob = js[no];//获得这个object
+						tradeID = ob["globalTradeID"].get<int64_t>();//int64_t 还是 int？
+						if (tradeID > tradeID_last)//如果不是更新的trade就放弃
 						{
-							rtn_order.OrderStatus = LF_CHAR_AllTraded;//已经完全成交了
+							tradeID_last = tradeID;
+							order_info.tradeID = tradeID;
+							strcpy(rtn_trade.TradeID, std::to_string(tradeID).c_str());
+							string price = to_string(stod(ob["rate"].get<string>()) * scale_offset);
+							rtn_trade.Price = stoll(price);
+							string volume = to_string(stod(ob["amount"].get<string>()) * scale_offset);
+							rtn_trade.Volume = stoll(volume);
+							on_rtn_trade(&rtn_trade);
+							rtn_order.VolumeTraded += rtn_trade.Volume;
+							rtn_order.VolumeTotal -= rtn_trade.Volume;
+							if (rtn_order.VolumeTotal <= 0)//判断数量
+							{
+								rtn_order.OrderStatus = LF_CHAR_AllTraded;//已经完全成交了
+								order_info.is_open = false;
+								//该订单处理结束							
+								on_rtn_order(&rtn_order);
+								break;
+							}
+							else
+							{
+								rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
+							}
+							on_rtn_order(&rtn_order);
+						}
+						no--;
+					}//更新完所有trade了，判断这个单是否关闭，若是关闭了，则删除这个元素
+					if (order_info.is_open)
+					{
+						KF_LOG_DEBUG(logger, "[updating_order_status] [return_order_status] (order_ref)" << order_ref);
+						r = return_order_status(order_ref);
+						if (r.status_code == 422)//错误处理已在函数中完成，status code==422时表示这个单已经被撤单或者完全成交了，
+						{
+							rtn_order.OrderStatus = LF_CHAR_Canceled;
 							order_info.is_open = false;
-							//该订单处理结束							
-							on_rtn_order(&rtn_order);														
-							break;
 						}
-						else
+					}
+					else
+					{
+						if (rtn_order.OrderStatus == LF_CHAR_Canceled)//无新的成交更新,这是一个撤单
 						{
-							rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
+							on_rtn_order(&rtn_order);
 						}
-						on_rtn_order(&rtn_order);
+						std::unique_lock<std::mutex> otlock(*mutex_order_and_trade);
+						map_order.erase(order_ref);//删除这个元素，它已经处理完了
 					}
-					no--;
-				}//更新完所有trade了，判断这个单是否关闭，若是关闭了，则删除这个元素
-				if (order_info.is_open)
+
+				}//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
+				//开始准备下一个订单
+				it++;
+				if (it == map_order.end())
 				{
-					KF_LOG_DEBUG(logger, "[updating_order_status] [return_order_status] (order_ref)" << order_ref);
-					r = return_order_status(order_ref);
-					if (r.status_code == 422)//错误处理已在函数中完成，status code==422时表示这个单已经被撤单或者完全成交了，
-					{
-						rtn_order.OrderStatus = LF_CHAR_Canceled;
-						order_info.is_open = false;
-					}
+					it = map_order.begin();
 				}
-				else
-				{
-					if (rtn_order.OrderStatus == LF_CHAR_Canceled)//无新的成交更新,这是一个撤单
-					{
-						on_rtn_order(&rtn_order);//TODO:给它加锁
-					}
-					std::unique_lock<std::mutex> otlock(*mutex_order_and_trade);
-					map_order.erase(order_ref);//删除这个元素，它已经处理完了
-				}
-				
-			}//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
-			//开始准备下一个订单
-			it++;
-			if (it == map_order.end())
-			{
-				it = map_order.begin();
 			}
+			
 		}
 	}
 }
