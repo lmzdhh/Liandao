@@ -663,6 +663,8 @@
 				"info": {
 					"APIKey": "e9e6fdc4c9a64d84b3ef65818607d093",
 					"SecretKey": "9cda0797313249c089bf1cb913be6c94",
+					"WithdrawlKey":"608885f245e5426c9d38921ada92c080",
+					"WithdrawlSecret":"9897278249cb41eba64870b72aa26a34",
 					"passphrase": "your-passphrase",
 					"baseUrl": "https://api.bittrex.com/api/v1.1",
 					"whiteLists": {
@@ -674,6 +676,11 @@
 						"usdt_xvg": "USDT-XVG",
 						"usdt_rvn": "USDT-RVN"
 
+					},
+					"withdrawlWhiteLists":{
+						"USDT":"1DEKiiXaoQv9abK5PCCwHFPg86XVsm2cpi",
+						"BTC":"1Poej9FX4pKQF9Le1ysJgPYdcBkED7wdkC",
+						"XRP":"rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh:104398738"
 					},
 					"positionWhiteLists": {
 						"ETC": "ETC",

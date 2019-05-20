@@ -78,7 +78,8 @@ struct AccountUnitBittrex
     string api_key;//uid
     string secret_key;
     string passphrase;
-
+    string withdrawl_key;
+    string withdrawl_secret;
     string baseUrl;
     // internal flags
     bool    logged_in;
@@ -87,6 +88,7 @@ struct AccountUnitBittrex
     std::map<std::string,PriceVolumePrecision> mapPriceVolumePrecision;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
+    CoinPairWhiteList withdrawlWhiteList;
     std::string spotAccountId;
     std::string marginAccountId;
 
@@ -159,6 +161,8 @@ private:
 
     void cancel_order(AccountUnitBittrex& unit, std::string code, std::string orderId, Document& json);
     void query_order(AccountUnitBittrex& unit, std::string code, std::string orderId, Document& json);
+    vector<string> split(string str, string pattern);
+    void withdrawl_currency(string currency, string volume, AccountUnitBittrex& unit);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
 
@@ -167,6 +171,7 @@ private:
     std::string createInsertOrdertring(string pair,string price,string volume);
 
     cpr::Response Get(const std::string& url,const std::string& body, std::string postData,AccountUnitBittrex& unit);
+    cpr::Response GetWithdraw(const std::string& url,const std::string& body, std::string postData,AccountUnitBittrex& unit);
     cpr::Response Post(const std::string& url,const std::string& body, std::string postData,AccountUnitBittrex& unit);
     void genUniqueKey();
     std::string genClinetid(const std::string& orderRef);

@@ -326,6 +326,33 @@ cpr::Response TDEngineBittrex::Get(const std::string& method_url,const std::stri
     //}
     return response;
 }
+cpr::Response TDEngineBittrex::GetWithdraw(const std::string& method_url,const std::string& body, std::string postData,AccountUnitBittrex& unit)
+{
+    int64_t nonce = getTimestamp();
+    string nonceStr=std::to_string(nonce);
+    KF_LOG_INFO(logger,"[GetWithdraw] (nonce) "<<nonceStr);
+    if(postData == ""){
+        postData=postData+"apikey="+unit.withdrawl_key+"&nonce="+nonceStr;
+    }else{
+        postData=postData+"&apikey="+unit.withdrawl_key+"&nonce="+nonceStr;
+    }
+    
+    string message = unit.baseUrl+method_url+"?"+postData;
+ 
+    string strSignature=getBittrexSignature(message,unit.withdrawl_secret,unit);
+
+    string url = unit.baseUrl + method_url+"?"+postData;
+
+    std::unique_lock<std::mutex> lock(g_httpMutex);
+    const auto response = cpr::Get(Url{url},
+                                   Header{{"apisign", strSignature}}, Timeout{10000} );
+    lock.unlock();
+    //if(response.text.length()<500){
+    KF_LOG_INFO(logger, "[GetWithdraw] (url) " << url << " (response.status_code) " << response.status_code <<
+        " (response.error.message) " << response.error.message <<" (response.text) " << response.text.c_str());
+    //}
+    return response;
+}
 //cys edit
 cpr::Response TDEngineBittrex::Post(const std::string& method_url,const std::string& body,std::string postData, AccountUnitBittrex& unit)
 {
@@ -378,6 +405,8 @@ TradeAccount TDEngineBittrex::load_account(int idx, const json& j_config)
     // internal load
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
+    string withdrawl_key = j_config["WithdrawlKey"].get<string>();
+    string withdrawl_secret = j_config["WithdrawlSecret"].get<string>();
     string passphrase = j_config["passphrase"].get<string>();
     //https://api.bittrex.pro
     string baseUrl = j_config["baseUrl"].get<string>();
@@ -402,6 +431,8 @@ TradeAccount TDEngineBittrex::load_account(int idx, const json& j_config)
     AccountUnitBittrex& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
+    unit.withdrawl_key = withdrawl_key;
+    unit.withdrawl_secret = withdrawl_secret;
     unit.passphrase = passphrase;
     unit.baseUrl = baseUrl;
 
@@ -416,6 +447,8 @@ TradeAccount TDEngineBittrex::load_account(int idx, const json& j_config)
     unit.positionWhiteList.ReadWhiteLists(j_config, "positionWhiteLists");
     unit.positionWhiteList.Debug_print();
 
+    unit.withdrawlWhiteList.ReadWhiteLists(j_config, "withdrawlWhiteLists");
+    unit.withdrawlWhiteList.Debug_print();
     //display usage:
     if(unit.coinPairWhiteList.Size() == 0) {
         KF_LOG_ERROR(logger, "TDEngineBittrex::load_account: please add whiteLists in kungfu.json like this :");
@@ -429,9 +462,10 @@ TradeAccount TDEngineBittrex::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     //printResponse(json);
-    cancel_order(unit,"code","e1751360-a64c-458a-aaa8-ff9834ca6a28",json);
+    //cancel_order(unit,"code","e1751360-a64c-458a-aaa8-ff9834ca6a28",json);
     //printResponse(json);
     getPriceVolumePrecision(unit);
+    withdrawl_currency("USDT", "10",unit);
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -957,6 +991,82 @@ void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int accou
     } else {
         
         KF_LOG_INFO(logger,"[req_order_action] cancel order success");
+    }
+}
+//字符串分割函数
+vector<string> TDEngineBittrex::split(string str, string pattern){
+    string::size_type pos;
+    vector<string> result;
+
+    str += pattern;//扩展字符串以方便操作
+    int size = str.size();
+
+    for (int i = 0; i<size; i++) {
+        pos = str.find(pattern, i);
+        if (pos<size) {
+            std::string s = str.substr(i, pos - i);
+            result.push_back(s);
+            i = pos + pattern.size() - 1;
+        }
+    }
+    return result;
+}
+void TDEngineBittrex::withdrawl_currency(string currency, string volume, AccountUnitBittrex& unit){
+    KF_LOG_INFO(logger,"[withdrawl_currency]");
+    string address = "", tag = "";
+    std::unordered_map<std::string, std::string>::iterator map_itr;
+    map_itr = unit.withdrawlWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+    if(map_itr == unit.withdrawlWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()){
+        KF_LOG_ERROR(logger,"[withdrawl_currency] withdrawlWhitelist is null, can not withdraw.");
+        return;
+    }
+    while(map_itr != unit.withdrawlWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()){
+        string currencyType = map_itr->first.c_str();
+        string address_tag = map_itr->second.c_str();
+        if(currency == currencyType){
+            string pattern = ":";
+            vector<string> strs = split(address_tag, pattern);
+            if(strs.size() == 1){
+                address = strs[0];
+            }else if(strs.size() == 2){
+                address = strs[0];
+                tag = strs[1];
+            }else{
+                KF_LOG_ERROR(logger,"[withdrawl_currency] three or more semicolon(:).");
+                return;
+            }
+            break;
+        }
+        map_itr++;
+    }
+    string path = "/account/withdraw";
+    string postData = "";
+    if(tag == "" && address != ""){
+        postData = postData + "currency="+currency+"&quantity="+volume+"&address="+address;
+    }else if(tag != "" && address != ""){
+        postData = postData + "currency="+currency+"&quantity="+volume+"&address="+address+"&paymentid="+tag;
+    }else{
+        KF_LOG_ERROR(logger,"[withdrawl_currency] address is null");
+        return;
+    }
+    KF_LOG_INFO(logger, "[withdrawl_currency] (currency) " << currency << " (volume) " << volume
+        << " (address) " << address << " (tag) " << tag);
+    auto response = GetWithdraw(path, "", postData, unit);
+    Document json;
+    json.Parse(response.text.c_str());
+    if (json.HasParseError() || !json.IsObject()){
+        KF_LOG_ERROR(logger,"[withdrawl_currency] json has parse error.");
+        return;
+    }
+    if(json.HasMember("success") && json["success"].GetBool()){
+        rapidjson::Value result = json["result"].GetObject();
+        string uuid = result["uuid"].GetString();
+        KF_LOG_INFO(logger, "[withdrawl_currency] (uuid) " << uuid);
+        KF_LOG_INFO(logger, "[withdrawl_currency] withdrawl success.");
+    }else if(json.HasMember("success") && !json["success"].GetBool()){
+        string message = json["message"].GetString();
+        KF_LOG_INFO(logger, "[withdrawl_currency] (message) " << message);
+        KF_LOG_INFO(logger, "[withdrawl_currency] withdrawl faild!");
     }
 }
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
