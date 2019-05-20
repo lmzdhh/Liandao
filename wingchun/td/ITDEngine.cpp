@@ -331,13 +331,13 @@ void ITDEngine::on_rsp_withdraw(const LFWithdrawField* action, int requestId,int
     if (errorId == 0)
     {
         writer->write_frame(action, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW, true, requestId);
-        KF_LOG_DEBUG(logger, "[RspAction]" << " (rid)" << requestId << " (currency) " << action->Currency
+        KF_LOG_DEBUG(logger, "[RspWithdraw]" << " (rid)" << requestId << " (currency) " << action->Currency
             << " (volume) " << action->Volume << " (address) " << action->Address << " (tag) " << action->Tag);
     }
     else
     {
         writer->write_error_frame(action, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW, true, requestId, errorId, errorMsg);
-        KF_LOG_ERROR(logger, "[RspAction] fail!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
+        KF_LOG_ERROR(logger, "[RspWithdraw] fail!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
     }
 }
 /** on rsp account info, engine (on_data) */
