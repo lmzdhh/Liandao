@@ -92,6 +92,13 @@ class Strategy:
                 data = ctypes.cast(raw_data, ctypes.POINTER(structs.MsgType2LFStruct[lf.MsgTypes.FUNDING])).contents
                 return func(context, data, source, nano)
             self.strategy.set_on_data(lf.MsgTypes.FUNDING, partial(func_parse, funding_func))
+    def set_withdraw(self,func_name):
+        withdraw_func = getattr(self.module, func_name, None)
+        if withdraw_func is not None:
+            def func_parse(func, raw_data, source, nano):
+                data = ctypes.cast(raw_data, ctypes.POINTER(structs.MsgType2LFStruct[lf.MsgTypes.WITHDRAW])).contents
+                return func(context, data, source, nano)
+            self.strategy.set_on_data(lf.MsgTypes.WITHDRAW, partial(func_parse, withdraw_func))
     def set_bar_data(self, func_name):
         bar_func = getattr(self.module, func_name, None)
         if bar_func is not None:
@@ -114,7 +121,7 @@ class Strategy:
         switch_day_func = getattr(self.module, func_name, None)
         if switch_day_func is not None:
             self.strategy.set_on_switch_day(partial(switch_day_func, context))
-
+    
     def setup_functions(self):
         init_func = getattr(self.module, 'initialize', None)
         if init_func is None:
@@ -131,3 +138,4 @@ class Strategy:
         self.set_func_error('on_error')
         self.set_func_pos('on_pos')
         self.set_func_switch_day('on_switch_day')
+        self.set_withdraw('on_withdraw')
