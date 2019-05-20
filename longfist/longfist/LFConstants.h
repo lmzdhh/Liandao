@@ -231,6 +231,7 @@ const short MSG_TYPE_LF_RTN_TRADE     = 206;
 const short MSG_TYPE_LF_ORDER_ACTION  = 207;
 const short MSG_TYPE_LF_QRY_ACCOUNT   = 208;
 const short MSG_TYPE_LF_RSP_ACCOUNT   = 209;
+const short MSG_TYPE_LF_WITHDRAW      = 210;
 
 // MsgTypes that from original data structures...
 // ctp, idx=1
@@ -391,6 +392,7 @@ const short MSG_TYPE_LF_ORDER_BITTREX     = 36204;
 const short MSG_TYPE_LF_RTN_ORDER_BITTREX = 36205;
 const short MSG_TYPE_LF_RTN_TRADE_BITTREX = 36206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITTREX = 36207;
+const short MSG_TYPE_LF_WITHDRAW_BITTREX = 36210;
 //KUCOIN, idx=32
 const short MSG_TYPE_LF_MD_KUCOIN       	= 32101;
 const short MSG_TYPE_LF_QRY_POS_KUCOIN  	= 32201;

@@ -432,5 +432,10 @@ struct LFRspAccountField
 	double   	Equity;                //当日权益
 	double   	MarketValue;           //账户市值
 };
-
+struct LFWithdrawField{
+	char_31     Currency;
+	int64_t     Volume;
+	char_64     Address;
+	char_64     Tag;
+};
 #endif

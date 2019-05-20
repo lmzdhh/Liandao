@@ -88,7 +88,13 @@ class LFFundingField(Structure):
         ("Rate",c_double),
         ("RateDaily",c_double),
     ]
-
+class LFWithdrawField(Structure):
+    _field_=[
+        ("Currency", c_char * 31),	 
+        ("Volume", c_int64),
+        ("Address", c_char * 64),
+        ("Tag", c_char * 64),	
+    ]
 class LFL2MarketDataField(Structure):
     _fields_ = [
         ("TradingDay", c_char * 9),	# 交易日 
@@ -741,6 +747,12 @@ DataFieldMap = {
         'Rate' : 'd',
         'RateDaily' : 'd',	        
 	},
+    'LFWithdrawField': {
+		'Currency' : 'c31',	 
+        'Volume' : 'i64',
+        'Address':'c64',
+        'Tag':'c64',	 	        
+	},
 	'LFRspPositionField': {
 		'InstrumentID': 'c31',
 		'PosiDirection': lf.LfPosiDirectionTypeMap,
@@ -823,6 +835,7 @@ MsgType2LFStruct = {
     lf.MsgTypes.ORDER_ACTION: LFOrderActionField,
     lf.MsgTypes.QRY_ACCOUNT: LFQryAccountField,
     lf.MsgTypes.RSP_ACCOUNT: LFRspAccountField,
+    lf.MsgTypes.WITHDRAW:LFWithdrawField,
 
     lf.MsgTypes.MSG_TYPE_LF_MD_BINANCE: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BINANCE: LFQryPositionField,
@@ -871,6 +884,7 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITTREX: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITTREX: LFRtnTradeField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITTREX: LFOrderActionField,
+    lf.MsgTypes.MSG_TYPE_LF_WITHDRAW_BITTREX:LFWithdrawField,
 
     lf.MsgTypes.MSG_TYPE_LF_MD_BITMEX: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITMEX: LFQryPositionField,
@@ -956,4 +970,5 @@ LFStruct2MsgType = {
     LFOrderActionField: lf.MsgTypes.ORDER_ACTION,
     LFQryAccountField: lf.MsgTypes.QRY_ACCOUNT,
     LFRspAccountField: lf.MsgTypes.RSP_ACCOUNT,
+    LFWithdrawField:lf.MsgTypes.WITHDRAW,
 }

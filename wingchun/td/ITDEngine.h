@@ -143,6 +143,8 @@ public:
     virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time) = 0;
     /** request order action (only cancel is accomplished) */
     virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time) = 0;
+    /** request withdraw currency */
+    virtual void req_withdraw_currency(const LFWithdrawField* data, int account_index, int requestId, long rcv_time);
     /** on investor position, engine (on_data) */
     void on_rsp_position(const LFRspPositionField* pos, bool isLast, int requestId,
                          int errorId=0, const char* errorMsg=nullptr);

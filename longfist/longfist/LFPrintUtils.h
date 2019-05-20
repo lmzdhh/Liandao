@@ -74,6 +74,12 @@ namespace LF_UTIL_PRINTER_CTP
 	 << std::setw(20) << "Rate:" << std::setw(6) << "(d)" << " " << ptr->Rate << std::endl \
 	 << std::setw(20) << "RateDaily:" << std::setw(6) << "(d)" << " " << ptr->RateDaily << std::endl \
 
+#define PRINT_WITHDRAW(ptr) ""\
+	 << std::setw(20) << "Currency:" << std::setw(6) << "(c31)" << " " << ptr->Currency << std::endl \
+	 << std::setw(20) << "Volume:" << std::setw(6) << "(i64)" << " " << ptr->Volume << std::endl \
+	 << std::setw(20) << "Address:" << std::setw(6) << "(c64)" << " " << ptr->Address << std::endl \
+	 << std::setw(20) << "Tag:" << std::setw(6) << "(c64)" << " " << ptr->Tag << std::endl \
+
 #define PRINT_L2_MD(ptr) ""\
 	 << std::setw(20) << "TradingDay:" << std::setw(6) << "(c9)" << " " << ptr->TradingDay << std::endl \
 	 << std::setw(20) << "TimeStamp:" << std::setw(6) << "(c9)" << " " << ptr->TimeStamp << std::endl \
@@ -733,6 +739,12 @@ inline void printData(const void* data, short msg_type)
 			using namespace LF_UTIL_PRINTER_CTP;
 			CThostFtdcTradingAccountField* ptr = (CThostFtdcTradingAccountField*)data;
 			std::cout << PRINT_RSP_ACCOUNT_CTP(ptr);
+			break;
+		}
+		case MSG_TYPE_LF_WITHDRAW:
+		{
+			LFWithdrawField* ptr = (LFWithdrawField*)data;
+			std::cout << PRINT_WITHDRAW(ptr);
 			break;
 		}
 	}

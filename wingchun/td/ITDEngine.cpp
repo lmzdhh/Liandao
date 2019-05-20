@@ -59,7 +59,9 @@ void ITDEngine::set_reader_thread()
 {
     reader_thread = ThreadPtr(new std::thread(boost::bind(&ITDEngine::listening, this)));
 }
+void ITDEngine::req_withdraw_currency(const LFWithdrawField* data, int account_index, int requestId, long rcv_time){
 
+}
 void ITDEngine::init()
 {
     reader = yijinjing::JournalReader::createRevisableReader(name());
@@ -245,6 +247,10 @@ void ITDEngine::listening()
                         strcpy(acc->InvestorID, accounts[idx].InvestorID);
                         req_qry_account(acc, idx, requestId);
                         break;
+                    }
+                    case MSG_TYPE_LF_WITHDRAW:
+                    {
+
                     }
                     default:
                         KF_LOG_DEBUG(logger, "[Unexpected] frame found: (msg_type)" << msg_type << ", (name)" << name);

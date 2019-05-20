@@ -53,6 +53,7 @@ public:
     virtual void on_rsp_order(const LFInputOrderField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
     virtual void on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
     virtual void on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time);
+    virtual void on_withdraw(const LFWithdrawField* data, int request_id, short source, long rcv_time);
     /* system utilities */
     virtual void on_switch_day(long rcv_time);
     virtual void on_time(long cur_time);

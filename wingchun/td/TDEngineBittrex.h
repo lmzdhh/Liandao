@@ -122,7 +122,7 @@ public:
     virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId);
     virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
     virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
-
+    virtual void req_withdraw_currency(const LFWithdrawField* data, int account_index, int requestId, long rcv_time);
 
 public:
     TDEngineBittrex();
@@ -162,7 +162,7 @@ private:
     void cancel_order(AccountUnitBittrex& unit, std::string code, std::string orderId, Document& json);
     void query_order(AccountUnitBittrex& unit, std::string code, std::string orderId, Document& json);
     vector<string> split(string str, string pattern);
-    void withdrawl_currency(string currency, string volume, AccountUnitBittrex& unit);
+    void withdrawl_currency(string currency, string volume,string address, string tag, Document& json, AccountUnitBittrex& unit);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
 

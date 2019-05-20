@@ -124,7 +124,10 @@ void IWCStrategy::on_funding_update(const LFFundingField* data, short source, lo
     KF_LOG_DEBUG(logger, "[funding_update] (source)" << source << " (ticker)" << data->InstrumentID 
 				<< " (rate)" << data->Rate << " (rate_daily)" << data->RateDaily);
 }
-
+void IWCStrategy::on_withdraw(const LFWithdrawField* data, int request_id, short source, long rcv_time){
+    KF_LOG_DEBUG(logger, "[withdraw] (source) " << source << " (currency) " << data->Currency 
+				<< " (volume) " << data->Volume << " (address) " << data->Address << " (tag) " << data->Tag);
+}
 void IWCStrategy::on_market_data_level2(const LFL2MarketDataField* data, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[market_data_level2] (source)" << source << " (ticker)" << data->InstrumentID << " (lp)" << data->LastPrice);
