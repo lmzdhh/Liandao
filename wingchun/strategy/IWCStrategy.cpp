@@ -261,7 +261,7 @@ bool IWCStrategy::td_is_connected(short source) const
         }\
     }
 
-#define CHECH_WITHDRAW(currency,volume,address) \
+#define CHECK_WITHDRAW(currency,volume,address) \
     {\
         if(currency == null || currency == ""){\
             return -1; \
