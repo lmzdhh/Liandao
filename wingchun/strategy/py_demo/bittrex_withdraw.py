@@ -43,11 +43,11 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             print '-- got pos in initial --'
             context.print_pos(pos_handler)
             #context.stop()
-            print '----will test buy cancel----'
-            context.buy_price = 44100 #market_data.LowerLimitPrice
-            context.sell_price = 20 #market_data.UpperLimitPrice
+            print '----will test withdraw----'
+            #context. = 44100 #market_data.LowerLimitPrice
+            #context.sell_price = 20 #market_data.UpperLimitPrice
             if context.order_rid < 0:
-                print("context.insert_limit_order 1.")
+                print("context.withdrwa 1.")
                 context.order_rid = context.withdraw_currency(source=SOURCE.BITTREX,
                                                                currency="USDT",
                                                                volume=10,
@@ -81,3 +81,6 @@ def on_rtn_trade(context, rtn_trade, order_id, source, rcv_time):
     print '----on rtn trade----'
     context.print_pos(context.get_pos(source=1))
     context.req_rid = context.req_pos(source=1)
+
+def on_withdraw(context, withdraw, order_id,source,rcv_time):
+    print '----on withdraw----'
