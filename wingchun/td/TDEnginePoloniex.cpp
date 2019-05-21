@@ -450,7 +450,7 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	//cancel order
 	OrderInfo order_info;
 	std::unique_lock<std::mutex> lock_map_new_order(*mutex_new_order);
-	if (unit.map_new_order.count(order_ref);)
+	if (unit.map_new_order.count(order_ref))
 	{
 		order_info = unit.map_new_order[order_ref];
 	}
@@ -728,6 +728,7 @@ cpr::Response TDEnginePoloniex::return_orderbook(string& currency_pair,int level
 cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 {
 	KF_LOG_INFO(logger, "[return_order_status](order_number)" << order_number);
+	AccountUnitPoloniex& unit = account_units[0];
 	cpr::Response r;
 	string method = "POST";
 	string timestamp = to_string(get_timestamp());
@@ -792,6 +793,7 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 {
 	KF_LOG_INFO(logger, "[return_order_trades](order_number)" << order_number);
+	AccountUnitPoloniex& unit = account_units[0];
 	cpr::Response r;
 	string method = "POST";
 	string timestamp = to_string(get_timestamp());
