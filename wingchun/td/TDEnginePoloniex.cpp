@@ -213,8 +213,8 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
     pos.PositionCost = 0;
 
     /*实现一个函数获得balance信息，一个函数解析并存储到positionHolder里面去*/
-    string timestamp = to_string(get_timestamp());
-    string command = "command=returnBalances&nonce="+timestamp;
+    //string timestamp = to_string(get_timestamp());
+	string command = "command=returnBalances&nonce=";// +timestamp;
     string method = "POST";
 	int count = 1;
 	KF_LOG_DEBUG(logger, "[getbalance]" );
@@ -266,8 +266,8 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
             KF_LOG_ERROR(logger, "req investor position failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[req_investor_position]");
-			timestamp = to_string(get_timestamp());
-			command = "command=returnBalances&nonce=" + timestamp;
+			//timestamp = to_string(get_timestamp());
+			command = "command=returnBalances&nonce=";// +timestamp;
             r = rest_withAuth(unit, method, command);
         }
     }
@@ -345,14 +345,14 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	if (data->TimeCondition == LF_CHAR_FAK) parastring += "&immediateOrCancel=1";
 	if (data->TimeCondition == LF_CHAR_FOK) parastring += "&fillOrKill=1";
 	OrderInfo order_info;
-	order_info.timestamp = timestamp;
+	order_info.timestamp = timestamp;//TODO:这个可能要去掉
 	order_info.currency_pair = currency_pair;
 	order_info.volume_total_original = data->Volume;
 	cpr::Response r;
 	json js;
 	int count = 1;
 	string method = "POST";
-	string fullcommand = command + timestamp + parastring;
+	string fullcommand = command + parastring;
 	r = rest_withAuth(unit, method, fullcommand);
 	//发单错误或者异常状况处理
 	while (true)
@@ -391,8 +391,8 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 			KF_LOG_ERROR(logger, "req order insert failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[req_order_insert]");
-			timestamp = to_string(get_timestamp());
-			fullcommand = command + timestamp + parastring;
+			//timestamp = to_string(get_timestamp());
+			//fullcommand = command + parastring;
 			r = rest_withAuth(unit, method, fullcommand);
 		}
 	}
@@ -472,12 +472,12 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	}
 	lock_map_new_order.unlock();
 	string method = "POST";
-	string timestamp = to_string(get_timestamp());
+	//string timestamp = to_string(get_timestamp());
 	string command = "command=cancelOrder&orderNumber=" + to_string(order_info.order_number) +
-		"&nonce=" + timestamp;
+		"&nonce=";// +timestamp;
 	r=rest_withAuth(unit, method, command);
 	//出错及异常处理
-	//需要特别注意单订单不存在或者已经成交了的话会返回错误码422
+	//需要特别注意单订单不存在或者已经成交了的话会返回错误码422,如果是操作的nonce错了也会返回422
 	json js;
 	int count;
 	while (true)
@@ -490,28 +490,6 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 				if (js.find("success") != js.end())
 				{
 					KF_LOG_INFO(logger, "[req_order_action] (order cancelled) ");
-					//需要处理一下数量变化-》此部分交给订单状态追踪来处理
-					//data->VolumeChange = order_info.volume_total_original - (stoll(js["amount"].get<string>())) * scale_offset;
-					/*//需要on rtn order 订单若是被撤单了就查不到了
-					LFRtnOrderField rtn_order;//返回order信息
-					memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-					string order_number_str = to_string(order_info.order_number);
-					//以下为必填项
-					strncpy(rtn_order.OrderRef, data->OrderRef, 21);
-					strncpy(rtn_order.BusinessUnit, order_number_str.c_str(), order_number_str.length());
-					rtn_order.OrderStatus = LF_CHAR_Canceled;
-					rtn_order.LimitPrice = data->LimitPrice;
-					rtn_order.VolumeTotalOriginal = order_info.volume_total_original;
-					rtn_order.VolumeTotal = stoll(js["amount"].get<string>())*scale_offset;
-					rtn_order.VolumeTraded = order_info.volume_total_original - rtn_order.VolumeTotal;
-	
-					//其余的为可填项，尽量补全
-					strncpy(rtn_order.UserID, data->UserID, 16);
-					strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
-					strncpy(rtn_order.ExchangeID, "poloniex", 8);
-					rtn_order.RequestID = requestId;
-
-					on_rtn_order(&rtn_order);*/
 					break;
 				}
 				if (js.find("error") != js.end())//错误回报，或者回报中没有orderNumber（可省略）
@@ -540,9 +518,9 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 			KF_LOG_ERROR(logger, "req order action failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[req_order_action]");
-			timestamp = to_string(get_timestamp());
+			//timestamp = to_string(get_timestamp());
 			command = "command=cancelOrder&orderNumber=" + to_string(order_info.order_number) +
-				"&nonce=" + timestamp;
+				"&nonce=";// +timestamp;
 			r = rest_withAuth(unit, method, command);
 		}
 	}
@@ -675,7 +653,8 @@ cpr::Response TDEnginePoloniex::rest_withAuth(AccountUnitPoloniex& unit, string&
     //url="https://poloniex.com/tradingApi";
     string url = unit.baseUrl;
     //command="command=returnBalances&nonce=154264078495300";
-    string body = command;
+	string timestamp = to_string(get_timestamp());
+    string body = command+timestamp;
     string sign=hmac_sha512(secret.c_str(),body.c_str());
     cpr::Response response;
     if (!strcmp(method.c_str(), "GET"))
@@ -726,7 +705,7 @@ cpr::Response TDEnginePoloniex::return_orderbook(string& currency_pair,int level
 	(response.text) {"asks":[["0.03156507",3.4012095]],"bids":[["0.03156001",4.28179236]],"isFrozen":"0","seq":693326150}
 	*/
 	string method = "GET";
-	string timestamp = to_string(get_timestamp());
+	//string timestamp = to_string(get_timestamp());
 	string level_str = to_string(level);
 	string command = "command=returnOrderBook&currencyPair="+currency_pair+
 		"&depth="+level_str;
@@ -740,11 +719,11 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 	AccountUnitPoloniex& unit = account_units[0];
 	cpr::Response r;
 	string method = "POST";
-	string timestamp = to_string(get_timestamp());
+	//string timestamp = to_string(get_timestamp());
 	string command = "command=returnOrderStatus&orderNumber=";
 	string order_number_str = to_string(order_number);
 	command += order_number_str +
-		"&nonce=" + timestamp;
+		"&nonce=";// +timestamp;
 	r = rest_withAuth(unit, method, command);
 	//出错处理
 	int count;
@@ -809,10 +788,10 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 			KF_LOG_ERROR(logger, "return order status failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[return_order_status]");
-			timestamp = to_string(get_timestamp());
-			command = "command=returnOrderStatus&orderNumber=";
-			command += order_number_str +
-				"&nonce=" + timestamp;
+			//timestamp = to_string(get_timestamp());
+			//command = "command=returnOrderStatus&orderNumber=";
+			//command += order_number_str +
+				"&nonce=";// +timestamp;
 			r = rest_withAuth(unit, method, command);
 		}
 	}
@@ -826,11 +805,11 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 	AccountUnitPoloniex& unit = account_units[0];
 	cpr::Response r;
 	string method = "POST";
-	string timestamp = to_string(get_timestamp());
+	//string timestamp = to_string(get_timestamp());
 	string command = "command=returnOrderTrades&orderNumber=";
 	string order_number_str = to_string(order_number);
 	command += order_number_str +
-		"&nonce=" + timestamp;
+		"&nonce=";// +timestamp;
 	r = rest_withAuth(unit, method, command);
 	//出错处理
 	int count;
@@ -872,10 +851,10 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 			KF_LOG_ERROR(logger, "return_order_trades failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[return_order_trades]");
-			timestamp = to_string(get_timestamp());
-			command = "command=returnOrderTrades&orderNumber=";
-			command += order_number_str +
-				"&nonce=" + timestamp;
+			//timestamp = to_string(get_timestamp());
+			//command = "command=returnOrderTrades&orderNumber=";
+			//command += order_number_str +
+			//	"&nonce=" + timestamp;
 			r = rest_withAuth(unit, method, command);
 		}
 	}
