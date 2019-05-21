@@ -95,7 +95,7 @@ class Strategy:
     def set_withdraw(self,func_name):
         withdraw_func = getattr(self.module, func_name, None)
         if withdraw_func is not None:
-            def func_parse(func, raw_data, source, nano):
+            def func_parse(func, raw_data, request_id, source, nano):
                 data = ctypes.cast(raw_data, ctypes.POINTER(structs.MsgType2LFStruct[lf.MsgTypes.WITHDRAW])).contents
                 return func(context, data, source, nano)
             self.strategy.set_on_data(lf.MsgTypes.WITHDRAW, partial(func_parse, withdraw_func))
