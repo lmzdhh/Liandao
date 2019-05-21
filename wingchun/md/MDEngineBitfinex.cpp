@@ -950,7 +950,7 @@ std::string MDEngineBitfinex::createBookJsonString(std::string exchange_coinpair
 	writer.String(exchange_coinpair.c_str());
 
 	writer.Key("len");
-	writer.Int(book_depth_count);
+	writer.Int(25);
 
 	writer.EndObject();
 	return s.GetString();
