@@ -881,9 +881,10 @@ void TDEnginePoloniex::updating_order_status()
 		{
 			KF_LOG_INFO(logger, "[updating_order_status] looping!");
 		}
+		KF_LOG_INFO(logger, "[updating_order_status] (map_order.size)"<<map_order.size());
 		map<string, LFRtnOrderField>::iterator it;
 		std::unique_lock<std::mutex> lock_map_order(*mutex_order);
-		for (it = map_order.begin(); it != map_order.end();it++)//遍历 map
+		for (it = map_order.begin(); it != map_order.end();)//遍历 map
 		{
 			LFRtnOrderField &rtn_order=it->second;//获得rtn order
 			string order_ref = it->first;
@@ -989,13 +990,9 @@ void TDEnginePoloniex::updating_order_status()
 				{
 					unit.map_new_order.erase(order_ref);
 					map_order.erase(order_ref);
-					auto nextone = it + 1;
-					if (it == map_order.end() || nextone == map_order.end())
-					{
-						break;
-					}
+					KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref << " done ");
 				}
-				KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref<<" done ");
+				it++;
 				//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
 			}
 			lock_map_new_order.unlock();
