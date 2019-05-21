@@ -266,6 +266,8 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
             KF_LOG_ERROR(logger, "req investor position failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[req_investor_position]");
+			timestamp = to_string(get_timestamp());
+			command = "command=returnBalances&nonce=" + timestamp;
             r = rest_withAuth(unit, method, command);
         }
     }
@@ -325,7 +327,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 			"&currencyPair=" + currency_pair +
 			"&rate=" + rate_str +
 			"&amount=" + amount_str +
-			"&nonce=" + timestamp;
+			"&nonce=";
 	}
 	else
 	{
@@ -338,9 +340,10 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 		on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
 		return;
 	}
-	if (is_post_only(data)) command += "&postOnly=1";
-	if (data->TimeCondition == LF_CHAR_FAK) command += "&immediateOrCancel=1";
-	if (data->TimeCondition == LF_CHAR_FOK) command += "&fillOrKill=1";
+	string parastring="";
+	if (is_post_only(data)) parastring += "&postOnly=1";
+	if (data->TimeCondition == LF_CHAR_FAK) parastring += "&immediateOrCancel=1";
+	if (data->TimeCondition == LF_CHAR_FOK) parastring += "&fillOrKill=1";
 	OrderInfo order_info;
 	order_info.timestamp = timestamp;
 	order_info.currency_pair = currency_pair;
@@ -349,7 +352,8 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	json js;
 	int count = 1;
 	string method = "POST";
-	r = rest_withAuth(unit, method, command);
+	string fullcommand = command + timestamp + parastring;
+	r = rest_withAuth(unit, method, fullcommand);
 	//发单错误或者异常状况处理
 	while (true)
 	{
@@ -387,7 +391,9 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 			KF_LOG_ERROR(logger, "req order insert failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[req_order_insert]");
-			r = rest_withAuth(unit, method, command);
+			timestamp = to_string(get_timestamp());
+			fullcommand = command + timestamp + parastring;
+			r = rest_withAuth(unit, method, fullcommand);
 		}
 	}
 	//获得订单信息，处理 order_info、rtn_order
@@ -534,6 +540,9 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 			KF_LOG_ERROR(logger, "req order action failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[req_order_action]");
+			timestamp = to_string(get_timestamp());
+			command = "command=cancelOrder&orderNumber=" + to_string(order_info.order_number) +
+				"&nonce=" + timestamp;
 			r = rest_withAuth(unit, method, command);
 		}
 	}
@@ -800,6 +809,10 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 			KF_LOG_ERROR(logger, "return order status failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[return_order_status]");
+			timestamp = to_string(get_timestamp());
+			command = "command=returnOrderStatus&orderNumber=";
+			command += order_number_str +
+				"&nonce=" + timestamp;
 			r = rest_withAuth(unit, method, command);
 		}
 	}
@@ -859,6 +872,10 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 			KF_LOG_ERROR(logger, "return_order_trades failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[return_order_trades]");
+			timestamp = to_string(get_timestamp());
+			command = "command=returnOrderTrades&orderNumber=";
+			command += order_number_str +
+				"&nonce=" + timestamp;
 			r = rest_withAuth(unit, method, command);
 		}
 	}
@@ -877,128 +894,131 @@ void TDEnginePoloniex::updating_order_status()
 	LFRtnTradeField rtn_trade;
 	while (isRunning)//这将是个死循环，时刻准备更新订单状态
 	{
+		std::unique_lock<std::mutex> lock_map_order(*mutex_order);
 		if (map_order.size() == 0)
 		{
 			KF_LOG_INFO(logger, "[updating_order_status] looping!");
 		}
-		KF_LOG_INFO(logger, "[updating_order_status] (map_order.size)"<<map_order.size());
-		map<string, LFRtnOrderField>::iterator it;
-		std::unique_lock<std::mutex> lock_map_order(*mutex_order);
-		for (it = map_order.begin(); it != map_order.end();)//遍历 map
+		else
 		{
-			LFRtnOrderField &rtn_order=it->second;//获得rtn order
-			string order_ref = it->first;
-			std::unique_lock<std::mutex> lock_map_new_order(*mutex_new_order);
-			if (!unit.map_new_order.count(order_ref))
+			KF_LOG_INFO(logger, "[updating_order_status] (map_order.size)" << map_order.size());
+			map<string, LFRtnOrderField>::iterator it;
+			for (it = map_order.begin(); it != map_order.end();)//遍历 map
 			{
-				KF_LOG_ERROR(logger, "[updating_order_status] no order refed by order_ref" << order_ref);
-				map_order.erase(order_ref);
-				unit.map_new_order.erase(order_ref);
-			}
-			else
-			{	//填写 rtn_order rtn_trade的部分共性信息
+				LFRtnOrderField& rtn_order = it->second;//获得rtn order
+				string order_ref = it->first;
+				std::unique_lock<std::mutex> lock_map_new_order(*mutex_new_order);
+				if (!unit.map_new_order.count(order_ref))
+				{
+					KF_LOG_ERROR(logger, "[updating_order_status] no order refed by order_ref" << order_ref);
+					map_order.erase(order_ref);
+					unit.map_new_order.erase(order_ref);
+				}
+				else
+				{	//填写 rtn_order rtn_trade的部分共性信息
 
-				OrderInfo& order_info = unit.map_new_order[order_ref];
-				KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref);
-				memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-				strcpy(rtn_trade.ExchangeID, "poloniex");
-				strncpy(rtn_trade.UserID, rtn_order.UserID, 16);
-				strncpy(rtn_trade.InstrumentID, rtn_order.InstrumentID, 31);
-				strncpy(rtn_trade.OrderRef, rtn_order.OrderRef, 21);
-				rtn_trade.Direction = rtn_order.Direction;
+					OrderInfo& order_info = unit.map_new_order[order_ref];
+					KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref);
+					memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
+					strcpy(rtn_trade.ExchangeID, "poloniex");
+					strncpy(rtn_trade.UserID, rtn_order.UserID, 16);
+					strncpy(rtn_trade.InstrumentID, rtn_order.InstrumentID, 31);
+					strncpy(rtn_trade.OrderRef, rtn_order.OrderRef, 21);
+					rtn_trade.Direction = rtn_order.Direction;
 
-				int64_t tradeID = 0, tradeID_last;
-				tradeID_last = order_info.tradeID;//上次更新到这个tradeID
+					int64_t tradeID = 0, tradeID_last;
+					tradeID_last = order_info.tradeID;//上次更新到这个tradeID
 
-				//KF_LOG_DEBUG(logger, "[updating_order_status] [return_order_trades] (order_ref)" << order_ref);
-				//1、先查order status，如果订单还在，查trades，如果订单不在，最后一次查trades
-				is_closed = false;
-				is_touched = false;
-				ro = return_order_status(order_info.order_number);
-				if (ro.status_code == ORDER_CLOSED)
-				{
-					is_closed = true;
-				}
-				else if (ro.status_code == 200)
-				{
-					
-				}
-				else if (ro.status_code >= 400)
-				{
-					//这个订单有问题，跳过
-					KF_LOG_ERROR(logger, "[updating_order_status] error there are para problem or unknown mistake"<<
-					" (order_number) "<<order_info.order_number);
-					continue;
-				}
-				rt = return_order_trades(order_info.order_number);
-				if (!is_closed && rt.status_code == PARA_ERROR)//订单未关闭，却报错，且不是参数问题的话（通常不是，即使是也可以看log看出来）说明此单未有任何变化
-				{
-					continue;
-				}
-				else if (is_closed && rt.status_code == PARA_ERROR)//订单关闭，未有任何交易记录，被撤单了
-				{
-					order_info.is_open = false;
-					rtn_order.OrderStatus = LF_CHAR_Canceled;
-					on_rtn_order(&rtn_order);
-				}
-				else if (rt.status_code == 200)//有交易记录
-				{
-					js = json::parse(rt.text);
-					int no = js.size();
-					no--;
-					while (no >= 0)//返回每一个trade，并返回order
+					//KF_LOG_DEBUG(logger, "[updating_order_status] [return_order_trades] (order_ref)" << order_ref);
+					//1、先查order status，如果订单还在，查trades，如果订单不在，最后一次查trades
+					is_closed = false;
+					is_touched = false;
+					ro = return_order_status(order_info.order_number);
+					if (ro.status_code == ORDER_CLOSED)
 					{
-						auto ob = js[no];//获得这个object
-						tradeID = ob["globalTradeID"].get<int64_t>();//int64_t 还是 int？
-						if (tradeID > tradeID_last)//如果不是更新的trade就放弃
-						{
-							tradeID_last = tradeID;
-							order_info.tradeID = tradeID;
-							strcpy(rtn_trade.TradeID, std::to_string(tradeID).c_str());
-							string price = to_string(stod(ob["rate"].get<string>()) * scale_offset);
-							rtn_trade.Price = stoll(price);
-							string volume = to_string(stod(ob["amount"].get<string>()) * scale_offset);
-							rtn_trade.Volume = stoll(volume);
-							on_rtn_trade(&rtn_trade);
-							rtn_order.VolumeTraded += rtn_trade.Volume;
-							rtn_order.VolumeTotal -= rtn_trade.Volume;
-							if (rtn_order.VolumeTotal <= 0)//判断数量
-							{
-								rtn_order.OrderStatus = LF_CHAR_AllTraded;//已经完全成交了
-								order_info.is_open = false;
-								is_closed = true;
-								//该订单处理结束							
-								on_rtn_order(&rtn_order);
-								break;
-							}
-							else
-							{
-								rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
-							}
-							on_rtn_order(&rtn_order);
-						}
-						no--;
+						is_closed = true;
 					}
-					if (is_closed && order_info.is_open)//在撤单情况下，要再返回一次最终状态
+					else if (ro.status_code == 200)
+					{
+
+					}
+					else if (ro.status_code >= 400)
+					{
+						//这个订单有问题，跳过
+						KF_LOG_ERROR(logger, "[updating_order_status] error there are para problem or unknown mistake" <<
+							" (order_number) " << order_info.order_number);
+						continue;
+					}
+					rt = return_order_trades(order_info.order_number);
+					if (!is_closed && rt.status_code == PARA_ERROR)//订单未关闭，却报错，且不是参数问题的话（通常不是，即使是也可以看log看出来）说明此单未有任何变化
+					{
+						continue;
+					}
+					else if (is_closed && rt.status_code == PARA_ERROR)//订单关闭，未有任何交易记录，被撤单了
 					{
 						order_info.is_open = false;
 						rtn_order.OrderStatus = LF_CHAR_Canceled;
 						on_rtn_order(&rtn_order);
 					}
+					else if (rt.status_code == 200)//有交易记录
+					{
+						js = json::parse(rt.text);
+						int no = js.size();
+						no--;
+						while (no >= 0)//返回每一个trade，并返回order
+						{
+							auto ob = js[no];//获得这个object
+							tradeID = ob["globalTradeID"].get<int64_t>();//int64_t 还是 int？
+							if (tradeID > tradeID_last)//如果不是更新的trade就放弃
+							{
+								tradeID_last = tradeID;
+								order_info.tradeID = tradeID;
+								strcpy(rtn_trade.TradeID, std::to_string(tradeID).c_str());
+								string price = to_string(stod(ob["rate"].get<string>()) * scale_offset);
+								rtn_trade.Price = stoll(price);
+								string volume = to_string(stod(ob["amount"].get<string>()) * scale_offset);
+								rtn_trade.Volume = stoll(volume);
+								on_rtn_trade(&rtn_trade);
+								rtn_order.VolumeTraded += rtn_trade.Volume;
+								rtn_order.VolumeTotal -= rtn_trade.Volume;
+								if (rtn_order.VolumeTotal <= 0)//判断数量
+								{
+									rtn_order.OrderStatus = LF_CHAR_AllTraded;//已经完全成交了
+									order_info.is_open = false;
+									is_closed = true;
+									//该订单处理结束							
+									on_rtn_order(&rtn_order);
+									break;
+								}
+								else
+								{
+									rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
+								}
+								on_rtn_order(&rtn_order);
+							}
+							no--;
+						}
+						if (is_closed && order_info.is_open)//在撤单情况下，要再返回一次最终状态
+						{
+							order_info.is_open = false;
+							rtn_order.OrderStatus = LF_CHAR_Canceled;
+							on_rtn_order(&rtn_order);
+						}
+					}
+					if (is_closed)//订单已经关闭了就要从order里剃出去
+					{
+						unit.map_new_order.erase(order_ref);
+						map_order.erase(it++);
+						KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref << " done ");
+					}
+					else
+					{
+						it++;
+					}
+					//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
 				}
-				if (is_closed)//订单已经关闭了就要从order里剃出去
-				{
-					unit.map_new_order.erase(order_ref);
-					map_order.erase(it++);
-					KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref << " done ");
-				}
-				else
-				{
-					it++;
-				}
-				//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
+				lock_map_new_order.unlock();
 			}
-			lock_map_new_order.unlock();
 		}
 		lock_map_order.unlock();
 		std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
