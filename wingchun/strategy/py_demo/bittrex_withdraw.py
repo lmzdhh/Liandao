@@ -53,7 +53,7 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                                volume=10,
                                                                address="1DEKiiXaoQv9abK5PCCwHFPg86XVsm2cpi",
                                                                tag="",
-                                                               key="")
+                                                               key="608885f245e5426c9d38921ada92c080")
                 print("context.order_rid:", context.order_rid)
     else:
         print '-- got pos requested --'
