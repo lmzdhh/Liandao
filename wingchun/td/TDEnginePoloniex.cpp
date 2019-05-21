@@ -129,8 +129,11 @@ TradeAccount TDEnginePoloniex::load_account(int idx, const json& j_config)
 	return_orderbook(currencyPair, 1);//测试一下，，，
     //test ends here
 	KF_LOG_INFO(logger, "[load_account] updating order status thread starts");
+	isRunning = 1;
 	rest_thread = ThreadPtr(new std::thread(boost::bind(&TDEnginePoloniex::updating_order_status, this)));
 
+
+	
     return account;
 }
 
@@ -309,17 +312,10 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	string currency_pair = unit.coinPairWhiteList.GetValueByKey(string(data->InstrumentID));
 	string order_type = get_order_type(data->OrderPriceType);//市价单或限价单
 	string order_side = get_order_side(data->Direction);//买或者卖
-	std::stringstream ss;
 	double rate = data->LimitPrice * 1.0 / scale_offset;
-    ss.str("");
-	ss.clear();
-	ss << rate;
-	string rate_str = ss.str();
+	string rate_str = to_string(rate);
 	double amount = data->Volume * 1.0 / scale_offset;
-    ss.str("");
-    ss.clear();
-	ss << amount;
-	string amount_str = ss.str();
+	string amount_str = to_string(amount);
 	string timestamp = to_string(get_timestamp());
 	//"command=buy&currencyPair=BTC_ETH&rate=0.01&amount=1&nonce=154264078495300"
 	string command = "command=";
@@ -336,7 +332,8 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 		//若是市价单，，暂时还没有办法处理，先出错处理吧
 		//新建一个线程来处理吧,暂时先放着，日后可能有其它办法了再说
 		KF_LOG_ERROR(logger, "[req_order_insert] (market order error) ");
-		errorId = 100;
+		KF_LOG_ERROR(logger, "[req_order_insert] (please use limitprice order instead) ");
+		errorId = EXEC_ERROR;
 		errorMsg = "market order error";
 		on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
 		return;
@@ -364,7 +361,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 				if (js.find("error") != js.end() || js.find("orderNumber") == js.end())//错误回报，或者回报中没有orderNumber（可省略）
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
-					KF_LOG_ERROR(logger, "[req_order_insert] (insert order error)（might because we don't set a right parameter）"<<r.text);
+					KF_LOG_ERROR(logger, "[req_order_insert] (insert order error) (might because we don't set a right parameter）"<<r.text);
 					errorId = PARA_ERROR;
 					errorMsg = r.text;
 					raw_writer->write_error_frame(data, sizeof(LFInputOrderField),
@@ -399,9 +396,9 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	order_info.tradeID = 0;
 	order_info.is_open = true;
 
-	std::unique_lock<std::mutex> rilock(*mutex_order_and_trade);
+	std::unique_lock<std::mutex> lock_map_new_order(*mutex_new_order);
 	unit.map_new_order.insert(std::make_pair(order_ref, order_info));
-	rilock.unlock();
+	lock_map_new_order.unlock();
 
 	LFRtnOrderField rtn_order;//返回order信息
 	memset(&rtn_order, 0, sizeof(LFRtnOrderField));
@@ -425,9 +422,9 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 
 	on_rtn_order(&rtn_order);
 
-	std::unique_lock<std::mutex> rolock(*mutex_order_and_trade);
+	std::unique_lock<std::mutex> lock_map_order(*mutex_order);
 	map_order.insert(std::make_pair(order_ref, rtn_order));
-	rolock.unlock();
+	lock_map_order.unlock();
 	//插入map，方便后续订单状态跟踪
 	/*//后续跟踪处理trade
 	std::thread rest_thread(updating_order_status,&rtn_order);
@@ -452,11 +449,8 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	*/
 	//cancel order
 	OrderInfo order_info;
-	int y;
-	std::unique_lock<std::mutex> oilock(*mutex_order_and_trade);
-	y = unit.map_new_order.count(order_ref);
-	oilock.unlock();
-	if (y==1)
+	std::unique_lock<std::mutex> lock_map_new_order(*mutex_new_order);
+	if (unit.map_new_order.count(order_ref);)
 	{
 		order_info = unit.map_new_order[order_ref];
 	}
@@ -468,8 +462,9 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 		on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
 		raw_writer->write_error_frame(data, sizeof(LFOrderActionField),
 			source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
-		return ;
+		return ;//此处自动解锁
 	}
+	lock_map_new_order.unlock();
 	string method = "POST";
 	string timestamp = to_string(get_timestamp());
 	string command = "command=cancelOrder&orderNumber=" + to_string(order_info.order_number) +
@@ -554,6 +549,8 @@ TDEnginePoloniex::TDEnginePoloniex():ITDEngine(SOURCE_POLONIEX)
     mutex_order_and_trade = new std::mutex();
     mutex_response_order_status = new std::mutex();
     mutex_orderaction_waiting_response = new std::mutex();
+	mutex_new_order = new std::mutex();
+	mutex_order = new std::mutex();
 }
 
 TDEnginePoloniex::~TDEnginePoloniex()
@@ -561,6 +558,8 @@ TDEnginePoloniex::~TDEnginePoloniex()
     if (mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
     if (mutex_response_order_status != nullptr) delete mutex_response_order_status;
     if (mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
+	if (mutex_new_order != nullptr) delete mutex_new_order;
+	if (mutex_order != nullptr) delete mutex_order;
 }
 
 inline int64_t TDEnginePoloniex::get_timestamp()
@@ -726,33 +725,17 @@ cpr::Response TDEnginePoloniex::return_orderbook(string& currency_pair,int level
 	return r;
 }
 
-cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
+cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 {
-	KF_LOG_INFO(logger, "[return_order_status](OrderRef)"<<OrderRef);
+	KF_LOG_INFO(logger, "[return_order_status](order_number)" << order_number);
 	cpr::Response r;
-	AccountUnitPoloniex& unit = account_units[0];
-	OrderInfo order_info;
-	int y = 0;
-	std::unique_lock<std::mutex> rilock(*mutex_order_and_trade);
-	y = unit.map_new_order.count(OrderRef);
-	rilock.unlock();
-	if (y==1)
-	{
-		order_info = unit.map_new_order[OrderRef];
-	}
-	else
-	{
-		r.status_code = 404;
-		KF_LOG_ERROR(logger, "could not find order by requestId");
-		return r;
-	}
 	string method = "POST";
 	string timestamp = to_string(get_timestamp());
-	string command = "command=returnOrderStatus&orderNumber=";	
-	string order_number_str = to_string(order_info.order_number);
+	string command = "command=returnOrderStatus&orderNumber=";
+	string order_number_str = to_string(order_number);
 	command += order_number_str +
 		"&nonce=" + timestamp;
-	r=rest_withAuth(unit, method, command);
+	r = rest_withAuth(unit, method, command);
 	//出错处理
 	int count;
 	string errorMsg = "";
@@ -763,29 +746,30 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 		if (r.status_code == 200)//操作发送成功，但不代表操作生效，可能有参数错误等
 		{
 			js = json::parse(r.text);//解析
-			if (js.is_object())
+			if (js.is_object())//进一步进行错误判断，回报200仍可能是有错误的
 			{
 				if (js.find("error") != js.end())//错误回报
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
-					KF_LOG_ERROR(logger, "[return_order_status]（might because we don't set a right parameter）" << r.text);
+					KF_LOG_ERROR(logger, "[return_order_status] (might because we don't set a right parameter）" << r.text);
 					r.status_code = PARA_ERROR;
 				}
 				break;
 			}
 			else
 			{
+				//放回的就不是正常的格式，可能存在未知错误
 				KF_LOG_ERROR(logger, "[return_order_status] (it's not a object）" << r.text);
 				r.status_code = PARSE_ERROR;
 				break;
 			}
 		}
-		else if (r.status_code==422)//订单已经被撤单了，或者订单已经成交了
+		else if (r.status_code == 422)//订单已经被撤单了，或者订单已经成交了
 		{
 			KF_LOG_DEBUG(logger, "[return_order_status] (text）" << r.text);
 			break;
 		}
-		else
+		else//无回复的超时错误，或者网络状况不好或者其它错误
 		{
 			count++;
 			if (count > max_retry_times)
@@ -804,26 +788,15 @@ cpr::Response TDEnginePoloniex::return_order_status(string& OrderRef)
 	return r;
 }
 
-cpr::Response TDEnginePoloniex::return_order_trades(string& OrderRef)
+
+cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 {
-	KF_LOG_INFO(logger, "[return_order_trades](OrderRef)" << OrderRef);
+	KF_LOG_INFO(logger, "[return_order_trades](order_number)" << order_number);
 	cpr::Response r;
-	AccountUnitPoloniex & unit = account_units[0];
-	OrderInfo order_info;
-	if (unit.map_new_order.count(OrderRef))
-	{
-		order_info = unit.map_new_order[OrderRef];
-	}
-	else
-	{
-		r.status_code = 404;
-		KF_LOG_ERROR(logger, "could not find order by requestId");
-		return r;
-	}
 	string method = "POST";
 	string timestamp = to_string(get_timestamp());
 	string command = "command=returnOrderTrades&orderNumber=";
-	string order_number_str = to_string(order_info.order_number);
+	string order_number_str = to_string(order_number);
 	command += order_number_str +
 		"&nonce=" + timestamp;
 	r = rest_withAuth(unit, method, command);
@@ -842,8 +815,8 @@ cpr::Response TDEnginePoloniex::return_order_trades(string& OrderRef)
 				if (js.find("error") != js.end())//错误回报
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
-					KF_LOG_ERROR(logger, "[return_order_trades]（might because we don't set a right parameter）" << r.text);
-					r.status_code = PARA_ERROR;
+					KF_LOG_ERROR(logger, "[return_order_trades] (might because we don't set a right parameter）" << r.text);
+					r.status_code = PARA_ERROR;//TODO需要额外考虑
 				}
 				break;
 			}
@@ -876,33 +849,35 @@ cpr::Response TDEnginePoloniex::return_order_trades(string& OrderRef)
 void TDEnginePoloniex::updating_order_status()
 {
 	KF_LOG_INFO(logger, "[updating_order_status] thread starts");
+	bool is_closed = false;
+	bool is_touched = false;
 	AccountUnitPoloniex& unit = account_units[0];
-	cpr::Response r;
+	cpr::Response ro;
+	cpr::Response rt;
+	json js;
 	LFRtnTradeField rtn_trade;
 	while (isRunning)//这将是个死循环，时刻准备更新订单状态
 	{
-		std::unique_lock<std::mutex> otlock(*mutex_order_and_trade);//lock
-		for(auto it:map_order)//遍历 map
+		KF_LOG_INFO(logger, "[updating_order_status] looping!");
+		map<string, LFRtnOrderField>::iterator it;
+		std::unique_lock<std::mutex> lock_map_order(*mutex_order);
+		for (it = map_order.begin(); it != map_order.end();it++)//遍历 map
 		{
 			LFRtnOrderField &rtn_order=it->second;//获得rtn order
 			string order_ref = it->first;
+			std::unique_lock<std::mutex> lock_map_new_order(*mutex_new_order);
 			if (!unit.map_new_order.count(order_ref))
 			{
 				KF_LOG_ERROR(logger, "[updating_order_status] no order refed by order_ref" << order_ref);
 				map_order.erase(order_ref);
-				it++;
-				if (it == map_order.end())
-				{
-					it = map_order.begin();
-				}
-				//continue;
+				unit.map_new_order.erase(order_ref);
 			}
 			else
-			{
+			{	//填写 rtn_order rtn_trade的部分共性信息
 
 				OrderInfo& order_info = unit.map_new_order[order_ref];
 				KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref);
-				memset(&rtn_trade, 0, sizeof(LFRtnTradeField));//填充rtn trade的各个成员
+				memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
 				strcpy(rtn_trade.ExchangeID, "poloniex");
 				strncpy(rtn_trade.UserID, rtn_order.UserID, 16);
 				strncpy(rtn_trade.InstrumentID, rtn_order.InstrumentID, 31);
@@ -912,17 +887,33 @@ void TDEnginePoloniex::updating_order_status()
 				int64_t tradeID = 0, tradeID_last;
 				tradeID_last = order_info.tradeID;//上次更新到这个tradeID
 
-				//查询trade 更新trade 更新order 
-				//若是all traded ，订单关闭，从map中删除元素
-				//若不是all traded，查询order，订单又是关闭的，订单状态设为关闭，等待下一次查traded 防止错过某个单，然后删除这个元素
-				KF_LOG_DEBUG(logger, "[updating_order_status] [return_order_trades] (order_ref)" << order_ref);
-				r = return_order_trades(order_ref);//查询trade
-				if (r.status_code < 400)//操作成功，错误处理已在return order trades函数中处理
+				//KF_LOG_DEBUG(logger, "[updating_order_status] [return_order_trades] (order_ref)" << order_ref);
+				//1、先查order status，如果订单还在，查trades，如果订单不在，最后一次查trades
+				is_closed = false;
+				is_touched = false;
+				ro = return_order_status(order_info.order_number);
+				if (ro.status_code == 422)
 				{
-					json js = json::parse(r.text);
+					is_closed = true;
+				}
+				else if (ro.status_code >= 400)
+				{
+					//这个订单有问题，跳过
+					KF_LOG_ERROR(logger, "[updating_order_status] error there are para problem or unknown mistake"<<
+					" (order_number) "<<order_info.order_number);
+					continue;
+				}
+				rt = return_order_trades(order_info.order_number);
+				if (!is_closed && rt.status_code == PARA_ERROR)//订单未关闭，却报错，且不是参数问题的话（通常不是，即使是也可以看log看出来）说明此单未有任何变化
+				{
+					continue;
+				}
+				else if (rt.status_code == 200)//有交易记录
+				{
+					js = json::parse(rt.text);
 					int no = js.size();
-					no--;//反向开始遍历
-					while (no >= 0)
+					no--;
+					while (no >= 0)//返回每一个trade，并返回order
 					{
 						auto ob = js[no];//获得这个object
 						tradeID = ob["globalTradeID"].get<int64_t>();//int64_t 还是 int？
@@ -953,30 +944,25 @@ void TDEnginePoloniex::updating_order_status()
 							on_rtn_order(&rtn_order);
 						}
 						no--;
-					}//更新完所有trade了，判断这个单是否关闭，若是关闭了，则删除这个元素
-					if (order_info.is_open)
-					{
-						KF_LOG_DEBUG(logger, "[updating_order_status] [return_order_status] (order_ref)" << order_ref);
-						r = return_order_status(order_ref);
-						if (r.status_code == 422)//错误处理已在函数中完成，status code==422时表示这个单已经被撤单或者完全成交了，
-						{
-							rtn_order.OrderStatus = LF_CHAR_Canceled;
-							order_info.is_open = false;
-						}
 					}
-					else
+					if (is_closed && order_info.is_open)//在撤单情况下，要再返回一次最终状态
 					{
-						if (rtn_order.OrderStatus == LF_CHAR_Canceled)//无新的成交更新,这是一个撤单
-						{
-							on_rtn_order(&rtn_order);
-						}
-						map_order.erase(order_ref);//删除这个元素，它已经处理完了
+						order_info.is_open = false;
+						rtn_order.OrderStatus = LF_CHAR_Canceled;
+						on_rtn_order(&rtn_order);
 					}
-
-				}//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
+					if (is_closed)//订单已经关闭了就要从order里剃出去
+					{
+						unit.map_new_order.erase(order_ref);
+						map_order.erase(order_ref);
+					}
+				}
+				KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref<<" done ");
+				//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
 			}
-			
+			lock_map_new_order.unlock();
 		}
+		lock_map_order.unlock();
 		std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 	}
 }

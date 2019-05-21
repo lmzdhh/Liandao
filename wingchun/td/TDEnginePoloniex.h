@@ -49,7 +49,7 @@ struct AccountUnitPoloniex
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
 
-    map<string, OrderInfo> map_new_order;//记录账户已经发出去的单，凭requestID进行查找
+    map<string, OrderInfo> map_new_order;//order_ref,order_info
     std::vector<PositionSetting> positionHolder;//记录每种持仓币种的情况，需要函数来更新
 };
 class TDEnginePoloniex : public ITDEngine
@@ -95,8 +95,9 @@ private:
     cpr::Response rest_withAuth(AccountUnitPoloniex& unit, string& method, string& command);
 
     cpr::Response return_orderbook(string& currency_pair,int level);//可用来测试接口实现是否有问题
-    cpr::Response return_order_status(string& OrderRef);
-	cpr::Response return_order_trades(string& OrderRef);
+   
+	cpr::Response return_order_status(int64_t& order_number);
+	cpr::Response return_order_trades(int64_t& order_number);
 	//void updating_order_status(LFRtnOrderField* data);//弃置
 	void updating_order_status();//订单状态追踪
 
@@ -108,11 +109,13 @@ private:
 	string url_public_point;
     ThreadPtr rest_thread;
 
-	map<string, LFRtnOrderField> map_order;
+	map<string, LFRtnOrderField> map_order;//order_ref,rtn_order
 
     std::mutex* mutex_order_and_trade = nullptr;
     std::mutex* mutex_response_order_status = nullptr;
     std::mutex* mutex_orderaction_waiting_response = nullptr;
+	std::mutex* mutex_new_order = nullptr;
+	std::mutex* mutex_order = nullptr;
 };
 
 WC_NAMESPACE_END
