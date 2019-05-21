@@ -49,7 +49,7 @@ USING_WC_NAMESPACE
 #define EXEC_ERROR 402
 #define PARA_ERROR 403
 #define NOT_FOUND 404
-
+#define ORDER_CLOSED 422
 void TDEnginePoloniex::init()
 {
     ITDEngine::init();
@@ -361,7 +361,7 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 				if (js.find("error") != js.end() || js.find("orderNumber") == js.end())//错误回报，或者回报中没有orderNumber（可省略）
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
-					KF_LOG_ERROR(logger, "[req_order_insert] (insert order error) (might because we don't set a right parameter）"<<r.text);
+					KF_LOG_ERROR(logger, "[req_order_insert] (insert order error) (might because we don't set a right parameter) "<<r.text);
 					errorId = PARA_ERROR;
 					errorMsg = r.text;
 					raw_writer->write_error_frame(data, sizeof(LFInputOrderField),
@@ -512,7 +512,7 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
 					errorId = PARA_ERROR;
-					KF_LOG_ERROR(logger, "[req_order_action] (cancel error）" << r.text);
+					KF_LOG_ERROR(logger, "[req_order_action] (cancel error) " << r.text);
 					raw_writer->write_error_frame(&data, sizeof(LFOrderActionField),
 						source_id, MSG_TYPE_LF_RSP_POS_POLONIEX, 1, requestId, errorId, errorMsg.c_str());
 					break;
@@ -741,6 +741,7 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 	int count;
 	string errorMsg = "";
 	int errorId = 0;
+	int success = 0;
 	json js;
 	while (true)
 	{
@@ -749,25 +750,36 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 			js = json::parse(r.text);//解析
 			if (js.is_object())//进一步进行错误判断，回报200仍可能是有错误的
 			{
+				if (js.find("success"))
+				{
+					success = js["success"].get<bool>();
+				}
 				if (js.find("error") != js.end())//错误回报
 				{
-					//出错处理，此种情况一般为参数错误，，，需要修改参数
-					KF_LOG_ERROR(logger, "[return_order_status] (might because we don't set a right parameter）" << r.text);
-					r.status_code = PARA_ERROR;
+					if (success == 0)
+					{
+						r.status_code = ORDER_CLOSED;
+					}
+					else
+					{
+						//出错处理，此种情况一般为参数错误，，，需要修改参数
+						KF_LOG_ERROR(logger, "[return_order_status] (might because we don't set a right parameter) " << r.text);
+						r.status_code = PARA_ERROR;
+					}
 				}
 				break;
 			}
 			else
 			{
 				//放回的就不是正常的格式，可能存在未知错误
-				KF_LOG_ERROR(logger, "[return_order_status] (it's not a object）" << r.text);
+				KF_LOG_ERROR(logger, "[return_order_status] (it's not a object) " << r.text);
 				r.status_code = PARSE_ERROR;
 				break;
 			}
 		}
 		else if (r.status_code == 422)//订单已经被撤单了，或者订单已经成交了
 		{
-			KF_LOG_DEBUG(logger, "[return_order_status] (text）" << r.text);
+			KF_LOG_DEBUG(logger, "[return_order_status] (text) " << r.text);
 			break;
 		}
 		else//无回复的超时错误，或者网络状况不好或者其它错误
@@ -817,14 +829,14 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 				if (js.find("error") != js.end())//错误回报
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
-					KF_LOG_ERROR(logger, "[return_order_trades] (might because we don't set a right parameter）" << r.text);
+					KF_LOG_ERROR(logger, "[return_order_trades] (might because we don't set a right parameter) " << r.text);
 					r.status_code = PARA_ERROR;//TODO需要额外考虑
 				}
 				break;
 			}
 			else
 			{
-				KF_LOG_ERROR(logger, "[return_order_trades] (it's not a object）" << r.text);
+				KF_LOG_ERROR(logger, "[return_order_trades] (it's not a object) " << r.text);
 				r.status_code = PARSE_ERROR;
 				break;
 			}
@@ -860,7 +872,10 @@ void TDEnginePoloniex::updating_order_status()
 	LFRtnTradeField rtn_trade;
 	while (isRunning)//这将是个死循环，时刻准备更新订单状态
 	{
-		KF_LOG_INFO(logger, "[updating_order_status] looping!");
+		if (map_order.size() == 0)
+		{
+			KF_LOG_INFO(logger, "[updating_order_status] looping!");
+		}
 		map<string, LFRtnOrderField>::iterator it;
 		std::unique_lock<std::mutex> lock_map_order(*mutex_order);
 		for (it = map_order.begin(); it != map_order.end();it++)//遍历 map
@@ -897,6 +912,10 @@ void TDEnginePoloniex::updating_order_status()
 				if (ro.status_code == 422)
 				{
 					is_closed = true;
+				}
+				else if (ro.status_code == 200)
+				{
+					
 				}
 				else if (ro.status_code >= 400)
 				{
