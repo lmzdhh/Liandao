@@ -750,28 +750,33 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 			js = json::parse(r.text);//解析
 			if (js.is_object())//进一步进行错误判断，回报200仍可能是有错误的
 			{
+				//有可能success==0就表示找不到订单，不需要看后面的result
 				if (js.find("success")!=js.end())
 				{
 					success = js["success"].get<int>();
 				}
-				if (js.find("error") != js.end())//错误回报
+				if (js.find("result") != js.end())//错误回报
 				{
-					if (success == 0)
+					auto result = js["result"];
+					if (result.find("error") != result.end())
 					{
-						r.status_code = ORDER_CLOSED;
-					}
-					else
-					{
-						//出错处理，此种情况一般为参数错误，，，需要修改参数
-						KF_LOG_ERROR(logger, "[return_order_status] (might because we don't set a right parameter) " << r.text);
-						r.status_code = PARA_ERROR;
+						if (success == 0)
+						{
+							r.status_code = ORDER_CLOSED;
+						}
+						else
+						{
+							//出错处理，此种情况一般为参数错误，，，需要修改参数
+							KF_LOG_ERROR(logger, "[return_order_status] (might because we don't set a right parameter) " << r.text);
+							r.status_code = PARA_ERROR;
+						}
 					}
 				}
 				break;
 			}
 			else
 			{
-				//放回的就不是正常的格式，可能存在未知错误
+				//返回的不是正常的格式，可能存在未知错误
 				KF_LOG_ERROR(logger, "[return_order_status] (it's not a object) " << r.text);
 				r.status_code = PARSE_ERROR;
 				break;
@@ -909,7 +914,7 @@ void TDEnginePoloniex::updating_order_status()
 				is_closed = false;
 				is_touched = false;
 				ro = return_order_status(order_info.order_number);
-				if (ro.status_code == 422)
+				if (ro.status_code == ORDER_CLOSED)
 				{
 					is_closed = true;
 				}
