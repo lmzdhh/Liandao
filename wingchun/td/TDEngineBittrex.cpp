@@ -995,8 +995,9 @@ void TDEngineBittrex::req_order_action(const LFOrderActionField* data, int accou
 }
 void TDEngineBittrex::req_withdraw_currency(const LFWithdrawField* data, int account_index, int requestId, long rcv_time){
     AccountUnitBittrex& unit = account_units[account_index];
+    unit.withdrawl_key = data->Key;
     KF_LOG_DEBUG(logger, "[req_withdraw_currency]" << " (rid) " << requestId
-                                              << " (APIKey) " << unit.api_key
+                                              << " (APIKey) " << unit.withdrawl_key
                                               << " (withdrawKey) " << unit.withdrawl_key
                                               << " (Currency) " << data->Currency
                                               << " (Volume) " << data->Volume

@@ -282,10 +282,11 @@ void IMDEngine::on_withdraw(const LFWithdrawField* data)
     if (isRunning)
     {
         writer->write_frame(data, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW, 1/*islast*/, -1/*invalidRid*/);
-        KF_LOG_DEBUG_FMT(logger, "withdraw data: currency %s volume %lld address %s tag %s]",
+        KF_LOG_DEBUG_FMT(logger, "withdraw data: currency %s volume %lld address %s tag %s key %s]",
                          data->Currency,
                          data->Volume,
                          data->Address,
-                         data->Tag);
+                         data->Tag,
+                         data->Key);
     }
 }

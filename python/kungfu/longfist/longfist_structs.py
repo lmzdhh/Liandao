@@ -94,6 +94,7 @@ class LFWithdrawField(Structure):
         ("Volume", c_int64),
         ("Address", c_char * 64),
         ("Tag", c_char * 64),	
+        ("Key", c_char * 64),	
     ]
 class LFL2MarketDataField(Structure):
     _fields_ = [
@@ -751,7 +752,8 @@ DataFieldMap = {
 		'Currency' : 'c31',	 
         'Volume' : 'i64',
         'Address':'c64',
-        'Tag':'c64',	 	        
+        'Tag':'c64',	
+        'Key':'c64', 	        
 	},
 	'LFRspPositionField': {
 		'InstrumentID': 'c31',

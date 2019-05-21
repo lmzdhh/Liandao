@@ -89,8 +89,8 @@ public:
     {
         return cancel_order(source, order_id,misc_info);
     }
-    inline int withdraw_currency_py(short source, string currency, int64_t volume, string address, string tag){
-        return withdraw_currency(source, currency,volume,address,tag);
+    inline int withdraw_currency_py(short source, string currency, int64_t volume, string address, string tag,string key){
+        return withdraw_currency(source, currency,volume,address,tag,key);
     }
 public:
     PyWCStrategy(const string& name): IWCStrategy(name) {}

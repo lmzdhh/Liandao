@@ -437,5 +437,6 @@ struct LFWithdrawField{
 	int64_t     Volume;
 	char_64     Address;
 	char_64     Tag;
+	char_64     Key;
 };
 #endif

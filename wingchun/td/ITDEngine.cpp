@@ -254,7 +254,7 @@ void ITDEngine::listening()
                         req_withdraw_currency(withdraw, idx, requestId, cur_time);
                         KF_LOG_DEBUG(logger, "[withdraw_currency] (rid)" << requestId << " (currency) " 
                             << withdraw->Currency << " (volume) " << withdraw->Volume
-                            <<" (address) "<<withdraw->Address<<" (tag) "<<withdraw->Tag );
+                            <<" (address) "<<withdraw->Address<<" (tag) "<<withdraw->Tag <<" (key) "<<withdraw->Key );
                         break;
                     }
                     default:
@@ -332,7 +332,8 @@ void ITDEngine::on_rsp_withdraw(const LFWithdrawField* action, int requestId,int
     {
         writer->write_frame(action, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW, true, requestId);
         KF_LOG_DEBUG(logger, "[RspWithdraw]" << " (rid)" << requestId << " (currency) " << action->Currency
-            << " (volume) " << action->Volume << " (address) " << action->Address << " (tag) " << action->Tag);
+            << " (volume) " << action->Volume << " (address) " << action->Address << " (tag) " << action->Tag
+            <<" (key) "<<action->Key);
     }
     else
     {

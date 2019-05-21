@@ -162,7 +162,7 @@ context_usage = \
         # withdraw
         ('withdraw_currency', lambda strategy: strategy.withdraw_currency,
          'withdraw currency',
-         ('int', [('int', 'source'), ('str', 'currency'), ('int', 'volume'), ('str', 'address'),('str', 'tag')])),
+         ('int', [('int', 'source'), ('str', 'currency'), ('int', 'volume'), ('str', 'address'),('str', 'tag'),('str','key')])),
     ]
 
 CONTEXT_COMMENT = 'wrap system-defined functions and internal data'
