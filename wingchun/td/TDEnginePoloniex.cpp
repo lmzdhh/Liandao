@@ -989,6 +989,11 @@ void TDEnginePoloniex::updating_order_status()
 				{
 					unit.map_new_order.erase(order_ref);
 					map_order.erase(order_ref);
+					auto nextone = it + 1;
+					if (it == map_order.end() || nextone == map_order.end())
+					{
+						break;
+					}
 				}
 				KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref<<" done ");
 				//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了

@@ -54,9 +54,10 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
                                                                direction=DIRECTION.Buy,
                                                                offset=OFFSET.Open)
                 print("context.order_rid:", context.order_rid)
-                print('will cancel it')
-               # import time
-               # time.sleep(2)
+                print('will cancel it after 10s')
+                import time
+                time.sleep(10)
+				print('canceling...')
                # context.cancel_id = context.cancel_order(source=source, order_id=context.order_rid)
                # print 'cancel (order_id)', context.order_rid, ' (request_id)', context.cancel_id
     else:
