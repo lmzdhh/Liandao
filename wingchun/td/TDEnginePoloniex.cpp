@@ -750,9 +750,9 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 			js = json::parse(r.text);//解析
 			if (js.is_object())//进一步进行错误判断，回报200仍可能是有错误的
 			{
-				if (js.find("success"))
+				if (js.find("success")!=js.end())
 				{
-					success = js["success"].get<bool>();
+					success = js["success"].get<int>();
 				}
 				if (js.find("error") != js.end())//错误回报
 				{
@@ -929,6 +929,12 @@ void TDEnginePoloniex::updating_order_status()
 				{
 					continue;
 				}
+				else if (is_closed && rt.status_code == PARA_ERROR)//订单关闭，未有任何交易记录，被撤单了
+				{
+					order_info.is_open = false;
+					rtn_order.OrderStatus = LF_CHAR_Canceled;
+					on_rtn_order(&rtn_order);
+				}
 				else if (rt.status_code == 200)//有交易记录
 				{
 					js = json::parse(rt.text);
@@ -954,6 +960,7 @@ void TDEnginePoloniex::updating_order_status()
 							{
 								rtn_order.OrderStatus = LF_CHAR_AllTraded;//已经完全成交了
 								order_info.is_open = false;
+								is_closed = true;
 								//该订单处理结束							
 								on_rtn_order(&rtn_order);
 								break;
@@ -972,11 +979,11 @@ void TDEnginePoloniex::updating_order_status()
 						rtn_order.OrderStatus = LF_CHAR_Canceled;
 						on_rtn_order(&rtn_order);
 					}
-					if (is_closed)//订单已经关闭了就要从order里剃出去
-					{
-						unit.map_new_order.erase(order_ref);
-						map_order.erase(order_ref);
-					}
+				}
+				if (is_closed)//订单已经关闭了就要从order里剃出去
+				{
+					unit.map_new_order.erase(order_ref);
+					map_order.erase(order_ref);
 				}
 				KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref<<" done ");
 				//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
