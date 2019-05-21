@@ -989,10 +989,13 @@ void TDEnginePoloniex::updating_order_status()
 				if (is_closed)//订单已经关闭了就要从order里剃出去
 				{
 					unit.map_new_order.erase(order_ref);
-					map_order.erase(order_ref);
+					map_order.erase(it++);
 					KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref << " done ");
 				}
-				it++;
+				else
+				{
+					it++;
+				}
 				//要在这个if中结束一个订单的所有操作，接下来要开始下一个订单的状态更新和返回了
 			}
 			lock_map_new_order.unlock();
