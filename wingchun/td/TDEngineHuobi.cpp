@@ -1211,7 +1211,7 @@ void TDEngineHuobi::req_order_action(const LFOrderActionField* data, int account
         Document json;
         int isTraded = orderIsTraded(unit,ticker,remoteOrderId,json);
         if(isTraded == 1){
-            KF_LOG_INFO(logger,"[req_order_action] AllTraded, can not cancel.");
+            KF_LOG_INFO(logger,"[req_order_action] AllTraded or Canceled, can not cancel again.");
             return;
         }
     } else {
@@ -1835,7 +1835,7 @@ int TDEngineHuobi::orderIsTraded(AccountUnitHuobi& unit, std::string code, std::
             unit.restOrderStatusMap.erase(orderId);
         }
     }
-    if(orderStatus == LF_CHAR_AllTraded)return 1;
+    if(orderStatus == LF_CHAR_AllTraded || orderStatus == LF_CHAR_Canceled)return 1;
 }
 void TDEngineHuobi::query_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json)
 {
