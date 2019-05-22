@@ -178,6 +178,7 @@ private:
     void cancel_all_orders(AccountUnitHuobi& unit, std::string code, Document& json);
     void cancel_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json);
     void query_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json);
+    int orderIsTraded(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
 
