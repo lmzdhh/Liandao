@@ -1812,7 +1812,7 @@ void TDEngineHuobi::cancel_order(AccountUnitHuobi& unit, std::string code, std::
 
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
-bool TDEngineHuobi::orderIsTraded(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json){
+int TDEngineHuobi::orderIsTraded(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json){
     KF_LOG_INFO(logger,"[orderIsCanceled]");
     std::map<std::string,LFRtnOrderField>::iterator itr = unit.restOrderStatusMap.find(orderId);
     if(itr == unit.restOrderStatusMap.end()){
