@@ -633,7 +633,7 @@ LfOrderPriceTypeType TDEngineBinance::GetPriceType(std::string input) {
 std::string TDEngineBinance::GetTimeInForce(const LfTimeConditionType& input) {
     if (LF_CHAR_IOC == input) {
       return "IOC";
-    } else if (LF_CHAR_GFD == input) {
+    } else if (LF_CHAR_GTC == input) {
       return "GTC";
     } else if (LF_CHAR_FOK == input) {
       return "FOK";
@@ -646,7 +646,7 @@ LfTimeConditionType TDEngineBinance::GetTimeCondition(std::string input) {
     if ("IOC" == input) {
       return LF_CHAR_IOC;
     } else if ("GTC" == input) {
-      return LF_CHAR_GFD;
+      return LF_CHAR_GTC;
     } else if ("FOK" == input) {
       return LF_CHAR_FOK;
     } else {
@@ -847,7 +847,8 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     auto it_rate = rate_limit_data_map.find(data->InstrumentID);
     if ( it_rate == rate_limit_data_map.end())
     {
-        rate_limit_data_map.insert(std::make_pair(data->InstrumentID, RateLimitUnit()));
+        auto ret_tmp = rate_limit_data_map.insert(std::make_pair(data->InstrumentID, RateLimitUnit()));
+        it_rate = ret_tmp.first;
     }
     else
     {

@@ -146,7 +146,7 @@ int WCStrategyUtil::insert_limit_order(short source, string instrument_id, strin
     order.LimitPrice = price;
     order.Volume = volume;
     order.MinVolume = 1;
-    order.TimeCondition = LF_CHAR_GFD;
+    order.TimeCondition = LF_CHAR_GTC;
     order.VolumeCondition = LF_CHAR_AV;
     order.OrderPriceType = LF_CHAR_LimitPrice;
     order.Direction = direction;
@@ -171,7 +171,7 @@ int WCStrategyUtil::insert_fok_order(short source, string instrument_id, string 
     order.LimitPrice = price;
     order.Volume = volume;
     order.MinVolume = 1;
-    order.TimeCondition = LF_CHAR_IOC;
+    order.TimeCondition = LF_CHAR_FOK;
     order.VolumeCondition = LF_CHAR_CV;
     order.OrderPriceType = LF_CHAR_LimitPrice;
     order.Direction = direction;
@@ -196,7 +196,7 @@ int WCStrategyUtil::insert_fak_order(short source, string instrument_id, string 
     order.LimitPrice = price;
     order.Volume = volume;
     order.MinVolume = 1;
-    order.TimeCondition = LF_CHAR_IOC;
+    order.TimeCondition = LF_CHAR_FAK;
     order.VolumeCondition = LF_CHAR_AV;
     order.OrderPriceType = LF_CHAR_LimitPrice;
     order.Direction = direction;
