@@ -327,7 +327,7 @@ std::string TDEngineHuobi::makeSubscribeOrdersUpdate(AccountUnitHuobi& unit, str
     writer.String(unit.spotAccountId.c_str());
     writer.Key("topic");
     string topic = "orders.";
-    topic = topic + ticker;
+    topic = topic + ticker + ".update";
     writer.String(topic.c_str());
     writer.EndObject();
     std::string strUpdate = sbUpdate.GetString();
@@ -2047,8 +2047,7 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     }
     auto& data=json["data"];
     if(!data.HasMember("filled-cash-amount")||!data.HasMember("filled-amount")||!data.HasMember("unfilled-amount")
-        ||!data.HasMember("order-type")||!data.HasMember("order-amount")||!data.HasMember("order-state")
-        ||!data.HasMember("order-price")||!data.HasMember("price")){
+        ||!data.HasMember("order-state")||!data.HasMember("order-state")){
         KF_LOG_ERROR(logger,"[handleResponseOrderStatus] no child segment");
         return;
     }
@@ -2062,16 +2061,10 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     int64_t averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
     //单次未成交数量
     int64_t nUnfilledAmount = std::round(std::stod(data["unfilled-amount"].GetString()) * scale_offset);
-    //报单价格条件
-    LfOrderPriceTypeType orderPriceType = GetPriceType(data["order-type"].GetString());
-    //买卖方向
-    LfDirectionType direction = GetDirection(data["order-type"].GetString());
     //总量
-    int64_t nVolume = std::round(std::stod(data["order-amount"].GetString()) * scale_offset);
+    int64_t nVolume = rtn_order.VolumeTotalOriginal;
     //报单状态  部分成交2
     LfOrderStatusType orderStatus=GetOrderStatus(data["order-state"].GetString());
-    //总价
-    int64_t price = std::round(std::stod(data["order-price"].GetString()) * scale_offset);
     
     if(role == "maker"){
         nUnfilledAmount = nVolume - rtn_order.VolumeTraded - nDealSize;
