@@ -1188,7 +1188,6 @@ void TDEngineHuobi::req_order_action(const LFOrderActionField* data, int account
         KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) "
                 << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
     }
-
     Document d;
     cancel_order(unit, ticker, remoteOrderId, d);
 
@@ -1206,8 +1205,15 @@ void TDEngineHuobi::req_order_action(const LFOrderActionField* data, int account
     if(errorId != 0)
     {
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_HUOBI, 1, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_HUOBI, 1, 
+            requestId, errorId, errorMsg.c_str());
 
+        Document json;
+        int isTraded = orderIsTraded(unit,ticker,remoteOrderId,json);
+        if(isTraded == 1){
+            KF_LOG_INFO(logger,"[req_order_action] AllTraded, can not cancel.");
+            return;
+        }
     } else {
         //addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
         // addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
@@ -1805,6 +1811,31 @@ void TDEngineHuobi::cancel_order(AccountUnitHuobi& unit, std::string code, std::
                                                     " (response.text) " << response.text.c_str() );
 
     //getResponse(response.status_code, response.text, response.error.message, json);
+}
+bool TDEngineHuobi::orderIsTraded(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json){
+    KF_LOG_INFO(logger,"[orderIsCanceled]");
+    std::map<std::string,LFRtnOrderField>::iterator itr = unit.restOrderStatusMap.find(orderId);
+    if(itr == unit.restOrderStatusMap.end()){
+        KF_LOG_INFO(logger,"[orderIsCanceled] order id not exits in restOrderStatusMap!");
+        return -1;
+    }
+    query_order(unit,code,orderId,json);
+    if(json.HasParseError()||!json.IsObject()){
+        KF_LOG_INFO(logger,"[orderIsCanceled] query order status is faild!");
+        return -1;
+    }
+    LfOrderStatusType orderStatus;
+    if(json.HasMember("status") && "ok" ==  json["status"].GetString()){
+        KF_LOG_INFO(logger, "[orderIsCanceled] (query success)");
+        handleResponseOrderStatus(unit, itr->second, json);
+        orderStatus=GetOrderStatus(json["data"]["order-state"].GetString());
+        if(orderStatus == LF_CHAR_AllTraded  || orderStatus == LF_CHAR_Canceled
+            || orderStatus == LF_CHAR_Error){
+            KF_LOG_INFO(logger, "[orderIsCanceled] remove a restOrderStatusMap.");
+            unit.restOrderStatusMap.erase(orderId);
+        }
+    }
+    if(orderStatus == LF_CHAR_AllTraded)return 1;
 }
 void TDEngineHuobi::query_order(AccountUnitHuobi& unit, std::string code, std::string orderId, Document& json)
 {
