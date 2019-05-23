@@ -733,12 +733,12 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 	string order_number_str = to_string(order_number);
 	command += order_number_str +
 		"&nonce=";
-	//KF_LOG_INFO(logger, "[return order status]");
+	KF_LOG_INFO(logger, "[return order status]");
 	r = rest_withAuth(unit, method, command);
-	/*KF_LOG_INFO(logger, " (command) " << command <<
+	KF_LOG_INFO(logger, " (command) " << command <<
 		" (response.status_code) " << r.status_code <<
 		" (response.error.message) " << r.error.message <<
-		" (response.text) " << r.text.c_str());*/
+		" (response.text) " << r.text.c_str());
 	//出错处理
 	int count;
 	string errorMsg = "";
@@ -824,12 +824,12 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 	string command = "command=returnOrderTrades&orderNumber=";
 	string order_number_str = to_string(order_number);
 	command += order_number_str +"&nonce=";
-	//KF_LOG_INFO(logger, "[return order trades]");
+	KF_LOG_INFO(logger, "[return order trades]");
 	r = rest_withAuth(unit, method, command);
-	/*KF_LOG_INFO(logger, " (command) " << command <<
+	KF_LOG_INFO(logger, " (command) " << command <<
 		" (response.status_code) " << r.status_code <<
 		" (response.error.message) " << r.error.message <<
-		" (response.text) " << r.text.c_str());*/
+		" (response.text) " << r.text.c_str());
 	//出错处理
 	int count;
 	string errorMsg = "";
@@ -889,6 +889,7 @@ void TDEnginePoloniex::updating_order_status()
 	KF_LOG_INFO(logger, "[updating_order_status] thread starts");
 	bool is_closed = false;
 	bool is_touched = false;
+	//bool is_fully_open = false;
 	AccountUnitPoloniex& unit = account_units[0];
 	cpr::Response ro;
 	cpr::Response rt;
@@ -934,6 +935,7 @@ void TDEnginePoloniex::updating_order_status()
 					//先查order status，如果订单还在，查trades，如果订单不在，最后一次查trades
 					is_closed = false;
 					is_touched = false;
+					//is_fully_open = false;
 					ro = return_order_status(order_info.order_number);
 					if (ro.status_code == ORDER_CLOSED)
 					{
@@ -949,6 +951,22 @@ void TDEnginePoloniex::updating_order_status()
 						KF_LOG_ERROR(logger, "[updating_order_status] error there are para problem or unknown mistake" <<
 							" (order_number) " << order_info.order_number);
 						continue;
+					}
+					js = json::parse(ro.text);
+					if (js.find("result"))
+					{
+						if (js["result"].find(to_string(order_info.order_number)))
+						{
+							if (js["result"][to_string(order_info.order_number)].find("status"))
+							{
+								string status = js["result"][to_string(order_info.order_number)]["status"].get<string>();
+								if (strcmp("open", status.c_str()) == 0)
+								{
+									//is_fully_open = true;
+									continue;
+								}
+							}
+						}
 					}
 					rt = return_order_trades(order_info.order_number);
 					if (!is_closed && rt.status_code == PARA_ERROR)//订单未关闭，却报错，且不是参数问题的话（通常不是，即使是也可以看log看出来）说明此单未有任何变化
