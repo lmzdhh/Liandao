@@ -780,7 +780,7 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 						if (order.find("status") != order.end());
 						{
 							string status = order["status"].get<string>();
-							if (strcmp("open", status.c_str()) == 0)
+							if (strcmp("Open", status.c_str()) == 0)
 							{
 								r.status_code = NOT_TOUCHED;
 							}
@@ -884,7 +884,7 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 				errorId = EXEC_ERROR;
 				break;
 			}
-			KF_LOG_ERROR(logger, "return_order_trades failed,retry after retry_interval_milliseconds");
+			KF_LOG_ERROR(logger, "[return_order_trades] failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			//KF_LOG_DEBUG(logger, "[return_order_trades]");
 			r = rest_withAuth(unit, method, command);
