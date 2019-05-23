@@ -217,6 +217,14 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
 	int count = 1;
 	KF_LOG_DEBUG(logger, "[getbalance]" );
     cpr::Response r = rest_withAuth(unit, method, command);//获得账户余额消息
+	KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+		" (command) " << command <<
+		//" (key) "<<key<<
+		//" (secret) "<<secret<<
+		//" (sign) " << sign <<
+		" (response.status_code) " << response.status_code <<
+		" (response.error.message) " << response.error.message <<
+		" (response.text) " << response.text.c_str());
     json js;
     while (true)
     {
@@ -265,6 +273,14 @@ void TDEnginePoloniex::req_investor_position(const LFQryPositionField* data, int
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[req_investor_position]");
             r = rest_withAuth(unit, method, command);
+			KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+				" (command) " << command <<
+				//" (key) "<<key<<
+				//" (secret) "<<secret<<
+				//" (sign) " << sign <<
+				" (response.status_code) " << response.status_code <<
+				" (response.error.message) " << response.error.message <<
+				" (response.text) " << response.text.c_str());
         }
     }
     bool findSymbolInResult = false;
@@ -350,6 +366,15 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 	string method = "POST";
 	string fullcommand = command + parastring;
 	r = rest_withAuth(unit, method, fullcommand);
+	KF_LOG_INFO(logger, "[req order insert]");
+	KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+		" (command) " << command <<
+		//" (key) "<<key<<
+		//" (secret) "<<secret<<
+		//" (sign) " << sign <<
+		" (response.status_code) " << response.status_code <<
+		" (response.error.message) " << response.error.message <<
+		" (response.text) " << response.text.c_str());
 	//发单错误或者异常状况处理
 	while (true)
 	{
@@ -388,6 +413,14 @@ void TDEnginePoloniex::req_order_insert(const LFInputOrderField* data, int accou
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[req_order_insert]");
 			r = rest_withAuth(unit, method, fullcommand);
+			KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+				" (command) " << command <<
+				//" (key) "<<key<<
+				//" (secret) "<<secret<<
+				//" (sign) " << sign <<
+				" (response.status_code) " << response.status_code <<
+				" (response.error.message) " << response.error.message <<
+				" (response.text) " << response.text.c_str());
 		}
 	}
 	//获得订单信息，处理 order_info、rtn_order
@@ -456,7 +489,16 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 	string method = "POST";
 	string command = "command=cancelOrder&orderNumber=" + to_string(order_info.order_number) +
 		"&nonce=";
+	KF_LOG_INFO(logger, "[req order action]");
 	r=rest_withAuth(unit, method, command);
+	KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+		" (command) " << command <<
+		//" (key) "<<key<<
+		//" (secret) "<<secret<<
+		//" (sign) " << sign <<
+		" (response.status_code) " << response.status_code <<
+		" (response.error.message) " << response.error.message <<
+		" (response.text) " << response.text.c_str());
 	//出错及异常处理
 	//需要特别注意单订单不存在或者已经成交了的话会返回错误码422,如果是操作的nonce错了也会返回422
 	json js;
@@ -503,6 +545,14 @@ void TDEnginePoloniex::req_order_action(const LFOrderActionField* data, int acco
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[req_order_action]");
 			r = rest_withAuth(unit, method, command);
+			KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+				" (command) " << command <<
+				//" (key) "<<key<<
+				//" (secret) "<<secret<<
+				//" (sign) " << sign <<
+				" (response.status_code) " << response.status_code <<
+				" (response.error.message) " << response.error.message <<
+				" (response.text) " << response.text.c_str());
 		}
 	}
 	
@@ -619,11 +669,11 @@ cpr::Response TDEnginePoloniex::rest_withoutAuth(string& method, string& command
         response.status_code = 404;
         return response;
     }
-    KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+    /*KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
         " (timestamp) " << Timestamp <<
         " (response.status_code) " << response.status_code <<
         " (response.error.message) " << response.error.message <<
-        " (response.text) " << response.text.c_str());
+        " (response.text) " << response.text.c_str());*/
     return response;
 }
 
@@ -669,14 +719,14 @@ cpr::Response TDEnginePoloniex::rest_withAuth(AccountUnitPoloniex& unit, string&
         response.status_code = 404;
         return response;
     }
-    KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+    /*KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
         " (command) " << command <<
         //" (key) "<<key<<
         //" (secret) "<<secret<<
         " (sign) " << sign <<
         " (response.status_code) " << response.status_code <<
         " (response.error.message) " << response.error.message <<
-        " (response.text) " << response.text.c_str());
+        " (response.text) " << response.text.c_str());*/
     return response;
 }
 
@@ -690,6 +740,11 @@ cpr::Response TDEnginePoloniex::return_orderbook(string& currency_pair,int level
 	string command = "command=returnOrderBook&currencyPair="+currency_pair+
 		"&depth="+level_str;
 	cpr::Response r = rest_withoutAuth(method,command);
+	KF_LOG_INFO(logger, "[return orderbook]");
+	KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+		" (response.status_code) " << response.status_code <<
+		" (response.error.message) " << response.error.message <<
+		" (response.text) " << response.text.c_str());
 	return r;
 }
 
@@ -703,7 +758,16 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 	string order_number_str = to_string(order_number);
 	command += order_number_str +
 		"&nonce=";
+	KF_LOG_INFO(logger, "[return order status]");
 	r = rest_withAuth(unit, method, command);
+	KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+		" (command) " << command <<
+		//" (key) "<<key<<
+		//" (secret) "<<secret<<
+		//" (sign) " << sign <<
+		" (response.status_code) " << response.status_code <<
+		" (response.error.message) " << response.error.message <<
+		" (response.text) " << response.text.c_str());
 	//出错处理
 	int count;
 	string errorMsg = "";
@@ -769,6 +833,14 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[return_order_status]");
 			r = rest_withAuth(unit, method, command);
+			KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+				" (command) " << command <<
+				//" (key) "<<key<<
+				//" (secret) "<<secret<<
+				//" (sign) " << sign <<
+				" (response.status_code) " << response.status_code <<
+				" (response.error.message) " << response.error.message <<
+				" (response.text) " << response.text.c_str());
 		}
 	}
 	return r;
@@ -785,7 +857,16 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 	string command = "command=returnOrderTrades&orderNumber=";
 	string order_number_str = to_string(order_number);
 	command += order_number_str +"&nonce=";
+	KF_LOG_INFO(logger, "[return order trades]");
 	r = rest_withAuth(unit, method, command);
+	KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+		" (command) " << command <<
+		//" (key) "<<key<<
+		//" (secret) "<<secret<<
+		//" (sign) " << sign <<
+		" (response.status_code) " << response.status_code <<
+		" (response.error.message) " << response.error.message <<
+		" (response.text) " << response.text.c_str());
 	//出错处理
 	int count;
 	string errorMsg = "";
@@ -831,6 +912,14 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
 			KF_LOG_DEBUG(logger, "[return_order_trades]");
 			r = rest_withAuth(unit, method, command);
+			KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
+				" (command) " << command <<
+				//" (key) "<<key<<
+				//" (secret) "<<secret<<
+				//" (sign) " << sign <<
+				" (response.status_code) " << response.status_code <<
+				" (response.error.message) " << response.error.message <<
+				" (response.text) " << response.text.c_str());
 		}
 	}
 	return r;
