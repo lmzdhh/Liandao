@@ -892,7 +892,7 @@ LfOrderStatusType TDEngineHuobi::GetOrderStatus(std::string state) {
     }else if(state == "submitted"){
         return LF_CHAR_NotTouched;
     }else if(state == "partial-canceled"){
-        return LF_CHAR_PartTradedQueueing;
+        return LF_CHAR_Canceled;
     }else if(state == "filled"){
         return LF_CHAR_AllTraded;
     }
@@ -2058,20 +2058,25 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     double dDealSize = std::stod(data["filled-amount"].GetString());
     //单次成交数量
     int64_t nDealSize = std::round(dDealSize * scale_offset);
-    int64_t averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
+    //单次成交价格
+    double dDealPrice = std::stod(data["price"].GetString());
+    //单次成交数量
+    int64_t nDealPrice = std::round(dDealPrice * scale_offset);
+    //int64_t averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
     //单次未成交数量
-    int64_t nUnfilledAmount = std::round(std::stod(data["unfilled-amount"].GetString()) * scale_offset);
+    //int64_t nUnfilledAmount = std::round(std::stod(data["unfilled-amount"].GetString()) * scale_offset);
     //总量
     int64_t nVolume = rtn_order.VolumeTotalOriginal;
     //报单状态  部分成交2
     LfOrderStatusType orderStatus=GetOrderStatus(data["order-state"].GetString());
     
-    if(role == "maker"){
-        nUnfilledAmount = nVolume - rtn_order.VolumeTraded - nDealSize;
+    if(role == "taker" && (orderStatus == LF_CHAR_AllTraded || orderStatus == LF_CHAR_PartTradedQueueing)){
+        KF_LOG_INFO(logger, "[handleResponseOrderStatus] role is taker");
+        return;
     }
 
-    int64_t volumeTraded = nVolume-nUnfilledAmount;
-    if(orderStatus == LF_CHAR_NotTouched && volumeTraded == rtn_order.VolumeTraded){//no change
+    int64_t volumeTraded = rtn_order.VolumeTraded+nDealSize;//nVolume-nUnfilledAmount;
+    if(orderStatus == rtn_order.OrderStatus && volumeTraded == rtn_order.VolumeTraded){//no change
         KF_LOG_INFO(logger, "[handleResponseOrderStatus] status is not changed");
         return;
     }
@@ -2081,7 +2086,7 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     //累计成交数量
     rtn_order.VolumeTraded = volumeTraded;
     //剩余数量
-    rtn_order.VolumeTotal = nUnfilledAmount;
+    rtn_order.VolumeTotal = nVolume - rtn_order.VolumeTraded;
     on_rtn_order(&rtn_order);
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_ORDER_HUOBI,
         1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
@@ -2097,7 +2102,7 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
         rtn_trade.Direction = rtn_order.Direction;
         //单次成交数量
         rtn_trade.Volume = nDealSize;
-        rtn_trade.Price =std::round(dDealFunds * scale_offset);//(newAmount - oldAmount)/(rtn_trade.Volume);
+        rtn_trade.Price =nDealPrice;//(newAmount - oldAmount)/(rtn_trade.Volume);
         strncpy(rtn_trade.OrderSysID,rtn_order.BusinessUnit,31);
         on_rtn_trade(&rtn_trade);
 

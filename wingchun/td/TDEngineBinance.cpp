@@ -951,7 +951,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         lck.unlock();
         std::string orderId=std::to_string(d["orderId"].GetInt64());
         //order insert success,on_rtn_order with NotTouched status first
-        onRtnNewOrder(data, unit, requestId,orderId);
+        onRtnNewOrder(data, unit, requestId,orderId,fixedVolume,fixedPrice);
         /*
         if(!d.HasMember("status"))
         {//no status, it is ACK
@@ -970,7 +970,8 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     }
 }
 
-void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBinance& unit, int requestId,string remoteOrderId){
+void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBinance& unit, int requestId,string remoteOrderId,int64_t fixedVolume,int64_t fixedPrice)
+{
     LFRtnOrderField rtn_order;
     memset(&rtn_order, 0, sizeof(LFRtnOrderField));
     strcpy(rtn_order.ExchangeID, "binance");
@@ -981,9 +982,9 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
     rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, data->OrderRef, 13);
     rtn_order.VolumeTraded = 0;
-    rtn_order.VolumeTotalOriginal = data->Volume;
-    rtn_order.VolumeTotal = data->Volume;
-    rtn_order.LimitPrice = data->LimitPrice;
+    rtn_order.VolumeTotalOriginal = fixedVolume;
+    rtn_order.VolumeTotal = fixedVolume;
+    rtn_order.LimitPrice = fixedPrice;
     rtn_order.RequestID = requestId;
     rtn_order.OrderStatus = LF_CHAR_NotTouched;
 

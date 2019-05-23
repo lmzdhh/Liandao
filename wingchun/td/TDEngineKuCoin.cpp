@@ -1039,9 +1039,10 @@ void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& 
             sprintf(strPrice,"%.8lf",dDealPrice + 0.0000000001);
             dDealVolume = std::stod(strVolume);
             dDealPrice = std::stod(strPrice);
+            KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << symbol << " (Volume)" << nVolume << " (Price)" << nPrice 
+                << " (FixedVolume)" << strVolume << " (FixedPrice)" << strPrice);
         }
-         KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << symbol << " (Volume)" << nVolume << " (Price)" << nPrice 
-                << " (FixedVolume)" << dDealVolume << " (FixedPrice)" << dDealPrice);
+         
 }
 
 void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
@@ -1592,6 +1593,8 @@ std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::s
     }
     writer.EndObject();
     std::stringstream ss;
+    ss.setf(std::ios::fixed);
+    ss.precision(8);
     std::string str = s.GetString();
     str.pop_back();
     ss << str;
