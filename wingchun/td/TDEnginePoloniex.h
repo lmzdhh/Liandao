@@ -22,6 +22,12 @@ WC_NAMESPACE_START
 命名格式基本采用xxx_xxx
 命名名称基本采用交易所对应名词
 */
+/*
+需要更改解析和orderinfo结构体内容，以及根据交易所的接口功能修改函数实现
+*/
+/*
+对交易所接口返回的错误进行分类，设置自己的错误码可能有利于后续处理
+*/
 struct PositionSetting
 {
     string ticker;
