@@ -44,6 +44,7 @@ using utils::crypto::base64_encode;
 using utils::crypto::hmac_sha512;
 USING_WC_NAMESPACE
 
+#define NOT_TOUCHED 300
 #define JUST_ERROR 400
 #define PARSE_ERROR 401
 #define EXEC_ERROR 402
@@ -773,6 +774,18 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 							r.status_code = PARA_ERROR;
 						}
 					}
+					if (result.find(to_string(order_number)) != result.end())
+					{
+						auto order = result[to_string(order_number)];
+						if (order.find("status") != order.end());
+						{
+							string status = order["status"].get<string>();
+							if (strcmp("open", status.c_str()) == 0)
+							{
+								r.status_code = NOT_TOUCHED;
+							}
+						}
+					}
 				}
 				break;
 			}
@@ -953,13 +966,19 @@ void TDEnginePoloniex::updating_order_status()
 						it++;
 						continue;
 					}
-					rt = return_order_trades(order_info.order_number);
-					if (!is_closed && rt.status_code == PARA_ERROR)//订单未关闭，却报错，且不是参数问题的话（通常不是，即使是也可以看log看出来）说明此单未有任何变化
+					else if (ro.status_code==NOT_TOUCHED)
 					{
 						it++;
 						continue;
 					}
-					else if (is_closed && rt.status_code == PARA_ERROR)//订单关闭，未有任何交易记录，被撤单了
+					rt = return_order_trades(order_info.order_number);
+					/*if (!is_closed && rt.status_code == PARA_ERROR)//订单未关闭，却报错，且不是参数问题的话（通常不是，即使是也可以看log看出来）说明此单未有任何变化
+					{
+						it++;
+						continue;
+					}
+					else */
+					if (is_closed && rt.status_code == PARA_ERROR)//订单关闭，未有任何交易记录，被撤单了
 					{
 						order_info.is_open = false;
 						rtn_order.OrderStatus = LF_CHAR_Canceled;
