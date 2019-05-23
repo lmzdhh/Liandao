@@ -717,16 +717,15 @@ cpr::Response TDEnginePoloniex::return_orderbook(string& currency_pair,int level
 		"&depth="+level_str;
 	cpr::Response r = rest_withoutAuth(method,command);
 	KF_LOG_INFO(logger, "[return orderbook]");
-	KF_LOG_INFO(logger, "[" << method << "] (url) " << url <<
-		" (response.status_code) " << response.status_code <<
-		" (response.error.message) " << response.error.message <<
-		" (response.text) " << response.text.c_str());
+	KF_LOG_INFO(logger, " (response.status_code) " << r.status_code <<
+		" (response.error.message) " << r.error.message <<
+		" (response.text) " << r.text.c_str());
 	return r;
 }
 
 cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 {
-	KF_LOG_INFO(logger, "[return_order_status](order_number)" << order_number);
+	//KF_LOG_INFO(logger, "[return_order_status](order_number)" << order_number);
 	AccountUnitPoloniex& unit = account_units[0];
 	cpr::Response r;
 	string method = "POST";
@@ -734,12 +733,12 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 	string order_number_str = to_string(order_number);
 	command += order_number_str +
 		"&nonce=";
-	KF_LOG_INFO(logger, "[return order status]");
+	//KF_LOG_INFO(logger, "[return order status]");
 	r = rest_withAuth(unit, method, command);
-	KF_LOG_INFO(logger, " (command) " << command <<
+	/*KF_LOG_INFO(logger, " (command) " << command <<
 		" (response.status_code) " << r.status_code <<
 		" (response.error.message) " << r.error.message <<
-		" (response.text) " << r.text.c_str());
+		" (response.text) " << r.text.c_str());*/
 	//出错处理
 	int count;
 	string errorMsg = "";
@@ -770,7 +769,7 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 						else
 						{
 							//出错处理，此种情况一般为参数错误，，，需要修改参数
-							KF_LOG_ERROR(logger, "[return_order_status] (might because we don't set a right parameter) " << r.text);
+							KF_LOG_ERROR(logger, "[return_order_status] " << r.text);
 							r.status_code = PARA_ERROR;
 						}
 					}
@@ -803,12 +802,12 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 			}
 			KF_LOG_ERROR(logger, "return order status failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
-			KF_LOG_DEBUG(logger, "[return_order_status]");
+			//KF_LOG_DEBUG(logger, "[return_order_status]");
 			r = rest_withAuth(unit, method, command);
-			KF_LOG_INFO(logger, " (command) " << command <<
+			/*KF_LOG_INFO(logger, " (command) " << command <<
 				" (response.status_code) " << r.status_code <<
 				" (response.error.message) " << r.error.message <<
-				" (response.text) " << r.text.c_str());
+				" (response.text) " << r.text.c_str());*/
 		}
 	}
 	return r;
@@ -817,7 +816,7 @@ cpr::Response TDEnginePoloniex::return_order_status(int64_t& order_number)
 
 cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 {
-	KF_LOG_INFO(logger, "[return_order_trades](order_number)" << order_number);
+	//KF_LOG_INFO(logger, "[return_order_trades](order_number)" << order_number);
 	AccountUnitPoloniex& unit = account_units[0];
 	cpr::Response r;
 	string method = "POST";
@@ -825,12 +824,12 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 	string command = "command=returnOrderTrades&orderNumber=";
 	string order_number_str = to_string(order_number);
 	command += order_number_str +"&nonce=";
-	KF_LOG_INFO(logger, "[return order trades]");
+	//KF_LOG_INFO(logger, "[return order trades]");
 	r = rest_withAuth(unit, method, command);
-	KF_LOG_INFO(logger, " (command) " << command <<
+	/*KF_LOG_INFO(logger, " (command) " << command <<
 		" (response.status_code) " << r.status_code <<
 		" (response.error.message) " << r.error.message <<
-		" (response.text) " << r.text.c_str());
+		" (response.text) " << r.text.c_str());*/
 	//出错处理
 	int count;
 	string errorMsg = "";
@@ -846,7 +845,7 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 				if (js.find("error") != js.end())//错误回报
 				{
 					//出错处理，此种情况一般为参数错误，，，需要修改参数
-					KF_LOG_ERROR(logger, "[return_order_trades] (might because we don't set a right parameter) " << r.text);
+					KF_LOG_ERROR(logger, "[return_order_trades] " << r.text);
 					r.status_code = PARA_ERROR;//TODO需要额外考虑
 				}
 				break;
@@ -874,12 +873,12 @@ cpr::Response TDEnginePoloniex::return_order_trades(int64_t& order_number)
 			}
 			KF_LOG_ERROR(logger, "return_order_trades failed,retry after retry_interval_milliseconds");
 			std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
-			KF_LOG_DEBUG(logger, "[return_order_trades]");
+			//KF_LOG_DEBUG(logger, "[return_order_trades]");
 			r = rest_withAuth(unit, method, command);
-			KF_LOG_INFO(logger, " (command) " << command <<
+			/*KF_LOG_INFO(logger, " (command) " << command <<
 				" (response.status_code) " << r.status_code <<
 				" (response.error.message) " << r.error.message <<
-				" (response.text) " << r.text.c_str());
+				" (response.text) " << r.text.c_str());*/
 		}
 	}
 	return r;
@@ -904,7 +903,7 @@ void TDEnginePoloniex::updating_order_status()
 		}
 		else
 		{
-			KF_LOG_INFO(logger, "[updating_order_status] (map_order.size)" << map_order.size());
+			//KF_LOG_INFO(logger, "[updating_order_status] (map_order.size)" << map_order.size());
 			map<string, LFRtnOrderField>::iterator it;
 			for (it = map_order.begin(); it != map_order.end();)//遍历 map
 			{
@@ -921,7 +920,7 @@ void TDEnginePoloniex::updating_order_status()
 				{	//填写 rtn_order rtn_trade的部分共性信息
 
 					OrderInfo& order_info = unit.map_new_order[order_ref];
-					KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref);
+					//KF_LOG_DEBUG(logger, "[updating_order_status] (order_ref) " << order_ref);
 					memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
 					strcpy(rtn_trade.ExchangeID, "poloniex");
 					strncpy(rtn_trade.UserID, rtn_order.UserID, 16);
