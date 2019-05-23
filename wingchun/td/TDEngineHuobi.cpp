@@ -2038,8 +2038,8 @@ void TDEngineHuobi::handlerResponseOrderStatus(AccountUnitHuobi& unit, std::vect
         orderStatusIterator->averagePrice = newAveragePrice;
     }
 }
-void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrderField& rtn_order, 
-                                        Document& json){
+void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrderField& rtn_order, Document& json)
+{
     KF_LOG_INFO(logger, "[handleResponseOrderStatus]");
     if(!json.HasMember("data")){
         KF_LOG_ERROR(logger,"[handleResponseOrderStatus] no data segment");
@@ -2070,10 +2070,10 @@ void TDEngineHuobi::handleResponseOrderStatus(AccountUnitHuobi& unit, LFRtnOrder
     //报单状态  部分成交2
     LfOrderStatusType orderStatus=GetOrderStatus(data["order-state"].GetString());
     
-    if(role == "taker" && (orderStatus == LF_CHAR_AllTraded || orderStatus == LF_CHAR_PartTradedQueueing)){
-        KF_LOG_INFO(logger, "[handleResponseOrderStatus] role is taker");
-        return;
-    }
+    //if(role == "taker" && (orderStatus == LF_CHAR_AllTraded || orderStatus == LF_CHAR_PartTradedQueueing)){
+        //KF_LOG_INFO(logger, "[handleResponseOrderStatus] role is taker");
+        //return;
+    //}
 
     int64_t volumeTraded = rtn_order.VolumeTraded+nDealSize;//nVolume-nUnfilledAmount;
     if(orderStatus == rtn_order.OrderStatus && volumeTraded == rtn_order.VolumeTraded){//no change
