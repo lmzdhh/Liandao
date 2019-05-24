@@ -873,7 +873,7 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         }
         //判断是否达到触发条件·委托单数量>=UFR_order_lower_limit
         uint64_t tmpOrderCount = it_rate->second.order_total+fixedVolume;
-        if (tmpOrderCount >= UFR_order_lower_limit)
+        if ((it_rate->second.order_count+1) >= UFR_order_lower_limit)
         {
             //计算UFR
             double UFR = 1 - it_rate->second.trade_total*1.0/tmpOrderCount;
@@ -964,6 +964,7 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
 
     //收到委托回报，在这里委托量+1
     unit.rate_limit_data_map[data->InstrumentID].order_total+=fixedVolume;
+    unit.rate_limit_data_map[data->InstrumentID].order_count++;
     //测试日志
     KF_LOG_DEBUG(logger, "[onRtnNewOrder] order_total++ " << " InstrumentID "<< data->InstrumentID <<
             " current order_total " << unit.rate_limit_data_map[data->InstrumentID].order_total <<" trade_total " << unit.rate_limit_data_map[data->InstrumentID].trade_total );

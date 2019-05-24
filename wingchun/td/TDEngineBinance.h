@@ -117,24 +117,28 @@ struct RateLimitUnit
     //UFR
     std::atomic<uint64_t> order_total; //委托总量
     std::atomic<uint64_t> trade_total; //成交总量
+    std::atomic<uint64_t> order_count;//委托单数
     //GCR
-    std::atomic<uint64_t> gtc_canceled_order_total;//已撤单GTC委托总量
+    std::atomic<uint64_t> gtc_canceled_order_total;//已撤单GTC委托单数
     std::map<std::string,int64_t> mapOrderTime;//GTC发单时间
     RateLimitUnit(const RateLimitUnit& src){
          order_total = src.order_total.load();
          trade_total = src.trade_total.load();
+         order_count = src.order_count.load();
          gtc_canceled_order_total = src.gtc_canceled_order_total.load();
          mapOrderTime = src.mapOrderTime;
     };
     RateLimitUnit(){
          order_total = 0;
          trade_total = 0;
+         order_count = 0;
          gtc_canceled_order_total=0;
     };
     void Reset()
     {
         order_total = 0;
         trade_total = 0;
+        order_count = 0;
         gtc_canceled_order_total=0;
         mapOrderTime.clear();
     };
