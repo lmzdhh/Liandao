@@ -111,6 +111,34 @@ struct SendOrderFilter
     int stepsize;
     //...other
 };
+//----rate_limit_data_map-----
+struct RateLimitUnit
+{
+    //UFR
+    std::atomic<uint64_t> order_total; //委托总量
+    std::atomic<uint64_t> trade_total; //成交总量
+    //GCR
+    std::atomic<uint64_t> gtc_canceled_order_total;//已撤单GTC委托总量
+    std::map<std::string,int64_t> mapOrderTime;//GTC发单时间
+    RateLimitUnit(const RateLimitUnit& src){
+         order_total = src.order_total.load();
+         trade_total = src.trade_total.load();
+         gtc_canceled_order_total = src.gtc_canceled_order_total.load();
+         mapOrderTime = src.mapOrderTime;
+    };
+    RateLimitUnit(){
+         order_total = 0;
+         trade_total = 0;
+         gtc_canceled_order_total=0;
+    };
+    void Reset()
+    {
+        order_total = 0;
+        trade_total = 0;
+        gtc_canceled_order_total=0;
+        mapOrderTime.clear();
+    };
+};
 
 struct AccountUnitBinance
 {
@@ -151,6 +179,9 @@ struct AccountUnitBinance
     std::mutex* mutex_order_and_trade = nullptr;
     struct lws_context *context = nullptr;
     struct lws * websocketConn;
+
+    std::map<std::string, RateLimitUnit> rate_limit_data_map;
+    int64_t last_rate_limit_timestamp = 0;    //
     AccountUnitBinance(const AccountUnitBinance& source);
     AccountUnitBinance();
     ~AccountUnitBinance();
@@ -163,34 +194,6 @@ struct OrderActionInfo
     int request_id;
 };
 
-//----rate_limit_data_map-----
-struct RateLimitUnit
-{
-    //UFR
-    std::atomic<uint64_t> order_total; //委托总量
-    std::atomic<uint64_t> trade_total; //成交总量
-    //GCR
-    std::atomic<uint64_t> gtc_canceled_order_total;//已撤单GTC委托总量
-    std::map<std::string,int64_t> mapOrderTime;//GTC发单时间
-    RateLimitUnit(const RateLimitUnit& src){
-         order_total = src.order_total.load();
-         trade_total = src.trade_total.load();
-         gtc_canceled_order_total = src.gtc_canceled_order_total.load();
-         mapOrderTime = src.mapOrderTime;
-    };
-    RateLimitUnit(){
-         order_total = 0;
-         trade_total = 0;
-         gtc_canceled_order_total=0;
-    };
-    void Reset()
-    {
-        order_total = 0;
-        trade_total = 0;
-        gtc_canceled_order_total=0;
-        mapOrderTime.clear();
-    };
-};
 
 /**
  * CTP trade engine
@@ -247,21 +250,10 @@ private:
     void testUTC();
     std::vector<std::string> split(std::string str, std::string token);
     bool loadExchangeOrderFilters(AccountUnitBinance& unit, Document &doc);
-    void GetAndHandleOrderTradeResponse(AccountUnitBinance& unit);
-    void addNewSentTradeIds(AccountUnitBinance& unit, int64_t newSentTradeIds);
-    void addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,int64_t limitPrice,
-                                        const char_21 OrderRef, const LfOrderStatusType OrderStatus, const uint64_t VolumeTraded, LfDirectionType Direction, int64_t binanceOrderId);
-
-    inline void onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
     inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
     inline void onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
     void onRtnNewOrder(const LFInputOrderField* data, AccountUnitBinance& unit, int requestId,string remoteOrderId,int64_t fixedVolume,int64_t fixedPrice);
-    void retrieveOrderStatus(AccountUnitBinance& unit);
-    void retrieveTradeStatus(AccountUnitBinance& unit);
     void moveNewtoPending(AccountUnitBinance& unit);
-    bool isExistSymbolInPendingTradeStatus(AccountUnitBinance& unit, const char_31 InstrumentID);
-    bool isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID, const char_21 OrderRef);
-    bool removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId);
 
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
     int64_t fixVolumeStepSize(int keepPrecision, int64_t volume, bool isBuy);
@@ -341,12 +333,10 @@ private:
     double UFR_limit = 0.998;    //触发条件·未成交率上限
     int UFR_order_lower_limit = 300;  //触发条件·委托单数量下限
     //GCR
-    double GCR_limit = 0.998;    //触发条件·GTC撤单率上限
+    double GCR_limit = 0.98;    //触发条件·GTC撤单率上限
     int GCR_order_lower_limit = 150;  //触发条件·GTC委托单数量下限
+    int64_t Rate_Limit_Reset_Interval = 600000;
 
-    std::map<std::string, RateLimitUnit> rate_limit_data_map;
-    int64_t last_rate_limit_timestamp = 0;    //
-    std::map<std::string, bool> UFR_orderRef_status_map;
 
     /////////////// request weight ////////////////
     //<=0，do nothing even meet 429
@@ -357,7 +347,7 @@ private:
     //handle 429,prohibit send/cencel order time,ms
     //code=-1429,msg:order count over 10000 limit.
     int prohibit_order_ms = 10000;      //default 10s
-    int default_429_rest_interval_ms = 1000;      //default 10s
+    int default_429_rest_interval_ms = 1000;      //default 1s
     
 
     

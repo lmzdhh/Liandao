@@ -844,57 +844,46 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
     //--------------rate limit------------------------------------------
     int64_t timestamp = getTimestamp();
     //若InstrumentId不在map中则添加
-    auto it_rate = rate_limit_data_map.find(data->InstrumentID);
-    if ( it_rate == rate_limit_data_map.end())
+    auto it_rate = unit.rate_limit_data_map.find(data->InstrumentID);
+    if ( it_rate == unit.rate_limit_data_map.end())
     {
-        auto ret_tmp = rate_limit_data_map.insert(std::make_pair(data->InstrumentID, RateLimitUnit()));
+        auto ret_tmp = unit.rate_limit_data_map.insert(std::make_pair(data->InstrumentID, RateLimitUnit()));
         it_rate = ret_tmp.first;
     }
     else
     {
         //测试日志
-        KF_LOG_DEBUG(logger, "[req_order_insert] rate_limit_data_map InstrumentID " << data->InstrumentID <<
-                                " rate_limit_data_map.size " << rate_limit_data_map.size() <<
-                                " order_total " << it_rate->second.order_total <<
-                                " trade_total " << it_rate->second.trade_total << 
+        KF_LOG_DEBUG(logger, "[req_order_insert] rate_limit_data_map InstrumentID " << data->InstrumentID << " rate_limit_data_map.size " << unit.rate_limit_data_map.size() <<
+                                " order_total " << it_rate->second.order_total <<" trade_total " << it_rate->second.trade_total << 
                                 " gtc_order_total " << it_rate->second.gtc_canceled_order_total);
         //判断是否需要整十分钟重置
         
-        if (timestamp - last_rate_limit_timestamp >=  600000)
+        if (timestamp - unit.last_rate_limit_timestamp >=  Rate_Limit_Reset_Interval)
         {
             //测试日志
             KF_LOG_DEBUG(logger, "[req_order_insert] reset rate_limit_data_map per 10mins" <<
-                                    " last_rate_limit_timestamp " << last_rate_limit_timestamp <<
+                                    " last_rate_limit_timestamp " << unit.last_rate_limit_timestamp <<
                                     " current timestamp " << timestamp);
-            last_rate_limit_timestamp = timestamp;
+            unit.last_rate_limit_timestamp = timestamp;
             //reset
-            for (auto& iter : rate_limit_data_map)
+            for (auto& iter : unit.rate_limit_data_map)
             {
                 iter.second.Reset();
             }
         }
-
         //判断是否达到触发条件·委托单数量>=UFR_order_lower_limit
-        //测试日志
-        KF_LOG_DEBUG(logger, "[req_order_insert] before order_total is reaching to UFR_order_lower_limit " <<
-                                    "InstrumentID "<< data->InstrumentID <<
-                                    " order_total " << it_rate->second.order_total <<
-                                    " trade_total " << it_rate->second.trade_total <<                              
-                                    " UFR_order_lower_limit " << UFR_order_lower_limit);
-        uint64_t tmpOrderCount = it_rate->second.order_total+1;
+        uint64_t tmpOrderCount = it_rate->second.order_total+fixedVolume;
         if (tmpOrderCount >= UFR_order_lower_limit)
         {
             //计算UFR
             double UFR = 1 - it_rate->second.trade_total*1.0/tmpOrderCount;
             //测试日志
-            KF_LOG_DEBUG(logger, "[req_order_insert] order_total is reaching to UFR_order_lower_limit " <<
-                                    "InstrumentID "<< data->InstrumentID <<
+            KF_LOG_DEBUG(logger, "[req_order_insert] order_total is reaching to UFR_order_lower_limit " << "InstrumentID "<< data->InstrumentID <<
                                     " current UFR " << UFR );
             if (UFR >= UFR_limit)
             {
                 //测试日志
-                KF_LOG_DEBUG(logger, "[req_order_insert] UFR above limit! " << 
-                                    " InstrumentID "<< data->InstrumentID << ", ufr_limit " << UFR_limit);
+                KF_LOG_DEBUG(logger, "[req_order_insert] UFR above limit! " <<  " InstrumentID "<< data->InstrumentID << ", ufr_limit " << UFR_limit);
                 //未成交率达到上限，报错并return
                 errorId = 123;
                 errorMsg = std::string(data->InstrumentID) + " UFR above limit !";
@@ -952,21 +941,6 @@ void TDEngineBinance::req_order_insert(const LFInputOrderField* data, int accoun
         std::string orderId=std::to_string(d["orderId"].GetInt64());
         //order insert success,on_rtn_order with NotTouched status first
         onRtnNewOrder(data, unit, requestId,orderId,fixedVolume,fixedPrice);
-        /*
-        if(!d.HasMember("status"))
-        {//no status, it is ACK
-            onRspNewOrderACK(data, unit, d, requestId);
-        } else {
-            if(!d.HasMember("fills"))
-            {
-                // it is RESULT
-                onRspNewOrderRESULT(data, unit, d, requestId);
-            } else {
-                // it is FULL
-                onRspNewOrderFULL(data, unit, d, requestId);
-            }
-        }
-        */
     }
 }
 
@@ -989,20 +963,10 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
     rtn_order.OrderStatus = LF_CHAR_NotTouched;
 
     //收到委托回报，在这里委托量+1
+    unit.rate_limit_data_map[data->InstrumentID].order_total+=fixedVolume;
     //测试日志
-            KF_LOG_DEBUG(logger, "[onRtnNewOrder] before order_total++ " << 
-                                " InstrumentID "<< data->InstrumentID <<
-                                " current order_total " << rate_limit_data_map[data->InstrumentID].order_total <<
-                                " trade_total " << rate_limit_data_map[data->InstrumentID].trade_total 
-                                 );
-    rate_limit_data_map[data->InstrumentID].order_total ++;
-    //测试日志
-            KF_LOG_DEBUG(logger, "[onRtnNewOrder] order_total++ " << 
-                                " InstrumentID "<< data->InstrumentID <<
-                                " current order_total " << rate_limit_data_map[data->InstrumentID].order_total <<
-                                " trade_total " << rate_limit_data_map[data->InstrumentID].trade_total 
-                                 );
-
+    KF_LOG_DEBUG(logger, "[onRtnNewOrder] order_total++ " << " InstrumentID "<< data->InstrumentID <<
+            " current order_total " << unit.rate_limit_data_map[data->InstrumentID].order_total <<" trade_total " << unit.rate_limit_data_map[data->InstrumentID].trade_total );
     on_rtn_order(&rtn_order);
 
     raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
@@ -1012,7 +976,8 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
     unit.ordersMap.insert(std::make_pair(remoteOrderId,rtn_order));
     lck.unlock();
     std::vector<std::string>::iterator it;
-    for(it=unit.wsOrderStatus.begin();it!=unit.wsOrderStatus.end();it++){
+    for(it=unit.wsOrderStatus.begin();it!=unit.wsOrderStatus.end();it++)
+    {
         Document json;
         json.Parse((*it).c_str());
         if(json.HasMember("i")){
@@ -1030,314 +995,6 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
                 }    
             }
         }
-    }
-}
-void TDEngineBinance::onRspNewOrderACK(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId)
-{
-    /*Response ACK:
-                    {
-                      "symbol": "BTCUSDT",
-                      "orderId": 28,
-                      "clientOrderId": "6gCrw2kRUAF9CvJDGP16IP",
-                      "transactTime": 1507725176595
-                    }
-    */
-
-    //if not Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
-    char noneStatus = LF_CHAR_NotTouched;
-    int64_t binanceOrderId =  result["orderId"].GetInt64();
-    addNewQueryOrdersAndTrades(unit, data->InstrumentID,data->LimitPrice, data->OrderRef, noneStatus, 0, data->Direction, binanceOrderId);
-}
-
-
-void TDEngineBinance::onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId)
-{
-    /*Response RESULT:
-                    {
-                      "symbol": "BTCUSDT",
-                      "orderId": 28,
-                      "clientOrderId": "6gCrw2kRUAF9CvJDGP16IP",
-                      "transactTime": 1507725176595,
-                      "price": "0.00000000",
-                      "origQty": "10.00000000",
-                      "executedQty": "10.00000000",
-                      "status": "FILLED",
-                      "timeInForce": "GTC",
-                      "type": "MARKET",
-                      "side": "SELL"
-                    }
-
-    */
-    KF_LOG_DEBUG(logger, "TDEngineBinance::onRspNewOrderRESULT:");
-    printResponse(result);
-
-    // no strike price, dont emit OnRtnTrade
-    LFRtnOrderField rtn_order;
-    memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-    strcpy(rtn_order.ExchangeID, "binance");
-    strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
-    rtn_order.Direction = data->Direction;
-    rtn_order.TimeCondition = data->TimeCondition;
-    rtn_order.OrderPriceType = data->OrderPriceType;
-    strncpy(rtn_order.OrderRef, result["clientOrderId"].GetString(), 13);
-    rtn_order.VolumeTraded = std::round(stod(result["executedQty"].GetString()) * scale_offset);
-    rtn_order.VolumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
-    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-    rtn_order.LimitPrice = data->LimitPrice;//std::round(stod(result["price"].GetString()) * scale_offset);
-    rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus = GetOrderStatus(result["status"].GetString());
-    if(rtn_order.OrderStatus != LF_CHAR_NotTouched)
-    {
-        on_rtn_order(&rtn_order);
-        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
-                                1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-    }
-
-    //if All Traded, emit OnRtnTrade
-    if(rtn_order.OrderStatus == LF_CHAR_AllTraded)
-    {
-        LFRtnTradeField rtn_trade;
-        memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-        strcpy(rtn_trade.ExchangeID, "binance");
-        strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-        strncpy(rtn_trade.InstrumentID, data->InstrumentID, 31);
-        strncpy(rtn_trade.OrderRef, result["clientOrderId"].GetString(), 13);
-        rtn_trade.Direction = data->Direction;
-        rtn_trade.Volume = std::round(stod(result["executedQty"].GetString()) * scale_offset);
-        rtn_trade.Price = std::round(stod(result["price"].GetString()) * scale_offset);
-
-        on_rtn_trade(&rtn_trade);
-
-        //---------------成交总量+1------------------------
-        //判断该orderref是否已经在map中，没有的话加入进去
-        if (UFR_orderRef_status_map.find(rtn_trade.OrderRef) == UFR_orderRef_status_map.end())
-        {
-
-            UFR_orderRef_status_map.insert(std::make_pair<string, bool>(rtn_trade.OrderRef, false));
-
-            //测试日志
-            KF_LOG_DEBUG(logger, "[onRspNewOrderRESULT] add OrderRef into UFR_orderRef_status_map " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " order_total " << rate_limit_data_map[data->InstrumentID].order_total <<
-                                " trade_total " << rate_limit_data_map[data->InstrumentID].trade_total <<
-                                " OrderRef " << rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
-                                 );
-        }
-
-        //测试日志
-            KF_LOG_DEBUG(logger, "[onRspNewOrderRESULT] before trade_total++ " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " OrderRef "<< rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                " current trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total
-                                 );
-        if (UFR_orderRef_status_map[rtn_trade.OrderRef] == false)
-        {
-            //OrderRef成交一次
-            UFR_orderRef_status_map[rtn_trade.OrderRef] = true;
-            rate_limit_data_map[rtn_trade.InstrumentID].trade_total ++;
-
-            //测试日志
-            KF_LOG_DEBUG(logger, "[onRspNewOrderRESULT] trade_total++ " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " OrderRef "<< rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                " current trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total
-                                 );
-        }
-
-
-        //---------------成交总量---------------------------
-
-        raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
-
-        //this response has no tradeId, so dont call unit.newSentTradeIds.push_back(tradeid)
-    }
-
-    //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
-    if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
-    {
-        int64_t binanceOrderId =  result["orderId"].GetInt64();
-        addNewQueryOrdersAndTrades(unit, data->InstrumentID,data->LimitPrice,
-                                       rtn_order.OrderRef, rtn_order.OrderStatus, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
-    }
-}
-
-void TDEngineBinance::onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId)
-{
-    /*Response FULL:
-                {
-	"symbol": "BTCUSDT",
-	"orderId": 144678401,
-	"clientOrderId": "25",
-	"transactTime": 1533717358045,
-	"price": "0.00000000",
-	"origQty": "0.01512200",
-	"executedQty": "0.01512200",
-	"cummulativeQuoteQty": "97.90379616",
-	"status": "FILLED",
-	"timeInForce": "GTC",
-	"type": "MARKET",
-	"side": "SELL",
-	"fills": [{
-		"price": "6474.49000000",
-		"qty": "0.00957100",
-		"commission": "0.00372804",
-		"commissionAsset": "BNB",
-		"tradeId": 61800504
-	}, {
-		"price": "6473.87000000",
-		"qty": "0.00555100",
-		"commission": "0.00216198",
-		"commissionAsset": "BNB",
-		"tradeId": 61800505
-	}]
-    }
-
-    */
-
-    LFRtnOrderField rtn_order;
-    memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-    strcpy(rtn_order.ExchangeID, "binance");
-    strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
-    rtn_order.Direction = data->Direction;
-    rtn_order.TimeCondition = data->TimeCondition;
-    rtn_order.OrderPriceType = data->OrderPriceType;
-    strncpy(rtn_order.OrderRef, result["clientOrderId"].GetString(), 13);
-    rtn_order.RequestID = requestId;
-    rtn_order.OrderStatus = GetOrderStatus(result["status"].GetString());
-
-    uint64_t volumeTotalOriginal = std::round(stod(result["origQty"].GetString()) * scale_offset);
-    //数量
-    rtn_order.VolumeTotalOriginal = volumeTotalOriginal;
-
-    bool isAllTraded = false;
-    if (rtn_order.OrderStatus == LF_CHAR_AllTraded)
-    {
-        isAllTraded = true;
-    }
-
-    LFRtnTradeField rtn_trade;
-    memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-    strcpy(rtn_trade.ExchangeID, "binance");
-    strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-    strncpy(rtn_trade.InstrumentID, data->InstrumentID, 31);
-    strncpy(rtn_trade.OrderRef, result["clientOrderId"].GetString(), 13);
-    rtn_trade.Direction = data->Direction;
-    rtn_order.LimitPrice = data->LimitPrice;
-    //we have strike price, emit OnRtnTrade
-    int fills_size = result["fills"].Size();
-
-    for(int i = 0; i < fills_size; ++i)
-    {
-        uint64_t volume = std::round(stod(result["fills"].GetArray()[i]["qty"].GetString()) * scale_offset);
-        int64_t price = std::round(stod(result["fills"].GetArray()[i]["price"].GetString()) * scale_offset);
-        //今成交数量
-        rtn_order.VolumeTraded += volume;
-        //剩余数量
-        //volumeTotalOriginal = volumeTotalOriginal - volume;
-        rtn_order.VolumeTotal = volumeTotalOriginal - rtn_order.VolumeTraded;
-
-        if(isAllTraded)
-        {
-            if(i == fills_size - 1) {
-                //the last one
-                rtn_order.OrderStatus = LF_CHAR_AllTraded;
-            } else {
-                rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
-            }
-        }
-        on_rtn_order(&rtn_order);
-        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
-                                1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-        rtn_trade.Volume = volume;
-        rtn_trade.Price = price;
-
-        //测试日志
-            KF_LOG_DEBUG(logger, "[onRspNewOrderFULL] before on_rtn_trade " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " order_total " << rate_limit_data_map[data->InstrumentID].order_total <<
-                                " trade_total " << rate_limit_data_map[data->InstrumentID].trade_total <<
-                                " OrderRef " << rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
-                                 );
-
-        on_rtn_trade(&rtn_trade);
-
-        //---------------成交总量+1------------------------
-        //判断该orderref是否已经在map中，没有的话加入进去
-        if (UFR_orderRef_status_map.find(rtn_trade.OrderRef) == UFR_orderRef_status_map.end())
-        {
-            UFR_orderRef_status_map.insert(std::make_pair<string, bool>(rtn_trade.OrderRef, false));
-
-            //测试日志
-            KF_LOG_DEBUG(logger, "[onRspNewOrderFULL] add OrderRef into UFR_orderRef_status_map " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " order_total " << rate_limit_data_map[data->InstrumentID].order_total <<
-                                " trade_total " << rate_limit_data_map[data->InstrumentID].trade_total <<
-                                " OrderRef " << rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
-                                 );
-        }
-
-
-        //测试日志
-            KF_LOG_DEBUG(logger, "[onRspNewOrderFULL] before trade_total++ " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " OrderRef "<< rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                " current trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total
-                                 );
-        if (UFR_orderRef_status_map[rtn_trade.OrderRef] == false)
-        {
-            //OrderRef成交一次
-            UFR_orderRef_status_map[rtn_trade.OrderRef] = true;
-            rate_limit_data_map[rtn_trade.InstrumentID].trade_total ++;
-
-            //测试日志
-            KF_LOG_DEBUG(logger, "[onRspNewOrderFULL] trade_total++ " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " OrderRef "<< rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                " current trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total <<
-                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
-                                 );
-        }
-
-
-        //---------------成交总量---------------------------
-       
-        raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
-
-        //this trade id has been send on_rtn_trade
-        int64_t newTradeid = result["fills"].GetArray()[i]["tradeId"].GetInt64();
-        addNewSentTradeIds(unit, newTradeid);
-    }
-
-    //if not All Traded, add pendingOrderStatus for GetAndHandleOrderTradeResponse
-    if(rtn_order.VolumeTraded  < rtn_order.VolumeTotalOriginal )
-    {
-        int64_t binanceOrderId =  result["orderId"].GetInt64();
-        LfOrderStatusType status =  rtn_order.OrderStatus;
-        if( fills_size <= 0)
-            status = LF_CHAR_NotTouched;
-        addNewQueryOrdersAndTrades(unit, data->InstrumentID,data->LimitPrice,
-                                       rtn_order.OrderRef,status, rtn_order.VolumeTraded, data->Direction, binanceOrderId);
     }
 }
 
@@ -1369,18 +1026,18 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     //GCR check
     int64_t timestamp = getTimestamp();
     //若InstrumentId不在map中则添加
-    auto it_rate = rate_limit_data_map.find(data->InstrumentID);
-    if ( it_rate != rate_limit_data_map.end())
+    auto it_rate = unit.rate_limit_data_map.find(data->InstrumentID);
+    if ( it_rate != unit.rate_limit_data_map.end())
     {
         //判断是否需要整十分钟重置
-        if (timestamp - last_rate_limit_timestamp >=  600000)
+        if (timestamp - unit.last_rate_limit_timestamp >=  Rate_Limit_Reset_Interval)
         {
             KF_LOG_DEBUG(logger, "[req_order_action] reset rate_limit_data_map per 10mins" <<
-                                    " last_rate_limit_timestamp " << last_rate_limit_timestamp <<
+                                    " last_rate_limit_timestamp " << unit.last_rate_limit_timestamp <<
                                     " current timestamp " << timestamp);
-            last_rate_limit_timestamp = timestamp;
+            unit.last_rate_limit_timestamp = timestamp;
             //reset
-            for (auto& iter : rate_limit_data_map)
+            for (auto& iter : unit.rate_limit_data_map)
             {
                 iter.second.Reset();
             }
@@ -1448,23 +1105,7 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 }
 
-void TDEngineBinance::GetAndHandleOrderTradeResponse(AccountUnitBinance& unit)
-{
-    KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (api_key)" << unit.api_key);
-    if (!unit.logged_in)
-    {
-        //continue;
-        return;
-    }
 
-    moveNewtoPending(unit);
-    retrieveOrderStatus(unit);
-    retrieveTradeStatus(unit);
-
-    
-
-    KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (timeDiffOfExchange)" << timeDiffOfExchange);
-}
 
 
 void TDEngineBinance::moveNewtoPending(AccountUnitBinance& unit)
@@ -1498,477 +1139,6 @@ void TDEngineBinance::moveNewtoPending(AccountUnitBinance& unit)
     }
 }
 
-void TDEngineBinance::retrieveOrderStatus(AccountUnitBinance& unit)
-{
-    KF_LOG_INFO(logger, "[retrieveOrderStatus] (unit.pendingOrderStatus.size())" << unit.pendingOrderStatus.size());
-    std::vector<PendingBinanceOrderStatus>::iterator orderStatusIterator;
-
-    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
-    {
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "account.api_key:"<< unit.api_key
-                                                                          << "  account.pendingOrderStatus.InstrumentID: "<< orderStatusIterator->InstrumentID
-                                                                          <<"  account.pendingOrderStatus.OrderRef: " << orderStatusIterator->OrderRef
-                                                                          <<"  account.pendingOrderStatus.OrderStatus: " << orderStatusIterator->OrderStatus
-        );
-
-        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
-        if(ticker.length() == 0) {
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
-            continue;
-        }
-
-
-        Document orderResult;
-        get_order(unit, ticker.c_str(), 0, orderStatusIterator->OrderRef, orderResult);
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                          << " (orderId)" << orderStatusIterator->OrderRef);
-        printResponse(orderResult);
-        if(orderResult.HasParseError()) {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order HasParseError, call continue");
-            continue;
-        }
-        /*
-           {
-            "symbol": "BTCUSDT",
-            "orderId": 144674450,
-            "clientOrderId": "1",
-            "price": "0.00000000",
-            "origQty": "0.00370000",
-            "executedQty": "0.00370000",
-            "cummulativeQuoteQty": "24.02137156",
-            "status": "FILLED",
-            "timeInForce": "GTC",
-            "type": "MARKET",
-            "side": "SELL",
-            "stopPrice": "0.00000000",
-            "icebergQty": "0.00000000",
-            "time": 1533716765364,
-            "updateTime": 1533716765364,
-            "isWorking": true
-        }
-        */
-        //parse order status
-        if(orderResult.IsObject() && !orderResult.HasMember("code"))
-        {
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.OrderStatus = GetOrderStatus(orderResult["status"].GetString());
-            rtn_order.VolumeTraded = std::round(stod(orderResult["executedQty"].GetString()) * scale_offset);
-
-            //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
-            if(orderStatusIterator->OrderStatus != rtn_order.OrderStatus ||
-               (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-                && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
-            {
-                strcpy(rtn_order.ExchangeID, "binance");
-                strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-                strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-                rtn_order.Direction = GetDirection(orderResult["side"].GetString());
-                rtn_order.TimeCondition = GetTimeCondition(orderResult["timeInForce"].GetString());
-                rtn_order.OrderPriceType = GetPriceType(orderResult["type"].GetString());
-                strncpy(rtn_order.OrderRef, orderResult["clientOrderId"].GetString(), 13);
-                rtn_order.VolumeTotalOriginal = std::round(stod(orderResult["origQty"].GetString()) * scale_offset);
-                rtn_order.LimitPrice =orderStatusIterator->LimitPrice;// std::round(stod(orderResult["price"].GetString()) * scale_offset);
-                rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
-                on_rtn_order(&rtn_order);
-                raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                        source_id, MSG_TYPE_LF_RTN_ORDER_BINANCE,
-                                        1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-                //update last status
-                orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-                orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-
-                //is status is canceled, dont need get the orderref's trade info
-                if(orderStatusIterator->OrderStatus == LF_CHAR_Canceled) {
-                    int64_t binanceOrderId =  orderResult["orderId"].GetInt64();
-                    if(removeBinanceOrderIdFromPendingOnRtnTrades(unit, binanceOrderId))
-                    {
-                        KF_LOG_INFO(logger, "[retrieveTradeStatus] the (OrderRef) "
-                                            << orderStatusIterator->OrderRef
-                                            << " is LF_CHAR_Canceled. done need get this (binanceOrderId)"
-                                               << binanceOrderId << " trade info");
-                    }
-                }
-            }
-        } else {
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                                    << " (orderId)" << orderStatusIterator->OrderRef);
-        }
-        //remove order when finish
-        if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
-           || orderStatusIterator->OrderStatus == LF_CHAR_Error)
-        {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
-            orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
-            //
-            auto it = mapCancelOrder.find(orderStatusIterator->OrderRef);
-            if(it != mapCancelOrder.end())
-            {
-                mapCancelOrder.erase(it);
-            }
-            std::unique_lock<std::mutex> lck(account_mutex);
-            auto it2 = mapInsertOrders.find(orderStatusIterator->OrderRef);
-            if(it2 != mapInsertOrders.end())
-            {
-                mapInsertOrders.erase(it2);
-            }
-        }
-        else {
-           
-            //
-            auto it = mapCancelOrder.find(orderStatusIterator->OrderRef);
-            if(it != mapCancelOrder.end() and (getTimestamp() - it->second.rcv_time) > cancel_timeout_milliseconds)
-            {
-                on_rsp_order_action(&(it->second.data),it->second.request_id , 101, "no response after cancel order for a long time");
-            }
-            //
-            ++orderStatusIterator;
-        }
-        //KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
-    }
-}
-
-void TDEngineBinance::retrieveTradeStatus(AccountUnitBinance& unit)
-{
-    KF_LOG_INFO(logger, "[retrieveTradeStatus] (unit.pendingOrderStatus.size())"
-                        << unit.pendingOrderStatus.size() << " (unit.pendingOnRtnTrades.size()) " << unit.pendingOnRtnTrades.size());
-    //if 'ours' order is finished, and ours trade is finished too , dont get trade info anymore.
-    if(unit.pendingOrderStatus.size() == 0 && unit.pendingOnRtnTrades.size() == 0) return;
-    std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
-    int indexNum = 0;
-    for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
-    {
-        KF_LOG_INFO(logger, "[retrieveTradeStatus] pendingTradeStatus [" << indexNum <<"]"
-                                                                << "  (InstrumentID) "<< tradeStatusIterator->InstrumentID
-                                                                <<"  (last_trade_id) " << tradeStatusIterator->last_trade_id);
-        indexNum++;
-    }
-
-    Document resultTrade;
-
-
-    for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
-    {
-        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 1 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
-
-        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(tradeStatusIterator->InstrumentID));
-        if(ticker.length() == 0) {
-            KF_LOG_INFO(logger, "[retrieveTradeStatus]: not in WhiteList , ignore it:" << tradeStatusIterator->InstrumentID);
-            continue;
-        }
-        KF_LOG_DEBUG(logger, "[retrieveTradeStatus] (exchange_ticker)" << ticker);
-        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 2 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
-        get_my_trades(unit, ticker.c_str(), 500, tradeStatusIterator->last_trade_id, resultTrade);
-        if(resultTrade.HasParseError()) {
-            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades HasParseError, call continue");
-            continue;
-        }
-        /*
-         [
-          {
-            "id": 28457,
-            "orderId": 100234,
-            "price": "4.00000100",
-            "qty": "12.00000000",
-            "commission": "10.10000000",
-            "commissionAsset": "BNB",
-            "time": 1499865549590,
-            "isBuyer": true,
-            "isMaker": false,
-            "isBestMatch": true
-          }
-        ]
-
-         example2, isBuyer=isMaker=true:
-         [{
-                "commission" : "0.00137879",
-                "commissionAsset" : "BNB",
-                "id" : 30801527,
-                "isBestMatch" : true,
-                "isBuyer" : true,
-                "isMaker" : true,
-                "orderId" : 61311309,
-                "price" : "0.00000603",
-                "qty" : "1000.00000000",
-                "time" : 1530541407016
-        }]
-        */
-        if(resultTrade.IsObject()) {
-            //expected is array,but get object, it must be the error response json:
-            /*
-             {
-            "code" : -1021,
-            "msg" : "Timestamp for this request is outside of the recvWindow."
-            }
-             * */
-            int errorId = 0;
-            std::string errorMsg = "";
-            if(resultTrade.HasMember("code"))
-            {
-                errorId = resultTrade["code"].GetInt();
-                if(resultTrade.HasMember("msg") && resultTrade["msg"].IsString())
-                {
-                    errorMsg = resultTrade["msg"].GetString();
-                }
-                KF_LOG_ERROR(logger, "[retrieveTradeStatus] get_my_trades failed!" << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
-
-            }
-            continue;
-        }
-        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 3 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
-        LFRtnTradeField rtn_trade;
-        memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-        strcpy(rtn_trade.ExchangeID, "binance");
-        strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-        strncpy(rtn_trade.InstrumentID, tradeStatusIterator->InstrumentID, 31);
-        //must be Array
-        if (!resultTrade.IsArray()) {
-			KF_LOG_INFO(logger, "[retrieveTradeStatus] Binance interface bans or refused!");
-			continue;
-		}
-        int len = resultTrade.Size();
-        for(int i = 0 ; i < len; i++)
-        {
-            int64_t newtradeId = resultTrade.GetArray()[i]["id"].GetInt64();
-            bool hasSendThisTradeId = false;
-            std::vector<int64_t>::iterator sentTradeIdsIterator;
-            for(sentTradeIdsIterator = unit.sentTradeIds.begin(); sentTradeIdsIterator != unit.sentTradeIds.end(); sentTradeIdsIterator++) {
-                if((*sentTradeIdsIterator) == newtradeId) {
-                    hasSendThisTradeId = true;
-                }
-            }
-            if(hasSendThisTradeId) {
-                KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (hasSendThisTradeId)" << hasSendThisTradeId << " (newtradeId)" << newtradeId);
-                continue;
-            }
-
-            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 4 (for_i)" << i << "  (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
-            rtn_trade.Volume = std::round(stod(resultTrade.GetArray()[i]["qty"].GetString()) * scale_offset);
-            rtn_trade.Price = std::round(stod(resultTrade.GetArray()[i]["price"].GetString()) * scale_offset);
-
-            //apply the direction of the OrderRef
-            int64_t binanceOrderId =  resultTrade.GetArray()[i]["orderId"].GetInt64();
-            std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
-
-            bool match_one = false;
-            for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); ++tradeIterator)
-            {
-                if(tradeIterator->binanceOrderId == binanceOrderId)
-                {
-                    rtn_trade.Direction = tradeIterator->Direction;
-                    strncpy(rtn_trade.OrderRef, tradeIterator->OrderRef, 13);
-                    match_one = true;
-                }
-            }
-            if(match_one) {
-
-                //测试日志
-                KF_LOG_DEBUG(logger, "[retrieveTradeStatus] before on_rtn_trade " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                " trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total <<
-                                " OrderRef " << rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
-                                 );
-
-                on_rtn_trade(&rtn_trade);
-
-                //---------------成交总量+1------------------------
-                //判断该orderref是否已经在map中，没有的话加入进去
-                if (UFR_orderRef_status_map.find(rtn_trade.OrderRef) == UFR_orderRef_status_map.end())
-                {
-                    UFR_orderRef_status_map.insert(std::make_pair<string, bool>(rtn_trade.OrderRef, false));
-
-                    //测试日志
-                    KF_LOG_DEBUG(logger, "[retrieveTradeStatus] add OrderRef into UFR_orderRef_status_map " << 
-                                        " InstrumentID "<< rtn_trade.InstrumentID <<
-                                        " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                        " trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total <<
-                                        " OrderRef " << rtn_trade.OrderRef <<
-                                        " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                        " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size() 
-                                         );
-                }
-
-                //测试日志
-                KF_LOG_DEBUG(logger, "[retrieveTradeStatus] before trade_total++ " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " OrderRef "<< rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                " current trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total
-                                 );
-                if (UFR_orderRef_status_map[rtn_trade.OrderRef] == false)
-                {
-                    //OrderRef成交一次
-                    UFR_orderRef_status_map[rtn_trade.OrderRef] = true;
-                    rate_limit_data_map[rtn_trade.InstrumentID].trade_total ++;
-
-                    //测试日志
-                    KF_LOG_DEBUG(logger, "[retrieveTradeStatus] trade_total++ " << 
-                                        " InstrumentID "<< rtn_trade.InstrumentID <<
-                                        " OrderRef "<< rtn_trade.OrderRef <<
-                                        " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                        " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                        " current trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total <<
-                                        " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
-                                         );
-                }
-
-
-                //---------------成交总量---------------------------
-          
-                raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                        source_id, MSG_TYPE_LF_RTN_TRADE_BINANCE, 1/*islast*/, -1/*invalidRid*/);
-            } else {
-                //this order is not me sent out, maybe other strategy's order or manuelly open orders.
-            }
-
-            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 5 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
-
-
-            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (newtradeId)" << newtradeId);
-            if(newtradeId >= tradeStatusIterator->last_trade_id) {
-                tradeStatusIterator->last_trade_id = newtradeId + 1;// for new trade
-            }
-            KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades (last_trade_id)" << tradeStatusIterator->last_trade_id << " (for_i)" << i);
-        }
-
-        //here, use another for-loop is for there maybe more than one trades on the same orderRef:
-        //if the first one remove pendingOnRtnTrades, the second one could not get the Direction.
-
-        for(int i = 0 ; i < len; i++)
-        {
-            if(! isExistSymbolInPendingBinanceOrderStatus(unit, tradeStatusIterator->InstrumentID, rtn_trade.OrderRef)) {
-                //all the OnRtnOrder is finished.
-
-                
-
-                //订单已经不存在，从 UFR_orderRef_status_map 中剔除orderref
-                //测试日志
-                    KF_LOG_DEBUG(logger, "[retrieveTradeStatus] before OrderRef has not existed and remove from UFR_orderRef_status_map " << 
-                                        " InstrumentID "<< rtn_trade.InstrumentID <<
-                                        " OrderRef "<< rtn_trade.OrderRef <<
-                                        " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                        " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                        " current trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total <<
-                                        " UFR_orderRef_status_map.size "<<UFR_orderRef_status_map.size()
-                                         );
-                if (UFR_orderRef_status_map.find(rtn_trade.OrderRef) != UFR_orderRef_status_map.end())
-                {
-                    UFR_orderRef_status_map.erase(UFR_orderRef_status_map.find(rtn_trade.OrderRef));
-
-                    //测试日志
-                    KF_LOG_DEBUG(logger, "[retrieveTradeStatus] OrderRef has not existed and remove from UFR_orderRef_status_map " << 
-                                        " InstrumentID "<< rtn_trade.InstrumentID <<
-                                        " OrderRef "<< rtn_trade.OrderRef <<
-                                    //    " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                        " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                        " current trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total <<
-                                        " UFR_orderRef_status_map.size "<<UFR_orderRef_status_map.size()
-                                         );
-
-                }
-
-
-                int64_t binanceOrderId =  resultTrade.GetArray()[i]["orderId"].GetInt64();
-                if(removeBinanceOrderIdFromPendingOnRtnTrades(unit, binanceOrderId))
-                {
-                    KF_LOG_INFO(logger, "[retrieveTradeStatus] there is no pendingOrderStatus(LF_CHAR_AllTraded/LF_CHAR_Canceled/LF_CHAR_Error occur). this is the last turn of get_myTrades on (symbol)" << tradeStatusIterator->InstrumentID);
-                }
-            }
-        }
-
-        KF_LOG_INFO(logger, "[retrieveTradeStatus] get_my_trades 6 (last_trade_id)" << tradeStatusIterator->last_trade_id << " (InstrumentID)" << tradeStatusIterator->InstrumentID);
-    }
-}
-
-bool TDEngineBinance::removeBinanceOrderIdFromPendingOnRtnTrades(AccountUnitBinance& unit, int64_t binanceOrderId)
-{
-    bool removedOne = false;
-    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
-    for(tradeIterator = unit.pendingOnRtnTrades.begin(); tradeIterator != unit.pendingOnRtnTrades.end(); )
-    {
-        if(tradeIterator->binanceOrderId == binanceOrderId)
-        {
-            tradeIterator = unit.pendingOnRtnTrades.erase(tradeIterator);
-            removedOne = true;
-        } else {
-            ++tradeIterator;
-        }
-    }
-    return removedOne;
-}
-
-
-void TDEngineBinance::addNewSentTradeIds(AccountUnitBinance& unit, int64_t newSentTradeIds)
-{
-    std::lock_guard<std::mutex> guard_mutex(*unit.mutex_order_and_trade);
-
-    unit.newSentTradeIds.push_back(newSentTradeIds);
-    KF_LOG_DEBUG(logger, "[addNewSentTradeIds]" << " (newSentTradeIds)" << newSentTradeIds);
-}
-
-void TDEngineBinance::addNewQueryOrdersAndTrades(AccountUnitBinance& unit, const char_31 InstrumentID,int64_t limitPrice,
-                                                     const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                 const uint64_t VolumeTraded, LfDirectionType Direction, int64_t binanceOrderId)
-{
-    //add new orderId for GetAndHandleOrderTradeResponse
-    std::lock_guard<std::mutex> guard_mutex(*unit.mutex_order_and_trade);
-
-    PendingBinanceOrderStatus status;
-    memset(&status, 0, sizeof(PendingBinanceOrderStatus));
-    strncpy(status.InstrumentID, InstrumentID, 31);
-    strncpy(status.OrderRef, OrderRef, 21);
-    status.OrderStatus = OrderStatus;
-    status.VolumeTraded = VolumeTraded;
-    status.LimitPrice = limitPrice;
-    unit.newOrderStatus.push_back(status);
-
-    OnRtnOrderDoneAndWaitingOnRtnTrade waitingTrade;
-    strncpy(waitingTrade.OrderRef, OrderRef, 21);
-    waitingTrade.binanceOrderId = binanceOrderId;
-    waitingTrade.Direction = Direction;
-    unit.newOnRtnTrades.push_back(waitingTrade);
-
-    //add new symbol for GetAndHandleOrderTradeResponse if had no this symbol before
-    if(!isExistSymbolInPendingTradeStatus(unit, InstrumentID))
-    {
-        PendingBinanceTradeStatus tradeStatus;
-        memset(&tradeStatus, 0, sizeof(PendingBinanceTradeStatus));
-        strncpy(tradeStatus.InstrumentID, InstrumentID, 31);
-        tradeStatus.last_trade_id = 0;
-        unit.newTradeStatus.push_back(tradeStatus);
-    }
-}
-
-bool TDEngineBinance::isExistSymbolInPendingTradeStatus(AccountUnitBinance& unit, const char_31 InstrumentID)
-{
-    std::vector<PendingBinanceTradeStatus>::iterator tradeStatusIterator;
-
-    for(tradeStatusIterator = unit.pendingTradeStatus.begin(); tradeStatusIterator != unit.pendingTradeStatus.end(); ++tradeStatusIterator)
-    {
-        if(strcmp(tradeStatusIterator->InstrumentID, InstrumentID) == 0)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-
-bool TDEngineBinance::isExistSymbolInPendingBinanceOrderStatus(AccountUnitBinance& unit, const char_31 InstrumentID, const char_21 OrderRef)
-{
-    std::vector<PendingBinanceOrderStatus>::iterator orderStatusIterator;
-
-    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end(); orderStatusIterator++) {
-        if (strcmp(orderStatusIterator->InstrumentID, InstrumentID) == 0 && strcmp(orderStatusIterator->OrderRef, OrderRef) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
 
 void TDEngineBinance::set_reader_thread()
 {
@@ -2001,24 +1171,11 @@ void TDEngineBinance::loop()
                 last_put_time = getTimestamp();
             }
             lws_service( unit.context, rest_get_interval_ms );
-            /*
-            if (unit.bHandle_429)
-            {
-                tmp_rest_get_interval_ms = default_429_rest_interval_ms;
-            }
-            if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < tmp_rest_get_interval_ms)
-            {
-                continue;
-            }
-            GetAndHandleOrderTradeResponse(unit);
-            
-            */
         }
         if( current_ms - last_rest_get_ts > SYNC_TIME_DEFAULT_INTERVAL) {
             //reset
             //sync_time_interval = SYNC_TIME_DEFAULT_INTERVAL;
             getTimeDiffOfExchange(account_units[0]);
-            //KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse] (reset_timeDiffOfExchange)" << timeDiffOfExchange);
             last_rest_get_ts = current_ms;
         }
         
@@ -3195,73 +2352,34 @@ void TDEngineBinance::onOrder(AccountUnitBinance& unit, Document& json) {
         int64_t priceTraded = std::round(std::stod(strTradePrice)*scale_offset);
 		rtn_trade.Price = priceTraded;
 		
-        //---------------成交总量+1------------------------
-        //判断该orderref是否已经在map中，没有的话加入进去
-        if (UFR_orderRef_status_map.find(rtn_trade.OrderRef) == UFR_orderRef_status_map.end())
-        {
-
-            UFR_orderRef_status_map.insert(std::make_pair<string, bool>(rtn_trade.OrderRef, false));
-
-            //测试日志
-            KF_LOG_DEBUG(logger, "[onRspNewOrderRESULT] add OrderRef into UFR_orderRef_status_map " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                " trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total <<
-                                " OrderRef " << rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " UFR_orderRef_status_map.size " << UFR_orderRef_status_map.size()
-                                 );
-        }
-        if (UFR_orderRef_status_map[rtn_trade.OrderRef] == false)
-        {
-            //OrderRef成交一次
-            UFR_orderRef_status_map[rtn_trade.OrderRef] = true;
-            rate_limit_data_map[rtn_trade.InstrumentID].trade_total ++;
-
-            //测试日志
-            KF_LOG_DEBUG(logger, "[onRspNewOrderRESULT] trade_total++ " << 
-                                " InstrumentID "<< rtn_trade.InstrumentID <<
-                                " OrderRef "<< rtn_trade.OrderRef <<
-                                " OrderRef.status " << UFR_orderRef_status_map[rtn_trade.OrderRef] <<
-                                " order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                " current trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total
-                                 );
-        }
-
-
-        //---------------成交总量---------------------------
+       
 
 		KF_LOG_INFO(logger, "TDEngineBinance::onOrder,rtn_trade");
         if(oldVolumeTraded != rtn_order.VolumeTraded){
 		    on_rtn_trade(&rtn_trade);
 		    raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),source_id, MSG_TYPE_LF_RTN_TRADE_BITMEX, 1, -1);
         }
-
+         //---------------成交总量+1------------------------
+        //判断该orderref是否已经在map中，没有的话加入进去
+        auto it_rate =unit.rate_limit_data_map.find(rtn_trade.InstrumentID);
+        if ( it_rate != unit.rate_limit_data_map.end())
+        {
+            it_rate->second.trade_total+= volumeTraded;
+        }
+        //---------------成交总量---------------------------
 
         if (rtn_order.OrderStatus == LF_CHAR_AllTraded || rtn_order.OrderStatus == LF_CHAR_PartTradedNotQueueing ||
 			rtn_order.OrderStatus == LF_CHAR_Canceled || rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing || rtn_order.OrderStatus == LF_CHAR_Error)
 		{
 			unit.ordersMap.erase(it);
 
-            std::unique_lock<std::mutex> lck(account_mutex);
+            std::unique_lock<std::mutex> lck2(account_mutex);
             auto it2 = mapInsertOrders.find(rtn_order.OrderRef);
             if(it2 != mapInsertOrders.end())
             {
                 mapInsertOrders.erase(it2);
             }
-
-            //订单已经不存在，从 UFR_orderRef_status_map 中剔除orderref
-            auto it3 = UFR_orderRef_status_map.find(rtn_trade.OrderRef);
-            if ( it3 != UFR_orderRef_status_map.end())
-            {
-                UFR_orderRef_status_map.erase(it3);
-
-                //测试日志
-                KF_LOG_DEBUG(logger, "[retrieveTradeStatus] OrderRef has not existed and remove from UFR_orderRef_status_map " << " InstrumentID "<< rtn_trade.InstrumentID <<
-                                    " OrderRef "<< rtn_trade.OrderRef <<" order_total " << rate_limit_data_map[rtn_trade.InstrumentID].order_total <<
-                                    " current trade_total " << rate_limit_data_map[rtn_trade.InstrumentID].trade_total <<" UFR_orderRef_status_map.size "<<UFR_orderRef_status_map.size());
-
-            }
+            lck2.unlock();
 		}       
     }
 
