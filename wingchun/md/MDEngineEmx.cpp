@@ -158,10 +158,10 @@ void MDEngineEmx::load(const json& j_config)
 
 // {
 // "type": "subscribe",
-// "contract_codes": ["BTCM19"],
+// "contract_codes": ["BTCM19"," "," "],
 // "channels": ["level2"]
 // }
-std::string MDEngineEmx::createJsonString(std::string exchange_coinpair,int type)
+std::string MDEngineEmx::createJsonString(std::vector<string> &exchange_coinpair,int type)
 {
 
     StringBuffer s;
@@ -171,9 +171,11 @@ std::string MDEngineEmx::createJsonString(std::string exchange_coinpair,int type
     writer.String("subscribe");
 
     writer.Key("contract_codes");
-    writer.StartObject();
-    writer.String(exchange_coinpair.c_str());
-    writer.EndObject();
+    writer.StartArray();
+    for(auto& coinpair:exchange_coinpair){
+        writer.String(coinpair.c_str());
+    } 
+    writer.EndArray();
 
     writer.Key("channels");
     writer.StartObject();
@@ -190,17 +192,19 @@ void MDEngineEmx::makeWebsocketSubscribeJsonString()//创建请求
 {
     std::unordered_map<std::string, std::string>::iterator map_itr;
     map_itr = coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().begin();
+    std::vector<string> array_coinpair ;
     while(map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
         KF_LOG_DEBUG(logger, "[makeWebsocketSubscribeJsonString] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) "<< map_itr->second);
 
-        std::string jsonBookString = createJsonString(map_itr->second,0);
-        websocketSubscribeJsonString.push_back(jsonBookString);
-
+        
+        array_coinpair.push_back(map_itr->second);
         //std::string jsonTradeString = createJsonString(map_itr->second,1);
         //websocketSubscribeJsonString.push_back(jsonTradeString);
 
         map_itr++;
     }
+    std::string jsonBookString = createJsonString(array_coinpair,0);
+    websocketSubscribeJsonString.push_back(jsonBookString);
 }
 
 void MDEngineEmx::debug_print(std::vector<std::string> &subJsonString)
@@ -258,7 +262,7 @@ void MDEngineEmx::login(long timeout_nsec) {//连接到服务器
 
     struct lws_client_connect_info ccinfo = {0};
 
-    static std::string host  = "api.Emx.net";
+    static std::string host  = "api.emx.com";
     static std::string path = "/";
     static int port = 443;
 
