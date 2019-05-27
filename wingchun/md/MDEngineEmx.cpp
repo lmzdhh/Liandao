@@ -608,7 +608,7 @@ void MDEngineEmx::loop()
     }
 }
 
-BOOST_PYTHON_MODULE(libEmxmd)
+BOOST_PYTHON_MODULE(libemxmd)
 {
     using namespace boost::python;
     class_<MDEngineEmx, boost::shared_ptr<MDEngineEmx> >("Engine")
