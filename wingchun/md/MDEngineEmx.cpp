@@ -378,11 +378,16 @@ void MDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
         return;
     }
    
-    if(json["channels"].IsArray()){
+    if(json.HasMember("channels")){
         KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: subscriptions info  " );
     }
     else if(strcmp(json["channel"].GetString(),"heartbeat") == 0){
-        KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: heartbeat info  " );
+        KF_LOG_INFO(logger, "MDEn
+        
+        
+        
+        
+        gineEmx::on_lws_data: heartbeat info  " );
     }
     
     else if(strcmp(json["channel"].GetString(),"level2") == 0){
@@ -507,8 +512,53 @@ void MDEngineEmx::onTrade(Document& json)
 //     asks: [[ "7500.02", "12.4372" ], [ "7500.03", "32.1839" ], ...]
 //   }
 // }
+void MDEngineEmx::onBook(Document& json)
+{
 
-// {
+        KF_LOG_DEBUG(logger, "onBook start");
+        if (!json.HasMember("data"))
+        {
+            KF_LOG_INFO(logger, "MDEngineEmx::onBook: no member:data ");
+            return;
+        }
+        auto& data = json["data"];
+
+        std::string ticker = coinPairWhiteList.GetKeyByValue(data["contract_code"].GetString());
+        KF_LOG_INFO(logger, "MDEngineEmx::onBook: (symbol) " << ticker.c_str());
+
+        LFPriceBook20Field priceBook {0};
+        strcpy(priceBook.ExchangeID, "Emx");
+        strcpy(priceBook.InstrumentID, ticker.c_str());
+
+        int i = 0;
+        if(json["type"].GetString() == "snapshot"){
+
+            auto& bids = data["bids"];
+            auto& asks = data["asks"];
+            if(bids.IsArray())
+            {              
+                KF_LOG_INFO(logger,"bids");
+                
+                for(i = 0; i < std::min((int)bids.Size(),book_depth_count); i++)
+                {
+                    priceBook.BidLevels[i].price = std::round(stod(bids[i].GetArray()[0].GetString()) * SCALE_OFFSET);
+                    priceBook.BidLevels[i].volume = std::round(stod(bids[i].GetArray()[1].GetString()) * SCALE_OFFSET);
+                }
+                priceBook.BidLevelCount = i;
+            }
+            if (asks.IsArray())
+            {
+                KF_LOG_INFO(logger,"asks");
+                int i = 0;
+                for(i = 0; i < std::min((int)asks.Size(),book_depth_count); ++i)
+                {
+                    priceBook.AskLevels[i].price = std::round(stod(asks[i].GetArray()[0].GetString()) * SCALE_OFFSET);
+                    priceBook.AskLevels[i].volume = std::round(stod(asks[i].GetArray()[1].GetString()) * SCALE_OFFSET);
+                }
+                priceBook.AskLevelCount = i;
+            }
+        }
+        // {
 //   channel: "level2",
 //   type: "update",
 //   data: {
@@ -521,73 +571,19 @@ void MDEngineEmx::onTrade(Document& json)
 //     ]
 //   }
 // }
-void MDEngineEmx::onBook(Document& json)
-{
-
-        KF_LOG_DEBUG(logger, "onBook start");
-        if (!json.HasMember("data"))
-        {
-            return;
-        }
-        auto& data = json["data"];
-        if (!data.HasMember("bids"))
-        {
-            return;
-        }
-        auto& bids = data["bids"];
-
-        if (!data.HasMember("asks"))
-        {
-            return;
-        }
-        auto& asks = data["asks"];
-
-        std::string ticker = coinPairWhiteList.GetKeyByValue(data["contract_code"].GetString());
-        KF_LOG_INFO(logger, "MDEngineEmx::onBook: (symbol) " << ticker.c_str());
-
-        LFPriceBook20Field priceBook {0};
-        strcpy(priceBook.ExchangeID, "Emx");
-        strcpy(priceBook.InstrumentID, ticker.c_str());
-
-        int i = 0;
-        if(json["type"].GetString() == "snapshot"){
-                if(bids.IsArray())
-            {
-                KF_LOG_INFO(logger,"bids");
-                
-                for(i = 0; i < std::min((int)bids.Size(),book_depth_count); i++)
-                {
-                    priceBook.BidLevels[i].price = std::round(stod(bids[i][0].GetString()) * SCALE_OFFSET);
-                    priceBook.BidLevels[i].volume = std::round(stod(bids[i][1].GetString()) * SCALE_OFFSET);
-                }
-                priceBook.BidLevelCount = i;
-            }
-            if (asks.IsArray())
-            {
-                KF_LOG_INFO(logger,"asks");
-                int i = 0;
-                for(i = 0; i < std::min((int)asks.Size(),book_depth_count); ++i)
-                {
-                    priceBook.AskLevels[i].price = std::round(stod(asks[i][0].GetString()) * SCALE_OFFSET);
-                    priceBook.AskLevels[i].volume = std::round(stod(asks[i][1].GetString()) * SCALE_OFFSET);
-                }
-                priceBook.AskLevelCount = i;
-            }
-        }
-        
         else if(json["type"].GetString() == "update"){
 
             auto& changes = data["changes"];
             int64_t price;
             double dAmount;
             uint64_t amount;
-
+            std::string type;
             for(i = 0; i < (int)changes.Size(); i++){
 
                 price = std::round(stod(changes.GetArray()[i].GetArray()[1].GetString()) * scale_offset);
                 dAmount = stod(changes.GetArray()[i].GetArray()[2].GetString());
 				amount = std::round(dAmount * scale_offset);
-                std::string type = changes.GetArray()[i].GetArray()[0].GetString();
+                type = changes.GetArray()[i].GetArray()[0].GetString();
                 KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (type) "<< type <<" (ticker)"
                                                                 << ticker << " (price)" 
                                                                 << price << " (amount)" << amount);
