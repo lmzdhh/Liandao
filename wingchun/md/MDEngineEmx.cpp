@@ -531,9 +531,8 @@ void MDEngineEmx::onBook(Document& json)
 
             auto& bids = data["bids"];
             auto& asks = data["asks"];
-            if(bids.IsArray())
-            {              
-                KF_LOG_INFO(logger,"bids");
+
+                KF_LOG_INFO(logger,"MDEngineEmx::onBook:bids");
                 
                 for(i = 0; i < std::min((int)bids.Size(),book_depth_count); i++)
                 {
@@ -541,18 +540,15 @@ void MDEngineEmx::onBook(Document& json)
                     volume = std::round(stod(bids[i].GetArray()[1].GetString()) * SCALE_OFFSET);
                     priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
                 }
-            }
-            if (asks.IsArray())
-            {
-                KF_LOG_INFO(logger,"asks");
-                int i = 0;
+ 
+                KF_LOG_INFO(logger,"MDEngineEmx::onBook:asks");
+
                 for(i = 0; i < std::min((int)asks.Size(),book_depth_count); ++i)
                 {
                     price = std::round(stod(asks[i].GetArray()[0].GetString()) * SCALE_OFFSET);
                     volume = std::round(stod(asks[i].GetArray()[1].GetString()) * SCALE_OFFSET);
                     priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
                 }
-            }
         }
 // {
 //   channel: "level2",
@@ -568,6 +564,7 @@ void MDEngineEmx::onBook(Document& json)
 //   }
 // }
         else if(strcmp(json["type"].GetString() , "update") == 0){
+            KF_LOG_INFO(logger,"MDEngineEmx::onBook:update");
 
             auto& changes = data["changes"];
             
