@@ -539,7 +539,7 @@ void MDEngineEmx::onBook(Document& json)
         strcpy(priceBook.InstrumentID, ticker.c_str());
 
         int i = 0;
-        if(json[type].GetString() == "snapshot"){
+        if(json["type"].GetString() == "snapshot"){
                 if(bids.IsArray())
             {
                 KF_LOG_INFO(logger,"bids");
@@ -564,7 +564,7 @@ void MDEngineEmx::onBook(Document& json)
             }
         }
         
-        else if(json[type].GetString() == "update"){
+        else if(json["type"].GetString() == "update"){
 
             auto& changes = data["changes"];
             int64_t price;
