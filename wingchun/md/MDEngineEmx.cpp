@@ -382,12 +382,7 @@ void MDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
         KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: subscriptions info  " );
     }
     else if(strcmp(json["channel"].GetString(),"heartbeat") == 0){
-        KF_LOG_INFO(logger, "MDEn
-        
-        
-        
-        
-        gineEmx::on_lws_data: heartbeat info  " );
+        KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: heartbeat info  " );
     }
     
     else if(strcmp(json["channel"].GetString(),"level2") == 0){
