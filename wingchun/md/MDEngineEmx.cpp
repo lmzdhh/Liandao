@@ -37,6 +37,76 @@ USING_WC_NAMESPACE
 
 static MDEngineEmx* global_md = nullptr;
 
+/*quest3 fxw v4 starts*/
+// int MDEngineBitfinex::GetSnapShotAndRtn(std::string ticker)//v1
+// {
+// 	std::string symbol = coinPairWhiteList_rest.GetValueByKey(ticker);
+// 	std::string requestPath = "/v1/book/";
+// 	std::string body = "";
+// 	string url = "wss://api.emx.com" + requestPath + symbol;//complete url
+// 	KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]the url we ask :" << url);
+// 	cpr::Response response = Get(
+// 		Url{ url }, cpr::VerifySsl{ false },
+// 		cpr::Body{ body },
+// 		cpr::Timeout{ 10000 }
+// 	);
+// 	if (response.status_code >= 200 && response.status_code <= 299)
+// 	{
+// 		KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]request succeeded,the text is :" << response.text.c_str());
+// 		Document d;
+// 		d.Parse(response.text.c_str());
+// 		LFPriceBook20Field md;
+// 		strcpy(md.ExchangeID, "emx");
+// 		strcpy(md.InstrumentID, ticker.c_str());
+// 		md.UpdateMicroSecond = 0;
+// 		md.Status = 0;
+// 		if (d.HasMember("bids"))
+// 		{
+// 			auto& bids = d["bids"];
+// 			if (bids.IsArray() && bids.Size() > 0)
+// 			{
+// 				auto size = std::min((int)bids.Size(), 20);
+// 				for (int i = 0; i < size; ++i)
+// 				{
+// 					md.BidLevels[i].price = stod(bids.GetArray()[i]["price"].GetString()) * scale_offset;
+// 					md.BidLevels[i].volume = stod(bids.GetArray()[i]["amount"].GetString()) * scale_offset;
+// 					KF_LOG_DEBUG(logger, "[quest2v4]bids price:" << md.BidLevels[i].price << "volume:" << md.BidLevels[i].volume);
+// 				}
+// 				md.BidLevelCount = size;
+// 			}
+// 		}
+// 		if (d.HasMember("asks"))
+// 		{
+// 			auto& asks = d["asks"];
+
+// 			if (asks.IsArray() && asks.Size() > 0)
+// 			{
+// 				auto size = std::min((int)asks.Size(), 20);
+
+// 				for (int i = 0; i < size; ++i)
+// 				{
+// 					md.AskLevels[i].price = stod(asks.GetArray()[i]["price"].GetString()) * scale_offset;
+// 					md.AskLevels[i].volume = stod(asks.GetArray()[i]["amount"].GetString()) * scale_offset;
+// 					KF_LOG_DEBUG(logger, "[quest2v4]asks price:" << md.AskLevels[i].price << "volume:" << md.AskLevels[i].volume);
+// 				}
+// 				md.AskLevelCount = size;
+// 			}
+// 		}
+// 		if (md.BidLevels[0].price > md.AskLevels[0].price)
+// 			md.Status = 2;
+// 		else md.Status = 0;
+// 		timer = getTimestamp();
+// 		on_price_book_update(&md);
+// 		KF_LOG_DEBUG(logger, "[quest2v4 fxw GetSnapShot]snapshot price book update succeeded");
+// 	}
+// 	else
+// 	{
+// 		KF_LOG_DEBUG(logger, "[quest2 fxw GetSnapShot]request failed");
+// 		KF_LOG_DEBUG(logger, "[quest2 fxw GetSnapShot](response.status_code)" << response.status_code << "(response.text)" << response.text.c_str());
+// 	}
+// 	return  0;
+// }
+
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
 
@@ -597,45 +667,8 @@ void MDEngineEmx::onBook(Document& json)
             strcpy(md.ExchangeID, "emx");
 
             KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: on_price_book_update");
-		/*on_price_book_update(&md);*/
-		/*quest2 FXW's edits start here*/
-		if (priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_asks(ticker) ||
-			priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_bids(ticker)
-			/*|| priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker) */
-			)
-		{
-			md.Status = 1;
-			/*need re-login*/
-			KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update failed ,lose level,re-login....");
-			on_price_book_update(&md);
-			GetSnapShotAndRtn(ticker);
-
-		}
-		else if ((-1 == priceBook20Assembler.GetBestBidPrice(ticker)) || (-1 == priceBook20Assembler.GetBestAskPrice(ticker)) ||
-			priceBook20Assembler.GetBestBidPrice(ticker) >= priceBook20Assembler.GetBestAskPrice(ticker))
-		{
-			md.Status = 2;
-			/*need re-login*/
-			KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update failed ,orderbook crossed,re-login....");
-			on_price_book_update(&md);
-			GetSnapShotAndRtn(ticker);
-		}
-		else
-		{
-			md.Status = 0;
-			on_price_book_update(&md);
-			timer = getTimestamp();/*quest2 fxw's edits v3*/
-			KF_LOG_DEBUG(logger, "[FXW successed]MDEngineBitfinex on_price_book_update successed");
-		}
         }
-
-    else//*quest2 FXW's edits v5 
-	{
-		timer = getTimestamp();
-		//GetSnapShotAndRtn(ticker);
-		KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update,priceBook20Assembler.Assembler(ticker, md) failed\n(ticker)" << ticker);
-	}
-     KF_LOG_DEBUG(logger, "onBooka end");
+        KF_LOG_DEBUG(logger, "onBooka end");
 }
 
 std::string MDEngineEmx::parseJsonToString(Document &d)
