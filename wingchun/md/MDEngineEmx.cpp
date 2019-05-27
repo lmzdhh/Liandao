@@ -122,7 +122,7 @@ struct session_data {
     int fd;
 };
 
-MDEngineEmx::MDEngineEmx(): IMDEngine(SOURCE_Emx)
+MDEngineEmx::MDEngineEmx(): IMDEngine(SOURCE_EMX)
 {
     logger = yijinjing::KfLog::getLogger("MdEngine.Emx");
 }
@@ -193,11 +193,11 @@ void MDEngineEmx::makeWebsocketSubscribeJsonString()//创建请求
     while(map_itr != coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList().end()) {
         KF_LOG_DEBUG(logger, "[makeWebsocketSubscribeJsonString] keyIsExchangeSideWhiteList (strategy_coinpair) " << map_itr->first << " (exchange_coinpair) "<< map_itr->second);
 
-        std::string jsonBookString = createJsonString(map_itr->second);
-        websocketSubscribeJsonString.push_back(jsonBookString,0);
+        std::string jsonBookString = createJsonString(map_itr->second,0);
+        websocketSubscribeJsonString.push_back(jsonBookString);
 
-        //std::string jsonTradeString = createJsonString(map_itr->second);
-        //websocketSubscribeJsonString.push_back(jsonTradeString,1);
+        //std::string jsonTradeString = createJsonString(map_itr->second,1);
+        //websocketSubscribeJsonString.push_back(jsonTradeString);
 
         map_itr++;
     }

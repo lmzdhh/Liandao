@@ -51,8 +51,8 @@ private:
     void onInfo(Document& json);
     void onSubscribed(Document& json);
 
-    void onBook(SubscribeChannel& channel, Document& json);
-    void onTrade(SubscribeChannel& channel, Document& json);
+    void onBook(Document& json);
+    void onTrade(Document& json);
 
     SubscribeChannel findByChannelID(int channelId);
 
@@ -105,6 +105,7 @@ private:
 
     CoinPairWhiteList coinPairWhiteList_websocket;
 	CoinPairWhiteList coinPairWhiteList_rest;
+    CoinPairWhiteList coinPairWhiteList;
 };
 
 DECLARE_PTR(MDEngineEmx);
