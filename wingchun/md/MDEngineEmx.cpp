@@ -521,9 +521,9 @@ void MDEngineEmx::onBook(Document& json)
         std::string ticker = coinPairWhiteList.GetKeyByValue(data["contract_code"].GetString());
         KF_LOG_INFO(logger, "MDEngineEmx::onBook: (symbol) " << ticker.c_str());
 
-        LFPriceBook20Field priceBook {0};
-        strcpy(priceBook.ExchangeID, "Emx");
-        strcpy(priceBook.InstrumentID, ticker.c_str());
+        int64_t price;
+        double dAmount;
+        uint64_t amount;
 
         int i = 0;
         if(json["type"].GetString() == "snapshot"){
@@ -536,10 +536,10 @@ void MDEngineEmx::onBook(Document& json)
                 
                 for(i = 0; i < std::min((int)bids.Size(),book_depth_count); i++)
                 {
-                    priceBook.BidLevels[i].price = std::round(stod(bids[i].GetArray()[0].GetString()) * SCALE_OFFSET);
-                    priceBook.BidLevels[i].volume = std::round(stod(bids[i].GetArray()[1].GetString()) * SCALE_OFFSET);
+                    price = std::round(stod(bids[i].GetArray()[0].GetString()) * SCALE_OFFSET);
+                    volume = std::round(stod(bids[i].GetArray()[1].GetString()) * SCALE_OFFSET);
+                    priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
                 }
-                priceBook.BidLevelCount = i;
             }
             if (asks.IsArray())
             {
@@ -547,13 +547,13 @@ void MDEngineEmx::onBook(Document& json)
                 int i = 0;
                 for(i = 0; i < std::min((int)asks.Size(),book_depth_count); ++i)
                 {
-                    priceBook.AskLevels[i].price = std::round(stod(asks[i].GetArray()[0].GetString()) * SCALE_OFFSET);
-                    priceBook.AskLevels[i].volume = std::round(stod(asks[i].GetArray()[1].GetString()) * SCALE_OFFSET);
+                    price = std::round(stod(asks[i].GetArray()[0].GetString()) * SCALE_OFFSET);
+                    volume = std::round(stod(asks[i].GetArray()[1].GetString()) * SCALE_OFFSET);
+                    priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
                 }
-                priceBook.AskLevelCount = i;
             }
         }
-        // {
+// {
 //   channel: "level2",
 //   type: "update",
 //   data: {
@@ -569,9 +569,7 @@ void MDEngineEmx::onBook(Document& json)
         else if(json["type"].GetString() == "update"){
 
             auto& changes = data["changes"];
-            int64_t price;
-            double dAmount;
-            uint64_t amount;
+            
             std::string type;
             for(i = 0; i < (int)changes.Size(); i++){
 
@@ -583,12 +581,61 @@ void MDEngineEmx::onBook(Document& json)
                                                                 << ticker << " (price)" 
                                                                 << price << " (amount)" << amount);
 
-                if(type == "bid") priceBook20Assembler.UpdateBidPrice(ticker,price,amount);
-                else if(type == "ask") priceBook20Assembler.UpdateAskPrice(ticker,price,amount);
+                if(type == "bid") {
+                    if(changes.GetArray()[i].GetArray()[2].GetString() == "0") priceBook20Assembler.EraseBidPrice(ticker, price)
+                    else priceBook20Assembler.UpdateBidPrice(ticker,price,amount);
+                }
+                else if(type == "ask") {
+                    if(changes.GetArray()[i].GetArray()[2].GetString() == "0") priceBook20Assembler.EraseAskPrice(ticker, price)
+                    else priceBook20Assembler.UpdateAskPrice(ticker,price,amount);
+                }
             }
         }
-        on_price_book_update(&priceBook);
-    
+
+        LFPriceBook20Field md;
+	    memset(&md, 0, sizeof(md));
+	    if (priceBook20Assembler.Assembler(ticker, md)) {
+            strcpy(priceBook.ExchangeID, "emx");
+            
+            KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: on_price_book_update");
+		/*on_price_book_update(&md);*/
+		/*quest2 FXW's edits start here*/
+		if (priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_asks(ticker) ||
+			priceBook20Assembler.GetLeastLevel() > priceBook20Assembler.GetNumberOfLevels_bids(ticker)
+			/*|| priceBook20Assembler.GetNumberOfLevels_asks(ticker)!= priceBook20Assembler.GetNumberOfLevels_bids(ticker) */
+			)
+		{
+			md.Status = 1;
+			/*need re-login*/
+			KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update failed ,lose level,re-login....");
+			on_price_book_update(&md);
+			GetSnapShotAndRtn(ticker);
+
+		}
+		else if ((-1 == priceBook20Assembler.GetBestBidPrice(ticker)) || (-1 == priceBook20Assembler.GetBestAskPrice(ticker)) ||
+			priceBook20Assembler.GetBestBidPrice(ticker) >= priceBook20Assembler.GetBestAskPrice(ticker))
+		{
+			md.Status = 2;
+			/*need re-login*/
+			KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update failed ,orderbook crossed,re-login....");
+			on_price_book_update(&md);
+			GetSnapShotAndRtn(ticker);
+		}
+		else
+		{
+			md.Status = 0;
+			on_price_book_update(&md);
+			timer = getTimestamp();/*quest2 fxw's edits v3*/
+			KF_LOG_DEBUG(logger, "[FXW successed]MDEngineBitfinex on_price_book_update successed");
+		}
+        }
+
+    else//*quest2 FXW's edits v5 
+	{
+		timer = getTimestamp();
+		//GetSnapShotAndRtn(ticker);
+		KF_LOG_DEBUG(logger, "[FXW]MDEngineBitfinex on_price_book_update,priceBook20Assembler.Assembler(ticker, md) failed\n(ticker)" << ticker);
+	}
      KF_LOG_DEBUG(logger, "onBooka end");
 }
 
