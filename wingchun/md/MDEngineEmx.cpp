@@ -365,7 +365,8 @@ int MDEngineEmx::lws_write_subscribe(struct lws* conn)
 
     return ret;
 }
-
+//{"type":"subscriptions","channels":[{"name":"level2","contract_codes":["BTCM19"]}]} 
+//{\channel\:\heartbeat\,\time\:\2019-05-27T08:52:04.663Z\} 要过滤掉
 void MDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: " << data<<",len:"<<len);
@@ -377,12 +378,18 @@ void MDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
         return;
     }
    
-    //vector<string> v = split(json["channel"].GetString(), "_");
-    if(strcmp(json["channel"].GetString(),"ticker") == 0){
-            onBook(json);
+    if(json["channels"].IsArray){
+        KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: subscriptions info  " );
     }
+    else if(strcmp(json["channel"].GetString(),"heartbeat") == 0){
+        KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: heartbeat info  " );
+    }
+    
     else if(strcmp(json["channel"].GetString(),"level2") == 0){
             onTrade(json);
+    }
+    else if(strcmp(json["channel"].GetString(),"ticker") == 0){
+            onBook(json);
     }
     else KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: unknown data: " << parseJsonToString(json));
 }
