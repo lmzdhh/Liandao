@@ -178,10 +178,10 @@ std::string MDEngineEmx::createJsonString(std::vector<string> &exchange_coinpair
     writer.EndArray();
 
     writer.Key("channels");
-    writer.StartObject();
+    writer.StartArray();
     if(type == 0) writer.String("level2");
     else writer.String("ticker");
-    writer.EndObject();
+    writer.EndArray();
     
     writer.EndObject();
     return s.GetString();
