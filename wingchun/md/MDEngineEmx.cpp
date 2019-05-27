@@ -598,7 +598,7 @@ void MDEngineEmx::onBook(Document& json)
 
         int i = 0;
          KF_LOG_INFO(logger,"MDEngineEmx::onBook:type == "<<json["type"].GetString().c_str());
-        if(strcmp(json["type"].GetString().c_str(),"snapshot") == 0){
+        if(strcmp(json["type"].GetString(),"snapshot") == 0){
 
             auto& bids = data["bids"];
             auto& asks = data["asks"];
