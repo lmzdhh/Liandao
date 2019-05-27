@@ -574,8 +574,8 @@ void MDEngineEmx::onBook(Document& json)
             for(i = 0; i < (int)changes.Size(); i++){
 
                 price = std::round(stod(changes.GetArray()[i].GetArray()[1].GetString()) * scale_offset);
-                dAmount = changes.GetArray()[i].GetArray()[2].GetString();
-				amount = std::round(stod(dAmount) * scale_offset);
+                dAmount = stod(changes.GetArray()[i].GetArray()[2].GetString());
+				amount = std::round(dAmount * scale_offset);
                 std::string type = changes.GetArray()[i].GetArray()[0].GetString();
                 KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: (type) "<< type <<" (ticker)"
                                                                 << ticker << " (price)" 
