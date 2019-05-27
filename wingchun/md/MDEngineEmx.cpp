@@ -386,10 +386,10 @@ void MDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
     }
     
     else if(strcmp(json["channel"].GetString(),"level2") == 0){
-            onTrade(json);
+            onBook(json);
     }
     else if(strcmp(json["channel"].GetString(),"ticker") == 0){
-            onBook(json);
+            onTrade(json);
     }
     else KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: unknown data: " << parseJsonToString(json));
 }
