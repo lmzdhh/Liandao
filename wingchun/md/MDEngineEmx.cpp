@@ -524,6 +524,7 @@ void MDEngineEmx::onBook(Document& json)
         int64_t price;
         double dAmount;
         uint64_t amount;
+        uint64_t volume = 0;
 
         int i = 0;
         if(json["type"].GetString() == "snapshot"){
@@ -582,11 +583,11 @@ void MDEngineEmx::onBook(Document& json)
                                                                 << price << " (amount)" << amount);
 
                 if(type == "bid") {
-                    if(changes.GetArray()[i].GetArray()[2].GetString() == "0") priceBook20Assembler.EraseBidPrice(ticker, price)
+                    if(changes.GetArray()[i].GetArray()[2].GetString() == "0") priceBook20Assembler.EraseBidPrice(ticker, price);
                     else priceBook20Assembler.UpdateBidPrice(ticker,price,amount);
                 }
                 else if(type == "ask") {
-                    if(changes.GetArray()[i].GetArray()[2].GetString() == "0") priceBook20Assembler.EraseAskPrice(ticker, price)
+                    if(changes.GetArray()[i].GetArray()[2].GetString() == "0") priceBook20Assembler.EraseAskPrice(ticker, price);
                     else priceBook20Assembler.UpdateAskPrice(ticker,price,amount);
                 }
             }
@@ -595,8 +596,8 @@ void MDEngineEmx::onBook(Document& json)
         LFPriceBook20Field md;
 	    memset(&md, 0, sizeof(md));
 	    if (priceBook20Assembler.Assembler(ticker, md)) {
-            strcpy(priceBook.ExchangeID, "emx");
-            
+            strcpy(md.ExchangeID, "emx");
+
             KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: on_price_book_update");
 		/*on_price_book_update(&md);*/
 		/*quest2 FXW's edits start here*/
