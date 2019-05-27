@@ -18,6 +18,7 @@ class SOURCE:
     BITHUMB = 29
     DAYBIT = 31
     KUCOIN = 32
+    EMX = 40
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所
@@ -178,6 +179,14 @@ class MsgTypes:
     MSG_TYPE_LF_RTN_ORDER_KUCOIN 		= 32205
     MSG_TYPE_LF_RTN_TRADE_KUCOIN  		= 32206
     MSG_TYPE_LF_ORDER_ACTION_KUCOIN 	= 32207
+
+    MSG_TYPE_LF_MD_EMX        = 40101
+    MSG_TYPE_LF_QRY_POS_EMX   = 40201
+    MSG_TYPE_LF_RSP_POS_EMX   = 40202
+    MSG_TYPE_LF_ORDER_EMX     = 40204
+    MSG_TYPE_LF_RTN_ORDER_EMX = 40205
+    MSG_TYPE_LF_RTN_TRADE_EMX = 40206
+    MSG_TYPE_LF_ORDER_ACTION_EMX = 40207
 ###################################
 # LfActionFlagType: 报单操作标志
 ###################################

@@ -156,6 +156,13 @@
 				"vet_btc": "VET-BTC",
 				"vet_eth": "VET-ETH"
 			}
+		},
+		"emx": {
+			"book_depth_count": 20,
+			"trade_count": 10,
+			"whiteLists": {
+				"btc_m19": "BTCM19"
+			}
 		}
 	},
 	"td": {
