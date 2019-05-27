@@ -57,7 +57,7 @@ private:
     SubscribeChannel findByChannelID(int channelId);
 
     std::string parseJsonToString(Document &d);
-    std::string createJsonString(std::string exchange_coinpair,int type);
+    std::string createJsonString(std::vector<string> &exchange_coinpair,int type);
 
     void loop();
 
@@ -93,7 +93,7 @@ private:
     std::vector<SubscribeChannel> websocketSubscribeChannel;
     SubscribeChannel EMPTY_CHANNEL = {0};
 
-    //std::string trade_channel = "";
+    std::string trade_channel = "ticker"; //TODO()
     std::string book_channel = "level2";
 
     PriceBook20Assembler priceBook20Assembler;
