@@ -668,6 +668,8 @@ void MDEngineEmx::onBook(Document& json)
 
             KF_LOG_INFO(logger, "MDEngineBitfinex::onDepth: on_price_book_update");
         }
+        
+        on_price_book_update(&md);
         KF_LOG_DEBUG(logger, "onBooka end");
 }
 
