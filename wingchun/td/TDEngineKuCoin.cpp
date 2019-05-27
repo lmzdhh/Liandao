@@ -281,7 +281,7 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
 void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
-//	KF_LOG_INFO(logger, "TDEngineKuCoin::on_lws_data: " << data);
+	KF_LOG_INFO(logger, "TDEngineKuCoin::on_lws_data: " << data);
     Document json;
 	json.Parse(data);
 
@@ -289,12 +289,12 @@ void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
 	{
         if(strcmp(json["type"].GetString(), "welcome") == 0)
         {
-            KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: welcome");
+            //KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: welcome");
             lws_callback_on_writable(conn);
         }
         if(strcmp(json["type"].GetString(), "pong") == 0)
 		{
-			KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: pong");
+			//KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: pong");
            m_isPong = true;
            m_conn = conn;
 		}
@@ -527,18 +527,15 @@ cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::strin
     string url = unit.baseUrl + method_url;
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strSign = strTimestamp + "GET" + method_url;
-    KF_LOG_INFO(logger, "strSign = " << strSign );
+    //KF_LOG_INFO(logger, "strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    KF_LOG_INFO(logger, "strHmac = " << strHmac );
+    //KF_LOG_INFO(logger, "strHmac = " << strHmac );
     std::string strSignatrue = base64_encode(strHmac,32);
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
                                         {"KC-API-TIMESTAMP",strTimestamp},
                                         {"KC-API-KEY",unit.api_key},
                                         {"KC-API-PASSPHRASE",unit.passphrase}};
-     KF_LOG_INFO(logger, "KC-API-SIGN = " << strSignatrue 
-                        << ", KC-API-TIMESTAMP = " << strTimestamp 
-                        << ", KC-API-KEY = " << unit.api_key 
-                        << ", KC-API-PASSPHRASE = " << unit.passphrase);
+    //KF_LOG_INFO(logger, "KC-API-SIGN = " << strSignatrue << ", KC-API-TIMESTAMP = " << strTimestamp << ", KC-API-KEY = " << unit.api_key << ", KC-API-PASSPHRASE = " << unit.passphrase);
 
 
     std::unique_lock<std::mutex> lock(g_httpMutex);
@@ -556,18 +553,15 @@ cpr::Response TDEngineKuCoin::Delete(const std::string& method_url,const std::st
     string url = unit.baseUrl + method_url + body;
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strSign =  strTimestamp + "DELETE" + method_url + body;
-    KF_LOG_INFO(logger, "strSign = " << strSign );
+    //KF_LOG_INFO(logger, "strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    KF_LOG_INFO(logger, "strHmac = " << strHmac );
+    //KF_LOG_INFO(logger, "strHmac = " << strHmac );
     std::string strSignatrue = base64_encode(strHmac,32);
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
                                         {"KC-API-TIMESTAMP",strTimestamp},
                                         {"KC-API-KEY",unit.api_key},
                                         {"KC-API-PASSPHRASE",unit.passphrase}};
-     KF_LOG_INFO(logger, "KC-API-SIGN = " << strSignatrue 
-                        << ", KC-API-TIMESTAMP = " << strTimestamp 
-                        << ", KC-API-KEY = " << unit.api_key 
-                        << ", KC-API-PASSPHRASE = " << unit.passphrase);
+    //KF_LOG_INFO(logger, "KC-API-SIGN = " << strSignatrue << ", KC-API-TIMESTAMP = " << strTimestamp << ", KC-API-KEY = " << unit.api_key << ", KC-API-PASSPHRASE = " << unit.passphrase);
 
     std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Delete(Url{url},Header{mapHeader}, Timeout{10000} );
@@ -582,7 +576,7 @@ cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::stri
 {
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strSign =  strTimestamp + "POST" + method_url + body;
-     KF_LOG_INFO(logger, "strSign = " << strSign );
+    // KF_LOG_INFO(logger, "strSign = " << strSign );
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     std::string strSignatrue = base64_encode(strHmac,32);
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
