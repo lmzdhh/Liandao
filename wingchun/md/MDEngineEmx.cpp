@@ -582,7 +582,7 @@ void MDEngineEmx::onBook(Document& json)
                                                                 << price << " (amount)" << amount);
 
                 if(type == "bid") priceBook20Assembler.UpdateBidPrice(ticker,price,amount);
-                eles if(type == "ask") priceBook20Assembler.UpdateAskPrice(ticker,price,amount);
+                else if(type == "ask") priceBook20Assembler.UpdateAskPrice(ticker,price,amount);
             }
         }
         on_price_book_update(&priceBook);
