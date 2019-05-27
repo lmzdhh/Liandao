@@ -378,7 +378,7 @@ void MDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
         return;
     }
    
-    if(json["channels"].IsArray){
+    if(json["channels"].IsArray()){
         KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: subscriptions info  " );
     }
     else if(strcmp(json["channel"].GetString(),"heartbeat") == 0){
