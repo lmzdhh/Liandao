@@ -527,7 +527,7 @@ void MDEngineEmx::onBook(Document& json)
         uint64_t volume = 0;
 
         int i = 0;
-        if(json["type"].GetString() == "snapshot"){
+        if(strcmp(json["type"].GetString(),"snapshot") == 0){
 
             auto& bids = data["bids"];
             auto& asks = data["asks"];
@@ -567,7 +567,7 @@ void MDEngineEmx::onBook(Document& json)
 //     ]
 //   }
 // }
-        else if(json["type"].GetString() == "update"){
+        else if(strcmp(json["type"].GetString() , "update") == 0){
 
             auto& changes = data["changes"];
             
