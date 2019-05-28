@@ -624,25 +624,33 @@ void MDEngineEmx::onBook(Document& json)
         uint64_t volume = 0;
 
         int i = 0;
-         KF_LOG_INFO(logger,"MDEngineEmx::onBook:type == "<<json["type"].GetString());
+         
         if(strcmp(json["type"].GetString(),"snapshot") == 0){
 
             auto& bids = data["bids"];
             auto& asks = data["asks"];
+            KF_LOG_INFO(logger,"MDEngineEmx::onBook:snapshot");
 
-                KF_LOG_INFO(logger,"MDEngineEmx::onBook:bids");
+                //KF_LOG_INFO(logger,"MDEngineEmx::onBook:bids");
                 
                 for(i = 0; i < std::min((int)bids.Size(),book_depth_count); i++)
                 {
+                    KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: bids: " <<" (ticker)"
+                                                                << ticker << " (price)" 
+                                                                << price << " (amount)" << amount <<"(i)"<<i);
                     price = std::round(stod(bids[i].GetArray()[0].GetString()) * SCALE_OFFSET);
                     volume = std::round(stod(bids[i].GetArray()[1].GetString()) * SCALE_OFFSET);
                     priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
                 }
  
-                KF_LOG_INFO(logger,"MDEngineEmx::onBook:asks");
+                //KF_LOG_INFO(logger,"MDEngineEmx::onBook:asks");
 
                 for(i = 0; i < std::min((int)asks.Size(),book_depth_count); ++i)
                 {
+                     KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: asks: " <<" (ticker)"
+                                                                << ticker << " (price)" 
+                                                                << price << " (amount)" << amount<<"(i)"<<i);
+
                     price = std::round(stod(asks[i].GetArray()[0].GetString()) * SCALE_OFFSET);
                     volume = std::round(stod(asks[i].GetArray()[1].GetString()) * SCALE_OFFSET);
                     priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
@@ -679,21 +687,21 @@ void MDEngineEmx::onBook(Document& json)
 
                 if(type == "bid") {
                     if(amount == 0){
-                         KF_LOG_INFO(logger,"bid erase");
+                         //KF_LOG_INFO(logger,"bid erase");
                         priceBook20Assembler.EraseBidPrice(ticker, price);
                     }
                     else {
-                        KF_LOG_INFO(logger,"bid update");
+                        //KF_LOG_INFO(logger,"bid update");
                         priceBook20Assembler.UpdateBidPrice(ticker,price,amount);
                     }
                 }
                 else if(type == "ask") {
                     if(amount == 0 ) {
-                        KF_LOG_INFO(logger,"ask erase");
+                       // KF_LOG_INFO(logger,"ask erase");
                         priceBook20Assembler.EraseAskPrice(ticker, price);
                     }
                     else {
-                        KF_LOG_INFO(logger,"ask update");
+                        //KF_LOG_INFO(logger,"ask update");
                         priceBook20Assembler.UpdateAskPrice(ticker,price,amount);
                     }
                 }
