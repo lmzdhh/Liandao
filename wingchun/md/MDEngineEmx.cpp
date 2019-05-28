@@ -453,7 +453,7 @@ void MDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
     }
     else if(strcmp(json["channel"].GetString(),"heartbeat") == 0){
         KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: heartbeat info  " );
-        onPing(struct lws* conn, const char* data);
+       // onPing(struct lws* conn, const char* data);
     }
     
     else if(strcmp(json["channel"].GetString(),"level2") == 0){
@@ -505,30 +505,30 @@ void MDEngineEmx::debug_print(std::vector<SubscribeChannel> &websocketSubscribeC
 }
 
 
-void MDEngineBitfinex::onPing(struct lws* conn, Document & json)
-{
-	KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: " << parseJsonToString(json));
-	StringBuffer s;
-	Writer<StringBuffer> writer(s);
-	writer.StartObject();
-	writer.Key("event");
-	writer.String("pong");
+// void MDEngineBitfinex::onPing(struct lws* conn, Document & json)
+// {
+// 	KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: " << parseJsonToString(json));
+// 	StringBuffer s;
+// 	Writer<StringBuffer> writer(s);
+// 	writer.StartObject();
+// 	writer.Key("event");
+// 	writer.String("pong");
 
-	writer.Key("ts");
-	writer.Int64(getTimestamp());
+// 	writer.Key("ts");
+// 	writer.Int64(getTimestamp());
 
-	writer.Key("cid");
-	writer.Int(json["cid"].GetInt());
+// 	writer.Key("cid");
+// 	writer.Int(json["cid"].GetInt());
 
-	writer.EndObject();
+// 	writer.EndObject();
 
-	std::string result = s.GetString();
-	KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: (Pong)" << result);
-	websocketPendingSendMsg.push_back(result);
+// 	std::string result = s.GetString();
+// 	KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: (Pong)" << result);
+// 	websocketPendingSendMsg.push_back(result);
 
-	//emit a callback
-	lws_callback_on_writable(conn);
-}
+// 	//emit a callback
+// 	lws_callback_on_writable(conn);
+// }
 
 // {
 //   channel: "ticker",
