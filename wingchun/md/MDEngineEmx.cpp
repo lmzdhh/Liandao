@@ -453,6 +453,7 @@ void MDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
     }
     else if(strcmp(json["channel"].GetString(),"heartbeat") == 0){
         KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: heartbeat info  " );
+        onPing(struct lws* conn, const char* data);
     }
     
     else if(strcmp(json["channel"].GetString(),"level2") == 0){
@@ -501,6 +502,32 @@ void MDEngineEmx::debug_print(std::vector<SubscribeChannel> &websocketSubscribeC
                             " (exchange_coinpair)" << websocketSubscribeChannel[i].exchange_coinpair <<
                             " (channelId)" << websocketSubscribeChannel[i].channelId);
     }
+}
+
+
+void MDEngineBitfinex::onPing(struct lws* conn, Document & json)
+{
+	KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: " << parseJsonToString(json));
+	StringBuffer s;
+	Writer<StringBuffer> writer(s);
+	writer.StartObject();
+	writer.Key("event");
+	writer.String("pong");
+
+	writer.Key("ts");
+	writer.Int64(getTimestamp());
+
+	writer.Key("cid");
+	writer.Int(json["cid"].GetInt());
+
+	writer.EndObject();
+
+	std::string result = s.GetString();
+	KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: (Pong)" << result);
+	websocketPendingSendMsg.push_back(result);
+
+	//emit a callback
+	lws_callback_on_writable(conn);
 }
 
 // {
@@ -651,12 +678,24 @@ void MDEngineEmx::onBook(Document& json)
                                                                 << price << " (amount)" << amount);
 
                 if(type == "bid") {
-                    if(changes.GetArray()[i].GetArray()[2].GetString() == "0") priceBook20Assembler.EraseBidPrice(ticker, price);
-                    else priceBook20Assembler.UpdateBidPrice(ticker,price,amount);
+                    if(amount == 0){
+                         KF_LOG_INFO(logger,"bid erase");
+                        priceBook20Assembler.EraseBidPrice(ticker, price);
+                    }
+                    else {
+                        KF_LOG_INFO(logger,"bid update");
+                        priceBook20Assembler.UpdateBidPrice(ticker,price,amount);
+                    }
                 }
                 else if(type == "ask") {
-                    if(changes.GetArray()[i].GetArray()[2].GetString() == "0") priceBook20Assembler.EraseAskPrice(ticker, price);
-                    else priceBook20Assembler.UpdateAskPrice(ticker,price,amount);
+                    if(amount == 0 ) {
+                        KF_LOG_INFO(logger,"ask erase");
+                        priceBook20Assembler.EraseAskPrice(ticker, price);
+                    }
+                    else {
+                        KF_LOG_INFO(logger,"ask update");
+                        priceBook20Assembler.UpdateAskPrice(ticker,price,amount);
+                    }
                 }
             }
         }
