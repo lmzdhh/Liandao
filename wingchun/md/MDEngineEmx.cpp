@@ -635,25 +635,26 @@ void MDEngineEmx::onBook(Document& json)
                 
                 for(i = 0; i < std::min((int)bids.Size(),book_depth_count); i++)
                 {
-                    KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: bids: " <<" (ticker)"
-                                                                << ticker << " (price)" 
-                                                                << price << " (amount)" << amount <<"(i)"<<i);
+                   
                     price = std::round(stod(bids[i].GetArray()[0].GetString()) * SCALE_OFFSET);
                     volume = std::round(stod(bids[i].GetArray()[1].GetString()) * SCALE_OFFSET);
-                    priceBook20Assembler.UpdateBidPrice(ticker, price, amount);
+                     KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: bids: " <<" (ticker)"
+                                                                << ticker << " (price)" 
+                                                                << price << " (volume)" << volume <<"(i)"<<i);
+                    priceBook20Assembler.UpdateBidPrice(ticker, price, volume);
                 }
  
                 //KF_LOG_INFO(logger,"MDEngineEmx::onBook:asks");
 
                 for(i = 0; i < std::min((int)asks.Size(),book_depth_count); ++i)
                 {
-                     KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: asks: " <<" (ticker)"
-                                                                << ticker << " (price)" 
-                                                                << price << " (amount)" << amount<<"(i)"<<i);
 
                     price = std::round(stod(asks[i].GetArray()[0].GetString()) * SCALE_OFFSET);
                     volume = std::round(stod(asks[i].GetArray()[1].GetString()) * SCALE_OFFSET);
-                    priceBook20Assembler.UpdateAskPrice(ticker, price, amount);
+                    KF_LOG_INFO(logger, "MDEngineBitfinex::onBook: asks: " <<" (ticker)"
+                                                                << ticker << " (price)" 
+                                                                << price << " (volume)" << volume <<"(i)"<<i);
+                    priceBook20Assembler.UpdateAskPrice(ticker, price, volume);
                 }
         }
 // {
