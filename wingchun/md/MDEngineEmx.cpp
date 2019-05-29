@@ -268,13 +268,15 @@ void MDEngineEmx::makeWebsocketSubscribeJsonString()//创建请求
 
         
         array_coinpair.push_back(map_itr->second);
-        //std::string jsonTradeString = createJsonString(map_itr->second,1);
-        //websocketSubscribeJsonString.push_back(jsonTradeString);
+        
 
         map_itr++;
     }
     std::string jsonBookString = createJsonString(array_coinpair,0);
     websocketSubscribeJsonString.push_back(jsonBookString);
+
+    std::string jsonTradeString = createJsonString(array_coinpair,1);
+    websocketSubscribeJsonString.push_back(jsonTradeString);
 }
 
 void MDEngineEmx::debug_print(std::vector<std::string> &subJsonString)
@@ -435,6 +437,7 @@ int MDEngineEmx::lws_write_subscribe(struct lws* conn)
 
     return ret;
 }
+
 //{"type":"subscriptions","channels":[{"name":"level2","contract_codes":["BTCM19"]}]} 
 //{\channel\:\heartbeat\,\time\:\2019-05-27T08:52:04.663Z\} 要过滤掉
 void MDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
@@ -453,7 +456,6 @@ void MDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
     }
     else if(strcmp(json["channel"].GetString(),"heartbeat") == 0){
         KF_LOG_INFO(logger, "MDEngineEmx::on_lws_data: heartbeat info  " );
-       // onPing(struct lws* conn, const char* data);
     }
     
     else if(strcmp(json["channel"].GetString(),"level2") == 0){
@@ -505,31 +507,6 @@ void MDEngineEmx::debug_print(std::vector<SubscribeChannel> &websocketSubscribeC
 }
 
 
-// void MDEngineBitfinex::onPing(struct lws* conn, Document & json)
-// {
-// 	KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: " << parseJsonToString(json));
-// 	StringBuffer s;
-// 	Writer<StringBuffer> writer(s);
-// 	writer.StartObject();
-// 	writer.Key("event");
-// 	writer.String("pong");
-
-// 	writer.Key("ts");
-// 	writer.Int64(getTimestamp());
-
-// 	writer.Key("cid");
-// 	writer.Int(json["cid"].GetInt());
-
-// 	writer.EndObject();
-
-// 	std::string result = s.GetString();
-// 	KF_LOG_INFO(logger, "MDEngineBitfinex::onPing: (Pong)" << result);
-// 	websocketPendingSendMsg.push_back(result);
-
-// 	//emit a callback
-// 	lws_callback_on_writable(conn);
-// }
-
 // {
 //   channel: "ticker",
 //   type: "update",
@@ -558,15 +535,15 @@ void MDEngineEmx::onTrade(Document& json)
 {
         auto& data = json["data"];
         std::string ticker = coinPairWhiteList.GetKeyByValue(data["contract_code"].GetString());
-        KF_LOG_INFO(logger, "MDEngineEmx::onTrade: (symbol) " << ticker.c_str());
+        KF_LOG_INFO(logger, "MDEngineEmx::onTrade: (ticker) " << ticker.c_str());
         LFL2TradeField trade;
         memset(&trade, 0, sizeof(trade));
         strcpy(trade.InstrumentID, ticker.c_str());
         strcpy(trade.ExchangeID, "Emx");
         auto& last_trade = data["last_trade"];
 
-        trade.Price = std::round(atof(last_trade["price"].GetString()) * scale_offset);
-        double amount = atof(last_trade["volume"].GetString());
+        trade.Price = std::round(stod(last_trade["price"].GetString()) * scale_offset);
+        double amount = stod(last_trade["volume"].GetString());
         uint64_t volume = 0;
 
          volume = std::round( amount * scale_offset);
@@ -586,7 +563,7 @@ void MDEngineEmx::onTrade(Document& json)
             // };
             trade.Volume = volume;
             //trade.OrderBSFlag[0] = data["type"].GetInt() == 0 ? 'B' : 'S';
-            KF_LOG_INFO(logger,"id_type");
+            //KF_LOG_INFO(logger,"id_type");
             //strcpy(trade.TradeID,std::to_string(data["id"].GetInt64()).c_str());
             strcpy(trade.TradeTime,((std::string)last_trade["logical_time"].GetString()).c_str());
 
@@ -594,6 +571,7 @@ void MDEngineEmx::onTrade(Document& json)
                                                                 " (Price)" << trade.Price <<
                                                                 " (trade.Volume)" << trade.Volume);
             on_trade(&trade);
+
 }
 // {
 //   channel: "level2",
