@@ -75,6 +75,7 @@ WC_NAMESPACE_START
             int64_t nBaseMinSize = 0;
             int64_t nPriceIncrement = 0;
             int64_t nQuoteIncrement = 0;
+            int64_t nBaseIncrement = 0;
         };
 
         struct AccountUnitKuCoin

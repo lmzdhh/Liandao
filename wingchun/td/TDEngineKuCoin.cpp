@@ -731,10 +731,11 @@ void TDEngineKuCoin::connect(long timeout_nsec)
                 stPriceIncrement.nBaseMinSize = std::round(std::stod(data["baseMinSize"].GetString())* scale_offset);
                 stPriceIncrement.nPriceIncrement = std::round(std::stod(data["priceIncrement"].GetString()) * scale_offset);
                 stPriceIncrement.nQuoteIncrement = std::round(std::stod(data["quoteIncrement"].GetString()) * scale_offset);
+                stPriceIncrement.nBaseIncrement = std::round(std::stod(data["baseIncrement"].GetString()) * scale_offset);
                 unit.mapPriceIncrement.insert(std::make_pair(pair.first,stPriceIncrement));
 
                  KF_LOG_INFO(logger, "[getPriceIncrement] (BaseMinSize )" << stPriceIncrement.nBaseMinSize << "(PriceIncrement)" << stPriceIncrement.nPriceIncrement
-                                    << "(QuoteIncrement)" << stPriceIncrement.nQuoteIncrement);
+                                    << "(QuoteIncrement)" << stPriceIncrement.nQuoteIncrement << "(BseIncrement)" << stPriceIncrement.nBaseIncrement);
             }
         }
    }
@@ -1023,7 +1024,7 @@ void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& 
                 dDealVolume = 0;
                 return ;
             }
-            int64_t nDealVolume =  it->second.nQuoteIncrement  > 0 ? nVolume / it->second.nQuoteIncrement * it->second.nQuoteIncrement : nVolume;
+            int64_t nDealVolume =  it->second.nBaseIncrement  > 0 ? nVolume / it->second.nBaseIncrement * it->second.nBaseIncrement : nVolume;
             int64_t nDealPrice = it->second.nPriceIncrement > 0 ? nPrice / it->second.nPriceIncrement * it->second.nPriceIncrement : nPrice;
             dDealVolume = nDealVolume * 1.0 / scale_offset;
             dDealPrice = nDealPrice * 1.0 / scale_offset;
