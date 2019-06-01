@@ -253,6 +253,10 @@ struct LFL2TradeField
 	char_64     TradeID;
 	char_32     Sequence;    
     int         Status;                 //状态码 0为正常//quest3 edited by fxw
+	int64_t     Imbalance;
+	int64_t     FairPrice;
+	int64_t     IndexPrice;
+	int64_t     MarkPrice;
 };
 
 struct LFBarMarketDataField
