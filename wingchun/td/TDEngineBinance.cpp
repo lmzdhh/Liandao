@@ -2037,7 +2037,7 @@ void TDEngineBinance::put_listen_key(AccountUnitBinance& unit, Document &json)
     std::string Timestamp = getTimestampString();
     std::string Method = "PUT";
     std::string requestPath = restBaseUrl +"/api/v1/userDataStream";
-    std::string queryString("");
+    std::string queryString("?listenKey="+unit.listenKey);
     std::string body ="{ \"listenKey\":"+ unit.listenKey + "}";
 
 
@@ -2066,7 +2066,7 @@ void TDEngineBinance::put_listen_key(AccountUnitBinance& unit, Document &json)
     std::unique_lock<std::mutex> lck(http_mutex);
     const auto response = Put(Url{url},
                               Header{{"X-MBX-APIKEY", unit.api_key}},
-                              Body{body}, Timeout{100000});
+                              Timeout{100000});
 
     KF_LOG_INFO(logger, "[put_listen_key] (url) " << url << " (response.status_code) " << response.status_code <<
                                                    " (response.error.message) " << response.error.message <<
