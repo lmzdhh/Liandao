@@ -542,35 +542,31 @@ void MDEngineEmx::onTrade(Document& json)
         strcpy(trade.ExchangeID, "Emx");
         auto& last_trade = data["last_trade"];
 
+        trade.Imbalance = std::round(stod(last_trade["imbalance"].GetString()) * scale_offset);
+
+        trade.FairPrice = std::round(stod(data["fair_price"].GetString()) * scale_offset);
+
+        trade.IndexPrice = std::round(stod(data["index_price"].GetString()) * scale_offset);
+
+        trade.MarkPrice = std::round(stod(data["mark_price"].GetString()) * scale_offset);
+
         trade.Price = std::round(stod(last_trade["price"].GetString()) * scale_offset);
+
         double amount = stod(last_trade["volume"].GetString());
         uint64_t volume = 0;
+        volume = std::round( amount * scale_offset);
+        trade.Volume = volume;
 
-         volume = std::round( amount * scale_offset);
+        strcpy(trade.TradeTime,((std::string)last_trade["logical_time"].GetString()).c_str());
 
-            // if(data["type"].GetInt() == 0){
-            //     KF_LOG_INFO(logger,"type = 0");
-            //     KF_LOG_INFO(logger,"order_id_type is ");
-            //     strcpy(trade.MakerOrderID,std::to_string(data["buy_order_id"].GetInt64()).c_str());
-            //     KF_LOG_INFO(logger,"sell_order_id_type is ");
-            //     strcpy(trade.TakerOrderID,std::to_string(data["sell_order_id"].GetInt64()).c_str());
-            // }
-            // else{
-            //      KF_LOG_INFO(logger,"type = 1");
-            //     strcpy(trade.MakerOrderID,std::to_string(data["sell_order_id"].GetInt64()).c_str());
-            //     KF_LOG_INFO(logger,"sell_order_id_type is ");
-            //     strcpy(trade.TakerOrderID,std::to_string(data["buy_order_id"].GetInt64()).c_str());
-            // };
-            trade.Volume = volume;
-            //trade.OrderBSFlag[0] = data["type"].GetInt() == 0 ? 'B' : 'S';
-            //KF_LOG_INFO(logger,"id_type");
-            //strcpy(trade.TradeID,std::to_string(data["id"].GetInt64()).c_str());
-            strcpy(trade.TradeTime,((std::string)last_trade["logical_time"].GetString()).c_str());
-
-            KF_LOG_INFO(logger, "MDEngineEmx::[onTrade]"  <<
-                                                                " (Price)" << trade.Price <<
-                                                                " (trade.Volume)" << trade.Volume);
-            on_trade(&trade);
+        KF_LOG_INFO(logger, "MDEngineEmx::[onTrade]"  <<
+                                                        " (Price)" << trade.Price <<                                                     
+                                                        " (trade.Volume)" << trade.Volume<<
+                                                        " (imbalance)"<<trade.Imbalance<<
+                                                        " (fariprice)"<<trade.FairPrice<<
+                                                        " (indexprice)"<<trade.IndexPrice<<
+                                                        " (markprice)"<<trade.MarkPrice);
+        on_trade(&trade);
 
 }
 // {
