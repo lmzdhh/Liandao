@@ -1082,7 +1082,7 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
         raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
         return;
     }
-    std::string strClientId = genClinetid(data->OrderRef);
+    std::string strClientId = "";//genClinetid(data->OrderRef);
     std::lock_guard<std::mutex> lck(*m_mutexOrder);
     send_order(unit, ticker.c_str(),strClientId, GetSide(data->Direction).c_str(),
                GetType(data->OrderPriceType).c_str(), fixedVolume, fixedPrice, funds, data->OrderRef,is_post_only(data),d);
@@ -1615,7 +1615,8 @@ void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,const 
         should_retry = false;
 
         std::string requestPath = "/api/v1/orders";
-        response = Post(requestPath,createInsertOrdertring(code, strClientId,side, type, size, price,strOrderRef,isPostOnly),unit);
+        std::string newClientId = genClinetid(strOrderRef);
+        response = Post(requestPath,createInsertOrdertring(code, newClientId,side, type, size, price,strOrderRef,isPostOnly),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
                                                   " (response.error.message) " << response.error.message <<
