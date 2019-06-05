@@ -1152,7 +1152,6 @@ void TDEngineBinance::set_reader_thread()
     // KF_LOG_INFO(logger,"[set_reader_thread] rest_thread start on AccountUnitBinance::testUTC");
     // test_thread = ThreadPtr(new std::thread(boost::bind(&TDEngineBinance::testUTC,this)));
 }
-int64_t last_put_time = 0;
 void TDEngineBinance::loop()
 {
     KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
@@ -1165,11 +1164,11 @@ void TDEngineBinance::loop()
         for (size_t idx = 0; idx < account_units.size(); idx++)
         {
             AccountUnitBinance& unit = account_units[idx];
-            if(last_put_time != 0 && current_ms - last_put_time > 1800000)
+            if(unit.last_put_time != 0 && current_ms - unit.last_put_time > 1800000)
             {
                 Document json;
                 put_listen_key(unit,json);
-                last_put_time = getTimestamp();
+                unit.last_put_time = getTimestamp();
             }
             lws_service( unit.context, rest_get_interval_ms );
         }
@@ -2256,7 +2255,7 @@ void TDEngineBinance::lws_login(AccountUnitBinance& unit, long timeout_nsec) {
         KF_LOG_ERROR(logger, "TDEngineBinance::lws_login: wsi create error.");
         return;
     }
-    last_put_time = getTimestamp();
+    unit.last_put_time = getTimestamp();
     KF_LOG_INFO(logger, "TDEngineBinance::lws_login: wsi create success.");
 }
 

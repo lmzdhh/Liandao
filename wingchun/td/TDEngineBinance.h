@@ -186,6 +186,7 @@ struct AccountUnitBinance
 
     std::map<std::string, RateLimitUnit> rate_limit_data_map;
     int64_t last_rate_limit_timestamp = 0;    //
+    int64_t last_put_time = 0;
     AccountUnitBinance(const AccountUnitBinance& source);
     AccountUnitBinance();
     ~AccountUnitBinance();
