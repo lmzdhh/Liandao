@@ -975,7 +975,6 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
                             1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
     std::unique_lock<std::mutex> lck(*unit.mutex_order_and_trade);
     unit.ordersMap.insert(std::make_pair(remoteOrderId,rtn_order));
-    lck.unlock();
     std::vector<std::string>::iterator it;
     for(it=unit.wsOrderStatus.begin();it!=unit.wsOrderStatus.end();it++)
     {
@@ -1106,39 +1105,6 @@ void TDEngineBinance::req_order_action(const LFOrderActionField* data, int accou
     raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_BINANCE, 1, requestId, errorId, errorMsg.c_str());
 }
 
-
-
-
-void TDEngineBinance::moveNewtoPending(AccountUnitBinance& unit)
-{
-    std::lock_guard<std::mutex> guard_mutex(*unit.mutex_order_and_trade);
-
-    std::vector<PendingBinanceOrderStatus>::iterator newOrderStatusIterator;
-    for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
-    {
-        unit.pendingOrderStatus.push_back(*newOrderStatusIterator);
-        newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
-    }
-
-    std::vector<OnRtnOrderDoneAndWaitingOnRtnTrade>::iterator tradeIterator;
-    for(tradeIterator = unit.newOnRtnTrades.begin(); tradeIterator != unit.newOnRtnTrades.end();)
-    {
-        unit.pendingOnRtnTrades.push_back(*tradeIterator);
-        tradeIterator = unit.newOnRtnTrades.erase(tradeIterator);
-    }
-
-    std::vector<PendingBinanceTradeStatus>::iterator newTradeStatusIterator;
-    for(newTradeStatusIterator = unit.newTradeStatus.begin(); newTradeStatusIterator != unit.newTradeStatus.end();) {
-        unit.pendingTradeStatus.push_back(*newTradeStatusIterator);
-        newTradeStatusIterator = unit.newTradeStatus.erase(newTradeStatusIterator);
-    }
-
-    std::vector<int64_t>::iterator newSentTradeIdsIterator;
-    for(newSentTradeIdsIterator = unit.newSentTradeIds.begin(); newSentTradeIdsIterator != unit.newSentTradeIds.end();) {
-        unit.sentTradeIds.push_back(*newSentTradeIdsIterator);
-        newSentTradeIdsIterator = unit.newSentTradeIds.erase(newSentTradeIdsIterator);
-    }
-}
 
 
 void TDEngineBinance::set_reader_thread()
@@ -2132,6 +2098,7 @@ void TDEngineBinance::on_lws_connection_error(struct lws* conn)
 {
     KF_LOG_ERROR(logger, "TDEngineBinance::on_lws_connection_error.");
     AccountUnitBinance& unit = findAccountUnitByWebsocketConn(conn);
+    std::lock_guard<std::mutex> lck(*unit.mutex_order_and_trade);	
     std::map<std::string, LFRtnOrderField>::iterator it;
     for(it=unit.ordersMap.begin();it!=unit.ordersMap.end();it++){
         int errorId;string errorMsg;

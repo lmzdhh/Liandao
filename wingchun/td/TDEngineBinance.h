@@ -258,7 +258,7 @@ private:
     inline void onRspNewOrderRESULT(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
     inline void onRspNewOrderFULL(const LFInputOrderField* data, AccountUnitBinance& unit, Document& result, int requestId);
     void onRtnNewOrder(const LFInputOrderField* data, AccountUnitBinance& unit, int requestId,string remoteOrderId,int64_t fixedVolume,int64_t fixedPrice);
-    void moveNewtoPending(AccountUnitBinance& unit);
+
 
     int64_t fixPriceTickSize(int keepPrecision, int64_t price, bool isBuy);
     int64_t fixVolumeStepSize(int keepPrecision, int64_t volume, bool isBuy);
