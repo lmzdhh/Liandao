@@ -65,7 +65,7 @@ static TDEngineEmx* global_md = nullptr;
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
     std::stringstream ss;
-    ss << "lws_callback,reason=" << reason << ",";
+    //ss << "lws_callback,reason=" << reason << ",";
 	switch( reason )
 	{
 		case LWS_CALLBACK_CLIENT_ESTABLISHED:
@@ -105,7 +105,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
         case LWS_CALLBACK_WSI_DESTROY:
 		case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
 		{
-            //ss << "LWS_CALLBACK_CLIENT_CONNECTION_ERROR:" << ;
+            ss << "lws_callback,reason=" << reason;
             
  			if(global_md)
 			{
@@ -115,7 +115,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 			break;
 		}
 		default:
-              if(global_md) global_md->writeErrorLog(ss.str());
+              //if(global_md) global_md->writeErrorLog(ss.str());
 			break;
 	}
 
