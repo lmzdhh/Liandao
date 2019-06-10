@@ -192,7 +192,7 @@ void TDEngineEmx::onTrade(const PendingOrderStatus& stPendingOrderStatus,int64_t
             {
                 std::string strAction = msg["action"].GetString();
                 auto& data = msg["data"];
-                if(strAction == "received" )
+                if(strAction == "order-received" )
                 {
                     std::string strOrderId = data["order_id"].GetString();
                     std::string strClientId = data["client_id"].GetString();
@@ -495,7 +495,7 @@ void TDEngineEmx::genUniqueKey()
     struct tm cur_time = getCurLocalTime();
     //SSMMHHDDN
     char key[11]{0};
-    snprintf((char*)key, 11, "%02d%02d%02d%02d%2d", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_CurrentTDIndex);
+    snprintf((char*)key, 11, "%02d%02d%02d%02d%02d", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_CurrentTDIndex);
     m_uniqueKey = key;
 }
 
