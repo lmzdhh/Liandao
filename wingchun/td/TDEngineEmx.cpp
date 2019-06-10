@@ -37,6 +37,7 @@ using std::stoi;
 using utils::crypto::hmac_sha256;
 using utils::crypto::hmac_sha256_byte;
 using utils::crypto::base64_encode;
+using utils::crypto::base64_decode;
 USING_WC_NAMESPACE
 std::mutex mutex_msg_queue;
 std::mutex g_httpMutex;
@@ -405,8 +406,8 @@ std::string TDEngineEmx::makeSubscribeChannelString(AccountUnitEmx& unit)
 std::string TDEngineEmx::sign(const AccountUnitEmx& unit,const std::string& method,const std::string& timestamp,const std::string& endpoint)
  {
     std::string to_sign = timestamp + method + endpoint;
-    //to_sign = base64_encode(to_sign.c_str(),32);
-    unsigned char * strHmac = hmac_sha256_byte(unit.secret_key.c_str(),to_sign.c_str());
+    std::string decode_secret = base64_decode(unit.secret_key);
+    unsigned char * strHmac = hmac_sha256_byte(decode_secret.c_str(),to_sign.c_str());
     std::string strSignatrue = base64_encode(strHmac,32);
     return strSignatrue;
  }

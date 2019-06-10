@@ -702,8 +702,8 @@
 				"info": {
 					"APIKey": "d3f45bd2-20f9-429a-9fa5-40830010ae3c",
 					"SecretKey": "Mvm+/p21lGpjFgvtP3NPd3b4eJzwmBsuSSj04B6TN8guOTL1LCFR1mSKAgWFATH9JuwOQWqNhS4fWBnnNySjiA==",
-					"baseUrl": "https://api.testnet.emx.com",
-					"wsUrl": "api.testnet.emx.com",
+					"baseUrl": "https://api.emx.com",
+					"wsUrl": "api.emx.com",
 					"whiteLists": {
 						"btc_j19": "BTCJ19"
 					},
