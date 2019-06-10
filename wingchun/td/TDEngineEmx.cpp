@@ -579,7 +579,7 @@ TradeAccount TDEngineEmx::load_account(int idx, const json& j_config)
     //test
     //Document json;
     //get_account(unit, json);
-    cancel_all_orders();
+    
     //getPriceIncrement(unit);
     // set up
     TradeAccount account = {};
@@ -599,6 +599,7 @@ void TDEngineEmx::connect(long timeout_nsec)
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
     }
 	login(timeout_nsec);
+    cancel_all_orders();
 }
 
    void TDEngineEmx::getPriceIncrement(AccountUnitEmx& unit)
