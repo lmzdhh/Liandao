@@ -392,7 +392,7 @@ const short MSG_TYPE_LF_RTN_ORDER_KUCOIN 	= 32205;
 const short MSG_TYPE_LF_RTN_TRADE_KUCOIN	= 32206;
 const short MSG_TYPE_LF_ORDER_ACTION_KUCOIN = 32207;
 
-//emx, idx=22
+//emx, idx=40
 const short MSG_TYPE_LF_MD_EMX        = 40101;
 const short MSG_TYPE_LF_QRY_POS_EMX   = 40201;
 const short MSG_TYPE_LF_RSP_POS_EMX   = 40202;
