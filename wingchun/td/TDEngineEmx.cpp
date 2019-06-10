@@ -380,10 +380,11 @@ std::string TDEngineEmx::makeSubscribeChannelString(AccountUnitEmx& unit)
     StringBuffer sbUpdate;
 	Writer<StringBuffer> writer(sbUpdate);
 	writer.StartObject();
-	writer.Key("timestamp");
-	writer.String(strTime.c_str());
-	writer.Key("type");
+    writer.Key("type");
 	writer.String("subscribe");
+    writer.Key("contract_codes");
+    writer.StartArray();
+    writer.EndArray();
 	writer.Key("channels");
     writer.StartArray();
     writer.String("orders");
@@ -394,6 +395,9 @@ std::string TDEngineEmx::makeSubscribeChannelString(AccountUnitEmx& unit)
     std::string strSignatrue = sign(unit,"GET",strTime,"/v1/user/verify");
     writer.Key("sig");
 	writer.String(strSignatrue.c_str());
+    writer.Key("timestamp");
+	writer.String(strTime.c_str());
+	
 	writer.EndObject();
     std::string strUpdate = sbUpdate.GetString();
 
@@ -577,8 +581,8 @@ TradeAccount TDEngineEmx::load_account(int idx, const json& j_config)
     }
 
     //test
-    //Document json;
-    //get_account(unit, json);
+    Document json;
+    get_account(unit, json);
     
     //getPriceIncrement(unit);
     // set up
@@ -681,7 +685,7 @@ void TDEngineEmx::login(long timeout_nsec)
 	}
 
 	// Set up the client creation info
-	std::string strAddress = "wss://api.testnet.emx.com";
+	std::string strAddress = "api.testnet.emx.com";
     clientConnectInfo.address = strAddress.c_str();
     clientConnectInfo.path = "/"; // Set the info's path to the fixed up url path
 	clientConnectInfo.context = context;
@@ -1192,7 +1196,7 @@ void TDEngineEmx::cancel_all_orders()
     std::string cancel_order = createCancelOrderString(nullptr);
     std::lock_guard<std::mutex> lck(mutex_msg_queue);
     m_vstMsg.push(cancel_order);
-    lws_callback_on_writable(m_conn);
+    //lws_callback_on_writable(m_conn);
 }
 /*
 {
