@@ -367,7 +367,7 @@ void TDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
             }
             else if(type == "error")
             {
-                
+
             }
         }
 	} else 
@@ -444,6 +444,10 @@ int TDEngineEmx::lws_write_msg(struct lws* conn)
             strMsg = m_vstMsg.front();
             m_vstMsg.pop();
         }
+    }
+    else
+    {
+        return 0;
     }
     
     unsigned char msg[1024];
