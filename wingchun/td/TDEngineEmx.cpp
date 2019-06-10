@@ -397,7 +397,6 @@ std::string TDEngineEmx::makeSubscribeChannelString(AccountUnitEmx& unit)
 	writer.String(strSignatrue.c_str());
     writer.Key("timestamp");
 	writer.String(strTime.c_str());
-	
 	writer.EndObject();
     std::string strUpdate = sbUpdate.GetString();
 
@@ -535,6 +534,7 @@ TradeAccount TDEngineEmx::load_account(int idx, const json& j_config)
     string api_key = j_config["APIKey"].get<string>();
     string secret_key = j_config["SecretKey"].get<string>();
     string baseUrl = j_config["baseUrl"].get<string>();
+    string wsUrl = j_config["wsUrl"].get<string>();
     rest_get_interval_ms = j_config["rest_get_interval_ms"].get<int>();
 
     if(j_config.find("orderaction_max_waiting_seconds") != j_config.end()) {
@@ -560,7 +560,7 @@ TradeAccount TDEngineEmx::load_account(int idx, const json& j_config)
     unit.api_key = api_key;
     unit.secret_key = secret_key;
     unit.baseUrl = baseUrl;
-
+    unit.wsUrl = wsUrl;
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
 
@@ -601,8 +601,9 @@ void TDEngineEmx::connect(long timeout_nsec)
         AccountUnitEmx& unit = account_units[idx];
         unit.logged_in = true;
         KF_LOG_INFO(logger, "[connect] (api_key)" << unit.api_key);
+        login(timeout_nsec);
     }
-	login(timeout_nsec);
+	
     cancel_all_orders();
 }
 
@@ -685,7 +686,7 @@ void TDEngineEmx::login(long timeout_nsec)
 	}
 
 	// Set up the client creation info
-	std::string strAddress = "api.testnet.emx.com";
+	std::string strAddress = account_units[0].wsUrl;
     clientConnectInfo.address = strAddress.c_str();
     clientConnectInfo.path = "/"; // Set the info's path to the fixed up url path
 	clientConnectInfo.context = context;
@@ -1100,7 +1101,7 @@ void TDEngineEmx::get_account(AccountUnitEmx& unit, Document& json)
                                         {"EMX-ACCESS-KEY",unit.api_key}};
      KF_LOG_INFO(logger, "EMX-ACCESS-SIG = " << strSignatrue 
                         << ", EMX-ACCESS-TIMESTAMP = " << strTimestamp 
-                        << ", KC-API-KEY = " << unit.api_key);
+                        << ", EMX-API-KEY = " << unit.api_key);
 
 
     std::unique_lock<std::mutex> lock(g_httpMutex);

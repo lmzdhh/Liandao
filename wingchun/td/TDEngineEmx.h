@@ -85,6 +85,7 @@ WC_NAMESPACE_START
             string passphrase;
 
             string baseUrl;
+            string wsUrl;
             // internal flags
             bool    logged_in;
             std::map<std::string,PriceIncrement> mapPriceIncrement;
