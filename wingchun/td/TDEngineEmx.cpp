@@ -128,63 +128,6 @@ std::string TDEngineEmx::getTimestampStr()
     return  std::to_string(timestamp);
 }
 
- void TDEngineEmx::onOrder(const PendingOrderStatus& stPendingOrderStatus)
- {
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-            rtn_order.RequestID = stPendingOrderStatus.nRequestID;
-            rtn_order.OrderStatus = stPendingOrderStatus.OrderStatus;
-            rtn_order.VolumeTraded = stPendingOrderStatus.VolumeTraded;
-
-            //first send onRtnOrder about the status change or VolumeTraded change
-            strcpy(rtn_order.ExchangeID, "emx");
-            strncpy(rtn_order.UserID, stPendingOrderStatus.strUserID.c_str(), sizeof(rtn_order.UserID));
-            strncpy(rtn_order.InstrumentID, stPendingOrderStatus.InstrumentID, sizeof(rtn_order.InstrumentID));
-            rtn_order.Direction = stPendingOrderStatus.Direction;
-            //No this setting on EMX
-            rtn_order.TimeCondition = LF_CHAR_GTC;
-            rtn_order.OrderPriceType = stPendingOrderStatus.OrderPriceType;
-            strncpy(rtn_order.OrderRef, stPendingOrderStatus.OrderRef, sizeof(rtn_order.OrderRef));
-            rtn_order.VolumeTotal = stPendingOrderStatus.nVolume - rtn_order.VolumeTraded;
-            rtn_order.LimitPrice = stPendingOrderStatus.nPrice;
-            rtn_order.VolumeTotalOriginal = stPendingOrderStatus.nVolume;
-            strncpy(rtn_order.BusinessUnit,stPendingOrderStatus.remoteOrderId.c_str(),sizeof(rtn_order.BusinessUnit));
-
-            on_rtn_order(&rtn_order);
-
-            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_EMX,
-                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
-            
-            KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
-                        << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
-
-
- }
-
-void TDEngineEmx::onTrade(const PendingOrderStatus& stPendingOrderStatus,int64_t nSize,int64_t nPrice,std::string& strTradeId,std::string& strTime)
-{
-            LFRtnTradeField rtn_trade;
-            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-            strcpy(rtn_trade.ExchangeID, "emx");
-            strncpy(rtn_trade.UserID, stPendingOrderStatus.strUserID.c_str(), sizeof(rtn_trade.UserID));
-            strncpy(rtn_trade.InstrumentID, stPendingOrderStatus.InstrumentID, sizeof(rtn_trade.InstrumentID));
-            strncpy(rtn_trade.OrderRef, stPendingOrderStatus.OrderRef, sizeof(rtn_trade.OrderRef));
-            rtn_trade.Direction = stPendingOrderStatus.Direction;
-            //calculate the volumn and price (it is average too)
-            rtn_trade.Volume = nSize;
-            rtn_trade.Price = nPrice;
-            strncpy(rtn_trade.OrderSysID,stPendingOrderStatus.remoteOrderId.c_str(),sizeof(rtn_trade.OrderSysID));
-            strncpy(rtn_trade.TradeID, strTradeId.c_str(), sizeof(rtn_trade.TradeID));
-            strncpy(rtn_trade.TradeTime, strTime.c_str(), sizeof(rtn_trade.TradeTime));
-            strncpy(rtn_trade.ClientID, stPendingOrderStatus.strClientId.c_str(), sizeof(rtn_trade.ClientID));
-            on_rtn_trade(&rtn_trade);
-            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_EMX, 1, -1);
-
-             KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction 
-                        << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
-}
 
  void TDEngineEmx::onOrderChange(Document& msg)
  {
@@ -221,6 +164,7 @@ void TDEngineEmx::onTrade(const PendingOrderStatus& stPendingOrderStatus,int64_t
                     auto it = m_mapOrder.find(strOrderId);
                     if(it != m_mapOrder.end())
                     {
+                        localOrderRefRemoteOrderId.insert(std::make_pair(it->second.OrderRef,strOrderId));
                         on_rtn_order(&(it->second));
                     }
                     //
@@ -273,6 +217,12 @@ void TDEngineEmx::onTrade(const PendingOrderStatus& stPendingOrderStatus,int64_t
                     {
                         it->second.OrderStatus = LF_CHAR_Canceled;
                         on_rtn_order(&(it->second));
+
+                        auto it_id = localOrderRefRemoteOrderId.find(it->second.OrderRef);
+                        if(it_id != localOrderRefRemoteOrderId.end())
+                        {
+                            localOrderRefRemoteOrderId.erase(it_id);
+                        }
                         m_mapOrder.erase(it);
                     }
                     //
@@ -325,6 +275,11 @@ void TDEngineEmx::onTrade(const PendingOrderStatus& stPendingOrderStatus,int64_t
 
                         if(it->second.OrderStatus == LF_CHAR_AllTraded)
                         {
+                            auto it_id = localOrderRefRemoteOrderId.find(it->second.OrderRef);
+                            if(it_id != localOrderRefRemoteOrderId.end())
+                            {
+                                localOrderRefRemoteOrderId.erase(it_id);
+                            }
                             m_mapOrder.erase(it);
                             //
                             auto it2 = m_mapInputOrder.find(strOrderId);
@@ -1011,7 +966,7 @@ void TDEngineEmx::req_order_action(const LFOrderActionField* data, int account_i
         KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) "
                 << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
         {
-            std::lock_guard<std::mutex> lck(*m_mutexOrder);
+            //std::lock_guard<std::mutex> lck(*m_mutexOrder);
             m_mapOrderAction.insert(std::make_pair(remoteOrderId,*data));
         }
         cancel_order(remoteOrderId);

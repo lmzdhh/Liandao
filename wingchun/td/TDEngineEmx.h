@@ -176,8 +176,6 @@ WC_NAMESPACE_START
             void writeErrorLog(std::string strError);
             void on_lws_data(struct lws* conn, const char* data, size_t len);
             void onOrderChange( Document& d);
-            void onOrder(const PendingOrderStatus& stPendingOrderStatus);
-            void onTrade(const PendingOrderStatus& stPendingOrderStatus,int64_t nSize,int64_t nPrice,std::string& strTradeId,std::string& strTime);
             int lws_write_msg(struct lws* conn);
             void on_lws_connection_error(struct lws* conn);
         private:     
