@@ -189,7 +189,8 @@ WC_NAMESPACE_START
             void genUniqueKey();
             std::string genClinetid(const std::string& orderRef);
         private:
-            bool m_isSub = false;    
+            bool m_isSub = false; 
+            bool m_isSubOK = false;   
             struct lws_context *context = nullptr;
             std::queue<std::string> m_vstMsg;
             std::string m_strToken;

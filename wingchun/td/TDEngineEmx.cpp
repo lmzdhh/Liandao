@@ -124,7 +124,7 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 
 std::string TDEngineEmx::getTimestampStr()
 {
-    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    long long timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return  std::to_string(timestamp);
 }
 
@@ -352,12 +352,24 @@ void TDEngineEmx::on_lws_data(struct lws* conn, const char* data, size_t len)
     Document json;
 	json.Parse(data);
 
-    if(!json.HasParseError() && json.IsObject() && json.HasMember("channel") && json["channel"].IsString())
+    if(!json.HasParseError() && json.IsObject())
 	{
-		if(strcmp(json["channel"].GetString(), "orders") == 0)
+		if(json.HasMember("channel") && json["channel"].IsString() && strcmp(json["channel"].GetString(), "orders") == 0)
 		{
            onOrderChange(json);
-		}	
+		}
+        else if(json.HasMember("type") && json["type"].IsString())	
+        {
+            std::string type = json["type"].GetString();
+            if(type == "subscriptions")
+            {
+                m_isSubOK = true;
+            }
+            else if(type == "error")
+            {
+                
+            }
+        }
 	} else 
     {
 		KF_LOG_ERROR(logger, "MDEngineEmx::on_lws_data . parse json error");
@@ -422,7 +434,7 @@ int TDEngineEmx::lws_write_msg(struct lws* conn)
         strMsg = makeSubscribeChannelString(account_units[0]);
         m_isSub = true;
     }
-    else
+    else if(m_isSubOK)
     {
         std::lock_guard<std::mutex> lck(mutex_msg_queue);
         if(m_vstMsg.size() == 0)
@@ -449,8 +461,6 @@ void TDEngineEmx::on_lws_connection_error(struct lws* conn)
     KF_LOG_ERROR(logger, "TDEngineEmx::on_lws_connection_error. login again.");
 	//no use it
     long timeout_nsec = 0;
-    //reset sub
-    m_isSub = false;
 
     login(timeout_nsec);
 }
@@ -642,6 +652,7 @@ void TDEngineEmx::login(long timeout_nsec)
 
     
     m_isSub = false;
+    m_isSubOK = false;
 	global_md = this;
 	int inputPort = 8443;
 	int logs = LLL_ERR | LLL_DEBUG | LLL_WARN;
@@ -1094,7 +1105,7 @@ void TDEngineEmx::get_account(AccountUnitEmx& unit, Document& json)
 
     string url = unit.baseUrl + requestPath ;
 
-    std::string strTimestamp = std::to_string(getTimestamp());
+    std::string strTimestamp = getTimestampStr();
 
     std::string strSignatrue = sign(unit,"GET",strTimestamp,requestPath);
     cpr::Header mapHeader = cpr::Header{{"EMX-ACCESS-SIG",strSignatrue},
