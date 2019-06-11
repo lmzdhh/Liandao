@@ -1941,7 +1941,7 @@ void TDEngineKuCoin::genUniqueKey()
     struct tm cur_time = getCurLocalTime();
     //SSMMHHDDN
     char key[11]{0};
-    snprintf((char*)key, 11, "%02d%02d%02d%02d%2d", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_CurrentTDIndex);
+    snprintf((char*)key, 11, "%02d%02d%02d%02d%02d", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_CurrentTDIndex);
     m_uniqueKey = key;
 }
 
