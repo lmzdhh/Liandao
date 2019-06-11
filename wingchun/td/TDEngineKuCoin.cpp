@@ -599,7 +599,7 @@ cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::stri
 
 void TDEngineKuCoin::init()
 {
-    genUniqueKey();
+    
     ITDEngine::init();
     JournalPair tdRawPair = getTdRawJournalPair(source_id);
     raw_writer = yijinjing::JournalSafeWriter::create(tdRawPair.first, tdRawPair.second, "RAW_" + name());
@@ -647,7 +647,7 @@ TradeAccount TDEngineKuCoin::load_account(int idx, const json& j_config)
         m_CurrentTDIndex = j_config["current_td_index"].get<int>();
     }
     KF_LOG_INFO(logger, "[load_account] (current_td_index)" << m_CurrentTDIndex);
-
+    genUniqueKey();
     AccountUnitKuCoin& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
