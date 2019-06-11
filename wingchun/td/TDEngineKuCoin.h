@@ -227,6 +227,7 @@ WC_NAMESPACE_START
         private:
             std::string m_uniqueKey;
             int HTTP_RESPONSE_OK = 200;
+            int m_CurrentTDIndex = 0;
             static constexpr int scale_offset = 1e8;
 
             ThreadPtr rest_thread;

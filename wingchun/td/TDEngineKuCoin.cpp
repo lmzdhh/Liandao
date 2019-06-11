@@ -643,6 +643,11 @@ TradeAccount TDEngineKuCoin::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (retry_interval_milliseconds)" << retry_interval_milliseconds);
 
+    if(j_config.find("current_td_index") != j_config.end()) {
+        m_CurrentTDIndex = j_config["current_td_index"].get<int>();
+    }
+    KF_LOG_INFO(logger, "[load_account] (current_td_index)" << m_CurrentTDIndex);
+
     AccountUnitKuCoin& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
@@ -1936,7 +1941,7 @@ void TDEngineKuCoin::genUniqueKey()
     struct tm cur_time = getCurLocalTime();
     //SSMMHHDDN
     char key[11]{0};
-    snprintf((char*)key, 11, "%02d%02d%02d%02d%1s", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_engineIndex.c_str());
+    snprintf((char*)key, 11, "%02d%02d%02d%02d%2d", cur_time.tm_sec, cur_time.tm_min, cur_time.tm_hour, cur_time.tm_mday, m_CurrentTDIndex);
     m_uniqueKey = key;
 }
 
