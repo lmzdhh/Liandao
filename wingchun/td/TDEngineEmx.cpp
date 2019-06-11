@@ -239,6 +239,7 @@ std::string TDEngineEmx::getTimestampStr()
                 }
                 else if(strAction == "filled")
                 {
+                    std::string strStatus = data["status"].GetString();
                     std::string strOrderId = data["order_id"].GetString();
                     std::string strSize = data["size"].GetString();
                     std::string strSizeFilled = data["size_filled"].GetString();
@@ -249,7 +250,7 @@ std::string TDEngineEmx::getTimestampStr()
                     if(it != m_mapOrder.end())
                     {
                         it->second.OrderStatus = LF_CHAR_AllTraded;
-                        if(strSize != strSizeFilled)
+                        if(strStatus == "accepted")
                         {
                             it->second.OrderStatus = LF_CHAR_PartTradedQueueing;
                         }
