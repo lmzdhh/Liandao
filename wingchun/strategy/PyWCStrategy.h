@@ -49,6 +49,7 @@ public:
     virtual void on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
     virtual void on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time);
     virtual void on_switch_day(long rcv_time);
+    virtual void on_l2_trade(const LFL2TradeField* data, short source, long rcv_time);
     //py log
     virtual void log_debug(string msg) { KF_LOG_DEBUG(logger, msg); };
     virtual void log_info(string msg) { KF_LOG_INFO(logger, msg); };

@@ -99,6 +99,13 @@ class Strategy:
                 data = ctypes.cast(raw_data, ctypes.POINTER(structs.MsgType2LFStruct[lf.MsgTypes.BAR_MD])).contents
                 return func(context, data, source, nano)
             self.strategy.set_on_data(lf.MsgTypes.BAR_MD, partial(func_parse, bar_func))
+    def set_func_l2_trade(self,func_name):
+        trade_func = getattr(self.module, func_name, None)
+        if trade_func is not None:
+            def func_parse(func, raw_data, source, nano):
+                data = ctypes.cast(raw_data, ctypes.POINTER(structs.MsgType2LFStruct[lf.MsgTypes.L2_TRADE])).contents
+                return func(context, data, source, nano)
+            self.strategy.set_on_data(lf.MsgTypes.L2_TRADE, partial(func_parse, trade_func))
 
     def set_func_error(self, func_name):
         bar_func = getattr(self.module, func_name, None)
@@ -114,6 +121,7 @@ class Strategy:
         switch_day_func = getattr(self.module, func_name, None)
         if switch_day_func is not None:
             self.strategy.set_on_switch_day(partial(switch_day_func, context))
+    
 
     def setup_functions(self):
         init_func = getattr(self.module, 'initialize', None)
@@ -131,3 +139,4 @@ class Strategy:
         self.set_func_error('on_error')
         self.set_func_pos('on_pos')
         self.set_func_switch_day('on_switch_day')
+        self.set_func_l2_trade('on_l2_tarde')

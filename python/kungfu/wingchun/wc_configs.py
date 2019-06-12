@@ -182,7 +182,7 @@ override_methods = [
                         ('price_book_data', 'LFPriceBook20Field', 'price book 20'),
                         ('source', 'int', SOURCE_COMMENT),
                         ('rcv_time', 'long', 'time of tick received.')]),
-     'callback when tick data received', False),
+     'callback when price book data received', False),
     ('on_funding', (None, [('context', 'context object', CONTEXT_COMMENT),
                         ('funding_data', 'LFFundingField', 'funding data'),
                         ('source', 'int', SOURCE_COMMENT),
@@ -192,7 +192,7 @@ override_methods = [
                         ('bar_data', 'LFBarMarketDataField', 'bar data'),
                         ('source', 'int', SOURCE_COMMENT),
                         ('rcv_time', 'long', 'time of tick received.')]),
-     'callback when tick data received', False),
+     'callback when bar data received', False),
     ('on_pos', (None, [('context', 'context object', CONTEXT_COMMENT),
                        ('pos_handler', 'PosHandler', 'class of position getting and setting'),
                        ('request_id', 'int', 'request_id of req_pos, -1 if is initial callback when login td'),
@@ -222,6 +222,11 @@ override_methods = [
     ('on_switch_day', (None, [('context', 'context object', CONTEXT_COMMENT),
                               ('rcv_time', 'long', 'time of switch_day signal received.')]),
      'callback when a trading day is switched', False),
+     ('on_l2_trade', (None, [('context', 'context object', CONTEXT_COMMENT),
+                        ('trade_data', 'LFL2TradeField', 'tarde data'),
+                        ('source', 'int', SOURCE_COMMENT),
+                        ('rcv_time', 'long', 'time of tick received.')]),
+     'callback when l2 trade data received', False)
 ]
 class_details = [
     ('PosHandler', [], [('add_pos', (None, [('str', 'ticker'),
