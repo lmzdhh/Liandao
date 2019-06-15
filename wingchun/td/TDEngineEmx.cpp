@@ -135,7 +135,7 @@ std::string TDEngineEmx::getTimestampStr()
             {
                 std::string strAction = msg["action"].GetString();
                 auto& data = msg["data"];
-                if(strAction == "order-received" && data.HasMember("order_id") && data.HasMember["client_id"] )
+                if(strAction == "order-received" && data.HasMember("order_id") && data.HasMember("client_id"))
                 {
                     std::string strOrderId = data["order_id"].GetString();
                     std::string strClientId = data["client_id"].GetString();
@@ -542,7 +542,9 @@ TradeAccount TDEngineEmx::load_account(int idx, const json& j_config)
                 {
                     std::string coinpair = it.key();
                     std::string size = it.value();
-                    unit.mapPriceIncrement.insert(std::make_pair(coinpair, std::round(std::stod(size)*scale_offset)));
+                    PriceIncrement increment;
+                    increment.nPriceIncrement = std::round(std::stod(size)*scale_offset);
+                    unit.mapPriceIncrement.insert(std::make_pair(coinpair,increment));
                 }
             }
     }
@@ -615,7 +617,6 @@ void TDEngineEmx::connect(long timeout_nsec)
             }
         }
         */
-       unit.mapPriceIncrement.insert(std::make_pair(pair.first,stPriceIncrement));
    }
 
 void TDEngineEmx::login(long timeout_nsec)

@@ -71,11 +71,11 @@ WC_NAMESPACE_START
             uint64_t volume = 0;
         };
 
-          struct PriceIncrement
+        struct PriceIncrement
         {
             int64_t nBaseMinSize = 0;
-            int64_t nPriceIncrement = 0;
-            int64_t nQuoteIncrement = 0;
+            int64_t nPriceIncrement = 1;
+            int64_t nQuoteIncrement = 1;
         };
 
         struct AccountUnitEmx
