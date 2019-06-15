@@ -14,6 +14,7 @@
 #include <document.h>
 #include <libwebsockets.h>
 #include <cpr/cpr.h>
+#include "../base/ThreadPool.h"
 using rapidjson::Document;
 
 WC_NAMESPACE_START
@@ -83,26 +84,22 @@ WC_NAMESPACE_START
             string api_key;//uid
             string secret_key;
             string passphrase;
-
             string baseUrl;
             // internal flags
             bool    logged_in;
-            std::vector<PendingOrderStatus> newOrderStatus;
-            std::vector<PendingOrderStatus> pendingOrderStatus;
             std::map<std::string,PriceIncrement> mapPriceIncrement;
             CoinPairWhiteList coinPairWhiteList;
             CoinPairWhiteList positionWhiteList;
-
         };
 
-    struct ServerInfo
-    {
-    int nPingInterval = 0;
-    int nPingTimeOut = 0;
-    std::string strEndpoint ;
-    std::string strProtocol ;
-    bool bEncrypt = true;
-    };
+        struct ServerInfo
+        {
+            int nPingInterval = 0;
+            int nPingTimeOut = 0;
+            std::string strEndpoint ;
+            std::string strProtocol ;
+            bool bEncrypt = true;
+        };
       
 /**
  * CTP trade engine
@@ -150,17 +147,7 @@ WC_NAMESPACE_START
 
 
             virtual void set_reader_thread() override;
-            void loop();
             std::vector<std::string> split(std::string str, std::string token);
-            void GetAndHandleOrderTradeResponse();
-            void addNewQueryOrdersAndTrades(AccountUnitKuCoin& unit, const char_31 InstrumentID,
-                                            const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                            const uint64_t VolumeTraded, const std::string& remoteOrderId);
-            void retrieveOrderStatus(AccountUnitKuCoin& unit);
-            void moveNewOrderStatusToPending(AccountUnitKuCoin& unit);
-
-            void handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus);
-            void addResponsedOrderStatusNoOrderRef(ResponsedOrderStatus &responsedOrderStatus, Document& json);
             void getPriceIncrement(AccountUnitKuCoin& unit);
             void dealPriceVolume(AccountUnitKuCoin& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,double& dDealPrice,double& dDealVome);
 
@@ -174,10 +161,10 @@ WC_NAMESPACE_START
             void get_account(AccountUnitKuCoin& unit, Document& json);
             void send_order(AccountUnitKuCoin& unit, const char *code,const std::string& strClientId,
                             const char *side, const char *type, double& size, double& price, double funds, const string& strOrderRef,bool isPostOnly,Document& json);
-
+            void handle_order_insert(AccountUnitKuCoin& unit,const LFInputOrderField data,int requestId,const std::string& ticker);
+            void handle_order_action(AccountUnitKuCoin& unit,const LFOrderActionField data, int requestId,const std::string& ticker);
             void cancel_all_orders(AccountUnitKuCoin& unit, std::string code, Document& json);
             void cancel_order(AccountUnitKuCoin& unit, std::string code, std::string orderId, Document& json);
-            void query_order(AccountUnitKuCoin& unit, std::string code, std::string orderId, Document& json);
             void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
             void printResponse(const Document& d);
 
@@ -250,7 +237,7 @@ WC_NAMESPACE_START
             int max_rest_retry_times = 3;
             int retry_interval_milliseconds = 1000;
             int orderaction_max_waiting_seconds = 30;
-
+            ThreadPool* m_ThreadPoolPtr = nullptr;
         };
 
 WC_NAMESPACE_END

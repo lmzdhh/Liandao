@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <mutex>
 #include <chrono>
+#include <functional>
 #include "../../utils/crypto/openssl_util.h"
 
 using cpr::Delete;
@@ -48,6 +49,7 @@ TDEngineKuCoin::TDEngineKuCoin(): ITDEngine(SOURCE_KUCOIN)
     mutex_order_and_trade = new std::mutex();
     mutex_response_order_status = new std::mutex();
     mutex_orderaction_waiting_response = new std::mutex();
+    m_ThreadPoolPtr = nullptr;
 }
 
 TDEngineKuCoin::~TDEngineKuCoin()
@@ -56,6 +58,7 @@ TDEngineKuCoin::~TDEngineKuCoin()
     if(mutex_order_and_trade != nullptr) delete mutex_order_and_trade;
     if(mutex_response_order_status != nullptr) delete mutex_response_order_status;
     if(mutex_orderaction_waiting_response != nullptr) delete mutex_orderaction_waiting_response;
+    if(m_ThreadPoolPtr != nullptr) delete m_ThreadPoolPtr;
 }
 
 static TDEngineKuCoin* global_md = nullptr;
@@ -281,7 +284,7 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
 void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
     //std::string strData = dealDataSprit(data);
-	KF_LOG_INFO(logger, "TDEngineKuCoin::on_lws_data: " << data);
+	//KF_LOG_INFO(logger, "TDEngineKuCoin::on_lws_data: " << data);
     Document json;
 	json.Parse(data);
 
@@ -648,6 +651,17 @@ TradeAccount TDEngineKuCoin::load_account(int idx, const json& j_config)
     }
     KF_LOG_INFO(logger, "[load_account] (current_td_index)" << m_CurrentTDIndex);
     genUniqueKey();
+
+    int thread_pool_size = 0;
+    if(j_config.find("thread_pool_size") != j_config.end()) {
+        thread_pool_size = j_config["thread_pool_size"].get<int>();
+    }
+    if(thread_pool_size > 0)
+    {
+        m_ThreadPoolPtr = new ThreadPool(thread_pool_size);
+    }
+    KF_LOG_INFO(logger, "[load_account] (current_td_index)" << m_CurrentTDIndex);
+
     AccountUnitKuCoin& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
@@ -1045,6 +1059,88 @@ void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& 
          
 }
 
+void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOrderField data,int requestId,const std::string& ticker)
+{
+    int errorId = 0;
+    std::string errorMsg = "";
+
+    double funds = 0;
+    Document d;
+
+    double fixedPrice = 0;
+    double fixedVolume = 0;
+    dealPriceVolume(unit,data.InstrumentID,data.LimitPrice,data.Volume,fixedPrice,fixedVolume);
+    
+      if(fixedVolume == 0)
+    {
+        KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error" << ticker);
+        errorId = 200;
+        errorMsg = data.InstrumentID;
+        errorMsg += " : quote less than baseMinSize";
+        on_rsp_order_insert(&data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(&data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
+        return;
+    }
+    std::string strClientId = "";//genClinetid(data->OrderRef);
+    
+    send_order(unit, ticker.c_str(),strClientId, GetSide(data.Direction).c_str(),
+               GetType(data.OrderPriceType).c_str(), fixedVolume, fixedPrice, funds, data.OrderRef,is_post_only(&data),d);
+
+    if(!d.IsObject())
+    {
+        errorId = 100;
+        errorMsg = "send_order http response has parse error or is not json. please check the log";
+        KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
+                                                                           errorId << " (errorMsg) " << errorMsg);
+    } else  if(d.HasMember("code"))
+    {
+        int code =std::round(std::stod(d["code"].GetString()));
+        if(code == 200000) {
+            //if send successful and the exchange has received ok, then add to  pending query order list
+            std::string remoteOrderId = d["data"]["orderId"].GetString();
+            //fix defect of use the old value
+            KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
+                                                                       data.OrderRef << " (remoteOrderId) "
+                                                                       << remoteOrderId);
+
+            PendingOrderStatus stPendingOrderStatus;
+            stPendingOrderStatus.nVolume = std::round(fixedVolume*scale_offset);
+            stPendingOrderStatus.nPrice = std::round(fixedPrice*scale_offset);
+            strncpy(stPendingOrderStatus.InstrumentID, data.InstrumentID, sizeof(stPendingOrderStatus.InstrumentID));
+            strncpy(stPendingOrderStatus.OrderRef, data.OrderRef, sizeof(stPendingOrderStatus.OrderRef));
+            stPendingOrderStatus.strUserID = unit.api_key;
+            stPendingOrderStatus.OrderStatus = LF_CHAR_NotTouched;
+            stPendingOrderStatus.VolumeTraded = 0;
+            stPendingOrderStatus.Direction = data.Direction;
+            stPendingOrderStatus.OrderPriceType = data.OrderPriceType;
+            stPendingOrderStatus.remoteOrderId = remoteOrderId;
+            stPendingOrderStatus.nRequestID = requestId;
+            stPendingOrderStatus.strClientId = strClientId;
+            onOrder(stPendingOrderStatus);
+            std::lock_guard<std::mutex> lck(*m_mutexOrder);
+            localOrderRefRemoteOrderId[std::string(data.OrderRef)] = remoteOrderId;
+            m_mapOrder[remoteOrderId] = stPendingOrderStatus;
+            //success, only record raw data
+            raw_writer->write_error_frame(&data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1,requestId, errorId, errorMsg.c_str());
+            KF_LOG_DEBUG(logger, "[req_order_insert] success" );
+            return;
+
+        }else {
+            errorId = code;
+            if(d.HasMember("msg") && d["msg"].IsString())
+            {
+                errorMsg = d["msg"].GetString();
+            }
+            KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        }
+    }
+    if(errorId != 0)
+    {
+        on_rsp_order_insert(&data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(&data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
+    }
+}
+
 void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     AccountUnitKuCoin& unit = account_units[account_index];
@@ -1070,133 +1166,39 @@ void TDEngineKuCoin::req_order_insert(const LFInputOrderField* data, int account
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
 
-    double funds = 0;
-    Document d;
-
-    double fixedPrice = 0;
-    double fixedVolume = 0;
-    dealPriceVolume(unit,data->InstrumentID,data->LimitPrice,data->Volume,fixedPrice,fixedVolume);
-    
-      if(fixedVolume == 0)
+    if(nullptr == m_ThreadPoolPtr)
     {
-        KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error" << ticker);
-        errorId = 200;
-        errorMsg = data->InstrumentID;
-        errorMsg += " : quote less than baseMinSize";
-        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
-        return;
+        handle_order_insert(unit,*data,requestId,ticker);
     }
-    std::string strClientId = "";//genClinetid(data->OrderRef);
-    std::lock_guard<std::mutex> lck(*m_mutexOrder);
-    send_order(unit, ticker.c_str(),strClientId, GetSide(data->Direction).c_str(),
-               GetType(data->OrderPriceType).c_str(), fixedVolume, fixedPrice, funds, data->OrderRef,is_post_only(data),d);
-    //d.Parse("{\"orderId\":19319936159776,\"result\":true}");
-    //not expected response
-    if(!d.IsObject())
+    else
     {
-        errorId = 100;
-        errorMsg = "send_order http response has parse error or is not json. please check the log";
-        KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
-                                                                           errorId << " (errorMsg) " << errorMsg);
-    } else  if(d.HasMember("code"))
-    {
-        int code =std::round(std::stod(d["code"].GetString()));
-        if(code == 200000) {
-            //if send successful and the exchange has received ok, then add to  pending query order list
-            std::string remoteOrderId = d["data"]["orderId"].GetString();
-            //fix defect of use the old value
-            localOrderRefRemoteOrderId[std::string(data->OrderRef)] = remoteOrderId;
-            KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
-                                                                       data->OrderRef << " (remoteOrderId) "
-                                                                       << remoteOrderId);
-
-            PendingOrderStatus stPendingOrderStatus;
-            stPendingOrderStatus.nVolume = std::round(fixedVolume*scale_offset);
-            stPendingOrderStatus.nPrice = std::round(fixedPrice*scale_offset);
-            strncpy(stPendingOrderStatus.InstrumentID, data->InstrumentID, sizeof(stPendingOrderStatus.InstrumentID));
-            strncpy(stPendingOrderStatus.OrderRef, data->OrderRef, sizeof(stPendingOrderStatus.OrderRef));
-            stPendingOrderStatus.strUserID = unit.api_key;
-            stPendingOrderStatus.OrderStatus = LF_CHAR_NotTouched;
-            stPendingOrderStatus.VolumeTraded = 0;
-            stPendingOrderStatus.Direction = data->Direction;
-            stPendingOrderStatus.OrderPriceType = data->OrderPriceType;
-            stPendingOrderStatus.remoteOrderId = remoteOrderId;
-            stPendingOrderStatus.nRequestID = requestId;
-            stPendingOrderStatus.strClientId = strClientId;
-            onOrder(stPendingOrderStatus);
-         
-            KF_LOG_DEBUG(logger, "[req_order_insert] (addNewQueryOrdersAndTrades)" );
-            char noneStatus = LF_CHAR_NotTouched;
-            //addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef, noneStatus, 0, remoteOrderId);
-            m_mapOrder[remoteOrderId] = stPendingOrderStatus;
-            //success, only record raw data
-            raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1,
-                                          requestId, errorId, errorMsg.c_str());
-            KF_LOG_DEBUG(logger, "[req_order_insert] success" );
-            return;
-
-        }else {
-            errorId = code;
-            if(d.HasMember("msg") && d["msg"].IsString())
-            {
-                errorMsg = d["msg"].GetString();
-            }
-            KF_LOG_ERROR(logger, "[req_order_insert] send_order error!  (rid)" << requestId << " (errorId)" <<
-                                                                               errorId << " (errorMsg) " << errorMsg);
-        }
-    }
-    if(errorId != 0)
-    {
-        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
+        m_ThreadPoolPtr->commit(std::bind(&TDEngineKuCoin::handle_order_insert,this,unit,*data,requestId,ticker));
     }
 }
 
-void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
+void TDEngineKuCoin::handle_order_action(AccountUnitKuCoin& unit,const LFOrderActionField data, int requestId,const std::string& ticker)
 {
-    AccountUnitKuCoin& unit = account_units[account_index];
-    KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
-                                              << " (APIKey)" << unit.api_key
-                                              << " (Iid)" << data->InvestorID
-                                              << " (OrderRef)" << data->OrderRef
-                                              << " (KfOrderID)" << data->KfOrderID);
-
-    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KUCOIN, 1, requestId);
-
     int errorId = 0;
     std::string errorMsg = "";
-
-    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
-    if(ticker.length() == 0) {
-        errorId = 200;
-        errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
-        KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
-                                                                                       errorId << " (errorMsg) " << errorMsg);
-        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
-        return;
-    }
-    KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
-    std::lock_guard<std::mutex> lck(*m_mutexOrder);
-    std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data->OrderRef);
+    std::unique_lock<std::mutex> lck(*m_mutexOrder);
+    std::map<std::string, std::string>::iterator itr = localOrderRefRemoteOrderId.find(data.OrderRef);
     std::string remoteOrderId;
     if(itr == localOrderRefRemoteOrderId.end()) {
         errorId = 1;
         std::stringstream ss;
-        ss << "[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) " << data->OrderRef;
+        ss << "[req_order_action] not found in localOrderRefRemoteOrderId map (orderRef) " << data.OrderRef;
         errorMsg = ss.str();
         KF_LOG_ERROR(logger, "[req_order_action] not found in localOrderRefRemoteOrderId map. "
-                << " (rid)" << requestId << " (orderRef)" << data->OrderRef << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
-        on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
+                << " (rid)" << requestId << " (orderRef)" << data.OrderRef << " (errorId)" << errorId << " (errorMsg) " << errorMsg);
+        on_rsp_order_action(&data, requestId, errorId, errorMsg.c_str());
+        raw_writer->write_error_frame(&data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
         return;
     } else {
         remoteOrderId = itr->second;
         KF_LOG_DEBUG(logger, "[req_order_action] found in localOrderRefRemoteOrderId map (orderRef) "
-                << data->OrderRef << " (remoteOrderId) " << remoteOrderId);
+                << data.OrderRef << " (remoteOrderId) " << remoteOrderId);
     }
-
+    lck.unlock();
     Document d;
     cancel_order(unit, ticker, remoteOrderId, d);
 
@@ -1213,17 +1215,44 @@ void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int accoun
 
     if(errorId != 0)
     {
+        on_rsp_order_action(&data, requestId, errorId, errorMsg.c_str());
+	    raw_writer->write_error_frame(&data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
+    } 
+}
+void TDEngineKuCoin::req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time)
+{
+    AccountUnitKuCoin& unit = account_units[account_index];
+    KF_LOG_DEBUG(logger, "[req_order_action]" << " (rid)" << requestId
+                                              << " (APIKey)" << unit.api_key
+                                              << " (Iid)" << data->InvestorID
+                                              << " (OrderRef)" << data->OrderRef
+                                              << " (KfOrderID)" << data->KfOrderID);
+
+    send_writer->write_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KUCOIN, 1, requestId);
+
+    int errorId = 0;
+    std::string errorMsg = "";
+    on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
+    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(data->InstrumentID));
+    if(ticker.length() == 0) {
+        errorId = 200;
+        errorMsg = std::string(data->InstrumentID) + " not in WhiteList, ignore it";
+        KF_LOG_ERROR(logger, "[req_order_action]: not in WhiteList , ignore it: (rid)" << requestId << " (errorId)" <<
+                                                                                       errorId << " (errorMsg) " << errorMsg);
         on_rsp_order_action(data, requestId, errorId, errorMsg.c_str());
-	raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
-
-    } else {
-        //addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
-
-       // addRemoteOrderIdOrderActionSentTime( data, requestId, remoteOrderId);
-
-        //TODO:   onRtn order/on rtn trade
-
+        raw_writer->write_error_frame(data, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION_KUCOIN, 1, requestId, errorId, errorMsg.c_str());
+        return;
     }
+    KF_LOG_DEBUG(logger, "[req_order_action] (exchange_ticker)" << ticker);
+    if(nullptr == m_ThreadPoolPtr)
+    {
+        handle_order_action(unit,*data,requestId,ticker);
+    }
+    else
+    {
+        m_ThreadPoolPtr->commit(std::bind(&TDEngineKuCoin::handle_order_action,this,unit,*data,requestId,ticker));
+    }
+    
 }
 
 //对于每个撤单指令发出后30秒（可配置）内，如果没有收到回报，就给策略报错（撤单被拒绝，pls retry)
@@ -1236,154 +1265,6 @@ void TDEngineKuCoin::addRemoteOrderIdOrderActionSentTime(const LFOrderActionFiel
     newOrderActionSent.sentNameTime = getTimestamp();
     memcpy(&newOrderActionSent.data, data, sizeof(LFOrderActionField));
     remoteOrderIdOrderActionSentTime[remoteOrderId] = newOrderActionSent;
-}
-
-void TDEngineKuCoin::GetAndHandleOrderTradeResponse()
-{
-    // KF_LOG_INFO(logger, "[GetAndHandleOrderTradeResponse]" );
-    //every account
-    for (size_t idx = 0; idx < account_units.size(); idx++)
-    {
-        AccountUnitKuCoin& unit = account_units[idx];
-        if (!unit.logged_in)
-        {
-            continue;
-        }
-        moveNewOrderStatusToPending(unit);
-        retrieveOrderStatus(unit);
-    }//end every account
-}
-
-
-void TDEngineKuCoin::retrieveOrderStatus(AccountUnitKuCoin& unit)
-{
-    //KF_LOG_INFO(logger, "[retrieveOrderStatus] order_size:"<< unit.pendingOrderStatus.size());
-    std::lock_guard<std::mutex> guard_mutex(*mutex_response_order_status);
-    std::lock_guard<std::mutex> guard_mutex_order_action(*mutex_orderaction_waiting_response);
-
-    std::vector<PendingOrderStatus>::iterator orderStatusIterator;
-
-    for(orderStatusIterator = unit.pendingOrderStatus.begin(); orderStatusIterator != unit.pendingOrderStatus.end();)
-    {
-
-        std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(orderStatusIterator->InstrumentID));
-        if(ticker.length() == 0) {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus]: not in WhiteList , ignore it:" << orderStatusIterator->InstrumentID);
-            continue;
-        }
-        KF_LOG_INFO(logger, "[retrieveOrderStatus] get_order " << "( account.api_key) " << unit.api_key
-                                                               << "  (account.pendingOrderStatus.InstrumentID) " << orderStatusIterator->InstrumentID
-                                                               << "  (account.pendingOrderStatus.OrderRef) " << orderStatusIterator->OrderRef
-                                                               << "  (account.pendingOrderStatus.remoteOrderId) " << orderStatusIterator->remoteOrderId
-                                                               << "  (account.pendingOrderStatus.OrderStatus) " << orderStatusIterator->OrderStatus
-                                                               << "  (exchange_ticker)" << ticker
-        );
-
-        Document d;
-        query_order(unit, ticker,orderStatusIterator->remoteOrderId, d);
-
-        //parse order status
-        //订单状态，﻿open（未成交）、filled（已完成）、canceled（已撤销）、cancel（撤销中）、partially-filled（部分成交）
-        if(d.HasParseError()) {
-            //HasParseError, skip
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order response HasParseError " << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                                           << " (orderRef)" << orderStatusIterator->OrderRef
-                                                                                           << " (remoteOrderId) " << orderStatusIterator->remoteOrderId);
-            continue;
-        }
-        const std::string strSuccessCode = "200000";
-         KF_LOG_INFO(logger, "[retrieveOrderStatus] query_order:");
-        if(d.HasMember("code") && strSuccessCode ==  d["code"].GetString())
-        {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] (query success)");
-            rapidjson::Value &data = d["data"];
-            ResponsedOrderStatus responsedOrderStatus;
-            responsedOrderStatus.ticker = ticker;
-            double dDealFunds = std::stod(data["dealFunds"].GetString());
-            double dDealSize = std::stod(data["dealSize"].GetString());
-            responsedOrderStatus.averagePrice = dDealSize > 0 ? std::round(dDealFunds / dDealSize * scale_offset): 0;
-            responsedOrderStatus.orderId = orderStatusIterator->remoteOrderId;
-            //报单价格条件
-            responsedOrderStatus.OrderPriceType = GetPriceType(data["type"].GetString());
-            //买卖方向
-            responsedOrderStatus.Direction = GetDirection(data["side"].GetString());
-            //报单状态
-            int64_t nDealSize = std::round(dDealSize * scale_offset);
-            int64_t nSize = std::round(std::stod(data["size"].GetString()) * scale_offset);
-            responsedOrderStatus.OrderStatus = GetOrderStatus(data["cancelExist"].GetBool(),nSize,nDealSize);
-            responsedOrderStatus.price = std::round(std::stod(data["price"].GetString()) * scale_offset);
-            responsedOrderStatus.volume = nSize;
-            //今成交数量
-            responsedOrderStatus.VolumeTraded = nDealSize;
-            responsedOrderStatus.openVolume =  nSize - nDealSize;
-
-            handlerResponseOrderStatus(unit, orderStatusIterator, responsedOrderStatus);
-
-            //OrderAction发出以后，有状态回来，就清空这次OrderAction的发送状态，不必制造超时提醒信息
-            remoteOrderIdOrderActionSentTime.erase(orderStatusIterator->remoteOrderId);
-        } else {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] (query failed)");
-            std::string errorMsg;
-            std::string errorId = d["code"].GetString();
-            if(d.HasMember("msg") && d["msg"].IsString())
-            {
-                errorMsg = d["msg"].GetString();
-            }
-
-            KF_LOG_ERROR(logger, "[retrieveOrderStatus] get_order fail." << " (symbol)" << orderStatusIterator->InstrumentID
-                                                                         << " (orderRef)" << orderStatusIterator->OrderRef
-                                                                         << " (errorId)" << errorId
-                                                                         << " (errorMsg)" << errorMsg);
-        }
-
-        //remove order when finish
-        if(orderStatusIterator->OrderStatus == LF_CHAR_AllTraded  || orderStatusIterator->OrderStatus == LF_CHAR_Canceled
-           || orderStatusIterator->OrderStatus == LF_CHAR_Error)
-        {
-            KF_LOG_INFO(logger, "[retrieveOrderStatus] remove a pendingOrderStatus.");
-            orderStatusIterator = unit.pendingOrderStatus.erase(orderStatusIterator);
-        } else {
-            ++orderStatusIterator;
-        }
-        //KF_LOG_INFO(logger, "[retrieveOrderStatus] move to next pendingOrderStatus.");
-    }
-}
-
-void TDEngineKuCoin::addNewQueryOrdersAndTrades(AccountUnitKuCoin& unit, const char_31 InstrumentID,
-                                                 const char_21 OrderRef, const LfOrderStatusType OrderStatus,
-                                                 const uint64_t VolumeTraded, const std::string& remoteOrderId)
-{
-      KF_LOG_DEBUG(logger, "[addNewQueryOrdersAndTrades]" );
-    //add new orderId for GetAndHandleOrderTradeResponse
-    std::lock_guard<std::mutex> guard_mutex(*mutex_order_and_trade);
-
-    PendingOrderStatus status;
-    strncpy(status.InstrumentID, InstrumentID, 31);
-    strncpy(status.OrderRef, OrderRef, 21);
-    status.OrderStatus = OrderStatus;
-    status.VolumeTraded = VolumeTraded;
-    //status.averagePrice = 0.0;
-    status.remoteOrderId = remoteOrderId;
-    unit.newOrderStatus.push_back(status);
-    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << status.InstrumentID
-                                                                       << " (OrderRef) " << status.OrderRef
-                                                                       << " (remoteOrderId) " << status.remoteOrderId
-                                                                       << "(VolumeTraded)" << VolumeTraded);
-}
-
-
-void TDEngineKuCoin::moveNewOrderStatusToPending(AccountUnitKuCoin& unit)
-{
-    std::lock_guard<std::mutex> pending_guard_mutex(*mutex_order_and_trade);
-    std::lock_guard<std::mutex> response_guard_mutex(*mutex_response_order_status);
-
-
-    std::vector<PendingOrderStatus>::iterator newOrderStatusIterator;
-    for(newOrderStatusIterator = unit.newOrderStatus.begin(); newOrderStatusIterator != unit.newOrderStatus.end();)
-    {
-        unit.pendingOrderStatus.push_back(*newOrderStatusIterator);
-        newOrderStatusIterator = unit.newOrderStatus.erase(newOrderStatusIterator);
-    }
 }
 
 void TDEngineKuCoin::set_reader_thread()
@@ -1408,31 +1289,14 @@ void TDEngineKuCoin::loopwebsocket()
             {
                 m_isPong = false;
                  nLastTime = nNowTime;
-                 KF_LOG_INFO(logger, "TDEngineKuCoin::loop: last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
+                 KF_LOG_INFO(logger, "TDEngineKuCoin::loopwebsocket: last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
                 m_shouldPing = true;
                 lws_callback_on_writable(m_conn);  
             }
-            //KF_LOG_INFO(logger, "TDEngineKuCoin::loop:lws_service");
 			lws_service( context, rest_get_interval_ms );
 		}
 }
 
-void TDEngineKuCoin::loop()
-{
-    KF_LOG_INFO(logger, "[loop] (isRunning) " << isRunning);
-    while(isRunning)
-    {
-        using namespace std::chrono;
-        auto current_ms = duration_cast< milliseconds>(system_clock::now().time_since_epoch()).count();
-        if(last_rest_get_ts != 0 && (current_ms - last_rest_get_ts) < rest_get_interval_ms)
-        {
-            continue;
-        }
-
-        last_rest_get_ts = current_ms;
-        GetAndHandleOrderTradeResponse();
-    }
-}
 
 
 void TDEngineKuCoin::loopOrderActionNoResponseTimeOut()
@@ -1717,208 +1581,7 @@ void TDEngineKuCoin::cancel_order(AccountUnitKuCoin& unit, std::string code, std
     //getResponse(response.status_code, response.text, response.error.message, json);
 }
 
-void TDEngineKuCoin::query_order(AccountUnitKuCoin& unit, std::string code, std::string orderId, Document& json)
-{
-    KF_LOG_INFO(logger, "[query_order]");
-    std::string requestPath = "/api/v1/orders/" + orderId;
-    auto response = Get(requestPath,"",unit);
 
-    json.Parse(response.text.c_str());
-    //getResponse(response.status_code, response.text, response.error.message, json);
-}
-
-
-
-void TDEngineKuCoin::handlerResponseOrderStatus(AccountUnitKuCoin& unit, std::vector<PendingOrderStatus>::iterator orderStatusIterator, ResponsedOrderStatus& responsedOrderStatus)
-{
-     KF_LOG_INFO(logger, "[handlerResponseOrderStatus]");
-
-    if( (responsedOrderStatus.OrderStatus == 'b' && '1' == orderStatusIterator-> OrderStatus || responsedOrderStatus.OrderStatus == orderStatusIterator-> OrderStatus) && responsedOrderStatus.VolumeTraded == orderStatusIterator->VolumeTraded)
-    {//no change
-        return;
-    }
-    int64_t newAveragePrice = responsedOrderStatus.averagePrice;
-    //cancel 需要特殊处理
-    if(LF_CHAR_Canceled == responsedOrderStatus.OrderStatus)  {
-        /*
-         * 因为restful查询有间隔时间，订单可能会先经历过部分成交，然后才达到的cancnel，所以得到cancel不能只认为是cancel，还需要判断有没有部分成交过。
-        这时候需要补状态，补一个on rtn order，一个on rtn trade。
-        这种情况仅cancel才有, 部分成交和全成交没有此问题。
-        当然，也要考虑，如果上一次部分成交已经被抓取到的并返回过 on rtn order/on rtn trade，那么就不需要补了
-         //2018-09-12.  不清楚websocket会不会有这个问题，先做同样的处理
-        */
-
-        //虽然是撤单状态，但是已经成交的数量和上一次记录的数量不一样，期间一定发生了部分成交. 要补发 LF_CHAR_PartTradedQueueing
-        if(responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded) {
-            //if status is LF_CHAR_Canceled but traded valume changes, emit onRtnOrder/onRtnTrade of LF_CHAR_PartTradedQueueing
-            LFRtnOrderField rtn_order;
-            memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-
-            std::string strOrderID = orderStatusIterator->remoteOrderId;
-            strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
-
-            rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
-            rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
-            //first send onRtnOrder about the status change or VolumeTraded change
-            strcpy(rtn_order.ExchangeID, "kucoin");
-            strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-            rtn_order.Direction = responsedOrderStatus.Direction;
-            //No this setting on KuCoin
-            rtn_order.TimeCondition = LF_CHAR_GTC;
-            rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
-            strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-            rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
-            rtn_order.LimitPrice = responsedOrderStatus.price;
-            //剩余数量
-            rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
-
-            //经过2018-08-20讨论，这个on rtn order 可以不必发送了, 只记录raw有这么回事就行了。只补发一个 on rtn trade 就行了。
-            //on_rtn_order(&rtn_order);
-            raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                    source_id, MSG_TYPE_LF_RTN_ORDER_KUCOIN,
-                                    1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-
-            //send OnRtnTrade
-            LFRtnTradeField rtn_trade;
-            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-            strcpy(rtn_trade.ExchangeID, "kucoin");
-            strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
-            strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
-            rtn_trade.Direction = rtn_order.Direction;
-            //double oldAmount = (double)orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
-            //double newAmount = (double)rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
-
-            //calculate the volumn and price (it is average too)
-            rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-           // double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
-           // rtn_trade.Price =(price + 0.000000001)*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
-            strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
-            on_rtn_trade(&rtn_trade);
-            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_KUCOIN, 1, -1);
-
-             KF_LOG_INFO(logger, "[on_rtn_trade 1] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction 
-                        << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
-
-
-        }
-
-        //emit the LF_CHAR_Canceled status
-        LFRtnOrderField rtn_order;
-        memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-
-        std::string strOrderID = orderStatusIterator->remoteOrderId;
-        strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
-
-        rtn_order.OrderStatus = LF_CHAR_Canceled;
-        rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
-
-        //first send onRtnOrder about the status change or VolumeTraded change
-        strcpy(rtn_order.ExchangeID, "kucoin");
-        strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-        strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-        rtn_order.Direction = responsedOrderStatus.Direction;
-        //KuCoin has no this setting
-        rtn_order.TimeCondition = LF_CHAR_GTC;
-        rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
-        strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-        rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
-        rtn_order.LimitPrice = responsedOrderStatus.price;
-        //剩余数量
-        rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
-
-        on_rtn_order(&rtn_order);
-        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_KUCOIN,
-                                1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-        
-         KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
-                        << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
-
-
-        //third, update last status for next query_order
-        orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-        orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-       // orderStatusIterator->averagePrice = newAveragePrice;
-
-    }
-    else
-    {
-        //if status changed or LF_CHAR_PartTradedQueueing but traded valume changes, emit onRtnOrder
-        LFRtnOrderField rtn_order;
-        memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-
-        std::string strOrderID = orderStatusIterator->remoteOrderId;
-        strncpy(rtn_order.BusinessUnit,strOrderID.c_str(),21);
-
-        KF_LOG_INFO(logger, "[handlerResponseOrderStatus] VolumeTraded Change  LastOrderPsp:" << orderStatusIterator->VolumeTraded << ", NewOrderRsp: " << responsedOrderStatus.VolumeTraded  <<
-                                                        " NewOrderRsp.Status " << responsedOrderStatus.OrderStatus);
-        if(responsedOrderStatus.OrderStatus == LF_CHAR_NotTouched && responsedOrderStatus.VolumeTraded != orderStatusIterator->VolumeTraded) {
-            rtn_order.OrderStatus = LF_CHAR_PartTradedQueueing;
-        } else{
-            rtn_order.OrderStatus = responsedOrderStatus.OrderStatus;
-        }
-        rtn_order.VolumeTraded = responsedOrderStatus.VolumeTraded;
-
-        //first send onRtnOrder about the status change or VolumeTraded change
-        strcpy(rtn_order.ExchangeID, "kucoin");
-        strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
-        strncpy(rtn_order.InstrumentID, orderStatusIterator->InstrumentID, 31);
-        rtn_order.Direction = responsedOrderStatus.Direction;
-        //No this setting on KuCoin
-        rtn_order.TimeCondition = LF_CHAR_GTC;
-        rtn_order.OrderPriceType = responsedOrderStatus.OrderPriceType;
-        strncpy(rtn_order.OrderRef, orderStatusIterator->OrderRef, 13);
-        rtn_order.VolumeTotalOriginal = responsedOrderStatus.volume;
-        rtn_order.LimitPrice = responsedOrderStatus.price;
-        rtn_order.VolumeTotal = responsedOrderStatus.openVolume;
-
-        on_rtn_order(&rtn_order);
-        raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                                source_id, MSG_TYPE_LF_RTN_ORDER_KUCOIN,
-                                1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
-         KF_LOG_INFO(logger, "[on_rtn_order] (InstrumentID)" << rtn_order.InstrumentID << "(OrderStatus)" <<  rtn_order.OrderStatus
-                        << "(Volume)" << rtn_order.VolumeTotalOriginal << "(VolumeTraded)" << rtn_order.VolumeTraded);
-
-        int64_t newAveragePrice = responsedOrderStatus.averagePrice;
-        //second, if the status is PartTraded/AllTraded, send OnRtnTrade
-        if(rtn_order.OrderStatus == LF_CHAR_AllTraded ||
-           (LF_CHAR_PartTradedQueueing == rtn_order.OrderStatus
-            && rtn_order.VolumeTraded != orderStatusIterator->VolumeTraded))
-        {
-            LFRtnTradeField rtn_trade;
-            memset(&rtn_trade, 0, sizeof(LFRtnTradeField));
-            strcpy(rtn_trade.ExchangeID, "kucoin");
-            strncpy(rtn_trade.UserID, unit.api_key.c_str(), 16);
-            strncpy(rtn_trade.InstrumentID, orderStatusIterator->InstrumentID, 31);
-            strncpy(rtn_trade.OrderRef, orderStatusIterator->OrderRef, 13);
-            rtn_trade.Direction = rtn_order.Direction;
-            //double oldAmount = (double)orderStatusIterator->VolumeTraded/scale_offset * orderStatusIterator->averagePrice/scale_offset*1.0;
-           // double newAmount = (double)rtn_order.VolumeTraded/scale_offset * newAveragePrice/scale_offset*1.0;
-
-            //calculate the volumn and price (it is average too)
-            rtn_trade.Volume = rtn_order.VolumeTraded - orderStatusIterator->VolumeTraded;
-            //double price = (newAmount - oldAmount)/((double)rtn_trade.Volume/scale_offset);
-            //rtn_trade.Price = (price + 0.000000001)*scale_offset;//(newAmount - oldAmount)/(rtn_trade.Volume);
-            strncpy(rtn_trade.OrderSysID,strOrderID.c_str(),31);
-            on_rtn_trade(&rtn_trade);
-            raw_writer->write_frame(&rtn_trade, sizeof(LFRtnTradeField),
-                                    source_id, MSG_TYPE_LF_RTN_TRADE_KUCOIN, 1, -1);
-
-             KF_LOG_INFO(logger, "[on_rtn_trade] (InstrumentID)" << rtn_trade.InstrumentID << "(Direction)" << rtn_trade.Direction 
-                        << "(Volume)" << rtn_trade.Volume << "(Price)" <<  rtn_trade.Price);
-
-        }
-        //third, update last status for next query_order
-        orderStatusIterator->OrderStatus = rtn_order.OrderStatus;
-        orderStatusIterator->VolumeTraded = rtn_order.VolumeTraded;
-        //orderStatusIterator->averagePrice = newAveragePrice;
-    }
-}
 
 std::string TDEngineKuCoin::parseJsonToString(Document &d)
 {
