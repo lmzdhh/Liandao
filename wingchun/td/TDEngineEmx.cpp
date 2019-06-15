@@ -135,7 +135,7 @@ std::string TDEngineEmx::getTimestampStr()
             {
                 std::string strAction = msg["action"].GetString();
                 auto& data = msg["data"];
-                if(strAction == "order-received" )
+                if(strAction == "order-received" && data.HasMember("order_id") && data.HasMember["client_id"] )
                 {
                     std::string strOrderId = data["order_id"].GetString();
                     std::string strClientId = data["client_id"].GetString();
@@ -534,6 +534,19 @@ TradeAccount TDEngineEmx::load_account(int idx, const json& j_config)
     unit.wsUrl = wsUrl;
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
+    if(j_config.find("increment_size") != j_config.end()) {
+            json increment_info = j_config["increment_size"].get<json>();
+            if(increment_info.is_object())
+            {
+                for (json::iterator it = increment_info.begin(); it != increment_info.end(); ++it)
+                {
+                    std::string coinpair = it.key();
+                    std::string size = it.value();
+                    unit.mapPriceIncrement.insert(std::make_pair(coinpair, std::round(std::stod(size)*scale_offset)));
+                }
+            }
+    }
+
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
@@ -602,6 +615,7 @@ void TDEngineEmx::connect(long timeout_nsec)
             }
         }
         */
+       unit.mapPriceIncrement.insert(std::make_pair(pair.first,stPriceIncrement));
    }
 
 void TDEngineEmx::login(long timeout_nsec)
@@ -852,8 +866,8 @@ void TDEngineEmx::dealPriceVolume(AccountUnitEmx& unit,const std::string& symbol
         }
         char strVolume[64];
         char strPrice[64];
-        sprintf(strVolume,"%.8lf",dDealVolume + 0.0000000001);
-        sprintf(strPrice,"%.8lf",dDealPrice + 0.0000000001);
+        sprintf(strVolume,"%.4lf",dDealVolume + 0.00001);
+        sprintf(strPrice,"%.2lf",dDealPrice + 0.001);
         dDealVolume = std::stod(strVolume);
         dDealPrice = std::stod(strPrice);
         KF_LOG_INFO(logger, "[dealPriceVolume]  (symbol)" << symbol << " (Volume)" << nVolume << " (Price)" << nPrice << " (FixedVolume)" << strVolume << " (FixedPrice)" << strPrice);
@@ -1129,7 +1143,7 @@ std::string TDEngineEmx::createInsertOrderString(const char *code,const char* st
     {
         std::stringstream ss;
         ss.setf(std::ios::fixed);
-        ss.precision(8);
+        ss.precision(2);
         ss << price;
         std::string strPrice = ss.str();
         writer.Key("price");
@@ -1137,7 +1151,7 @@ std::string TDEngineEmx::createInsertOrderString(const char *code,const char* st
     }
     std::stringstream ss;
     ss.setf(std::ios::fixed);
-    ss.precision(8);
+    ss.precision(4);
     ss << size;
     std::string strSize = ss.str();
     writer.Key("size");

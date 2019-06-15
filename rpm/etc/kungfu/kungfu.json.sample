@@ -705,7 +705,11 @@
 					"baseUrl": "https://api.emx.com",
 					"wsUrl": "api.emx.com",
 					"whiteLists": {
-						"btc_j19": "BTCJ19"
+						"btc_m19": "BTCM19"
+					},
+					"increment_size":
+					{
+						"btc_m19": "0.5"
 					},
 					"positionWhiteLists": {
 						"ETC": "ETC",
