@@ -581,7 +581,7 @@ void TDEngineEmx::connect(long timeout_nsec)
    void TDEngineEmx::getPriceIncrement(AccountUnitEmx& unit)
    { 
         KF_LOG_INFO(logger, "[getPriceIncrement]");
-        std::string requestPath = "/contracts/active";
+        std::string requestPath = "/v1/contracts/active";
         string url = unit.baseUrl + requestPath ;
         std::string strTimestamp = getTimestampStr();
 
