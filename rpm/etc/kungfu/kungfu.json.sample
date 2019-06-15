@@ -707,10 +707,6 @@
 					"whiteLists": {
 						"btc_m19": "BTCM19"
 					},
-					"increment_size":
-					{
-						"btc_m19": "0.5"
-					},
 					"positionWhiteLists": {
 						"ETC": "ETC",
 						"BTC": "BTC",

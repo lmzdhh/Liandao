@@ -534,21 +534,6 @@ TradeAccount TDEngineEmx::load_account(int idx, const json& j_config)
     unit.wsUrl = wsUrl;
     KF_LOG_INFO(logger, "[load_account] (api_key)" << api_key << " (baseUrl)" << unit.baseUrl);
 
-    if(j_config.find("increment_size") != j_config.end()) {
-            json increment_info = j_config["increment_size"].get<json>();
-            if(increment_info.is_object())
-            {
-                for (json::iterator it = increment_info.begin(); it != increment_info.end(); ++it)
-                {
-                    std::string coinpair = it.key();
-                    std::string size = it.value();
-                    PriceIncrement increment;
-                    increment.nPriceIncrement = std::round(std::stod(size)*scale_offset);
-                    unit.mapPriceIncrement.insert(std::make_pair(coinpair,increment));
-                }
-            }
-    }
-
 
     unit.coinPairWhiteList.ReadWhiteLists(j_config, "whiteLists");
     unit.coinPairWhiteList.Debug_print();
@@ -570,7 +555,7 @@ TradeAccount TDEngineEmx::load_account(int idx, const json& j_config)
     Document json;
     get_account(unit, json);
     
-    //getPriceIncrement(unit);
+    getPriceIncrement(unit);
     // set up
     TradeAccount account = {};
     //partly copy this fields
@@ -594,29 +579,50 @@ void TDEngineEmx::connect(long timeout_nsec)
 }
 
    void TDEngineEmx::getPriceIncrement(AccountUnitEmx& unit)
-   {
-       /*
-        auto& coinPairWhiteList = unit.coinPairWhiteList.GetKeyIsStrategyCoinpairWhiteList();
-        for(auto& pair : coinPairWhiteList)
-        {
-            Document json;
-            const auto response = Get("/api/v1/symbols/" + pair.second,"",unit);
-            json.Parse(response.text.c_str());
-            const static std::string strSuccesse = "200000";
-            if(json.HasMember("code") && json["code"].GetString() == strSuccesse)
-            {
-                auto& data = json["data"];
-                PriceIncrement stPriceIncrement;
-                stPriceIncrement.nBaseMinSize = std::round(std::stod(data["baseMinSize"].GetString())* scale_offset);
-                stPriceIncrement.nPriceIncrement = std::round(std::stod(data["priceIncrement"].GetString()) * scale_offset);
-                stPriceIncrement.nQuoteIncrement = std::round(std::stod(data["quoteIncrement"].GetString()) * scale_offset);
-                unit.mapPriceIncrement.insert(std::make_pair(pair.first,stPriceIncrement));
+   { 
+        KF_LOG_INFO(logger, "[getPriceIncrement]");
+        std::string requestPath = "/contracts/active";
+        string url = unit.baseUrl + requestPath ;
+        std::string strTimestamp = getTimestampStr();
 
-                 KF_LOG_INFO(logger, "[getPriceIncrement] (BaseMinSize )" << stPriceIncrement.nBaseMinSize << "(PriceIncrement)" << stPriceIncrement.nPriceIncrement
-                                    << "(QuoteIncrement)" << stPriceIncrement.nQuoteIncrement);
+        std::string strSignatrue = sign(unit,"GET",strTimestamp,requestPath);
+        cpr::Header mapHeader = cpr::Header{{"EMX-ACCESS-SIG",strSignatrue},
+                                            {"EMX-ACCESS-TIMESTAMP",strTimestamp},
+                                            {"EMX-ACCESS-KEY",unit.api_key}};
+        KF_LOG_INFO(logger, "EMX-ACCESS-SIG = " << strSignatrue 
+                            << ", EMX-ACCESS-TIMESTAMP = " << strTimestamp 
+                            << ", EMX-API-KEY = " << unit.api_key);
+
+
+        std::unique_lock<std::mutex> lock(g_httpMutex);
+        const auto response = cpr::Get(Url{url}, Header{mapHeader}, Timeout{10000} );
+        lock.unlock();
+        KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
+                                                " (response.error.message) " << response.error.message <<
+                                               " (response.text) " << response.text.c_str());
+        Document json;
+        json.Parse(response.text.c_str());
+
+        if(!json.HasParseError() && json.HasMember("contracts"))
+        {
+            auto& jisonData = json["contracts"];
+            size_t len = jisonData.Size();
+            KF_LOG_INFO(logger, "[getPriceIncrement] (accounts.length)" << len);
+            for(size_t i = 0; i < len; i++)
+            {
+                std::string symbol = jisonData.GetArray()[i]["contract_code"].GetString();
+                std::string ticker = unit.coinPairWhiteList.GetKeyByValue(symbol);
+                KF_LOG_INFO(logger, "[getPriceIncrement] (symbol) " << symbol << " (ticker) " << ticker);
+                if(ticker.length() > 0) { 
+                    std::string size = jisonData.GetArray()[i]["minimum_price_increment"].GetString(); 
+                    PriceIncrement increment;
+                    increment.nPriceIncrement = std::round(std::stod(size)*scale_offset);
+                    unit.mapPriceIncrement.insert(std::make_pair(ticker,increment));           
+                    KF_LOG_INFO(logger, "[getPriceIncrement] (symbol) " << symbol << " (position) " << increment.nPriceIncrement);
+                }
             }
         }
-        */
+        
    }
 
 void TDEngineEmx::login(long timeout_nsec)
@@ -791,7 +797,7 @@ void TDEngineEmx::req_investor_position(const LFQryPositionField* data, int acco
     std::string errorMsg = "";
     Document d;
     get_account(unit, d);
-     KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
+    KF_LOG_INFO(logger, "[req_investor_position] (get_account)" );
     if(d.IsObject() && d.HasMember("code") && d.HasMember("message"))
     {
         errorId =  d["code"].GetInt();
