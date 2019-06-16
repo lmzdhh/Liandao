@@ -276,15 +276,20 @@ bool TDEngineBitmex::loadExchangeOrderFilters(AccountUnitBitmex& unit, Document 
         int symbolsCount = doc.Size();
         for (SizeType i = 0; i < symbolsCount; i++) {
             const rapidjson::Value &sym = doc[i];
-            if (sym.HasMember("symbol") && sym.HasMember("tickSize")) {
+            if (sym.HasMember("symbol") && sym.HasMember("tickSize") && sym.HasMember("lotSize")) {
                 std::string symbol = sym["symbol"].GetString();
                 double tickSize = sym["tickSize"].GetDouble();
-                KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)"
-                                                                                           << tickSize);
+                double lotSize =0.00000001;
+                if(sym["lotSize"].IsDouble())
+                {
+                    lotSize = sym["lotSize"].GetDouble();
+                }
+                KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)" << tickSize << " (lotSize)" << lotSize);
                 //0.0000100; 0.001;  1; 10
                 SendOrderFilter afilter;
                 afilter.InstrumentID = symbol;
                 afilter.ticksize = tickSize;
+                afilter.lotsize = lotSize;
                 unit.sendOrderFilters.insert(std::make_pair(symbol, afilter));
             }
         }
@@ -299,7 +304,7 @@ void TDEngineBitmex::debug_print(std::map<std::string, SendOrderFilter> &sendOrd
     while(map_itr != sendOrderFilters.end())
     {
         KF_LOG_DEBUG(logger, "[debug_print] sendOrderFilters (symbol)" << map_itr->first <<
-                                                                      " (tickSize)" << map_itr->second.ticksize);
+                                                                      " (tickSize)" << map_itr->second.ticksize << " (lotSize)" <<  map_itr->second.lotsize);
         map_itr++;
     }
 }
@@ -311,6 +316,7 @@ SendOrderFilter TDEngineBitmex::getSendOrderFilter(AccountUnitBitmex& unit, cons
     }
     SendOrderFilter defaultFilter;
     defaultFilter.ticksize = 0.00000001;
+    defaultFilter.lotsize = 0.00000001;
     defaultFilter.InstrumentID = "";
     return defaultFilter;
 }
@@ -519,7 +525,14 @@ int64_t TDEngineBitmex::fixPriceTickSize(double keepPrecision, int64_t price, bo
     }
     return new_price;
 }
-
+int64_t TDEngineBitmex::fixVolumeLotSize(double keepPrecision, int64_t volume)
+{
+    int64_t tickSize = int64_t((keepPrecision+0.000000001)* scale_offset);
+    int64_t count = volume/tickSize;
+    int64_t new_volume = tickSize * count;
+     KF_LOG_INFO(logger, "[fixVolumeLotSize]" << " (input volume)" << volume << " (output volume)"  << new_volume);
+    return new_volume;
+}
 int TDEngineBitmex::Round(std::string tickSizeStr) {
     size_t docAt = tickSizeStr.find( ".", 0 );
     size_t oneAt = tickSizeStr.find( "1", 0 );
@@ -579,19 +592,20 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
     SendOrderFilter filter = getSendOrderFilter(unit, ticker.c_str());
 
     int64_t fixedPrice = fixPriceTickSize(filter.ticksize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
-
+    int64_t fixedVolume = fixVolumeLotSize(filter.lotsize, data->Volume);
     KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<
                                                                      " (LimitPrice)" << data->LimitPrice <<
                                                                      " (ticksize)" << filter.ticksize <<
-                                                                     " (fixedPrice)" << fixedPrice);
+                                                                     " (fixedPrice)" << fixedPrice <<
+                                                                     " (fixedVolume)" << fixedVolume);
 	addNewQueryOrdersAndTrades(unit, data->InstrumentID, data->OrderRef,data->Direction, LF_CHAR_Unknown, 0, requestId);
     send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
-            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef, d);
+            GetType(data->OrderPriceType).c_str(), fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef, d);
     int nRetryTimes=0;
     while(ShouldRetry(d) && nRetryTimes < unit.maxRetryCount)
     {
         send_order(unit, ticker.c_str(), GetSide(data->Direction).c_str(),
-            GetType(data->OrderPriceType).c_str(), data->Volume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef, d);
+            GetType(data->OrderPriceType).c_str(), fixedVolume*1.0/scale_offset, fixedPrice*1.0/scale_offset, data->OrderRef, d);
     }
     /*
      {"orderID":"18eb8aeb-3a29-b546-b2fe-1b55f24ef63f","clOrdID":"5","clOrdLinkID":"","account":272991,"symbol":"XBTUSD","side":"Buy",

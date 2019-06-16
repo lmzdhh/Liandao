@@ -44,6 +44,7 @@ struct SendOrderFilter
 {
     std::string InstrumentID;   //合约代码
     double ticksize; //for price round.
+    double lotsize;
     //...other
 };
 
@@ -176,6 +177,7 @@ private:
     inline int64_t getTimestamp();
 
     int64_t fixPriceTickSize(double keepPrecision, int64_t price, bool isBuy);
+    int64_t fixVolumeLotSize(double keepPrecision, int64_t volume);
     bool loadExchangeOrderFilters(AccountUnitBitmex& unit, Document &doc);
     void debug_print(std::map<std::string, SendOrderFilter> &sendOrderFilters);
     SendOrderFilter getSendOrderFilter(AccountUnitBitmex& unit, const std::string& symbol);
