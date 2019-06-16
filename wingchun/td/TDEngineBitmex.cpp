@@ -284,6 +284,10 @@ bool TDEngineBitmex::loadExchangeOrderFilters(AccountUnitBitmex& unit, Document 
                 {
                     lotSize = sym["lotSize"].GetDouble();
                 }
+                else if(sym["lotSize"].IsInt())
+                {
+                    lotSize = sym["lotSize"].GetInt()*1.0;
+                }
                 KF_LOG_INFO(logger, "[loadExchangeOrderFilters] sendOrderFilters (symbol)" << symbol << " (tickSize)" << tickSize << " (lotSize)" << lotSize);
                 //0.0000100; 0.001;  1; 10
                 SendOrderFilter afilter;
@@ -509,7 +513,7 @@ void TDEngineBitmex::req_qry_account(const LFQryAccountField *data, int account_
 int64_t TDEngineBitmex::fixPriceTickSize(double keepPrecision, int64_t price, bool isBuy) {
 
 
-    int64_t tickSize = int64_t((keepPrecision+0.000000001)* scale_offset);
+    int64_t tickSize = std::round((keepPrecision+0.000000001)* scale_offset);
 
     KF_LOG_INFO(logger, "[fixPriceTickSize input]" << "(price)" << price);
     int64_t count = price/tickSize;
@@ -527,7 +531,7 @@ int64_t TDEngineBitmex::fixPriceTickSize(double keepPrecision, int64_t price, bo
 }
 int64_t TDEngineBitmex::fixVolumeLotSize(double keepPrecision, int64_t volume)
 {
-    int64_t tickSize = int64_t((keepPrecision+0.000000001)* scale_offset);
+    int64_t tickSize = std::round((keepPrecision+0.000000001)* scale_offset);
     int64_t count = volume/tickSize;
     int64_t new_volume = tickSize * count;
      KF_LOG_INFO(logger, "[fixVolumeLotSize]" << " (input volume)" << volume << " (output volume)"  << new_volume);
