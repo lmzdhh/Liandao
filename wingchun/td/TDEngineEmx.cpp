@@ -152,9 +152,11 @@ std::string TDEngineEmx::getTimestampStr()
 
                     auto it2 = m_mapInputOrder.find(strClientId);
                     if(it2 != m_mapInputOrder.end())
-                    {
-                        m_mapInputOrder.insert(std::make_pair(strOrderId,it2->second));
+                    { 
+                        auto data = it2->second;
                         m_mapInputOrder.erase(it2);
+                        m_mapInputOrder.insert(std::make_pair(strOrderId,data));
+                        
                     }
                 }
                 else if(strAction == "accepted" )
@@ -381,7 +383,7 @@ std::string TDEngineEmx::sign(const AccountUnitEmx& unit,const std::string& meth
  }
 int TDEngineEmx::lws_write_msg(struct lws* conn)
 {
-	KF_LOG_INFO(logger, "TDEngineEmx::lws_write_msg:" );
+	//KF_LOG_INFO(logger, "TDEngineEmx::lws_write_msg:" );
     
     int ret = 0;
     std::string strMsg = "";

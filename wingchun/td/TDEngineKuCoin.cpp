@@ -295,8 +295,8 @@ void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
         if(strcmp(json["type"].GetString(), "pong") == 0)
 		{
 			KF_LOG_INFO(logger, "MDEngineKuCoin::on_lws_data: pong");
-           m_isPong = true;
-           m_conn = conn;
+            m_isPong = true;
+            m_conn = conn;
 		}
 		if(strcmp(json["type"].GetString(), "message") == 0)
 		{
