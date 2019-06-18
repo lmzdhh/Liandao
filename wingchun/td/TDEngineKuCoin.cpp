@@ -1061,6 +1061,7 @@ void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& 
 
 void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOrderField data,int requestId,const std::string& ticker)
 {
+     KF_LOG_DEBUG(logger, "[handle_order_insert]" << " (current thread)" << std::this_thread::get_id());
     int errorId = 0;
     std::string errorMsg = "";
 
