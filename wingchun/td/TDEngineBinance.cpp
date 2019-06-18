@@ -975,6 +975,7 @@ void TDEngineBinance::onRtnNewOrder(const LFInputOrderField* data, AccountUnitBi
                             1/*islast*/, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
     std::unique_lock<std::mutex> lck(*unit.mutex_order_and_trade);
     unit.ordersMap.insert(std::make_pair(remoteOrderId,rtn_order));
+    //lck.unlock();
     std::vector<std::string>::iterator it;
     for(it=unit.wsOrderStatus.begin();it!=unit.wsOrderStatus.end();it++)
     {
@@ -2243,6 +2244,7 @@ void TDEngineBinance::on_lws_data(struct lws* conn, const char* data, size_t len
         {
             KF_LOG_INFO(logger, "TDEngineBinance::on_lws_data. Order Update ");
             AccountUnitBinance& unit= findAccountUnitByWebsocketConn(conn);
+            std::lock_guard<std::mutex> lck(*unit.mutex_order_and_trade);
             onOrder(unit,json);
         }
         else if(eventType == "outboundAccountInfo")
@@ -2275,11 +2277,17 @@ std::string TDEngineBinance::parseJsonToString(Document &d){
 
     return buffer.GetString();
 }
+/*
+ {"e":"executionReport","E":1560804132647,"s":"BTCPAX","c":"1","S":"SELL","o":"MARKET","f":"GTC","q":"0.49680700","p":"0.00000000",
+ "P":"0.00000000","F":"0.00000000","g":-1,"C":"null","x":"TRADE","X":"PARTIALLY_FILLED","r":"NONE","i":44992393,"l":"0.02656900",
+ "z":"0.02656900","L":"9268.56000000","n":"0.24625637","N":"PAX","T":1560804132640,"t":4718951,"I":94230823,"w":false,"m":false,
+ "M":true,"O":1560804132640,"Z":"246.25637064","Y":"246.25637064"}
+*/
 void TDEngineBinance::onOrder(AccountUnitBinance& unit, Document& json) {
 	KF_LOG_INFO(logger, "TDEngineBinance::onOrder");
     if (json.HasMember("c")&& json.HasMember("i") && json.HasMember("X")&& json.HasMember("l")&& json.HasMember("L")&& json.HasMember("z")&& json.HasMember("t")) {
 		
-		std::lock_guard<std::mutex> lck(*unit.mutex_order_and_trade);		
+		//std::lock_guard<std::mutex> lck(*unit.mutex_order_and_trade);		
 		std::string remoteOrderId= std::to_string(json["i"].GetInt64());      
 		auto it = unit.ordersMap.find(remoteOrderId);
 		if (it == unit.ordersMap.end())
