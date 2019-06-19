@@ -1394,7 +1394,7 @@ void TDEngineKuCoin::getResponse(int http_status_code, std::string responseText,
         }
         else if(responseText.size() > 0)
         {
-            val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
+            val.SetString(responseText.c_str(), responseText.length(), allocator);
         }
         else
         {
