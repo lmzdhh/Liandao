@@ -184,6 +184,7 @@ WC_NAMESPACE_START
 
         public:
             void writeErrorLog(std::string strError);
+            void handle_lws_data(struct lws* conn,std::string data);
             void on_lws_data(struct lws* conn, const char* data, size_t len);
             void onOrderChange( Document& d);
             void onOrder(const PendingOrderStatus& stPendingOrderStatus);

@@ -15,6 +15,7 @@
 #include <mutex>
 #include <chrono>
 #include <functional>
+#include <atomic>
 #include "../../utils/crypto/openssl_util.h"
 
 using cpr::Delete;
@@ -281,12 +282,13 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
         }
  }
 
-void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
+
+void TDEngineKuCoin::handle_lws_data(struct lws* conn,std::string data)
 {
     //std::string strData = dealDataSprit(data);
 	//KF_LOG_INFO(logger, "TDEngineKuCoin::on_lws_data: " << data);
     Document json;
-	json.Parse(data);
+	json.Parse(data.c_str());
 
     if(!json.HasParseError() && json.IsObject() && json.HasMember("type") && json["type"].IsString())
 	{
@@ -303,12 +305,23 @@ void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
 		}
 		if(strcmp(json["type"].GetString(), "message") == 0)
 		{
-           onOrderChange(json);
+            onOrderChange(json);
 		}	
 	} else 
     {
 		KF_LOG_ERROR(logger, "MDEngineKuCoin::on_lws_data . parse json error: " << data);
 	}
+}
+void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
+{
+    if(nullptr == m_ThreadPoolPtr)
+    {
+        handle_lws_data(conn,std::string(data));
+    }
+    else
+    {
+        m_ThreadPoolPtr->commit(std::bind(&TDEngineKuCoin::handle_lws_data,this,conn,std::string(data)));
+    }
 	
 }
 
@@ -660,7 +673,7 @@ TradeAccount TDEngineKuCoin::load_account(int idx, const json& j_config)
     {
         m_ThreadPoolPtr = new ThreadPool(thread_pool_size);
     }
-    KF_LOG_INFO(logger, "[load_account] (current_td_index)" << m_CurrentTDIndex);
+    KF_LOG_INFO(logger, "[load_account] (thread_pool_size)" << thread_pool_size);
 
     AccountUnitKuCoin& unit = account_units[idx];
     unit.api_key = api_key;
@@ -1610,9 +1623,10 @@ void TDEngineKuCoin::genUniqueKey()
 }
 
 //clientid =  m_uniqueKey+orderRef
+std::atomic<uint64_t> nIndex{0};
 std::string TDEngineKuCoin::genClinetid(const std::string &orderRef)
 {
-    static int nIndex = 0;
+    //static int nIndex = 0;
     return m_uniqueKey + orderRef + std::to_string(nIndex++);
 }
 
