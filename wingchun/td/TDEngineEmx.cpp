@@ -170,11 +170,11 @@ std::string TDEngineEmx::getTimestampStr()
                         on_rtn_order(&(it->second));
                     }
                     //
-                    auto it2 = m_mapInputOrder.find(strOrderId);
-                    if(it2 != m_mapInputOrder.end())
-                    {
-                        m_mapInputOrder.erase(it2);
-                    }
+                    //auto it2 = m_mapInputOrder.find(strOrderId);
+                    //if(it2 != m_mapInputOrder.end())
+                    //{
+                    //    m_mapInputOrder.erase(it2);
+                    //}
                 }
                 else if(strAction == "rejected")
                 {
