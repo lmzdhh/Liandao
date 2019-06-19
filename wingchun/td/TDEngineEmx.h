@@ -199,6 +199,7 @@ WC_NAMESPACE_START
             std::map<std::string,LFRtnOrderField> m_mapNewOrder;
             std::map<std::string,LFInputOrderField> m_mapInputOrder;
             std::map<std::string,LFOrderActionField> m_mapOrderAction;
+            std::map<std::string,int64_t> m_mapCanceledOrder;
         private:
             std::string m_uniqueKey;
             int HTTP_RESPONSE_OK = 200;

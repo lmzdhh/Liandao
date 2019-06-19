@@ -124,8 +124,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 
 std::string TDEngineEmx::getTimestampStr()
 {
-    long long timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    return  std::to_string(timestamp);
+    //long long timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return  std::to_string(getMSTime());
 }
 
 
@@ -218,14 +218,16 @@ std::string TDEngineEmx::getTimestampStr()
                     if(it != m_mapOrder.end())
                     {
                         it->second.OrderStatus = LF_CHAR_Canceled;
-                        on_rtn_order(&(it->second));
+                        //撤单回报延时返回
+                        m_mapCanceledOrder.insert(std::make_pair(strOrderId,getMSTime()));
+                        //on_rtn_order(&(it->second));
 
                         auto it_id = localOrderRefRemoteOrderId.find(it->second.OrderRef);
                         if(it_id != localOrderRefRemoteOrderId.end())
                         {
                             localOrderRefRemoteOrderId.erase(it_id);
                         }
-                        m_mapOrder.erase(it);
+                        //m_mapOrder.erase(it);
                     }
                     //
                     auto it2 = m_mapInputOrder.find(strOrderId);
@@ -1024,12 +1026,29 @@ void TDEngineEmx::set_reader_thread()
 
 void TDEngineEmx::loopwebsocket()
 {
-        //time_t nLastTime = time(0);
-
 		while(isRunning)
 		{
             //KF_LOG_INFO(logger, "TDEngineEmx::loop:lws_service");
 			lws_service( context, rest_get_interval_ms );
+            //延时返回撤单回报
+            std::lock_guard<std::mutex> lck(*m_mutexOrder); 
+            for(auto canceled_order = m_mapCanceledOrder.begin();canceled_order != m_mapCanceledOrder.end();++canceled_order)
+            {
+                if(getMSTime() - canceled_order->second >= 1000)
+                {// 撤单成功超过1秒时，回报205
+                    auto it = m_mapOrder.find(canceled_order->first);
+                    if(it != m_mapOrder.end())
+                    {
+                        on_rtn_order(&(it->second));
+                        m_mapOrder.erase(it);
+                    }
+                    canceled_order = m_mapCanceledOrder.erase(canceled_order);
+                    if(canceled_order == m_mapCanceledOrder.end())
+                    {
+                        break;
+                    }
+                }
+            }
 		}
 }
 
