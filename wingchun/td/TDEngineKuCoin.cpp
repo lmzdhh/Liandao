@@ -1381,27 +1381,33 @@ void TDEngineKuCoin::getResponse(int http_status_code, std::string responseText,
         
         Document d;
         d.Parse(responseText.c_str());
-        KF_LOG_INFO(logger, "[getResponse] (err) (responseText)" << responseText.c_str());
-        json.SetObject();
-        Document::AllocatorType& allocator = json.GetAllocator();
-        std::string strErrorID = std::to_string(http_status_code);
-        json.AddMember("code", Document::StringRefType(strErrorID.c_str()), allocator);
-
-        rapidjson::Value val;
-        if(errorMsg.size() > 0)
+        if(!d.HasParseError() && d.IsObject() && d.HasMember("code") && d.HasMember("msg"))
         {
-            val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
-        }
-        else if(responseText.size() > 0)
-        {
-            val.SetString(responseText.c_str(), responseText.length(), allocator);
+            json.Parse(responseText.c_str());
         }
         else
         {
-            val.SetString("unknown error");
+            json.SetObject();
+            Document::AllocatorType& allocator = json.GetAllocator();
+            std::string strErrorID = std::to_string(http_status_code);
+            json.AddMember("code", Document::StringRefType(strErrorID.c_str()), allocator);
+
+            rapidjson::Value val;
+            if(errorMsg.size() > 0)
+            {
+                val.SetString(errorMsg.c_str(), errorMsg.length(), allocator);
+            }
+            else if(responseText.size() > 0)
+            {
+                val.SetString(responseText.c_str(), responseText.length(), allocator);
+            }
+            else
+            {
+                val.SetString("unknown error");
+            }
+            
+            json.AddMember("msg", val, allocator);
         }
-        
-        json.AddMember("msg", val, allocator);
         
     }
 }
