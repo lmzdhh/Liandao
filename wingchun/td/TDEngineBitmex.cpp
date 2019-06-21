@@ -192,6 +192,10 @@ TradeAccount TDEngineBitmex::load_account(int idx, const json& j_config)
     base_interval_ms = j_config["rest_get_interval_ms"].get<int>();
     base_interval_ms = std::max(base_interval_ms,(int64_t)500);
 
+     if(j_config.find("no_response_wait_ms") != j_config.end()) {
+        no_response_wait_ms = j_config["no_response_wait_ms"].get<int>();
+        no_response_wait_ms = std::max(no_response_wait_ms,(int64_t)500);
+    }
     AccountUnitBitmex& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
@@ -628,7 +632,6 @@ void TDEngineBitmex::req_order_insert(const LFInputOrderField* data, int account
                                                                            errorId << " (errorMsg) " << errorMsg);
     } else  if(d.HasMember("orderID"))
     {
-
             //if send successful and the exchange has received ok, then add to  pending query order list
             std::string remoteOrderId = d["orderID"].GetString();
             localOrderRefRemoteOrderId.insert(std::make_pair(std::string(data->OrderRef), remoteOrderId));
@@ -748,7 +751,7 @@ void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const c
 {
     //add new orderId for GetAndHandleOrderTradeResponse
     std::lock_guard<std::mutex> guard_mutex(unit_mutex);
-     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades]");
+    KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades]");
 
     PendingBitmexOrderStatus status;
     memset(&status, 0, sizeof(PendingBitmexOrderStatus));
@@ -773,6 +776,7 @@ void TDEngineBitmex::addNewQueryOrdersAndTrades(AccountUnitBitmex& unit, const c
 	order.Direction = direction;
 
 	unit.ordersMap.insert(std::make_pair(OrderRef, order));
+    unit.ordersInsertTimeMap.insert(std::make_pair(OrderRef,getTimestampMS()));
     KF_LOG_INFO(logger, "[addNewQueryOrdersAndTrades] (InstrumentID) " << InstrumentID
                                                                        << " (OrderRef) " << OrderRef
                                                                        << "(VolumeTraded)" << VolumeTraded);
@@ -796,6 +800,29 @@ void TDEngineBitmex::wsloop()
     {
         int n = lws_service( context, base_interval_ms );
         //std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
+        std::lock_guard<std::mutex> lck(unit_mutex);
+        for(auto& unit:account_units)
+        {
+            auto it = unit.ordersInsertTimeMap.begin();
+            while(it != unit.ordersInsertTimeMap.end())
+            {
+                if(getTimestampMS() - it->second <= no_response_wait_ms)
+                {
+                    ++it;
+                    continue;
+                }
+                //get_order
+                auto it_order = unit.ordersMap.find(it->first);
+                if(it_order != unit.ordersMap.end())
+                {
+                    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(it_order->second.InstrumentID));
+                    if(ticker.length() > 0) {
+                        get_order(unit,ticker.c_str(),it_order->second.OrderRef,it->second);
+                    }  
+                }
+                it = unit.ordersInsertTimeMap.erase(it);
+            }
+        }
     }
 }
 
@@ -1014,6 +1041,52 @@ void TDEngineBitmex::get_products(AccountUnitBitmex& unit, Document& json)
 	return handleResponse(response, json);
 }
 
+std::string time_to_iso_str(int64_t time)
+{
+    tm* gmt_time = gmtime(&time);
+    //2019-06-21T03:03:04.130Z
+    char buf[64];
+    sprintf(buf,"%4d-%2d-%2dT%2d:%2d:%2d.000Z",gmt_time->tm_year+1900,gmt_time->tm_mon+1,gmt_time->tm_mday,gmt_time->tm_hour,gmt_time->tm_min,gmt_time->tm_sec);
+    return buf;
+}
+
+void TDEngineBitmex::get_order(AccountUnitBitmex& unit, const char *code, const char *orderRef,int64_t startTime)
+{
+    char buf[512];
+    std::string strStartTime = time_to_iso_str(startTime);
+    std::string strEndTime = time_to_iso_str(getTimestampMS());
+    sprintf(buf,"?symbol=%s&filter={\"clOrdID\":\"%s\"}&reverse=true&startTime=%s&endTime=%s",code,orderRef,strStartTime.c_str(),strEndTime.c_str());
+    
+    std::string Timestamp = std::to_string(getTimestamp()+g_RequestGap);
+    std::string Method = "GET";
+    std::string requestPath = "/api/v1/order";
+    std::string queryString= buf;
+    std::string body = "";
+
+    string Message = Method + requestPath + queryString + Timestamp + body;
+    KF_LOG_INFO(logger, "[get_order] (Message)" << Message);
+
+    std::string signature = hmac_sha256(unit.secret_key.c_str(), Message.c_str());
+    string url = unit.baseUrl + requestPath + queryString;
+    const auto response = Get(Url{url},
+                               Header{{"api-key", unit.api_key},
+                                      {"Content-Type", "application/json"},
+                                      {"api-signature", signature},
+                                      {"api-expires", Timestamp}}
+                                      , Timeout{30000});
+
+
+    //{ "error": {"message": "Authorization Required","name": "HTTPError"} }
+    KF_LOG_INFO(logger, "[get_order] (url) " << url << " (response.status_code) " << response.status_code <<
+        " (response.error.message) " << response.error.message <<" (response.text) " << response.text.c_str());
+    Document d;
+    handleResponse(response, d);
+    if(!d.HasParseError() && d.IsArray() && d.Size() > 0)
+    {
+        auto& order = d.GetArray()[0];
+        handle_order(unit,order);
+    }  
+}
 //https://www.bitmex.com/api/explorer/#!/Order/Order_new
 void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
                                      const char *side, const char *type, double size, double price,  std::string orderRef, Document& json)
@@ -1191,11 +1264,15 @@ void TDEngineBitmex::cancel_order(AccountUnitBitmex& unit, std::string orderId, 
 
 inline int64_t TDEngineBitmex::getTimestamp()
 {
-    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    return timestamp/1000;
+    long long timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return timestamp;
 }
 
-
+inline int64_t TDEngineBitmex::getTimestampMS()
+{
+    long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    return timestamp;
+}
 
 
 void TDEngineBitmex::on_lws_connection_error(struct lws* conn)
@@ -1357,7 +1434,50 @@ AccountUnitBitmex& TDEngineBitmex::findAccountUnitByWebsocketConn(struct lws * w
 
 
 
-
+void TDEngineBitmex::handle_order(AccountUnitBitmex& unit,Value& order)
+{
+    std::string OrderRef= order["clOrdID"].GetString();
+	auto it = unit.ordersMap.find(OrderRef);
+	if (it == unit.ordersMap.end())
+	{ 
+		KF_LOG_ERROR(logger, "TDEngineBitmex::onOrder,no order match");
+		return;
+	}
+	LFRtnOrderField& rtn_order = it->second;
+    char status=LF_CHAR_NotTouched;
+	if (order.HasMember("ordStatus"))
+    {   
+        status = GetOrderStatus(order["ordStatus"].GetString());				
+    }
+    if(status == LF_CHAR_NotTouched &&  rtn_order.OrderStatus == status)
+    {
+        KF_LOG_INFO(logger, "TDEngineBitmex::onOrder,status is not changed");
+        return;
+    }
+    
+    rtn_order.OrderStatus = status;
+	if (order.HasMember("leavesQty"))
+		rtn_order.VolumeTotal = int64_t(order["leavesQty"].GetDouble()*scale_offset);	
+	if (order.HasMember("side"))
+		rtn_order.Direction = GetDirection(order["side"].GetString());
+	if (order.HasMember("ordType"))
+		rtn_order.OrderPriceType = GetPriceType(order["ordType"].GetString());
+    if (order.HasMember("orderQty"))
+		rtn_order.VolumeTotalOriginal = int64_t(order["orderQty"].GetDouble()*scale_offset);
+	if (order.HasMember("price") && order["price"].IsNumber())
+		rtn_order.LimitPrice = order["price"].GetDouble()*scale_offset;
+	if (order.HasMember("cumQty"))
+		rtn_order.VolumeTraded= int64_t(order["cumQty"].GetDouble()*scale_offset);
+	KF_LOG_INFO(logger, "TDEngineBitmex::onOrder,rtn_order");
+	on_rtn_order(&rtn_order);
+	raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),source_id, MSG_TYPE_LF_RTN_ORDER_BITMEX,1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
+	if (rtn_order.OrderStatus == LF_CHAR_AllTraded || rtn_order.OrderStatus == LF_CHAR_PartTradedNotQueueing ||
+		rtn_order.OrderStatus == LF_CHAR_Canceled || rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing || rtn_order.OrderStatus == LF_CHAR_Error)
+	{
+		unit.ordersMap.erase(it);
+		localOrderRefRemoteOrderId.erase(OrderRef);
+	}
+}
 
 void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 	KF_LOG_INFO(logger, "TDEngineBitmex::onOrder");
@@ -1368,49 +1488,16 @@ void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {
 		auto& arrayData = json["data"];
 		for (SizeType index = 0; index < arrayData.Size(); ++index)
 		{
-			auto& order = arrayData[index];			
-			std::string OrderRef= order["clOrdID"].GetString();
-			auto it = unit.ordersMap.find(OrderRef);
-			if (it == unit.ordersMap.end())
-			{ 
-				KF_LOG_ERROR(logger, "TDEngineBitmex::onOrder,no order match");
-				continue;
-			}
-			LFRtnOrderField& rtn_order = it->second;
-            char status=LF_CHAR_NotTouched;
-			if (order.HasMember("ordStatus"))
-            {   
-                status = GetOrderStatus(order["ordStatus"].GetString());				
-            }
-            if(status == LF_CHAR_NotTouched &&  rtn_order.OrderStatus == status)
+			auto& order = arrayData[index];	
+            std::string OrderRef= order["clOrdID"].GetString();	
+            auto it_time = unit.ordersInsertTimeMap.find(OrderRef);
+            if(it_time != unit.ordersInsertTimeMap.end())
             {
-                KF_LOG_INFO(logger, "TDEngineBitmex::onOrder,status is not changed");
-                continue;
-            }
-            rtn_order.OrderStatus = status;
-			if (order.HasMember("leavesQty"))
-				rtn_order.VolumeTotal = int64_t(order["leavesQty"].GetDouble()*scale_offset);	
-			if (order.HasMember("side"))
-				rtn_order.Direction = GetDirection(order["side"].GetString());
-			if (order.HasMember("ordType"))
-				rtn_order.OrderPriceType = GetPriceType(order["ordType"].GetString());
-			if (order.HasMember("orderQty"))
-				rtn_order.VolumeTotalOriginal = int64_t(order["orderQty"].GetDouble()*scale_offset);
-			if (order.HasMember("price") && order["price"].IsNumber())
-				rtn_order.LimitPrice = order["price"].GetDouble()*scale_offset;
-			if (order.HasMember("cumQty"))
-				rtn_order.VolumeTraded= int64_t(order["cumQty"].GetDouble()*scale_offset);
-			KF_LOG_INFO(logger, "TDEngineBitmex::onOrder,rtn_order");
-			on_rtn_order(&rtn_order);
-			raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-				source_id, MSG_TYPE_LF_RTN_ORDER_BITMEX,
-				1, (rtn_order.RequestID > 0) ? rtn_order.RequestID : -1);
-			if (rtn_order.OrderStatus == LF_CHAR_AllTraded || rtn_order.OrderStatus == LF_CHAR_PartTradedNotQueueing ||
-				rtn_order.OrderStatus == LF_CHAR_Canceled || rtn_order.OrderStatus == LF_CHAR_NoTradeNotQueueing || rtn_order.OrderStatus == LF_CHAR_Error)
-			{
-				unit.ordersMap.erase(it);
-				localOrderRefRemoteOrderId.erase(OrderRef);
-			}
+                unit.ordersInsertTimeMap.erase(it_time);
+            }	
+
+			handle_order(unit,order);
+            
 		}
        
     }

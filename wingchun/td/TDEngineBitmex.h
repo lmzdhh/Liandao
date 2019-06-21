@@ -65,6 +65,7 @@ struct AccountUnitBitmex
     std::vector<PendingBitmexOrderStatus> pendingOrderStatus;
     std::map<std::string, SendOrderFilter> sendOrderFilters;
 	std::map<std::string, LFRtnOrderField> ordersMap;
+    std::map<std::string, int64_t> ordersInsertTimeMap;
     CoinPairWhiteList coinPairWhiteList;
     CoinPairWhiteList positionWhiteList;
 
@@ -138,6 +139,7 @@ private:
 
     int64_t rest_get_interval_ms = 0;
     int64_t base_interval_ms=500;
+    int64_t no_response_wait_ms = 2000;
     std::map<std::string, std::string> localOrderRefRemoteOrderId;
     int m_limitRate_Remain = 0;
     int64_t m_TimeStamp_Reset;
@@ -147,6 +149,7 @@ private:
     AccountUnitBitmex& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onOrder(struct lws * websocketConn, Document& json);
     void onTrade(struct lws * websocketConn, Document& json);
+    void handle_order(AccountUnitBitmex& unit,rapidjson::Value& order);
     void wsloop();
     //void addWebsocketPendingSendMsg(AccountUnitBitmex& unit, std::string msg);
     std::string createAuthJsonString(AccountUnitBitmex& unit );
@@ -163,10 +166,9 @@ private:
     void get_products(AccountUnitBitmex& unit, Document& json);
     void send_order(AccountUnitBitmex& unit, const char *code,
                         const char *side, const char *type, double size, double price, std::string orderRef, Document& json);
-
+    void get_order(AccountUnitBitmex& unit, const char *code, const char *orderRef,int64_t startTime);
     void cancel_all_orders(AccountUnitBitmex& unit, Document& json);
     void cancel_order(AccountUnitBitmex& unit, std::string orderId, Document& json);
-
     //void query_order(AccountUnitBitmex& unit, std::string code, std::string orderId, Document& json);
     void getResponse(int http_status_code, std::string responseText, std::string errorMsg, Document& json);
     void printResponse(const Document& d);
@@ -175,7 +177,7 @@ private:
     std::string getLwsSubscribe(AccountUnitBitmex& unit);
 
     inline int64_t getTimestamp();
-
+    inline int64_t getTimestampMS();
     int64_t fixPriceTickSize(double keepPrecision, int64_t price, bool isBuy);
     int64_t fixVolumeLotSize(double keepPrecision, int64_t volume);
     bool loadExchangeOrderFilters(AccountUnitBitmex& unit, Document &doc);
