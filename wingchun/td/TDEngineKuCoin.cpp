@@ -278,7 +278,7 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
                     }
 
                 }
-                if(strType == "received")
+                if(strType == "received" && data.HasMember("clientOid"))
                 {
                     std::string strClientID = data["clientOid"].GetString();
                     std::string strOrderId = data["orderId"].GetString();
