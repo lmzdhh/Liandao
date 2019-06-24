@@ -85,8 +85,8 @@ static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, voi
 		}
 		case LWS_CALLBACK_CLIENT_RECEIVE:
 		{
-		     ss << "LWS_CALLBACK_CLIENT_RECEIVE.";
-           		//global_md->writeErrorLog(ss.str());
+		    ss << "LWS_CALLBACK_CLIENT_RECEIVE.";
+           	//global_md->writeErrorLog(ss.str());
 			if(global_md)
 			{
 				global_md->on_lws_data(wsi, (const char*)in, len);
@@ -286,7 +286,7 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
 void TDEngineKuCoin::handle_lws_data(struct lws* conn,std::string data)
 {
     //std::string strData = dealDataSprit(data);
-	//KF_LOG_INFO(logger, "TDEngineKuCoin::on_lws_data: " << data);
+	KF_LOG_INFO(logger, "TDEngineKuCoin::on_lws_data: " << data);
     Document json;
 	json.Parse(data.c_str());
 
@@ -314,6 +314,8 @@ void TDEngineKuCoin::handle_lws_data(struct lws* conn,std::string data)
 }
 void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
 {
+    handle_lws_data(conn,std::string(data));
+    /*
     if(nullptr == m_ThreadPoolPtr)
     {
         handle_lws_data(conn,std::string(data));
@@ -322,7 +324,7 @@ void TDEngineKuCoin::on_lws_data(struct lws* conn, const char* data, size_t len)
     {
         m_ThreadPoolPtr->commit(std::bind(&TDEngineKuCoin::handle_lws_data,this,conn,std::string(data)));
     }
-	
+	*/
 }
 
 std::string TDEngineKuCoin::makeSubscribeL3Update(const std::map<std::string,int>& mapAllSymbols)
