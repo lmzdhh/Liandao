@@ -255,7 +255,7 @@ void TDEngineBitmex::connect(long timeout_nsec)
                 KF_LOG_ERROR(logger, "[connect] logged_in = false for loadExchangeOrderFilters return false");
             }
             debug_print(unit.sendOrderFilters);
-            get_order(unit,0);
+            get_order(unit,getTimestampMS());
 			lws_login(unit, 0);
             unit.logged_in = true;
         }
@@ -1446,7 +1446,7 @@ std::string TDEngineBitmex::handle_order(AccountUnitBitmex& unit,Value& order)
 	auto it = unit.ordersMap.find(OrderRef);
 	if (it == unit.ordersMap.end())
 	{ 
-		KF_LOG_ERROR(logger, "TDEngineBitmex::onOrder,no order match");
+		KF_LOG_ERROR(logger, "TDEngineBitmex::onOrder,no order match " << OrderRef);
 		return closed_order;
 	}
 	LFRtnOrderField& rtn_order = it->second;
