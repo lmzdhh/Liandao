@@ -1160,8 +1160,8 @@ void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOr
             //fix defect of use the old value
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data.OrderRef << " (remoteOrderId) "
-               
-            /*                                                        << remoteOrderId);       
+                                                                       << remoteOrderId);      
+            /*                                                           
             std::lock_guard<std::mutex> lck(*m_mutexOrder);
             
             if(m_mapOrder.find(remoteOrderId) == m_mapOrder.end())
