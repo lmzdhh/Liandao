@@ -233,6 +233,11 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
                     auto it = m_mapOrder.find(strOrderId);
                     if(it != m_mapOrder.end())
                     {
+                        auto it2 = localOrderRefRemoteOrderId.find(it->second.OrderRef);
+                        if(it2 != localOrderRefRemoteOrderId.end())
+                        {
+                            localOrderRefRemoteOrderId.erase(it2);
+                        }
                         it->second.OrderStatus = LF_CHAR_Canceled;
                         onOrder( it->second);
                         m_mapOrder.erase(it);
@@ -253,10 +258,15 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
                         it->second.OrderStatus =  it->second.VolumeTraded ==  it->second.nVolume ? LF_CHAR_AllTraded : LF_CHAR_PartTradedQueueing;
                         onOrder( it->second);
                         onTrade(it->second,nSize,nPrice,strTradeId,strTime);
-                       if( it->second.OrderStatus == LF_CHAR_AllTraded)
-                       {
+                        if( it->second.OrderStatus == LF_CHAR_AllTraded)
+                        {
+                            auto it2 = localOrderRefRemoteOrderId.find(it->second.OrderRef);
+                            if(it2 != localOrderRefRemoteOrderId.end())
+                            {
+                                localOrderRefRemoteOrderId.erase(it2);
+                            }
                             m_mapOrder.erase(it);
-                       }
+                        }
                     }
 
                     strOrderId = data["makerOrderId"].GetString();
@@ -270,11 +280,16 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
                         it->second.VolumeTraded += nSize;
                         it->second.OrderStatus =  it->second.VolumeTraded ==  it->second.nVolume ? LF_CHAR_AllTraded : LF_CHAR_PartTradedQueueing;
                         onOrder( it->second);
-                       onTrade(it->second,nSize,nPrice,strTradeId,strTime);
-                       if( it->second.OrderStatus == LF_CHAR_AllTraded)
-                       {
+                        onTrade(it->second,nSize,nPrice,strTradeId,strTime);
+                        if( it->second.OrderStatus == LF_CHAR_AllTraded)
+                        {
+                            auto it2 = localOrderRefRemoteOrderId.find(it->second.OrderRef);
+                            if(it2 != localOrderRefRemoteOrderId.end())
+                            {
+                                localOrderRefRemoteOrderId.erase(it2);
+                            }
                             m_mapOrder.erase(it);
-                       }
+                        }
                     }
 
                 }
@@ -1146,6 +1161,7 @@ void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOr
                                                                        data.OrderRef << " (remoteOrderId) "
                                                                        << remoteOrderId);       
             std::lock_guard<std::mutex> lck(*m_mutexOrder);
+            /*
             if(m_mapOrder.find(remoteOrderId) == m_mapOrder.end())
             {
                 stPendingOrderStatus.OrderStatus = LF_CHAR_NotTouched;
@@ -1153,6 +1169,8 @@ void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOr
                 m_mapOrder.insert(std::make_pair(remoteOrderId,stPendingOrderStatus));
                 localOrderRefRemoteOrderId.insert(std::make_pair(data.OrderRef,remoteOrderId));
             }
+            */
+            
             auto it = m_mapNewOrder.find(stPendingOrderStatus.strClientId);
             if(it != m_mapNewOrder.end())
             {
