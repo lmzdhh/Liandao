@@ -255,6 +255,7 @@ void TDEngineBitmex::connect(long timeout_nsec)
                 KF_LOG_ERROR(logger, "[connect] logged_in = false for loadExchangeOrderFilters return false");
             }
             debug_print(unit.sendOrderFilters);
+            get_order(unit,0);
 			lws_login(unit, 0);
             unit.logged_in = true;
         }
@@ -800,29 +801,26 @@ void TDEngineBitmex::wsloop()
     {
         int n = lws_service( context, base_interval_ms );
         //std::cout << " 3.1415 loop() lws_service (n)" << n << std::endl;
-        std::lock_guard<std::mutex> lck(unit_mutex);
         for(auto& unit:account_units)
         {
+            std::lock_guard<std::mutex> lck(unit_mutex);
             auto it = unit.ordersInsertTimeMap.begin();
-            while(it != unit.ordersInsertTimeMap.end())
-            {
-                if(getTimestampMS() - it->second <= no_response_wait_ms)
-                {
-                    ++it;
-                    continue;
-                }
-                //get_order
-                auto it_order = unit.ordersMap.find(it->first);
-                if(it_order != unit.ordersMap.end())
-                {
-                    std::string ticker = unit.coinPairWhiteList.GetValueByKey(std::string(it_order->second.InstrumentID));
-                    if(ticker.length() > 0) {
-                        get_order(unit,ticker.c_str(),it_order->second.OrderRef,it->second);
-                    }  
-                }
-                it = unit.ordersInsertTimeMap.erase(it);
+            if(it == unit.ordersInsertTimeMap.end() || getTimestampMS() - it->second < no_response_wait_ms)
+            {//没有可查询订单 或 订单时间间隔未到 
+                continue;
             }
+            auto list_orders = get_order(unit,it->second);
+            for(auto& order:list_orders)
+            {
+                it == unit.ordersInsertTimeMap.find(order);
+                if(it != unit.ordersInsertTimeMap.end())
+                {
+                    unit.ordersInsertTimeMap.erase(it);
+                }
+            }
+            
         }
+
     }
 }
 
@@ -1043,19 +1041,21 @@ void TDEngineBitmex::get_products(AccountUnitBitmex& unit, Document& json)
 
 std::string time_to_iso_str(int64_t time)
 {
+    time/=1000;
     tm* gmt_time = gmtime(&time);
     //2019-06-21T03:03:04.130Z
     char buf[64];
-    sprintf(buf,"%4d-%2d-%2dT%2d:%2d:%2d.000Z",gmt_time->tm_year+1900,gmt_time->tm_mon+1,gmt_time->tm_mday,gmt_time->tm_hour,gmt_time->tm_min,gmt_time->tm_sec);
+    sprintf(buf,"%04d-%02d-%02dT%02d:%02d:%02d.000Z",gmt_time->tm_year+1900,gmt_time->tm_mon+1,gmt_time->tm_mday,gmt_time->tm_hour,gmt_time->tm_min,gmt_time->tm_sec);
     return buf;
 }
 
-void TDEngineBitmex::get_order(AccountUnitBitmex& unit, const char *code, const char *orderRef,int64_t startTime)
+std::vector<std::string> TDEngineBitmex::get_order(AccountUnitBitmex& unit,int64_t startTime)
 {
+    std::vector<std::string> listOrders;
     char buf[512];
     std::string strStartTime = time_to_iso_str(startTime);
     std::string strEndTime = time_to_iso_str(getTimestampMS());
-    sprintf(buf,"?symbol=%s&filter={\"clOrdID\":\"%s\"}&reverse=true&startTime=%s&endTime=%s",code,orderRef,strStartTime.c_str(),strEndTime.c_str());
+    sprintf(buf,"?startTime=%s&endTime=%s",strStartTime.c_str(),strEndTime.c_str());
     
     std::string Timestamp = std::to_string(getTimestamp()+g_RequestGap);
     std::string Method = "GET";
@@ -1083,8 +1083,13 @@ void TDEngineBitmex::get_order(AccountUnitBitmex& unit, const char *code, const 
     handleResponse(response, d);
     if(!d.HasParseError() && d.IsArray() && d.Size() > 0)
     {
-        auto& order = d.GetArray()[0];
-        handle_order(unit,order);
+        for(int i =0;i < d.Size();++i)
+        {
+            auto& order = d.GetArray()[i];
+            std::string closed_order = handle_order(unit,order);
+            if(!closed_order.empty())
+                listOrders.push_back(closed_order);
+        }
     }  
 }
 //https://www.bitmex.com/api/explorer/#!/Order/Order_new
@@ -1434,14 +1439,15 @@ AccountUnitBitmex& TDEngineBitmex::findAccountUnitByWebsocketConn(struct lws * w
 
 
 
-void TDEngineBitmex::handle_order(AccountUnitBitmex& unit,Value& order)
+std::string TDEngineBitmex::handle_order(AccountUnitBitmex& unit,Value& order)
 {
+    std::string closed_order = "";
     std::string OrderRef= order["clOrdID"].GetString();
 	auto it = unit.ordersMap.find(OrderRef);
 	if (it == unit.ordersMap.end())
 	{ 
 		KF_LOG_ERROR(logger, "TDEngineBitmex::onOrder,no order match");
-		return;
+		return closed_order;
 	}
 	LFRtnOrderField& rtn_order = it->second;
     char status=LF_CHAR_NotTouched;
@@ -1452,7 +1458,7 @@ void TDEngineBitmex::handle_order(AccountUnitBitmex& unit,Value& order)
     if(status == LF_CHAR_NotTouched &&  rtn_order.OrderStatus == status)
     {
         KF_LOG_INFO(logger, "TDEngineBitmex::onOrder,status is not changed");
-        return;
+        return closed_order;
     }
     
     rtn_order.OrderStatus = status;
@@ -1476,7 +1482,9 @@ void TDEngineBitmex::handle_order(AccountUnitBitmex& unit,Value& order)
 	{
 		unit.ordersMap.erase(it);
 		localOrderRefRemoteOrderId.erase(OrderRef);
+        closed_order = OrderRef;
 	}
+    return closed_order;
 }
 
 void TDEngineBitmex::onOrder(struct lws* conn, Document& json) {

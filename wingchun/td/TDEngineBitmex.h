@@ -149,7 +149,7 @@ private:
     AccountUnitBitmex& findAccountUnitByWebsocketConn(struct lws * websocketConn);
     void onOrder(struct lws * websocketConn, Document& json);
     void onTrade(struct lws * websocketConn, Document& json);
-    void handle_order(AccountUnitBitmex& unit,rapidjson::Value& order);
+    std::string handle_order(AccountUnitBitmex& unit,rapidjson::Value& order);
     void wsloop();
     //void addWebsocketPendingSendMsg(AccountUnitBitmex& unit, std::string msg);
     std::string createAuthJsonString(AccountUnitBitmex& unit );
@@ -166,7 +166,7 @@ private:
     void get_products(AccountUnitBitmex& unit, Document& json);
     void send_order(AccountUnitBitmex& unit, const char *code,
                         const char *side, const char *type, double size, double price, std::string orderRef, Document& json);
-    void get_order(AccountUnitBitmex& unit, const char *code, const char *orderRef,int64_t startTime);
+    std::vector<std::string> get_order(AccountUnitBitmex& unit,int64_t startTime);
     void cancel_all_orders(AccountUnitBitmex& unit, Document& json);
     void cancel_order(AccountUnitBitmex& unit, std::string orderId, Document& json);
     //void query_order(AccountUnitBitmex& unit, std::string code, std::string orderId, Document& json);
