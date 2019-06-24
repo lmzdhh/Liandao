@@ -1091,6 +1091,7 @@ std::vector<std::string> TDEngineBitmex::get_order(AccountUnitBitmex& unit,int64
                 listOrders.push_back(closed_order);
         }
     }  
+    return listOrders;
 }
 //https://www.bitmex.com/api/explorer/#!/Order/Order_new
 void TDEngineBitmex::send_order(AccountUnitBitmex& unit, const char *code,
