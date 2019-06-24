@@ -306,6 +306,7 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
                         onOrder(it2->second);
                         m_mapOrder.insert(std::make_pair(strOrderId,it2->second));
                         localOrderRefRemoteOrderId.insert(std::make_pair(it2->second.OrderRef,strOrderId));
+                        m_mapNewOrder.erase(it2);
                     }
                 }
             }
@@ -1159,9 +1160,10 @@ void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOr
             //fix defect of use the old value
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data.OrderRef << " (remoteOrderId) "
-                                                                       << remoteOrderId);       
+               
+            /*                                                        << remoteOrderId);       
             std::lock_guard<std::mutex> lck(*m_mutexOrder);
-            /*
+            
             if(m_mapOrder.find(remoteOrderId) == m_mapOrder.end())
             {
                 stPendingOrderStatus.OrderStatus = LF_CHAR_NotTouched;
@@ -1169,13 +1171,13 @@ void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOr
                 m_mapOrder.insert(std::make_pair(remoteOrderId,stPendingOrderStatus));
                 localOrderRefRemoteOrderId.insert(std::make_pair(data.OrderRef,remoteOrderId));
             }
-            */
             
             auto it = m_mapNewOrder.find(stPendingOrderStatus.strClientId);
             if(it != m_mapNewOrder.end())
             {
                 m_mapNewOrder.erase(it);
             }
+            */
             //success, only record raw data
             raw_writer->write_error_frame(&data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1,requestId, errorId, errorMsg.c_str());
             KF_LOG_DEBUG(logger, "[req_order_insert] success" );
