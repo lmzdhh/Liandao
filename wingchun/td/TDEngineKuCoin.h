@@ -159,8 +159,7 @@ WC_NAMESPACE_START
             void orderActionNoResponseTimeOut();
         private:
             void get_account(AccountUnitKuCoin& unit, Document& json);
-            void send_order(AccountUnitKuCoin& unit, const char *code,const std::string& strClientId,
-                            const char *side, const char *type, double& size, double& price, double funds, const string& strOrderRef,bool isPostOnly,Document& json);
+            void send_order(AccountUnitKuCoin& unit,PendingOrderStatus& stPendingOrderStatus,const char* code,double size,double price,bool isPostOnly,Document& json);
             void handle_order_insert(AccountUnitKuCoin& unit,const LFInputOrderField data,int requestId,const std::string& ticker);
             void handle_order_action(AccountUnitKuCoin& unit,const LFOrderActionField data, int requestId,const std::string& ticker);
             void cancel_all_orders(AccountUnitKuCoin& unit, std::string code, Document& json);
@@ -172,8 +171,8 @@ WC_NAMESPACE_START
 
             std::string construct_request_body(const AccountUnitKuCoin& unit,const  std::string& data,bool isget = true);
             cpr::Header construct_request_header(AccountUnitKuCoin& unit,const std::string& strSign,const std::string& strContentType);
-            std::string createInsertOrdertring(const char *code,const std::string& strClientId,
-                                               const char *side, const char *type, double& size, double& price,const string& strOrderRef,bool isPostOnly);
+            std::string createInsertOrdertring(const char *code,const char* strClientId,
+                                               const char *side, const char *type, double& size, double& price,bool isPostOnly);
 
             cpr::Response Get(const std::string& url,const std::string& body, AccountUnitKuCoin& unit);
             cpr::Response Post(const std::string& url,const std::string& body, AccountUnitKuCoin& unit);
@@ -211,6 +210,7 @@ WC_NAMESPACE_START
 
             std::mutex* m_mutexOrder = nullptr;
             std::map<std::string,PendingOrderStatus> m_mapOrder;
+            std::map<std::string,PendingOrderStatus> m_mapNewOrder;
 
         private:
             std::string m_uniqueKey;

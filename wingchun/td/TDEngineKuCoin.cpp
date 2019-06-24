@@ -278,6 +278,21 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
                     }
 
                 }
+                if(strType == "received")
+                {
+                    std::string strClientID = data["clientOid"].GetString();
+                    std::string strOrderId = data["orderId"].GetString();
+                    std::lock_guard<std::mutex> lck(*m_mutexOrder); 
+                    auto it = m_mapOrder.find(strOrderId);
+                    auto it2 = m_mapNewOrder.find(strClientID);
+                    if(it == m_mapOrder.end() && it2 != m_mapNewOrder.end())
+                    {
+                        it2->second.OrderStatus = LF_CHAR_NotTouched;
+                        onOrder(it2->second);
+                        m_mapOrder.insert(std::make_pair(strOrderId,it2->second));
+                        localOrderRefRemoteOrderId.insert(std::make_pair(it2->second.OrderRef,strOrderId));
+                    }
+                }
             }
         }
  }
@@ -1076,7 +1091,7 @@ void TDEngineKuCoin::dealPriceVolume(AccountUnitKuCoin& unit,const std::string& 
 
 void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOrderField data,int requestId,const std::string& ticker)
 {
-     KF_LOG_DEBUG(logger, "[handle_order_insert]" << " (current thread)" << std::this_thread::get_id());
+    KF_LOG_DEBUG(logger, "[handle_order_insert]" << " (current thread)" << std::this_thread::get_id());
     int errorId = 0;
     std::string errorMsg = "";
 
@@ -1087,7 +1102,7 @@ void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOr
     double fixedVolume = 0;
     dealPriceVolume(unit,data.InstrumentID,data.LimitPrice,data.Volume,fixedPrice,fixedVolume);
     
-      if(fixedVolume == 0)
+    if(fixedVolume == 0)
     {
         KF_LOG_DEBUG(logger, "[req_order_insert] fixed Volume error" << ticker);
         errorId = 200;
@@ -1098,9 +1113,21 @@ void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOr
         return;
     }
     std::string strClientId = "";//genClinetid(data->OrderRef);
-    
-    send_order(unit, ticker.c_str(),strClientId, GetSide(data.Direction).c_str(),
-               GetType(data.OrderPriceType).c_str(), fixedVolume, fixedPrice, funds, data.OrderRef,is_post_only(&data),d);
+    PendingOrderStatus stPendingOrderStatus;
+    stPendingOrderStatus.nVolume = std::round(fixedVolume*scale_offset);
+    stPendingOrderStatus.nPrice = std::round(fixedPrice*scale_offset);
+    strncpy(stPendingOrderStatus.InstrumentID, data.InstrumentID, sizeof(stPendingOrderStatus.InstrumentID));
+    strncpy(stPendingOrderStatus.OrderRef, data.OrderRef, sizeof(stPendingOrderStatus.OrderRef));
+    stPendingOrderStatus.strUserID = unit.api_key;
+    stPendingOrderStatus.OrderStatus = LF_CHAR_Unknown;
+    stPendingOrderStatus.VolumeTraded = 0;
+    stPendingOrderStatus.Direction = data.Direction;
+    stPendingOrderStatus.OrderPriceType = data.OrderPriceType;
+    //stPendingOrderStatus.remoteOrderId = remoteOrderId;
+    stPendingOrderStatus.nRequestID = requestId;
+    stPendingOrderStatus.strClientId = strClientId;
+
+    send_order(unit,stPendingOrderStatus, ticker.c_str(), fixedVolume, fixedPrice,is_post_only(&data),d);
 
     if(!d.IsObject())
     {
@@ -1117,25 +1144,20 @@ void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOr
             //fix defect of use the old value
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data.OrderRef << " (remoteOrderId) "
-                                                                       << remoteOrderId);
-
-            PendingOrderStatus stPendingOrderStatus;
-            stPendingOrderStatus.nVolume = std::round(fixedVolume*scale_offset);
-            stPendingOrderStatus.nPrice = std::round(fixedPrice*scale_offset);
-            strncpy(stPendingOrderStatus.InstrumentID, data.InstrumentID, sizeof(stPendingOrderStatus.InstrumentID));
-            strncpy(stPendingOrderStatus.OrderRef, data.OrderRef, sizeof(stPendingOrderStatus.OrderRef));
-            stPendingOrderStatus.strUserID = unit.api_key;
-            stPendingOrderStatus.OrderStatus = LF_CHAR_NotTouched;
-            stPendingOrderStatus.VolumeTraded = 0;
-            stPendingOrderStatus.Direction = data.Direction;
-            stPendingOrderStatus.OrderPriceType = data.OrderPriceType;
-            stPendingOrderStatus.remoteOrderId = remoteOrderId;
-            stPendingOrderStatus.nRequestID = requestId;
-            stPendingOrderStatus.strClientId = strClientId;
-            onOrder(stPendingOrderStatus);
+                                                                       << remoteOrderId);       
             std::lock_guard<std::mutex> lck(*m_mutexOrder);
-            localOrderRefRemoteOrderId[std::string(data.OrderRef)] = remoteOrderId;
-            m_mapOrder[remoteOrderId] = stPendingOrderStatus;
+            if(m_mapOrder.find(remoteOrderId) == m_mapOrder.end())
+            {
+                stPendingOrderStatus.OrderStatus = LF_CHAR_NotTouched;
+                onOrder(stPendingOrderStatus);
+                m_mapOrder.insert(std::make_pair(remoteOrderId,stPendingOrderStatus));
+                localOrderRefRemoteOrderId.insert(std::make_pair(data.OrderRef,remoteOrderId));
+            }
+            auto it = m_mapNewOrder.find(stPendingOrderStatus.strClientId);
+            if(it != m_mapNewOrder.end())
+            {
+                m_mapNewOrder.erase(it);
+            }
             //success, only record raw data
             raw_writer->write_error_frame(&data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1,requestId, errorId, errorMsg.c_str());
             KF_LOG_DEBUG(logger, "[req_order_insert] success" );
@@ -1449,15 +1471,15 @@ void TDEngineKuCoin::get_account(AccountUnitKuCoin& unit, Document& json)
     "ord_type": "limit"
 }
  * */
-std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::string& strClientId,
-                                                    const char *side, const char *type, double& size, double& price,const string& strOrderRef,bool isPostOnly)
+std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const char*  strClientId,
+                                                    const char *side, const char *type, double& size, double& price,bool isPostOnly)
 {
     KF_LOG_INFO(logger, "[TDEngineKuCoin::createInsertOrdertring]:(price)"<<price << "(volume)" << size);
     StringBuffer s;
     Writer<StringBuffer> writer(s);
     writer.StartObject();
     writer.Key("clientOid");
-    writer.String(strClientId.c_str());
+    writer.String(strClientId);
 
     writer.Key("side");
     writer.String(side);
@@ -1494,11 +1516,11 @@ std::string TDEngineKuCoin::createInsertOrdertring(const char *code,const std::s
     return str;
 }
 
-void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,const std::string& strClientId,
-                                 const char *side, const char *type, double& size, double& price, double funds, const std::string& strOrderRef, bool isPostOnly,Document& json)
+void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit,PendingOrderStatus& stPendingOrderStatus,const char* code,double size,double price, bool isPostOnly,Document& json)
 {
     KF_LOG_INFO(logger, "[send_order]");
-
+    auto strSide = GetSide(stPendingOrderStatus.Direction);
+    auto strType =GetType(stPendingOrderStatus.OrderPriceType);
     int retry_times = 0;
     cpr::Response response;
     bool should_retry = false;
@@ -1506,8 +1528,12 @@ void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,const 
         should_retry = false;
 
         std::string requestPath = "/api/v1/orders";
-        std::string newClientId = genClinetid(strOrderRef);
-        response = Post(requestPath,createInsertOrdertring(code, newClientId,side, type, size, price,strOrderRef,isPostOnly),unit);
+        std::string newClientId = genClinetid(stPendingOrderStatus.OrderRef);
+        stPendingOrderStatus.strClientId = newClientId;
+        std::unique_lock<std::mutex> lck(*m_mutexOrder);
+        m_mapNewOrder.insert(std::make_pair(newClientId,stPendingOrderStatus));
+        lck.unlock();
+        response = Post(requestPath,createInsertOrdertring(code, newClientId.c_str(),strSide.c_str(), strType.c_str(), size, price,isPostOnly),unit);
 
         KF_LOG_INFO(logger, "[send_order] (url) " << requestPath << " (response.status_code) " << response.status_code <<
                                                   " (response.error.message) " << response.error.message <<
@@ -1519,6 +1545,9 @@ void TDEngineKuCoin::send_order(AccountUnitKuCoin& unit, const char *code,const 
         if(shouldRetry(json)) {
             should_retry = true;
             retry_times++;
+            std::unique_lock<std::mutex> lck(*m_mutexOrder);
+            m_mapNewOrder.erase(newClientId);
+            lck.unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_milliseconds));
         }
     } while(should_retry && retry_times < max_rest_retry_times);
