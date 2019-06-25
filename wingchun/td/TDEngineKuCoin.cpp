@@ -233,13 +233,15 @@ void TDEngineKuCoin::onTrade(const PendingOrderStatus& stPendingOrderStatus,int6
                     auto it = m_mapOrder.find(strOrderId);
                     if(it != m_mapOrder.end())
                     {
+                        
+                        it->second.OrderStatus = LF_CHAR_Canceled;
+                        onOrder( it->second);
+
                         auto it2 = localOrderRefRemoteOrderId.find(it->second.OrderRef);
                         if(it2 != localOrderRefRemoteOrderId.end())
                         {
                             localOrderRefRemoteOrderId.erase(it2);
                         }
-                        it->second.OrderStatus = LF_CHAR_Canceled;
-                        onOrder( it->second);
                         m_mapOrder.erase(it);
                     }
                 }
