@@ -822,8 +822,9 @@ void TDEngineKuCoin::check_orders(AccountUnitKuCoin& unit)
     }
     if(startTime >= endTime /*|| endTime - startTime < no_response_wait_ms*/)
     {
-        KF_LOG_INFO(logger, "[check_orders] no need");
-        return;
+        //KF_LOG_INFO(logger, "[check_orders] not need");
+        //return;
+        startTime = endTime - 1000;
     }
     std::string url = "/api/v1/orders?status=active&startAt=" + std::to_string(startTime-1000);
     url += "&endAt="+std::to_string(endTime);
