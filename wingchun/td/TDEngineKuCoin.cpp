@@ -809,6 +809,7 @@ void TDEngineKuCoin::connect(long timeout_nsec)
    }
 void TDEngineKuCoin::check_orders(AccountUnitKuCoin& unit)
 {
+    KF_LOG_INFO(logger, "[check_orders]");
     std::unique_lock<std::mutex> lck(*m_mutexOrder);  
     int64_t endTime = getTimestamp();
     int64_t startTime = endTime;
@@ -821,6 +822,7 @@ void TDEngineKuCoin::check_orders(AccountUnitKuCoin& unit)
     }
     if(startTime >= endTime /*|| endTime - startTime < no_response_wait_ms*/)
     {
+        KF_LOG_INFO(logger, "[check_orders] no need");
         return;
     }
     std::string url = "/api/v1/orders?status=active&startAt=" + std::to_string(startTime-1000);
