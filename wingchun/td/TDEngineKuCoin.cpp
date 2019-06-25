@@ -707,7 +707,10 @@ TradeAccount TDEngineKuCoin::load_account(int idx, const json& j_config)
         m_ThreadPoolPtr = new ThreadPool(thread_pool_size);
     }
     KF_LOG_INFO(logger, "[load_account] (thread_pool_size)" << thread_pool_size);
-
+    if(j_config.find("no_response_wait_ms") != j_config.end()) {
+        no_response_wait_ms = j_config["no_response_wait_ms"].get<int64_t>();
+    }
+    no_response_wait_ms = std::max(no_response_wait_ms,(int64_t)500);
     AccountUnitKuCoin& unit = account_units[idx];
     unit.api_key = api_key;
     unit.secret_key = secret_key;
@@ -786,7 +789,7 @@ void TDEngineKuCoin::connect(long timeout_nsec)
         for(auto& pair : coinPairWhiteList)
         {
             Document json;
-             const auto response = Get("/api/v1/symbols/" + pair.second,"",unit);
+            const auto response = Get("/api/v1/symbols/" + pair.second,"",unit);
             json.Parse(response.text.c_str());
             const static std::string strSuccesse = "200000";
             if(json.HasMember("code") && json["code"].GetString() == strSuccesse)
@@ -804,7 +807,57 @@ void TDEngineKuCoin::connect(long timeout_nsec)
             }
         }
    }
+void TDEngineKuCoin::check_orders(AccountUnitKuCoin& unit)
+{
+    std::unique_lock<std::mutex> lck(*m_mutexOrder);  
+    int64_t endTime = getTimestamp();
+    int64_t startTime = endTime;
+    for(auto& order : m_mapNewOrder)
+    {
+        if(order.second.nSendTime > 0)
+        {
+            startTime = std::min(startTime,order.second.nSendTime);
+        }
+    }
+    if(startTime >= endTime /*|| endTime - startTime < no_response_wait_ms*/)
+    {
+        return;
+    }
+    std::string url = "/api/v1/orders?status=active&startAt=" + std::to_string(startTime-1000);
+    url += "&endAt="+std::to_string(endTime);
+    Document json;
+    const auto response = Get(url.c_str(),"",unit);
+    json.Parse(response.text.c_str());
+    const static std::string strSuccesse = "200000";
+    if(!json.HasParseError() && json.IsObject() &&json.HasMember("code") && json["code"].GetString() == strSuccesse && json.HasMember("data"))
+    {
+        auto& data = json["data"];
+        if(data.HasMember("items") && data["items"].IsArray())
+        {
+            int size = data["items"].Size();
+            //auto& items = data["items"].GetArray();
+            for(int i =0;i < size;++i)
+            {
+                auto& item = data["items"][i];
+                if(item.HasMember("clientOid") && item.HasMember("orderId"))
+                {
+                    std::string strClientId = item["clientOid"].GetString();
+                    std::string strOrderId = item["orderId"].GetString();
+                    auto it = m_mapNewOrder.find(strClientId);
+                    if(it != m_mapNewOrder.end())
+                    {
+                        it->second.OrderStatus = LF_CHAR_NotTouched;
+                        onOrder(it->second);
+                        m_mapOrder.insert(std::make_pair(strOrderId,it->second));
+                        localOrderRefRemoteOrderId.insert(std::make_pair(it->second.OrderRef,strOrderId));
+                        m_mapNewOrder.erase(it);
+                    }
+                }
+            }
+        }
+    }
 
+}
 void TDEngineKuCoin::login(long timeout_nsec)
 {
     KF_LOG_INFO(logger, "TDEngineKuCoin::login:");
@@ -1161,23 +1214,14 @@ void TDEngineKuCoin::handle_order_insert(AccountUnitKuCoin& unit,const LFInputOr
             KF_LOG_INFO(logger, "[req_order_insert] after send  (rid)" << requestId << " (OrderRef) " <<
                                                                        data.OrderRef << " (remoteOrderId) "
                                                                        << remoteOrderId);      
-            /*                                                           
-            std::lock_guard<std::mutex> lck(*m_mutexOrder);
-            
-            if(m_mapOrder.find(remoteOrderId) == m_mapOrder.end())
-            {
-                stPendingOrderStatus.OrderStatus = LF_CHAR_NotTouched;
-                onOrder(stPendingOrderStatus);
-                m_mapOrder.insert(std::make_pair(remoteOrderId,stPendingOrderStatus));
-                localOrderRefRemoteOrderId.insert(std::make_pair(data.OrderRef,remoteOrderId));
-            }
-            
+                                                                       
+            std::lock_guard<std::mutex> lck(*m_mutexOrder);   
             auto it = m_mapNewOrder.find(stPendingOrderStatus.strClientId);
             if(it != m_mapNewOrder.end())
-            {
-                m_mapNewOrder.erase(it);
+            {//websocket信息尚未到达
+                it->second.nSendTime = getTimestamp();//记录当前时间
             }
-            */
+            
             //success, only record raw data
             raw_writer->write_error_frame(&data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_KUCOIN, 1,requestId, errorId, errorMsg.c_str());
             KF_LOG_DEBUG(logger, "[req_order_insert] success" );
@@ -1346,8 +1390,8 @@ void TDEngineKuCoin::loopwebsocket()
             if(m_isPong && (nNowTime - nLastTime>= 30))
             {
                 m_isPong = false;
-                 nLastTime = nNowTime;
-                 KF_LOG_INFO(logger, "TDEngineKuCoin::loopwebsocket: last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
+                nLastTime = nNowTime;
+                KF_LOG_INFO(logger, "TDEngineKuCoin::loopwebsocket: last time = " <<  nLastTime << ",now time = " << nNowTime << ",m_isPong = " << m_isPong);
                 m_shouldPing = true;
                 lws_callback_on_writable(m_conn);  
             }
@@ -1362,7 +1406,11 @@ void TDEngineKuCoin::loopOrderActionNoResponseTimeOut()
     KF_LOG_INFO(logger, "[loopOrderActionNoResponseTimeOut] (isRunning) " << isRunning);
     while(isRunning)
     {
-        orderActionNoResponseTimeOut();
+        //orderActionNoResponseTimeOut();
+        for(auto& unit:account_units)
+        {
+            check_orders(unit);
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }

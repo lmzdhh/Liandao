@@ -37,6 +37,7 @@ WC_NAMESPACE_START
             LfOrderPriceTypeType OrderPriceType; //报单价格条件
             std::string remoteOrderId;// sender_order response order id://{"orderId":19319936159776,"result":true}
             std::string strClientId;
+            int64_t nSendTime = 0;
         };
 
         struct OrderActionSentTime
@@ -150,7 +151,7 @@ WC_NAMESPACE_START
             std::vector<std::string> split(std::string str, std::string token);
             void getPriceIncrement(AccountUnitKuCoin& unit);
             void dealPriceVolume(AccountUnitKuCoin& unit,const std::string& symbol,int64_t nPrice,int64_t nVolume,double& dDealPrice,double& dDealVome);
-
+            void check_orders(AccountUnitKuCoin& unit);
             std::string parseJsonToString(Document &d);
 
             void addRemoteOrderIdOrderActionSentTime(const LFOrderActionField* data, int requestId, const std::string& remoteOrderId);
@@ -239,6 +240,7 @@ WC_NAMESPACE_START
             int retry_interval_milliseconds = 1000;
             int orderaction_max_waiting_seconds = 30;
             ThreadPool* m_ThreadPoolPtr = nullptr;
+            int64_t no_response_wait_ms = 5000;
         };
 
 WC_NAMESPACE_END
