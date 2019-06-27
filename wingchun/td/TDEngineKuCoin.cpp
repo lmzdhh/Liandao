@@ -822,11 +822,10 @@ void TDEngineKuCoin::check_orders(AccountUnitKuCoin& unit)
             startTime = std::min(startTime,order.second.nSendTime);
         }
     }
-    if(startTime >= endTime /*|| endTime - startTime < no_response_wait_ms*/)
+    if(startTime >= endTime || endTime - startTime < no_response_wait_ms)
     {
-        //KF_LOG_INFO(logger, "[check_orders] not need");
-        //return;
-        startTime = endTime - 1000;
+        KF_LOG_INFO(logger, "[check_orders] not need");
+        return;
     }
     std::string url = "/api/v1/orders?status=active&startAt=" + std::to_string(startTime-1000);
     url += "&endAt="+std::to_string(endTime);
