@@ -89,9 +89,9 @@ struct PageCommMsg
 } __attribute__((packed));
 
 /** max number of communication users in the same time */
-#define MAX_COMM_USER_NUMBER 1000
+#define MAX_COMM_USER_NUMBER 19
 /** REQUEST_ID_RANGE * MAX_COMM_USER_NUMBER < 2147483647(max num of int) */
-#define REQUEST_ID_RANGE 1000000
+#define REQUEST_ID_RANGE 100000000
 /** based on the max number, the comm file size is determined */
 const int COMM_SIZE = MAX_COMM_USER_NUMBER * sizeof(PageCommMsg) + 1024;
 /** fast type convert */
