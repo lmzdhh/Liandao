@@ -556,7 +556,7 @@ int TDEngineBitmex::Round(std::string tickSizeStr) {
 
 bool TDEngineBitmex::ShouldRetry(const Document& json)
 {
-	std::lock_guard<std::mutex> lck(unit_mutex);
+	//std::lock_guard<std::mutex> lck(unit_mutex);
     if(json.IsObject() && json.HasMember("code") && json["code"].IsNumber())
     {
         int code = json["code"].GetInt();
@@ -866,7 +866,6 @@ std::string TDEngineBitmex::getLwsSubscribe(AccountUnitBitmex& unit) {
 
 void TDEngineBitmex::handleResponse(cpr::Response rsp, Document& json)
 {
-	std::lock_guard<std::mutex> lck(unit_mutex);
 	auto& header = rsp.header;
 	std::stringstream stream;
 	for (auto& item : header)
