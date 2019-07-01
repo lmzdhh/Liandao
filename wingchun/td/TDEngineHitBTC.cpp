@@ -43,6 +43,8 @@ using utils::crypto::base64_encode;
 USING_WC_NAMESPACE
 static TDEngineHitBTC* global_md = nullptr;
 
+std::recursive_mutex insertMapMutex;
+std::recursive_mutex actionMapMutex;
 
 static int ws_service_cb( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
 {
@@ -283,15 +285,15 @@ bool TDEngineHitBTC::is_connected() const
 
 
 
-//std::string TDEngineHitBTC::GetSide(const LfDirectionType& input) {
-//    if (LF_CHAR_Buy == input) {
-//        return "buy";
-//    } else if (LF_CHAR_Sell == input) {
-//        return "sell";
-//    } else {
-//        return "";
-//    }
-//}
+std::string TDEngineHitBTC::GetSide(const LfDirectionType& input) {
+    if (LF_CHAR_Buy == input) {
+        return "buy";
+    } else if (LF_CHAR_Sell == input) {
+        return "sell";
+    } else {
+        return "";
+    }
+}
 //
 //LfDirectionType TDEngineHitBTC::GetDirection(std::string input) {
 //    if ("buy" == input) {
@@ -443,11 +445,11 @@ void TDEngineHitBTC::on_lws_data(struct lws* conn, const char* data, size_t len)
         return;
     }
 
-    if(json.IsObject() && json.HasMember("event")) {
-        if (strcmp(json["event"].GetString(), "info") == 0) {
+    if(json.IsObject() && json.HasMember("method")) {
+        if (strcmp(json["method"].GetString(), "info") == 0) {
             KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: is info");
             onInfo(json);
-        } else if (strcmp(json["event"].GetString(), "auth") == 0) {
+        } else if (strcmp(json["method"].GetString(), "auth") == 0) {
             KF_LOG_INFO(logger, "TDEngineHITBTC::on_lws_data: is auth");
             onAuth(conn, json);
         } else {
@@ -1096,7 +1098,11 @@ void TDEngineHitBTC::onNotification(struct lws* conn, Document& json)
                     if (orderActionItr != pendingOrderActionData.end()) {
                         OrderActionData& cache = orderActionItr->second;
 
-                        std::string cancelOrderJsonString = createCancelOrderIdJsonString(remoteOrderId);
+                        //std::string cancelOrderJsonString = createCancelOrderIdJsonString(remoteOrderId);
+
+                        //for hitbtc, can canncel using clientOrderID
+                        std::string cancelOrderJsonString= createCancelOrderIdJsonString(std::to_string(cid));
+
                         addPendingSendMsg(unit, cancelOrderJsonString);
                         KF_LOG_DEBUG(logger, "TDEngineHITBTC::onNotification: pending_and_send  [req_order_action] createCancelOrderIdJsonString (remoteOrderId) " << remoteOrderId);
                         RemoteOrderIDorderActionData.insert(std::pair<int64_t, OrderActionData>(remoteOrderId, cache));
@@ -1272,6 +1278,12 @@ void TDEngineHitBTC::req_qry_account(const LFQryAccountField *data, int account_
 
 
 
+std::string zeroPadNumber(int num)
+{
+    std::ostringstream ss;
+    ss << std::setw( 9 ) << std::setfill( '0' ) << num;
+    return ss.str();
+}
 void TDEngineHitBTC::req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time)
 {
     AccountUnitHitBTC& unit = account_units[account_index];
@@ -1298,36 +1310,67 @@ void TDEngineHitBTC::req_order_insert(const LFInputOrderField* data, int account
     }
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
 
-    if(errorId != 0)
-    {
-        on_rsp_order_insert(data, requestId, errorId, errorMsg.c_str());
-    }
-    raw_writer->write_error_frame(data, sizeof(LFInputOrderField), source_id, MSG_TYPE_LF_ORDER_MOCK, 1, requestId, errorId, errorMsg.c_str());
+    //Price (Not required for market orders)
+    double price = data->LimitPrice*1.0/scale_offset;
 
+    double size = data->Volume*1.0/scale_offset;
+    //amount	decimal string	Positive for buy, Negative for sell
+//    if (LF_CHAR_Sell == data->Direction) {
+//        size = size * -1;
+//    }
+
+    std::string priceStr;
+    std::stringstream convertPriceStream;
+    convertPriceStream <<std::fixed << std::setprecision(8) << price;
+    convertPriceStream >> priceStr;
+
+    std::string sizeStr;
+    std::stringstream convertSizeStream;
+    convertSizeStream <<std::fixed << std::setprecision(8) << size;
+    convertSizeStream >> sizeStr;
+
+//type limit, market, stopLimit, stopMarket
+    std::string type = GetType(data->OrderPriceType);
+
+
+    int cid = atoi(data->OrderRef);
+    std::string dateStr = getDateStr();
+
+    std::string sideStr = GetSide(data->Direction);
+
+    KF_LOG_INFO(logger, "[send_order] (ticker) " << ticker << " (type) " <<
+                                                 type << " (size) "<< sizeStr << " (price) "<< priceStr
+                                                 << " (cid) " << cid << " (dateStr) "<< dateStr);
+
+    std::string clientorderId = zeroPadNumber(cid);
+    std::string insertOrderJsonString = createInsertOrderJsonString(0, clientorderId, type, ticker, sizeStr, priceStr, sideStr);
+    addPendingSendMsg(unit, insertOrderJsonString);
+    //emit e event for websocket callback
+    lws_callback_on_writable(unit.websocketConn);
 
     LFRtnOrderField rtn_order;
     memset(&rtn_order, 0, sizeof(LFRtnOrderField));
-    rtn_order.OrderStatus = LF_CHAR_OrderInserted;
-    rtn_order.VolumeTraded = 0;
-
-    //first send onRtnOrder about the status change or VolumeTraded change
-    strcpy(rtn_order.ExchangeID, "mock");
+    strcpy(rtn_order.ExchangeID, "HitBtc");
     strncpy(rtn_order.UserID, unit.api_key.c_str(), 16);
+    rtn_order.OrderStatus = LF_CHAR_Unknown;
     strncpy(rtn_order.InstrumentID, data->InstrumentID, 31);
-    rtn_order.Direction = LF_CHAR_Buy;
-    //No this setting on coinmex
-    rtn_order.TimeCondition = LF_CHAR_GTC;
-    rtn_order.OrderPriceType = LF_CHAR_AnyPrice;
+    rtn_order.VolumeTraded = 0;
+    rtn_order.Direction = data->Direction;
+    rtn_order.TimeCondition = data->TimeCondition;
+    rtn_order.OrderPriceType = data->OrderPriceType;
     strncpy(rtn_order.OrderRef, data->OrderRef, 13);
     rtn_order.VolumeTotalOriginal = data->Volume;
-    rtn_order.LimitPrice = std::round(data->LimitPrice);
-    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal - rtn_order.VolumeTraded;
+    rtn_order.LimitPrice = data->LimitPrice;
+    rtn_order.VolumeTotal = rtn_order.VolumeTotalOriginal;
 
-    on_rtn_order(&rtn_order);
-    raw_writer->write_frame(&rtn_order, sizeof(LFRtnOrderField),
-                            source_id, MSG_TYPE_LF_RTN_ORDER_HITBTC,
-                            1, (rtn_order.RequestID > 0) ? rtn_order.RequestID: -1);
-
+    OrderInsertData cache;
+    cache.requestId = requestId;
+    cache.remoteOrderId = 0;
+    cache.dateStr = dateStr;
+    memcpy(&cache.rtnOrder, &rtn_order, sizeof(LFRtnOrderField));
+    memcpy(&cache.data, data, sizeof(LFInputOrderField));
+    std::lock_guard<std::recursive_mutex> lck(insertMapMutex);
+    CIDorderInsertData.insert(std::pair<int, OrderInsertData>(cid, cache));
 }
 
 
@@ -1506,72 +1549,66 @@ std::string TDEngineHitBTC::createAuthJsonString(AccountUnitHitBTC& unit )
     return s.GetString();
 }
 
-
-/*
- // Model
-[
-  0,
-  "on",
-  null,
-  {
-    "gid": GID,
-    "cid": CID,
-    "type": TYPE,
-    "symbol": SYMBOL,
-    "amount": AMOUNT,
-    "price": PRICE,
-    ...
-  }
-]
-
-// Example
-[
-  0,
-  "on",
-  null,
-  {
-    "gid": 1,
-    "cid": 12345,
-    "type": "LIMIT",
-    "symbol": "tBTCUSD",
-    "amount": "1.0",
-    "price": "500"
-  }
-]
- * */
-std::string TDEngineHitBTC::createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr)
+std::string TDEngineHitBTC::createSubReportJsonString()
 {
-
     StringBuffer s;
     Writer<StringBuffer> writer(s);
-    writer.StartArray();
+    writer.StartObject();
+    writer.Key("method");
+    writer.String("subscribeReports");
+    writer.Key("params");
 
-    writer.Int(0);
-    writer.String("on");
-    writer.Null();
+    writer.EndObject();
+    return s.GetString();
+
+}
+//{
+//  "method": "newOrder",
+//  "params": {
+//    "clientOrderId": "57d5525562c945448e3cbd559bd068c4",
+//    "symbol": "ETHBTC",
+//    "side": "sell",
+//    "price": "0.059837",
+//    "quantity": "0.015"
+//  },
+//  "id": 123
+//}
+
+std::string TDEngineHitBTC::createInsertOrderJsonString(int gid, std::string clientOrderId, std::string type, std::string symbol, std::string amountStr,
+        std::string priceStr, std::string sideStr)
+{
+    StringBuffer s;
+    Writer<StringBuffer> writer(s);
+    writer.StartObject();
+    writer.Key("method");
+    writer.String("newOrder");
+
+    writer.Key("params");
+
 
     writer.StartObject();
-    writer.Key("gid");
-    writer.Int(gid);
 
-    writer.Key("cid");
-    writer.Int(cid);
-
-    writer.Key("type");
-    writer.String(type.c_str());
+    writer.Key("clientOrderId");
+    writer.String(clientOrderId.c_str());
 
     writer.Key("symbol");
     writer.String(symbol.c_str());
 
-    writer.Key("amount");
+    writer.Key("type");
+    writer.String(type.c_str());
+
+    writer.Key("side");
+    writer.String(sideStr.c_str());
+
+    writer.Key("quantity");
     writer.String(amountStr.c_str());
 
     writer.Key("price");
     writer.String(priceStr.c_str());
 
     writer.EndObject();
-    writer.EndArray();
 
+    writer.EndObject();
     return s.GetString();
 }
 
@@ -1609,52 +1646,53 @@ std::string TDEngineHitBTC::getDateStr()
     "cid_date": CID_DATE
   }
 ]
+ */
 
 //You can cancel the order by the Internal Order ID or using a Client Order ID (supplied by you).
 // The Client Order ID is unique per day, so you also have to provide the date of the order as a date string in this format YYYY-MM-DD.
- * */
-std::string TDEngineHitBTC::createCancelOrderIdJsonString(int64_t orderId)
+//{ "method": "cancelOrder", "params": { "clientOrderId": "57d5525562c945448e3cbd559bd068c4" }, "id": 123 }
+std::string TDEngineHitBTC::createCancelOrderIdJsonString(std::string orderId)
 {
     StringBuffer s;
     Writer<StringBuffer> writer(s);
-    writer.StartArray();
 
-    writer.Int(0);
-    writer.String("oc");
-    writer.Null();
 
     writer.StartObject();
-    writer.Key("id");
-    writer.Int64(orderId);
+    writer.Key("method");
+    writer.String("cancelOrder");
+    writer.Key("params");
+
+    writer.StartObject();
+    writer.Key("clientOrderId");
+    writer.String(orderId.c_str());
+    writer.EndObject();
 
     writer.EndObject();
-    writer.EndArray();
-
     return s.GetString();
 }
 
-std::string TDEngineHitBTC::createCancelOrderCIdJsonString(int cid, std::string dateStr)
-{
-    StringBuffer s;
-    Writer<StringBuffer> writer(s);
-    writer.StartArray();
-
-    writer.Int(0);
-    writer.String("oc");
-    writer.Null();
-
-    writer.StartObject();
-    writer.Key("cid");
-    writer.Int(cid);
-
-    writer.Key("cid_date");
-    writer.String(dateStr.c_str());
-
-    writer.EndObject();
-    writer.EndArray();
-
-    return s.GetString();
-}
+//std::string TDEngineHitBTC::createCancelOrderCIdJsonString(int cid, std::string dateStr)
+//{
+//    StringBuffer s;
+//    Writer<StringBuffer> writer(s);
+//    writer.StartArray();
+//
+//    writer.Int(0);
+//    writer.String("oc");
+//    writer.Null();
+//
+//    writer.StartObject();
+//    writer.Key("cid");
+//    writer.Int(cid);
+//
+//    writer.Key("cid_date");
+//    writer.String(dateStr.c_str());
+//
+//    writer.EndObject();
+//    writer.EndArray();
+//
+//    return s.GetString();
+//}
 
 
 

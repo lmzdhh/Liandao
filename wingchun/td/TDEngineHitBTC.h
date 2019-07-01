@@ -85,6 +85,8 @@ struct AccountUnitHitBTC
             //            如果撤单时发现有orderid  会优先使用orderid ，没有orderid 的时候，才会使用clientid + date
             //            这种情况可能发生在 我们发单以后， on-req还没有来得及返回orderid，我们就发送撤单指令了
             std::string dateStr;
+
+            LFRtnOrderField rtnOrder;
         };
 
         struct OrderActionData
@@ -116,7 +118,7 @@ public:
 
     // req functions
     virtual void req_investor_position(const LFQryPositionField* data, int account_index, int requestId);
-    virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId);
+    virtual void req_qry_account(const LFQryAccountField* data, int account_index, int requestId);//not needed
     virtual void req_order_insert(const LFInputOrderField* data, int account_index, int requestId, long rcv_time);
     virtual void req_order_action(const LFOrderActionField* data, int account_index, int requestId, long rcv_time);
 
@@ -135,7 +137,7 @@ private:
 
     virtual void set_reader_thread() override;
 
-    //std::string GetSide(const LfDirectionType& input);
+    std::string GetSide(const LfDirectionType& input);
     //LfDirectionType GetDirection(std::string input);
     std::string GetType(const LfOrderPriceTypeType& input);
     LfOrderPriceTypeType GetPriceType(std::string input);
@@ -149,11 +151,12 @@ private:
 
     std::string createAuthJsonString(AccountUnitHitBTC& unit );
     std::string parseJsonToString(Document &d);
-    std::string createInsertOrderJsonString(int gid, int cid, std::string type, std::string symbol, std::string amountStr, std::string priceStr);
-    std::string createCancelOrderIdJsonString(int64_t orderId);
+    std::string createInsertOrderJsonString(int gid, std::string clientOrderId, std::string type, std::string symbol, std::string amountStr,
+            std::string priceStr, std::string sideStr);
+    std::string createCancelOrderIdJsonString(std::string orderId);
     std::string createCancelOrderCIdJsonString(int cid, std::string dateStr);
     std::string getDateStr();
-
+    std::string createSubReportJsonString();
 
     void lws_login(AccountUnitHitBTC& unit, long timeout_nsec);
     void onInfo(Document& json);
