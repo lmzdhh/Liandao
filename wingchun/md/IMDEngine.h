@@ -86,6 +86,8 @@ public:
     void on_trade(const LFL2TradeField* trade);
 
     void on_funding_update(const LFFundingField* data);
+
+    void on_withdraw(const LFWithdrawField* data);
 };
 
 DECLARE_PTR(IMDEngine);

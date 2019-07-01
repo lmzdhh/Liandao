@@ -90,7 +90,16 @@ void PyWCStrategy::on_funding_update(const LFFundingField* data, short source, l
         END_PYTHON_FUNC_CALLING
     }
 }
-
+void PyWCStrategy::on_withdraw(const LFWithdrawField* data, int request_id, short source, long rcv_time){
+    KF_LOG_INFO(logger, "[on_withdraw] on_withdraw started");
+    bp::object& obj = py_on_data[MSG_TYPE_LF_WITHDRAW];
+    if (obj != bp::object() && IWCDataProcessor::signal_received <= 0)
+    {
+        START_PYTHON_FUNC_CALLING
+        obj((uintptr_t)data, request_id, source, rcv_time);
+        END_PYTHON_FUNC_CALLING
+    }
+}
 void PyWCStrategy::on_market_bar_data(const LFBarMarketDataField* data, short source, long rcv_time)
 {
     bp::object& obj = py_on_data[MSG_TYPE_LF_BAR_MD];
@@ -264,7 +273,8 @@ BOOST_PYTHON_MODULE(libwingchunstrategy)
     .def("insert_fak_order", &PyWCStrategy::insert_fak_order_py, (bp::arg("source"), bp::arg("ticker"), bp::arg("exchange_id"), bp::arg("price"), bp::arg("volume"), bp::arg("direction"), bp::arg("offset"), bp::arg("misc_info")=""))
     .def("req_position", &PyWCStrategy::req_position, (bp::arg("source")))
     .def("cancel_order", &PyWCStrategy::cancel_order_py, (bp::arg("source"), bp::arg("order_id"),bp::arg("misc_info")=""))
-    .def("set_on_error", &PyWCStrategy::set_on_error, (bp::arg("func")));
+    .def("set_on_error", &PyWCStrategy::set_on_error, (bp::arg("func")))
+    .def("withdraw_currency", &PyWCStrategy::withdraw_currency_py, (bp::arg("source"), bp::arg("currency"), bp::arg("volume")=0, bp::arg("address"),bp::arg("tag")="",bp::arg("key")));
 
     bp::class_<WCStrategyUtil, WCStrategyUtilPtr>("Util", bp::no_init)
     .def("subscribe_market_data", &WCStrategyUtil::subscribe_market_data, (bp::arg("tickers"), bp::arg("source")))

@@ -58,6 +58,11 @@ ADD_LIBRARY(bitfinextd SHARED ${BITFINEX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(bitfinextd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS bitfinextd DESTINATION "lib/wingchun")
 
+SET(BITTREX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBittrex.cpp TDEngineBittrex.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
+ADD_LIBRARY(bittrextd SHARED ${BITTREX_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(bittrextd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS bittrextd DESTINATION "lib/wingchun")
+
 SET(BITMEX_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBitmex.cpp TDEngineBitmex.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
 ADD_LIBRARY(bitmextd SHARED ${BITMEX_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(bitmextd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)

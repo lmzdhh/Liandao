@@ -1,0 +1,22 @@
+{
+    "bittrex_s.f_beavo":{
+        "Exchange":"bittrex",
+        "Key":"608885f245e5426c9d38921ada92c080",
+        "Secret":"9897278249cb41eba64870b72aa26a34",
+        "WithdrawWhiteLists":{
+            "USDT":"1DEKiiXaoQv9abK5PCCwHFPg86XVsm2cpi",
+			"BTC":"1Poej9FX4pKQF9Le1ysJgPYdcBkED7wdkC",
+			"XRP":"rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh:104398738"
+        }
+    },
+    "binance_s.f_beavo":{
+        "Exchange":"binance",
+        "Key":"608885f245e5426c9d38921ada92c080",
+        "Secret":"9897278249cb41eba64870b72aa26a34",
+        "WithdrawWhiteLists":{
+            "USDT":"1DEKiiXaoQv9abK5PCCwHFPg86XVsm2cpi",
+			"BTC":"1Poej9FX4pKQF9Le1ysJgPYdcBkED7wdkC",
+			"XRP":"rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh:104398738"
+        }
+    }
+}

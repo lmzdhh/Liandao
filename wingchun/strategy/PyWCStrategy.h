@@ -48,6 +48,7 @@ public:
     virtual void on_rsp_order(const LFInputOrderField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
     virtual void on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
     virtual void on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time);
+    virtual void on_withdraw(const LFWithdrawField* data, int request_id, short source, long rcv_time);
     virtual void on_switch_day(long rcv_time);
     virtual void on_l2_trade(const LFL2TradeField* data, short source, long rcv_time);
     //py log
@@ -88,6 +89,9 @@ public:
     inline int cancel_order_py(short source, int order_id,string misc_info = "")
     {
         return cancel_order(source, order_id,misc_info);
+    }
+    inline int withdraw_currency_py(short source, string currency, int64_t volume, string address, string tag,string key){
+        return withdraw_currency(source, currency,volume,address,tag,key);
     }
 public:
     PyWCStrategy(const string& name): IWCStrategy(name) {}

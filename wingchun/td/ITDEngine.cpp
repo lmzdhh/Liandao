@@ -59,7 +59,9 @@ void ITDEngine::set_reader_thread()
 {
     reader_thread = ThreadPtr(new std::thread(boost::bind(&ITDEngine::listening, this)));
 }
+void ITDEngine::req_withdraw_currency(const LFWithdrawField* data, int account_index, int requestId, long rcv_time){
 
+}
 void ITDEngine::init()
 {
     reader = yijinjing::JournalReader::createRevisableReader(name());
@@ -246,6 +248,15 @@ void ITDEngine::listening()
                         req_qry_account(acc, idx, requestId);
                         break;
                     }
+                    case MSG_TYPE_LF_WITHDRAW:
+                    {
+                        LFWithdrawField* withdraw = (LFWithdrawField*)fdata;
+                        req_withdraw_currency(withdraw, idx, requestId, cur_time);
+                        KF_LOG_DEBUG(logger, "[withdraw_currency] (rid)" << requestId << " (currency) " 
+                            << withdraw->Currency << " (volume) " << withdraw->Volume
+                            <<" (address) "<<withdraw->Address<<" (tag) "<<withdraw->Tag <<" (key) "<<withdraw->Key );
+                        break;
+                    }
                     default:
                         KF_LOG_DEBUG(logger, "[Unexpected] frame found: (msg_type)" << msg_type << ", (name)" << name);
                 }
@@ -314,6 +325,20 @@ void ITDEngine::on_rsp_order_action(const LFOrderActionField *action, int reques
     {
         writer->write_error_frame(action, sizeof(LFOrderActionField), source_id, MSG_TYPE_LF_ORDER_ACTION, true, requestId, errorId, errorMsg);
         KF_LOG_ERROR(logger, "[RspAction] fail!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
+    }
+}
+void ITDEngine::on_rsp_withdraw(const LFWithdrawField* action, int requestId,int errorId, const char* errorMsg){
+    if (errorId == 0)
+    {
+        writer->write_frame(action, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW, true, requestId);
+        KF_LOG_DEBUG(logger, "[RspWithdraw]" << " (rid)" << requestId << " (currency) " << action->Currency
+            << " (volume) " << action->Volume << " (address) " << action->Address << " (tag) " << action->Tag
+            <<" (key) "<<action->Key);
+    }
+    else
+    {
+        writer->write_error_frame(action, sizeof(LFWithdrawField), source_id, MSG_TYPE_LF_WITHDRAW, true, requestId, errorId, errorMsg);
+        KF_LOG_ERROR(logger, "[RspWithdraw] fail!" << " (rid)" << requestId << " (errorId)" << errorId << " (errorMsg)" << errorMsg);
     }
 }
 /** on rsp account info, engine (on_data) */

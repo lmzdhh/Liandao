@@ -53,6 +53,7 @@ public:
     virtual void on_rsp_order(const LFInputOrderField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
     virtual void on_rsp_order_action(const LFOrderActionField* data, int request_id, short source, long rcv_time, short errorId=0, const char* errorMsg=nullptr);
     virtual void on_rsp_position(const PosHandlerPtr posMap, int request_id, short source, long rcv_time);
+    virtual void on_withdraw(const LFWithdrawField* data, int request_id, short source, long rcv_time);
     /* system utilities */
     virtual void on_switch_day(long rcv_time);
     virtual void on_time(long cur_time);
@@ -77,6 +78,7 @@ public: // util functions, wrap upon WCStrategyUtil
     int insert_fak_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info = "");
     int req_position(short source);
     int cancel_order(short source, int order_id,string misc_info = "");
+    int withdraw_currency(short source, string currency,int64_t volume,string address,string tag,string key);
 
 public:
     /** default destructor */

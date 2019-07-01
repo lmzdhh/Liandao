@@ -136,7 +136,17 @@ int WCStrategyUtil::insert_market_order(short source,
     write_frame_extra(&order, sizeof(LFInputOrderField), source, MSG_TYPE_LF_ORDER, 1/*lastflag*/, rid, md_nano);
     return rid;
 }
-
+int WCStrategyUtil::withdraw_currency(short source,string currency,int64_t volume,string address,string tag, string key){
+    int rid = get_rid();
+    LFWithdrawField withdraw = {};
+    strcpy(withdraw.Currency,currency.c_str());
+    withdraw.Volume = volume;
+    strcpy(withdraw.Address,address.c_str());
+    strcpy(withdraw.Tag,tag.c_str());
+    strcpy(withdraw.Key, key.c_str());
+    write_frame_extra(&withdraw, sizeof(LFWithdrawField), source, MSG_TYPE_LF_WITHDRAW, 1/*lastflag*/, rid, md_nano);
+    return rid;
+}
 int WCStrategyUtil::insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     int rid = get_rid();

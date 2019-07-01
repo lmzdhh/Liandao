@@ -297,6 +297,11 @@ void WCDataWrapper::run()
                             processor->on_rtn_trade((LFRtnTradeField *) data, request_id, msg_source, cur_time);
                             break;
                         }
+                        case MSG_TYPE_LF_WITHDRAW:
+                        {
+                            processor->on_withdraw((LFWithdrawField*)data,request_id,msg_source,cur_time);
+                            break;
+                        }
                     }
                 }
             }

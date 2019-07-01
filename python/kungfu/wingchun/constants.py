@@ -32,6 +32,7 @@ class SOURCE:
     UPBIT = 30
     BITHUMB = 29
     DAYBIT = 31
+    BITTREX = 36
     KUCOIN = 32
     POLONIEX = 37
     BITSTAMP = 38

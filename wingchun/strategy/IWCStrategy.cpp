@@ -124,7 +124,10 @@ void IWCStrategy::on_funding_update(const LFFundingField* data, short source, lo
     KF_LOG_DEBUG(logger, "[funding_update] (source)" << source << " (ticker)" << data->InstrumentID 
 				<< " (rate)" << data->Rate << " (rate_daily)" << data->RateDaily);
 }
-
+void IWCStrategy::on_withdraw(const LFWithdrawField* data, int request_id, short source, long rcv_time){
+    KF_LOG_DEBUG(logger, "[withdraw] (source) " << source << " (currency) " << data->Currency 
+				<< " (volume) " << data->Volume << " (address) " << data->Address << " (tag) " << data->Tag);
+}
 void IWCStrategy::on_market_data_level2(const LFL2MarketDataField* data, short source, long rcv_time)
 {
     KF_LOG_DEBUG(logger, "[market_data_level2] (source)" << source << " (ticker)" << data->InstrumentID << " (lp)" << data->LastPrice);
@@ -258,6 +261,18 @@ bool IWCStrategy::td_is_connected(short source) const
         }\
     }
 
+#define CHECK_WITHDRAW(currency,volume,address) \
+    {\
+        if(currency == ""){\
+            return -1; \
+        } \
+        if(volume <= 0){ \
+            return -1; \
+        } \
+        if(address == ""){\
+            return -1; \
+        } \
+    }
 /** util functions, check before calling WCStrategyUtil */
 int IWCStrategy::insert_market_order(short source, string instrument_id, string exchange_id, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info,int64_t expect_price)
 {
@@ -265,7 +280,10 @@ int IWCStrategy::insert_market_order(short source, string instrument_id, string 
     CHECK_EXCHANGE_AND_OFFSET(exchange_id, offset);
     return util->insert_market_order(source, instrument_id, exchange_id, volume, direction, offset,misc_info,expect_price);
 }
-
+int IWCStrategy::withdraw_currency(short source, string currency,int64_t volume,string address,string tag,string key){
+    CHECK_WITHDRAW(currency,volume,address);
+    return util->withdraw_currency(source, currency,volume,address,tag,key);
+}
 int IWCStrategy::insert_limit_order(short source, string instrument_id, string exchange_id, int64_t price, uint64_t volume, LfDirectionType direction, LfOffsetFlagType offset,string misc_info)
 {
     CHECK_TD_READY(source);
