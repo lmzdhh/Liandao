@@ -83,6 +83,7 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_BITHUMB);
     loadJournalInfo(SOURCE_DAYBIT);
     loadJournalInfo(SOURCE_KUCOIN);
+    loadJournalInfo(SOURCE_BITSTAMP);
 
 
     loadJournalInfo(0, getSystemJournalPair);

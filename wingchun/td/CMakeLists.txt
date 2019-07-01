@@ -100,3 +100,9 @@ SET(HUOBI_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineHuobi.cpp TDEngineHuobi.h ../b
 ADD_LIBRARY(huobitd SHARED ${HUOBI_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(huobitd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
 INSTALL(TARGETS huobitd DESTINATION "lib/wingchun")
+
+SET(BITSTAMP_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBitstamp.cpp TDEngineBitstamp.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
+ADD_LIBRARY(bitstamptd SHARED ${BITSTAMP_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(bitstamptd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS bitstamptd DESTINATION "lib/wingchun")
+

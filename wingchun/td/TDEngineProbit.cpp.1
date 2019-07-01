@@ -310,9 +310,9 @@ SendOrderFilter TDEngineProbit::getSendOrderFilter1(AccountUnitProbit& unit, con
         map_itr++;
     }
     SendOrderFilter defaultFilter;
-    defaultFilter.ticksize = 8;
-   /* strcpy(defaultFilter.InstrumentID, "notfound");
-    return defaultFilter;*/
+/*    defaultFilter.ticksize = 8;
+    strcpy(defaultFilter.InstrumentID, "notfound");*/
+    return defaultFilter;
 }
 
 void TDEngineProbit::debug_print(const std::map<std::string, SendOrderFilter> &sendOrderFilters)
@@ -633,7 +633,6 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
     KF_LOG_DEBUG(logger, "[req_order_insert] (exchange_ticker)" << ticker);
     OrderFieldEx order {};
     order.RequestID = requestId;
-    order.VolumeTotalOriginal = data->Volume;
 
     std::string clientId = genClinetid(data->OrderRef);
     {
@@ -644,9 +643,9 @@ void TDEngineProbit::req_order_insert(const LFInputOrderField* data, int account
 /*    int64_t fixedPrice = fixPriceTickSize(ticker, data->LimitPrice, LF_CHAR_Buy == data->Direction);
     KF_LOG_DEBUG(logger, "[req_order_insert] SendOrderFilter  (Tid)" << ticker <<" (LimitPrice)" << data->LimitPrice <<" (FixedPrice)" << fixedPrice);
 */
-   // int64_t ExpectPrice=scale_offset;
+    int64_t ExpectPrice=scale_offset;
     uint64_t  cost1;
-    cost1 = (data->Volume*1.0)*(data->ExpectPrice*1.0);
+    cost1 = (data->Volume*1.0)*(ExpectPrice*1.0);
 
     SendOrderFilter filter = getSendOrderFilter1(unit, ticker.c_str());
     int64_t fixedPrice = fixPrice(filter.ticksize, data->LimitPrice, LF_CHAR_Buy == data->Direction);
@@ -883,7 +882,7 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
     document.SetObject();
     Document::AllocatorType& allocator = document.GetAllocator();
 
-    //Value document(kObjectType);
+   // Value document(kObjectType);
 
     document.AddMember("market_id", StringRef(code), allocator);
     document.AddMember("side", StringRef(side), allocator);
@@ -913,7 +912,7 @@ void TDEngineProbit::send_order(const AccountUnitProbit& unit, const char *code,
     //document.AddMember("limit_price", StringRef(priceStr.c_str()), allocator);
     std::string client_id = clientId;
     document.AddMember("client_order_id", StringRef(client_id.c_str()), allocator);
-    //document1.AddMember("data",document,allocator); 
+  //  document1.AddMember("data",document,allocator); 
 
     StringBuffer jsonStr;
     Writer<StringBuffer> writer(jsonStr);
@@ -1230,12 +1229,10 @@ void TDEngineProbit::onOrder(struct lws* conn, Document& json)
         if (!order.HasMember("quantity") || !order["quantity"].IsString())
         {
             KF_LOG_ERROR(logger, "TDEngineProbit::onOrder, parse json error:json string has no member \"quantity\"");
-           // return;
+            return;
         }
-        else if(order.HasMember("quantity") && order["quantity"].IsString()){
         double quantity = std::atof(order["quantity"].GetString()) + 0.000000001;
         rtnOrderEx.VolumeTotalOriginal = (uint64_t)(quantity*scale_offset);
-        }
         //status
         if (!order.HasMember("status") || !order["status"].IsString())
         {
