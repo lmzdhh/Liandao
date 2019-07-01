@@ -636,7 +636,7 @@ cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::stri
                                         {"KC-API-PASSPHRASE",unit.passphrase},
                                         {"Content-Type", "application/json"}};
 
-    KF_LOG_INFO(logger, "[post] (url) " << url <<"(TO-SIGN) "<< strSign <<" (SIGNED)"<<strSignatrue << " (TIMESTAMP) " << strTimestamp << " (KEY) " << unit.api_key);
+    KF_LOG_INFO(logger, "[post] (TO-SIGN) "<< strSign <<" (SIGNED)"<<strSignatrue << " (TIMESTAMP) " << strTimestamp << " (KEY) " << unit.api_key);
     string url = unit.baseUrl + method_url;
     std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{mapHeader},
