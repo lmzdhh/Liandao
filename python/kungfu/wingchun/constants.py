@@ -32,7 +32,9 @@ class SOURCE:
     BITHUMB = 29
     DAYBIT = 31
     KUCOIN = 32
+    POLONIEX = 37
     BITSTAMP = 38
+
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所

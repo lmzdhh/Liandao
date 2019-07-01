@@ -367,8 +367,9 @@ wingchun_constants = [
                        ('PROBIT', 28, ''),
                        ('BITHUMB', 29, ''),
                        ('DAYBIT', 31, ''),
-                        ('KUCOIN', 32, ''),
-                        ('BITSTAMP', 38, '')
+                       ('KUCOIN', 32, ''),
+                       ('POLONIEX', 37, ''),
+                       ('BITSTAMP', 38, '')
                        ],'source index'),
     ('DIRECTION', 'char', [('Buy', '0', '买'),
                            ('Sell', '1', '卖')],

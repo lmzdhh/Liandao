@@ -920,6 +920,14 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_DAYBIT: LFRtnTradeField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_DAYBIT: LFOrderActionField,
 
+    lf.MsgTypes.MSG_TYPE_LF_MD_POLONIEX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_POLONIEX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_POLONIEX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_POLONIEX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_POLONIEX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_POLONIEX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_POLONIEX: LFOrderActionField,
+    
     lf.MsgTypes.MSG_TYPE_LF_MD_KUCOIN: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_KUCOIN: LFQryPositionField,
     lf.MsgTypes.MSG_TYPE_LF_RSP_POS_KUCOIN: LFRspPositionField,

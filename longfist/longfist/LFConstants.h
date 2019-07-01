@@ -30,6 +30,7 @@ enum exchange_source_index : short
     SOURCE_BITHUMB = 29,
     SOURCE_DAYBIT = 31,
     SOURCE_KUCOIN = 32,
+    SOURCE_POLONIEX = 37,
     SOURCE_BITSTAMP = 38
 };
 
@@ -71,9 +72,12 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "bithumb";
         case SOURCE_DAYBIT:
             return "daybit";
-        case SOURCE_KUCOIN:
+
+         case SOURCE_KUCOIN:
             return "kucoin";
-        case SOURCE_BITSTAMP:
+         case SOURCE_POLONIEX:
+            return "poloniex"
+         case SOURCE_BITSTAMP:
             return "bitstamp";
 		default:
 			return "unknown";
@@ -150,6 +154,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
 		return SOURCE_BITHUMB;
     }
+    else if(exch_str == "poloniex")
+    {
+        return SOURCE_POLONIEX;
+    }
      else if(exch_str == "kucoin")
     {
 		return SOURCE_KUCOIN;
@@ -187,6 +195,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_PROBIT "PROBIT"
 #define EXCHANGE_BITHUMB "BITHUMB"
 #define EXCHANGE_DAYBIT "DAYBIT"
+#define EXCHANGE_POLONIEX "POLONIEX"
 #define EXCHANGE_KUCOIN "KUCOIN"
 #define EXCHANGE_BITSTAMP "BITSTAMP"
 
@@ -213,6 +222,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_BITHUMB  29
 #define EXCHANGE_ID_DAYBIT  31
 #define EXCHANGE_ID_KUCOIN  32
+#define EXCHANGE_ID_POLONIEX  37
 #define EXCHANGE_ID_BITSTAMP  38
 // MsgTypes that used for LF data structure...
 const short MSG_TYPE_LF_MD            = 101;
@@ -391,6 +401,17 @@ const short MSG_TYPE_LF_ORDER_KUCOIN   	= 32204;
 const short MSG_TYPE_LF_RTN_ORDER_KUCOIN 	= 32205;
 const short MSG_TYPE_LF_RTN_TRADE_KUCOIN	= 32206;
 const short MSG_TYPE_LF_ORDER_ACTION_KUCOIN = 32207;
+
+//POLONIEX, idx=37
+const short MSG_TYPE_LF_MD_POLONIEX        	= 37101;
+const short MSG_TYPE_LF_QRY_POS_POLONIEX   	= 37201;
+const short MSG_TYPE_LF_RSP_POS_POLONIEX   	= 37202;
+const short MSG_TYPE_LF_ORDER_POLONIEX     	= 37204;
+const short MSG_TYPE_LF_RTN_ORDER_POLONIEX 	= 37205;
+const short MSG_TYPE_LF_RTN_TRADE_POLONIEX 	= 37206;
+const short MSG_TYPE_LF_ORDER_ACTION_POLONIEX = 37207;
+
+
 
 //BITSTAMP, idx=38
 const short MSG_TYPE_LF_MD_BITSTAMP       	= 38101;

@@ -53,6 +53,8 @@ inline std::string getExchangeName(short exchange_id)
 			return EXCHANGE_BITHUMB;
 		case EXCHANGE_ID_DAYBIT:
 			return EXCHANGE_DAYBIT;
+		case EXCHANGE_ID_POLONIEX:
+			return EXCHANGE_POLONIEX;
 		case EXCHANGE_ID_KUCOIN:
 			return EXCHANGE_KUCOIN;
 		case EXCHANGE_ID_BITSTAMP:
@@ -107,6 +109,8 @@ inline int getExchangeId(std::string exchange_name)
 		return EXCHANGE_ID_BITHUMB;
 	else if (exchange_name.compare(EXCHANGE_DAYBIT) == 0) 
 		return EXCHANGE_ID_DAYBIT;
+	else if (exchange_name.compare(EXCHANGE_POLONIEX) == 0)
+		return EXCHANGE_ID_POLONIEX;
 	else if (exchange_name.compare(EXCHANGE_KUCOIN) == 0) 
 		return EXCHANGE_ID_KUCOIN;
 	else if (exchange_name.compare(EXCHANGE_BITSTAMP) == 0) 
@@ -150,6 +154,8 @@ inline JournalPair getMdJournalPair(short source)
 			return { "/shared/kungfu/journal/MD/BITHUMB/", "MD_BITHUMB" };
 		case 31:
 			return{ "/shared/kungfu/journal/MD/DAYBIT/", "MD_DAYBIT" };
+		case 37:
+			return{ "/shared/kungfu/journal/MD/POLONIEX/", "MD_POLONIEX" };
 		case 32:
 			return{ "/shared/kungfu/journal/MD/KUCOIN/", "MD_KUCOIN" };
 		case 38:
@@ -191,6 +197,8 @@ inline JournalPair getMdRawJournalPair(short source)
             return{ "/shared/kungfu/journal/MD_RAW/BITHUMB/", "MDRAW_BITHUMB" };
 		case 31:
 			return{ "/shared/kungfu/journal/MD_RAW/DAYBIT/", "MDRAW_DAYBIT" };
+		case 37:
+			return{ "/shared/kungfu/journal/MD_RAW/POLONIEX/", "MDRAW_POLONIEX"};
 		case 32:
 			return{ "/shared/kungfu/journal/MD_RAW/KUCOIN/", "MDRAW_KUCOIN" };
 		case 38:
@@ -234,6 +242,8 @@ inline JournalPair getTdJournalPair(short source)
 			return {"/shared/kungfu/journal/TD/BITHUMB/", "TD_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD/DAYBIT/", "TD_DAYBIT"};
+		case 37:
+			return {"/shared/kungfu/journal/TD/POLONIEX/", "TD_POLONIEX"};
 		case 32:
 			return {"/shared/kungfu/journal/TD/KUCOIN/", "TD_KUCOIN"};
 		case 38:
@@ -277,6 +287,8 @@ inline JournalPair getTdSendJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_SEND/BITHUMB/", "TD_SEND_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD_SEND/DAYBIT/", "TD_SEND_DAYBIT"};
+		case 37:
+			return {"/shared/kungfu/journal/TD_SEND/POLONIEX/", "TD_SEND_POLONIEX"};
 		case 32:
 			return {"/shared/kungfu/journal/TD_SEND/KUCOIN/", "TD_SEND_KUCOIN"};
 		case 38:
@@ -320,6 +332,8 @@ inline JournalPair getTdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_RAW/BITHUMB/", "TD_RAW_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD_RAW/DAYBIT/", "TD_RAW_DAYBIT"};
+		case 37:
+			return {"/shared/kungfu/journal/TD_RAW/POLONIEX/", "TD_RAW_POLONIEX"};
 		case 32:
 			return {"/shared/kungfu/journal/TD_RAW/KUCOIN/", "TD_RAW_KUCOIN"};
 		case 38:
@@ -363,6 +377,8 @@ inline JournalPair getTdQJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_Q/BITHUMB/", "TD_Q_BITHUMB"};
 		case 31:
 			return {"/shared/kungfu/journal/TD_Q/DAYBIT/", "TD_Q_DAYBIT"};
+		case 37:
+			return {"/shared/kungfu/journal/TD_Q/POLONIEX/", "TD_Q_POLONIEX"};
 		case 32:
 			return {"/shared/kungfu/journal/TD_Q/KUCOIN/", "TD_Q_KUCOIN"};
 		case 38:
