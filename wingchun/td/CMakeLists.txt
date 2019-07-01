@@ -95,6 +95,11 @@ ADD_LIBRARY(daybittd SHARED ${DAYBIT_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(daybittd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
 INSTALL(TARGETS daybittd DESTINATION "lib/wingchun")
 
+SET(KRAKEN_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineKraken.cpp TDEngineKraken.h  ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h)
+ADD_LIBRARY(krakentd SHARED ${KRAKEN_SOURCE_FILES})
+TARGET_LINK_LIBRARIES(krakentd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so ${CMAKE_SOURCE_DIR}/utils/libwebsockets/lib/libwebsockets.so)
+INSTALL(TARGETS krakentd DESTINATION "lib/wingchun")
+
 SET(BITFLYER_SOURCE_FILES ${TD_SOURCE_FILES} TDEngineBitflyer.cpp TDEngineBitflyer.h ../base/CoinPairWhiteList.cpp ../base/CoinPairWhiteList.h ../base/InterfaceMgr.cpp ../base/InterfaceMgr.h)
 ADD_LIBRARY(bitflyertd SHARED ${BITFLYER_SOURCE_FILES})
 TARGET_LINK_LIBRARIES(bitflyertd ${COMMON_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcpr.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcurl.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libcrypto.so ${CMAKE_SOURCE_DIR}/utils/cpr/lib/libssl.so)
