@@ -31,6 +31,7 @@ enum exchange_source_index : short
     SOURCE_UPBIT = 30,
     SOURCE_DAYBIT = 31,
     SOURCE_KUCOIN = 32,
+    SOURCE_BITFLYER= 33,
     SOURCE_POLONIEX = 37,
     SOURCE_BITSTAMP = 38
 };
@@ -75,8 +76,10 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "bithumb";
         case SOURCE_DAYBIT:
             return "daybit";
-         case SOURCE_KUCOIN:
+        case SOURCE_KUCOIN:
             return "kucoin";
+        case SOURCE_BITFLYER:
+	        return "bitflyer";
          case SOURCE_POLONIEX:
             return "poloniex"
          case SOURCE_BITSTAMP:
@@ -160,6 +163,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
 		return SOURCE_BITHUMB;
     }
+    else if(exch_str == "bitflyer")
+    {
+        return SOURCE_BITFLYER;
+    }
     else if(exch_str == "poloniex")
     {
         return SOURCE_POLONIEX;
@@ -202,6 +209,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_UPBIT "UPBIT"
 #define EXCHANGE_BITHUMB "BITHUMB"
 #define EXCHANGE_DAYBIT "DAYBIT"
+#define EXCHANGE_BITFLYER "BITFLYER"
 #define EXCHANGE_POLONIEX "POLONIEX"
 #define EXCHANGE_KUCOIN "KUCOIN"
 #define EXCHANGE_BITSTAMP "BITSTAMP"
@@ -229,6 +237,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_BITHUMB  29
 #define EXCHANGE_ID_UPBIT  30
 #define EXCHANGE_ID_DAYBIT  31
+#define EXCHANGE_ID_BITFLYER  33
 #define EXCHANGE_ID_KUCOIN  32
 #define EXCHANGE_ID_POLONIEX  37
 #define EXCHANGE_ID_BITSTAMP  38
@@ -414,11 +423,19 @@ const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
 const short MSG_TYPE_LF_MD_KUCOIN       	= 32101;
 const short MSG_TYPE_LF_QRY_POS_KUCOIN  	= 32201;
 const short MSG_TYPE_LF_RSP_POS_KUCOIN  	= 32202;
-const short MSG_TYPE_LF_ORDER_KUCOIN   	= 32204;
+const short MSG_TYPE_LF_ORDER_KUCOIN   	    = 32204;
 const short MSG_TYPE_LF_RTN_ORDER_KUCOIN 	= 32205;
 const short MSG_TYPE_LF_RTN_TRADE_KUCOIN	= 32206;
 const short MSG_TYPE_LF_ORDER_ACTION_KUCOIN = 32207;
 
+//BITFLYER, idx=33
+const short MSG_TYPE_LF_MD_BITFLYER               = 33101;
+const short MSG_TYPE_LF_QRY_POS_BITFLYER          = 33201;
+const short MSG_TYPE_LF_RSP_POS_BITFLYER          = 33202;
+const short MSG_TYPE_LF_ORDER_BITFLYER            = 33204;
+const short MSG_TYPE_LF_RTN_ORDER_BITFLYER        = 33205;
+const short MSG_TYPE_LF_RTN_TRADE_BITFLYER        = 33206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITFLYER     = 33207;
 //POLONIEX, idx=37
 const short MSG_TYPE_LF_MD_POLONIEX        	= 37101;
 const short MSG_TYPE_LF_QRY_POS_POLONIEX   	= 37201;

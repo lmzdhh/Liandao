@@ -85,6 +85,7 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_DAYBIT);
     loadJournalInfo(SOURCE_POLONIEX);
     loadJournalInfo(SOURCE_KUCOIN);
+    loadJournalInfo(SOURCE_BITFLYER);
     loadJournalInfo(SOURCE_BITSTAMP);
 
 

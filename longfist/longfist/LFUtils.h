@@ -57,6 +57,8 @@ inline std::string getExchangeName(short exchange_id)
 			return EXCHANGE_POLONIEX;
 		case EXCHANGE_ID_KUCOIN:
 			return EXCHANGE_KUCOIN;
+        case EXCHANGE_ID_BITFLYER:
+            return EXCHANGE_BITFLYER;
 		case EXCHANGE_ID_BITSTAMP:
 			return EXCHANGE_BITSTAMP;
 		default:
@@ -113,6 +115,8 @@ inline int getExchangeId(std::string exchange_name)
 		return EXCHANGE_ID_POLONIEX;
 	else if (exchange_name.compare(EXCHANGE_KUCOIN) == 0) 
 		return EXCHANGE_ID_KUCOIN;
+	else if (exchange_name.compare(EXCHANGE_BITFLYER) == 0)
+        return EXCHANGE_ID_BITFLYER;
 	else if (exchange_name.compare(EXCHANGE_BITSTAMP) == 0) 
 		return EXCHANGE_ID_BITSTAMP;
 	return -1;
@@ -160,6 +164,8 @@ inline JournalPair getMdJournalPair(short source)
 			return{ "/shared/kungfu/journal/MD/POLONIEX/", "MD_POLONIEX" };
 		case 32:
 			return{ "/shared/kungfu/journal/MD/KUCOIN/", "MD_KUCOIN" };
+		case 33:
+            return {"/shared/kungfu/journal/MD/BITFLYER/", "MD_BITFLYER"};
 		case 38:
 			return{ "/shared/kungfu/journal/MD/BITSTAMP/", "MD_BITSTAMP" };
 		default:
@@ -206,6 +212,8 @@ inline JournalPair getMdRawJournalPair(short source)
 			return{ "/shared/kungfu/journal/MD_RAW/POLONIEX/", "MDRAW_POLONIEX"};
 		case 32:
 			return{ "/shared/kungfu/journal/MD_RAW/KUCOIN/", "MDRAW_KUCOIN" };
+		case 33:
+            return{ "/shared/kungfu/journal/MD_RAW/BITFLYER/", "MDRAW_BITFLYER" };
 		case 38:
 			return{ "/shared/kungfu/journal/MD_RAW/BITSTAMP/", "MDRAW_BITSTAMP" };
 		default:
@@ -253,6 +261,8 @@ inline JournalPair getTdJournalPair(short source)
 			return {"/shared/kungfu/journal/TD/POLONIEX/", "TD_POLONIEX"};
 		case 32:
 			return {"/shared/kungfu/journal/TD/KUCOIN/", "TD_KUCOIN"};
+		case 33:
+            return {"/shared/kungfu/journal/TD/BITFLYER/", "TD_BITFLYER"};
 		case 38:
 			return {"/shared/kungfu/journal/TD/BITSTAMP/", "TD_BITSTAMP"};
 		default:
@@ -300,6 +310,8 @@ inline JournalPair getTdSendJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_SEND/POLONIEX/", "TD_SEND_POLONIEX"};
 		case 32:
 			return {"/shared/kungfu/journal/TD_SEND/KUCOIN/", "TD_SEND_KUCOIN"};
+		case 33:
+            return {"/shared/kungfu/journal/TD_SEND/BITFLYER/", "TD_SEND_BITFLYER"};
 		case 38:
 			return {"/shared/kungfu/journal/TD_SEND/BITSTAMP/", "TD_SEND_BITSTAMP"};
 		default:
@@ -347,6 +359,8 @@ inline JournalPair getTdRawJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_RAW/POLONIEX/", "TD_RAW_POLONIEX"};
 		case 32:
 			return {"/shared/kungfu/journal/TD_RAW/KUCOIN/", "TD_RAW_KUCOIN"};
+		case 33:
+            return {"/shared/kungfu/journal/TD_RAW/BITFLYER/", "TD_RAW_BITFLYER"};
 		case 38:
 			return {"/shared/kungfu/journal/TD_RAW/BITSTAMP/", "TD_RAW_BITSTAMP"};
 		default:
@@ -394,6 +408,8 @@ inline JournalPair getTdQJournalPair(short source)
 			return {"/shared/kungfu/journal/TD_Q/POLONIEX/", "TD_Q_POLONIEX"};
 		case 32:
 			return {"/shared/kungfu/journal/TD_Q/KUCOIN/", "TD_Q_KUCOIN"};
+		case 33:
+            return {"/shared/kungfu/journal/TD_Q/BITFLYER/", "TD_Q_BITFLYER"};
 		case 38:
 			return {"/shared/kungfu/journal/TD_Q/BITSTAMP/", "TD_Q_BITSTAMP"};
 		default:

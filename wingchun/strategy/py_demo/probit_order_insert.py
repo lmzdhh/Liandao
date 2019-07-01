@@ -22,7 +22,7 @@ wingchun strategy -n my_test -p binance_order_cancel_test.py
 
 def initialize(context):
     #context.add_md(source=SOURCE.PROBIT)
-    context.ticker = 'xrp_usdt'
+    context.ticker = 'eos_btc'
     context.exchange_id = EXCHANGE.SHFE
     context.buy_price = -1
     context.sell_price = -1
@@ -49,9 +49,9 @@ def on_pos(context, pos_handler, request_id, source, rcv_time):
             context.sell_price = 999999999 #market_data.UpperLimitPrice
             if context.order_rid < 0:
                 print("context.insert_limit_order 1.")
-                context.order_rid = context.insert_limit_order(source=SOURCE.PROBIT,
+                context.order_rid = context.insert_market_order(source=SOURCE.PROBIT,
                                                                ticker=context.ticker,
-                                                               price=context.buy_price,
+                                                             #  price=context.buy_price,
                                                                exchange_id=context.exchange_id,
                                                                volume=100000000,
                                                                direction=DIRECTION.Buy,
