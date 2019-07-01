@@ -80,6 +80,7 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_HUOBI);
 	loadJournalInfo(SOURCE_OCEANEXB);
     loadJournalInfo(SOURCE_PROBIT);
+    loadJournalInfo(SOURCE_UPBIT);
     loadJournalInfo(SOURCE_BITHUMB);
     loadJournalInfo(SOURCE_DAYBIT);
     loadJournalInfo(SOURCE_POLONIEX);

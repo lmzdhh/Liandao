@@ -366,6 +366,7 @@ wingchun_constants = [
                        ('OCEANEXB', 27, ''),
                        ('PROBIT', 28, ''),
                        ('BITHUMB', 29, ''),
+                       ('UPBIT', 30, ''),
                        ('DAYBIT', 31, ''),
                        ('KUCOIN', 32, ''),
                        ('POLONIEX', 37, ''),

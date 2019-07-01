@@ -29,6 +29,7 @@ class SOURCE:
     HUOBI = 26
     OCEANEXB = 27
     PROBIT = 28
+    UPBIT = 30
     BITHUMB = 29
     DAYBIT = 31
     KUCOIN = 32

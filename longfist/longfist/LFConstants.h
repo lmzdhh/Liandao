@@ -28,6 +28,7 @@ enum exchange_source_index : short
     SOURCE_OCEANEXB = 27,
     SOURCE_PROBIT = 28,
     SOURCE_BITHUMB = 29,
+    SOURCE_UPBIT = 30,
     SOURCE_DAYBIT = 31,
     SOURCE_KUCOIN = 32,
     SOURCE_POLONIEX = 37,
@@ -68,11 +69,12 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "oceanexb";
         case SOURCE_PROBIT:
             return "probit";
+        case SOURCE_UPBIT:
+            return "upbit";
         case SOURCE_BITHUMB:
             return "bithumb";
         case SOURCE_DAYBIT:
             return "daybit";
-
          case SOURCE_KUCOIN:
             return "kucoin";
          case SOURCE_POLONIEX:
@@ -146,6 +148,10 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_PROBIT;
     }
+    else if(exch_str == "upbit")
+    {
+        return SOURCE_UPBIT;
+    }
     else if(exch_str == "daybit")
     {
         return SOURCE_DAYBIT;
@@ -193,6 +199,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_HUOBI "HUOBI"
 #define EXCHANGE_OCEANEXB "OCEANEXB"
 #define EXCHANGE_PROBIT "PROBIT"
+#define EXCHANGE_UPBIT "UPBIT"
 #define EXCHANGE_BITHUMB "BITHUMB"
 #define EXCHANGE_DAYBIT "DAYBIT"
 #define EXCHANGE_POLONIEX "POLONIEX"
@@ -220,6 +227,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_OCEANEXB  27
 #define EXCHANGE_ID_PROBIT  28
 #define EXCHANGE_ID_BITHUMB  29
+#define EXCHANGE_ID_UPBIT  30
 #define EXCHANGE_ID_DAYBIT  31
 #define EXCHANGE_ID_KUCOIN  32
 #define EXCHANGE_ID_POLONIEX  37
@@ -381,6 +389,15 @@ const short MSG_TYPE_LF_ORDER_BITHUMB             = 29204;
 const short MSG_TYPE_LF_RTN_ORDER_BITHUMB         = 29205;
 const short MSG_TYPE_LF_RTN_TRADE_BITHUMB         = 29206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITHUMB     = 29207;
+
+//UPBIT, idx=30
+const short MSG_TYPE_LF_MD_UPBIT        	= 30101;
+const short MSG_TYPE_LF_QRY_POS_UPBIT   	= 30201;
+const short MSG_TYPE_LF_RSP_POS_UPBIT   	= 30202;
+const short MSG_TYPE_LF_ORDER_UPBIT     	= 30204;
+const short MSG_TYPE_LF_RTN_ORDER_UPBIT 	= 30205;
+const short MSG_TYPE_LF_RTN_TRADE_UPBIT 	= 30206;
+const short MSG_TYPE_LF_ORDER_ACTION_UPBIT  = 30207;
 
 
 
