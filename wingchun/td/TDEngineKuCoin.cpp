@@ -555,9 +555,9 @@ cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::strin
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strSign = strTimestamp + "GET" + method_url;
     //KF_LOG_INFO(logger, "strSign = " << strSign );
-    std::unique_lock<std::mutex> lock(g_httpMutex);
-    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    //KF_LOG_INFO(logger, "strHmac = " << strHmac );
+    unsigned char strHmac[EVP_MAX_MD_SIZE]={0};
+    hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str(),strHmac,EVP_MAX_MD_SIZE);
+    KF_LOG_INFO(logger, "strHmac = " << strHmac );
     std::string strSignatrue = base64_encode(strHmac,32);
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
                                         {"KC-API-TIMESTAMP",strTimestamp},
@@ -578,9 +578,9 @@ cpr::Response TDEngineKuCoin::Delete(const std::string& method_url,const std::st
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strSign =  strTimestamp + "DELETE" + method_url + body;
     //KF_LOG_INFO(logger, "strSign = " << strSign );
-    std::unique_lock<std::mutex> lock(g_httpMutex);
-    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    //KF_LOG_INFO(logger, "strHmac = " << strHmac );
+    unsigned char strHmac[EVP_MAX_MD_SIZE]={0};
+    hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str(),strHmac,EVP_MAX_MD_SIZE);
+    KF_LOG_INFO(logger, "strHmac = " << strHmac );
     std::string strSignatrue = base64_encode(strHmac,32);
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
                                         {"KC-API-TIMESTAMP",strTimestamp},
@@ -600,8 +600,10 @@ cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::stri
     std::string strSign =  strTimestamp + "POST" + method_url + body;
     // KF_LOG_INFO(logger, "strSign = " << strSign );
     std::unique_lock<std::mutex> lock(g_httpMutex);
-    unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
+    unsigned char strHmac[EVP_MAX_MD_SIZE]={0};
+    hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str(),strHmac,EVP_MAX_MD_SIZE);
     std::string strSignatrue = base64_encode(strHmac,32);
+    KF_LOG_INFO(logger, "strHmac = " << strHmac );
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
                                         {"KC-API-TIMESTAMP",strTimestamp},
                                         {"KC-API-KEY",unit.api_key},
