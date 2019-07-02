@@ -171,7 +171,6 @@ WC_NAMESPACE_START
             bool shouldRetry(Document& d);
 
             std::string construct_request_body(const AccountUnitKuCoin& unit,const  std::string& data,bool isget = true);
-            cpr::Header construct_request_header(AccountUnitKuCoin& unit,const std::string& strSign,const std::string& strContentType);
             std::string createInsertOrdertring(const char *code,const char* strClientId,
                                                const char *side, const char *type, double& size, double& price,bool isPostOnly);
 

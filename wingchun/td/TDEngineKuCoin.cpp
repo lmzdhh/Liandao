@@ -548,30 +548,6 @@ int64_t TDEngineKuCoin::getMSTime()
     return  timestamp;
 }
 
-
-cpr::Header TDEngineKuCoin::construct_request_header(AccountUnitKuCoin& unit,const std::string& strSign,const std::string& strContentType)
-{
-    unsigned char * strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
-    std::string strSignatrue = base64_encode(strHmac,32);
-    
-    if(strContentType.empty())
-    {
-           return cpr::Header{{"KC-API-SIGN",strSignatrue},
-                                        {"KC-API-TIMESTAMP",std::to_string(getTimestamp())},
-                                        {"KC-API-KEY",unit.api_key},
-                                        {"KC-API-PASSPHRASE",unit.passphrase}};
-    }
-    else
-    {
-        return cpr::Header{{"KC-API-SIGN",strSignatrue},
-                                    {"KC-API-TIMESTAMP",std::to_string(getTimestamp())},
-                                    {"KC-API-KEY",unit.api_key},
-                                    {"KC-API-PASSPHRASE",unit.passphrase},
-                                    {"Contenr-Type",strContentType}};
-    }
-    
-}
-
 std::mutex g_httpMutex;
 cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::string& body, AccountUnitKuCoin& unit)
 {
@@ -579,6 +555,7 @@ cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::strin
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strSign = strTimestamp + "GET" + method_url;
     //KF_LOG_INFO(logger, "strSign = " << strSign );
+    std::unique_lock<std::mutex> lock(g_httpMutex);
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     //KF_LOG_INFO(logger, "strHmac = " << strHmac );
     std::string strSignatrue = base64_encode(strHmac,32);
@@ -587,12 +564,8 @@ cpr::Response TDEngineKuCoin::Get(const std::string& method_url,const std::strin
                                         {"KC-API-KEY",unit.api_key},
                                         {"KC-API-PASSPHRASE",unit.passphrase}};
     //KF_LOG_INFO(logger, "KC-API-SIGN = " << strSignatrue << ", KC-API-TIMESTAMP = " << strTimestamp << ", KC-API-KEY = " << unit.api_key << ", KC-API-PASSPHRASE = " << unit.passphrase);
-
-
-    std::unique_lock<std::mutex> lock(g_httpMutex);
     const auto response = cpr::Get(Url{url}, 
                              Header{mapHeader}, Timeout{10000} );
-    lock.unlock();
     KF_LOG_INFO(logger, "[get] (url) " << url << " (response.status_code) " << response.status_code <<
                                                " (response.error.message) " << response.error.message <<
                                                " (response.text) " << response.text.c_str());
@@ -605,6 +578,7 @@ cpr::Response TDEngineKuCoin::Delete(const std::string& method_url,const std::st
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strSign =  strTimestamp + "DELETE" + method_url + body;
     //KF_LOG_INFO(logger, "strSign = " << strSign );
+    std::unique_lock<std::mutex> lock(g_httpMutex);
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     //KF_LOG_INFO(logger, "strHmac = " << strHmac );
     std::string strSignatrue = base64_encode(strHmac,32);
@@ -612,11 +586,8 @@ cpr::Response TDEngineKuCoin::Delete(const std::string& method_url,const std::st
                                         {"KC-API-TIMESTAMP",strTimestamp},
                                         {"KC-API-KEY",unit.api_key},
                                         {"KC-API-PASSPHRASE",unit.passphrase}};
-    //KF_LOG_INFO(logger, "KC-API-SIGN = " << strSignatrue << ", KC-API-TIMESTAMP = " << strTimestamp << ", KC-API-KEY = " << unit.api_key << ", KC-API-PASSPHRASE = " << unit.passphrase);
-
-    std::unique_lock<std::mutex> lock(g_httpMutex);
+    //KF_LOG_INFO(logger, "KC-API-SIGN = " << strSignatrue << ", KC-API-TIMESTAMP = " << strTimestamp << ", KC-API-KEY = " << unit.api_key << ", KC-API-PASSPHRASE = " << unit.passphrase);  
     const auto response = cpr::Delete(Url{url},Header{mapHeader}, Timeout{10000} );
-    lock.unlock();
     KF_LOG_INFO(logger, "[delete] (url) " << url << " (response.status_code) " << response.status_code <<
                                                " (response.error.message) " << response.error.message <<
                                                " (response.text) " << response.text.c_str());
@@ -628,6 +599,7 @@ cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::stri
     std::string strTimestamp = std::to_string(getTimestamp());
     std::string strSign =  strTimestamp + "POST" + method_url + body;
     // KF_LOG_INFO(logger, "strSign = " << strSign );
+    std::unique_lock<std::mutex> lock(g_httpMutex);
     unsigned char* strHmac = hmac_sha256_byte(unit.secret_key.c_str(),strSign.c_str());
     std::string strSignatrue = base64_encode(strHmac,32);
     cpr::Header mapHeader = cpr::Header{{"KC-API-SIGN",strSignatrue},
@@ -638,10 +610,8 @@ cpr::Response TDEngineKuCoin::Post(const std::string& method_url,const std::stri
 
     KF_LOG_INFO(logger, "[post] (TO-SIGN) "<< strSign <<" (SIGNED)"<<strSignatrue << " (TIMESTAMP) " << strTimestamp << " (KEY) " << unit.api_key);
     string url = unit.baseUrl + method_url;
-    std::unique_lock<std::mutex> lock(g_httpMutex);
     auto response = cpr::Post(Url{url}, Header{mapHeader},
                     Body{body},Timeout{30000});
-    lock.unlock();
     KF_LOG_INFO(logger, "[post] (url) " << url <<"(body) "<< body<< " (response.status_code) " << response.status_code <<
                                        " (response.error.message) " << response.error.message <<
                                        " (response.text) " << response.text.c_str());
