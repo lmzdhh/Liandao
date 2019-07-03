@@ -298,7 +298,7 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 			for(int i = 0; i < size; ++i)
 			{
 				//CYS add std::round
-                                md.BidLevels[i].price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
+                md.BidLevels[i].price = std::round(stod(bids.GetArray()[i][0].GetString()) * scale_offset);
 				md.BidLevels[i].volume = std::round(stod(bids.GetArray()[i][1].GetString()) * scale_offset);
 			}
 			md.BidLevelCount = size;
@@ -350,7 +350,7 @@ void MDEngineBinance::on_lws_book_update(const char* data, size_t len, const std
 
 void MDEngineBinance::on_lws_kline(const char* src, size_t len)
 {
-	KF_LOG_INFO(logger, "processing 1-min trade bins data" << src);
+	//KF_LOG_INFO(logger, "processing 1-min trade bins data" << src);
  	Document json;
     json.Parse(src);
     if(!json.HasMember("s") || !json.HasMember("k"))
@@ -365,7 +365,7 @@ void MDEngineBinance::on_lws_kline(const char* src, size_t len)
         KF_LOG_INFO(logger, "received 1-min trade bin symbol not in white list");
         return;
     }
-    KF_LOG_INFO(logger, "received 1-min trade bin symbol is " << symbol << " and ticker is " << ticker);
+    //KF_LOG_INFO(logger, "received 1-min trade bin symbol is " << symbol << " and ticker is " << ticker);
  	auto& data = json["k"];
 	if(data["x"].GetBool())
 	{
@@ -556,7 +556,7 @@ void MDEngineBinance::loop()
             /*quest3 edited by fxw starts here*/
             /*判断是否在设定时间内更新与否，*/
             int64_t now = getTimestamp();
-            KF_LOG_INFO(logger, "quest3: update check ");
+            //KF_LOG_INFO(logger, "quest3: update check ");
             if ((now - timer[1]) > refresh_normal_check_book_s * 1000)
             {
                 LFPriceBook20Field md;
