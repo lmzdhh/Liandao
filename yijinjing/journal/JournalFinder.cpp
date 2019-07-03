@@ -80,14 +80,18 @@ JournalFinder::JournalFinder() {
     loadJournalInfo(SOURCE_HUOBI);
 	loadJournalInfo(SOURCE_OCEANEXB);
     loadJournalInfo(SOURCE_PROBIT);
-    loadJournalInfo(SOURCE_UPBIT);
     loadJournalInfo(SOURCE_BITHUMB);
+    loadJournalInfo(SOURCE_UPBIT);
     loadJournalInfo(SOURCE_DAYBIT);
-    loadJournalInfo(SOURCE_POLONIEX);
-    loadJournalInfo(SOURCE_KUCOIN);
     loadJournalInfo(SOURCE_BITFLYER);
+    loadJournalInfo(SOURCE_KUCOIN);
+    loadJournalInfo(SOURCE_KRAKEN);
+    loadJournalInfo(SOURCE_IB);
+    loadJournalInfo(SOURCE_BITTREX);
+    loadJournalInfo(SOURCE_POLONIEX);
     loadJournalInfo(SOURCE_BITSTAMP);
-
+    loadJournalInfo(SOURCE_DERIBIT);
+    loadJournalInfo(SOURCE_EMX);
 
     loadJournalInfo(0, getSystemJournalPair);
 

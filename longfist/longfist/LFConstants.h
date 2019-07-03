@@ -7,11 +7,11 @@
 #include <cstdlib>
 #include <stdio.h>
 #include <string>
-
+#include <map>
 // Index for Sources...
 enum exchange_source_index : short
 {
-    SOURCE_UNKNOWN =-1,
+    SOURCE_UNKNOWN = -1,
     SOURCE_CTP = 1,
     SOURCE_XTP = 15,
     SOURCE_BINANCE = 16,
@@ -31,31 +31,77 @@ enum exchange_source_index : short
     SOURCE_UPBIT = 30,
     SOURCE_DAYBIT = 31,
     SOURCE_KUCOIN = 32,
-    SOURCE_BITFLYER= 33,
+    SOURCE_BITFLYER = 33,
+    SOURCE_KRAKEN = 34,
+    SOURCE_IB = 35,
+    SOURCE_BITTREX = 36,
     SOURCE_POLONIEX = 37,
-    SOURCE_BITSTAMP = 38
+    SOURCE_BITSTAMP = 38,
+    SOURCE_DERIBIT = 39,
+    SOURCE_EMX = 40
 };
-
+std::map<exchange_source_index,char*> g_mapSources={
+    {SOURCE_CTP,"ctp"},
+	{SOURCE_XTP,"xtp"},
+	{SOURCE_BINANCE,"binance"},
+	{SOURCE_INDODAX,"indodax"},
+    {SOURCE_OKEX,"okex"},
+	{SOURCE_COINMEX,"coinmex"},
+	{SOURCE_MOCK,"mock"},
+	{SOURCE_BITMAX,"bitmax"},
+	{SOURCE_BITHUMB,"bithumb"},
+    {SOURCE_BITFINEX,"bitfinex"},
+    {SOURCE_BITMEX,"bitmex"},
+    {SOURCE_HITBTC,"hitbtc"},
+    {SOURCE_OCEANEX,"oceanex"},
+    {SOURCE_HUOBI,"huobi"},
+    {SOURCE_OCEANEXB,"oceanexb"},
+    {SOURCE_PROBIT,"probit"},
+    {SOURCE_BITHUMB,"bithumb"},
+    {SOURCE_UPBIT,"upbit"},
+    {SOURCE_DAYBIT,"daybit"},
+    {SOURCE_KUCOIN,"kucoin"},
+    {SOURCE_BITFLYER,"bitflyer"},
+    {SOURCE_KRAKEN,"kraken"},
+    {SOURCE_IB,"ib"},
+    {SOURCE_BITTREX,"bittrex"},
+    {SOURCE_POLONIEX,"poloniex"},
+    {SOURCE_BITSTAMP,"bitstamp"},
+    {SOURCE_DERIBIT,"deribit"},
+    {SOURCE_EMX,"emx"}
+}
 inline const char* get_str_from_source_index(exchange_source_index source)
 {
-    switch(source)
+    auto it = g_mapSources.find(source);
+    if(it != g_mapSources.end())
     {
-        case SOURCE_CTP:
-            return "ctp";
-        case SOURCE_XTP:
-            return "xtp";
-        case SOURCE_BINANCE:
-            return "binance";
-        case SOURCE_INDODAX:
-            return "indodax";
-        case SOURCE_OKEX:
-            return "okex";
-        case SOURCE_COINMEX:
-            return "coinmex";
-        case SOURCE_MOCK:
-            return "mock";
-        case SOURCE_BITMAX:
-            return "bitmax";
+        return it->second;
+    }
+    else
+    {
+        return "unknown";
+    }
+    /* 
+	switch(source)
+	{
+		case SOURCE_CTP:
+			return "ctp";
+		case SOURCE_XTP:
+			return "xtp";
+		case SOURCE_BINANCE:
+			return "binance";
+		case SOURCE_INDODAX:
+			return "indodax";
+		case SOURCE_OKEX:
+			return "okex";
+		case SOURCE_COINMEX:
+			return "coinmex";
+		case SOURCE_MOCK:
+			return "mock";
+		case SOURCE_BITMAX:
+			return "bitmax";
+		case SOURCE_BITHUMB:
+			return "bithumb";
         case SOURCE_BITFINEX:
             return "bitfinex";
         case SOURCE_BITMEX:
@@ -70,27 +116,47 @@ inline const char* get_str_from_source_index(exchange_source_index source)
             return "oceanexb";
         case SOURCE_PROBIT:
             return "probit";
-        case SOURCE_UPBIT:
-            return "upbit";
         case SOURCE_BITHUMB:
             return "bithumb";
+        case SOURCE_UPBIT:
+            return "upbit";
         case SOURCE_DAYBIT:
             return "daybit";
         case SOURCE_KUCOIN:
             return "kucoin";
         case SOURCE_BITFLYER:
-	        return "bitflyer";
-         case SOURCE_POLONIEX:
-            return "poloniex"
-         case SOURCE_BITSTAMP:
+            return "bitflyer";
+        case SOURCE_KRAKEN:
+            return "kraken";
+        case SOURCE_IB:
+            return "ib";
+        case SOURCE_BITTREX:
+            return "bittrex";
+        case SOURCE_POLONIEX:
+            return "poloniex";
+        case SOURCE_BITSTAMP:
             return "bitstamp";
-		default:
-			return "unknown";
+        case SOURCE_DERIBIT:
+            return "deribit";
+        case SOURCE_EMX:
+            return "emx";
+        default:
+            return "unknown";
 	}
+    */
 }
 
 inline exchange_source_index get_source_index_from_str(const std::string& exch_str)
 {
+    for(auto& exch:g_mapSources)
+    {
+        if(exch_str == exch.second)
+        {
+            return exch.first;
+        }
+    }
+    return SOURCE_UNKNOWN;
+    /* 
     if(exch_str == "ctp")
     {
         return SOURCE_CTP;
@@ -143,46 +209,67 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
     {
         return SOURCE_HUOBI;
     }
-	else if (exch_str == "oceanexb")
-	{
-		return SOURCE_OCEANEXB;
-	}
+    else if(exch_str == "oceanexb")
+    {
+        return SOURCE_OCEANEXB;
+    }
     else if(exch_str == "probit")
     {
         return SOURCE_PROBIT;
     }
+    else if(exch_str == "bithumb")
+    {
+	    return SOURCE_BITHUMB;
+    }
     else if(exch_str == "upbit")
     {
-        return SOURCE_UPBIT;
+	    return SOURCE_UPBIT;
     }
     else if(exch_str == "daybit")
     {
-        return SOURCE_DAYBIT;
+	    return SOURCE_DAYBIT;
     }
-    else if(exch_str == "bithumb")
+    else if(exch_str == "kucoin")
     {
-		return SOURCE_BITHUMB;
+	    return SOURCE_KUCOIN;
     }
     else if(exch_str == "bitflyer")
     {
-        return SOURCE_BITFLYER;
+	    return SOURCE_BITFLYER;
+    }
+    else if(exch_str == "kraken")
+    {
+	    return SOURCE_KRAKEN;
+    }
+    else if(exch_str == "ib")
+    {
+	    return SOURCE_IB;
+    }
+    else if(exch_str == "bittrex")
+    {
+	    return SOURCE_BITTREX;
     }
     else if(exch_str == "poloniex")
     {
-        return SOURCE_POLONIEX;
-    }
-     else if(exch_str == "kucoin")
-    {
-		return SOURCE_KUCOIN;
+	    return SOURCE_POLONIEX;
     }
     else if(exch_str == "bitstamp")
     {
-        return SOURCE_BITSTAMP;
+	    return SOURCE_BITSTAMP;
+    }
+    else if(exch_str == "deribit")
+    {
+	    return SOURCE_DERIBIT;
+    }
+    else if(exch_str == "emx")
+    {
+	    return SOURCE_EMX;
     }
     else 
     {
-		return SOURCE_UNKNOWN;
+	    return SOURCE_UNKNOWN;
     }
+    */
 
 }
 
@@ -194,8 +281,6 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_DCE "DCE" //大连商品交易所
 #define EXCHANGE_CZCE "CZCE" //郑州商品交易所
 #define EXCHANGE_BINANCE "BINANCE"
-#define EXCHANGE_INDODAX "INDODAX"
-#define EXCHANGE_OKEX "OKEX"
 #define EXCHANGE_COINMEX "COINMEX"
 #define EXCHANGE_MOCK "MOCK"
 #define EXCHANGE_BITMAX "BITMAX"
@@ -206,14 +291,18 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_HUOBI "HUOBI"
 #define EXCHANGE_OCEANEXB "OCEANEXB"
 #define EXCHANGE_PROBIT "PROBIT"
-#define EXCHANGE_UPBIT "UPBIT"
 #define EXCHANGE_BITHUMB "BITHUMB"
+#define EXCHANGE_UPBIT "UPBIT"
 #define EXCHANGE_DAYBIT "DAYBIT"
-#define EXCHANGE_BITFLYER "BITFLYER"
-#define EXCHANGE_POLONIEX "POLONIEX"
 #define EXCHANGE_KUCOIN "KUCOIN"
+#define EXCHANGE_BITFLYER "BITFLYER"
+#define EXCHANGE_KRAKEN "KRAKEN"
+#define EXCHANGE_IB "IB"
+#define EXCHANGE_BITTREX "BITTREX"
+#define EXCHANGE_POLONIEX "POLONIEX"
 #define EXCHANGE_BITSTAMP "BITSTAMP"
-
+#define EXCHANGE_DERIBIT "DERIBIT"
+#define EXCHANGE_EMX "EMX"
 // Exchange ids
 #define EXCHANGE_ID_SSE 1 //上海证券交易所
 #define EXCHANGE_ID_SZE 2 //深圳证券交易所
@@ -221,26 +310,7 @@ inline exchange_source_index get_source_index_from_str(const std::string& exch_s
 #define EXCHANGE_ID_SHFE 12 //上海期货交易所
 #define EXCHANGE_ID_DCE 13 //大连商品交易所
 #define EXCHANGE_ID_CZCE 14 //郑州商品交易所
-#define EXCHANGE_ID_BINANCE  16
-#define EXCHANGE_ID_INDODAX  17
-#define EXCHANGE_ID_OKEX  18
-#define EXCHANGE_ID_COINMEX  19
-#define EXCHANGE_ID_MOCK  20
-#define EXCHANGE_ID_BITMAX  21
-#define EXCHANGE_ID_BITFINEX  22
-#define EXCHANGE_ID_BITMEX  23
-#define EXCHANGE_ID_HITBTC  24
-#define EXCHANGE_ID_OCEANEX  25
-#define EXCHANGE_ID_HUOBI  26
-#define EXCHANGE_ID_OCEANEXB  27
-#define EXCHANGE_ID_PROBIT  28
-#define EXCHANGE_ID_BITHUMB  29
-#define EXCHANGE_ID_UPBIT  30
-#define EXCHANGE_ID_DAYBIT  31
-#define EXCHANGE_ID_BITFLYER  33
-#define EXCHANGE_ID_KUCOIN  32
-#define EXCHANGE_ID_POLONIEX  37
-#define EXCHANGE_ID_BITSTAMP  38
+
 // MsgTypes that used for LF data structure...
 const short MSG_TYPE_LF_MD            = 101;
 const short MSG_TYPE_LF_L2_MD         = 102;
@@ -249,7 +319,6 @@ const short MSG_TYPE_LF_L2_ORDER      = 104;
 const short MSG_TYPE_LF_L2_TRADE      = 105;
 const short MSG_TYPE_LF_PRICE_BOOK_20 = 106;
 const short MSG_TYPE_LF_BAR_MD        = 110;
-const short MSG_TYPE_LF_FUNDING       = 111;
 const short MSG_TYPE_LF_QRY_POS       = 201;
 const short MSG_TYPE_LF_RSP_POS       = 202;
 const short MSG_TYPE_LF_ORDER         = 204;
@@ -364,23 +433,6 @@ const short MSG_TYPE_LF_RTN_ORDER_OCEANEX = 25205;
 const short MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206;
 const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207;
 
-//HUOBI, idx=26
-const short MSG_TYPE_LF_MD_HUOBI = 26101;
-const short MSG_TYPE_LF_QRY_POS_HUOBI = 26201;
-const short MSG_TYPE_LF_RSP_POS_HUOBI = 26202;
-const short MSG_TYPE_LF_ORDER_HUOBI = 26204;
-const short MSG_TYPE_LF_RTN_ORDER_HUOBI = 26205;
-const short MSG_TYPE_LF_RTN_TRADE_HUOBI = 26206;
-const short MSG_TYPE_LF_ORDER_ACTION_HUOBI = 26207;
-
-//OCEANEXB, idx=27
-const short MSG_TYPE_LF_MD_OCEANEXB        = 27101;
-const short MSG_TYPE_LF_QRY_POS_OCEANEXB   = 27201;
-const short MSG_TYPE_LF_RSP_POS_OCEANEXB   = 27202;
-const short MSG_TYPE_LF_ORDER_OCEANEXB     = 27204;
-const short MSG_TYPE_LF_RTN_ORDER_OCEANEXB = 27205;
-const short MSG_TYPE_LF_RTN_TRADE_OCEANEXB = 27206;
-const short MSG_TYPE_LF_ORDER_ACTION_OCEANEXB = 27207;
 //PROBIT, idx=28
 const short MSG_TYPE_LF_MD_PROBIT        	= 28101;
 const short MSG_TYPE_LF_QRY_POS_PROBIT   	= 28201;
@@ -400,61 +452,103 @@ const short MSG_TYPE_LF_RTN_TRADE_BITHUMB         = 29206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITHUMB     = 29207;
 
 //UPBIT, idx=30
-const short MSG_TYPE_LF_MD_UPBIT        	= 30101;
-const short MSG_TYPE_LF_QRY_POS_UPBIT   	= 30201;
-const short MSG_TYPE_LF_RSP_POS_UPBIT   	= 30202;
-const short MSG_TYPE_LF_ORDER_UPBIT     	= 30204;
-const short MSG_TYPE_LF_RTN_ORDER_UPBIT 	= 30205;
-const short MSG_TYPE_LF_RTN_TRADE_UPBIT 	= 30206;
-const short MSG_TYPE_LF_ORDER_ACTION_UPBIT  = 30207;
-
-
+const short MSG_TYPE_LF_MD_UPBIT             = 30101;
+const short MSG_TYPE_LF_QRY_POS_UPBIT           = 30201;
+const short MSG_TYPE_LF_RSP_POS_UPBIT           = 30202;
+const short MSG_TYPE_LF_ORDER_UPBIT             = 30204;
+const short MSG_TYPE_LF_RTN_ORDER_UPBIT         = 30205;
+const short MSG_TYPE_LF_RTN_TRADE_UPBIT         = 30206;
+const short MSG_TYPE_LF_ORDER_ACTION_UPBIT     = 30207;
 
 //DAYBIT, idx=31
-const short MSG_TYPE_LF_MD_DAYBIT        	= 31101;
-const short MSG_TYPE_LF_QRY_POS_DAYBIT   	= 31201;
-const short MSG_TYPE_LF_RSP_POS_DAYBIT   	= 31202;
-const short MSG_TYPE_LF_ORDER_DAYBIT     	= 31204;
-const short MSG_TYPE_LF_RTN_ORDER_DAYBIT 	= 31205;
-const short MSG_TYPE_LF_RTN_TRADE_DAYBIT 	= 31206;
-const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT = 31207;
+const short MSG_TYPE_LF_MD_DAYBIT             = 31101;
+const short MSG_TYPE_LF_QRY_POS_DAYBIT           = 31201;
+const short MSG_TYPE_LF_RSP_POS_DAYBIT           = 31202;
+const short MSG_TYPE_LF_ORDER_DAYBIT             = 31204;
+const short MSG_TYPE_LF_RTN_ORDER_DAYBIT         = 31205;
+const short MSG_TYPE_LF_RTN_TRADE_DAYBIT         = 31206;
+const short MSG_TYPE_LF_ORDER_ACTION_DAYBIT     = 31207;
 
 //KUCOIN, idx=32
-const short MSG_TYPE_LF_MD_KUCOIN       	= 32101;
-const short MSG_TYPE_LF_QRY_POS_KUCOIN  	= 32201;
-const short MSG_TYPE_LF_RSP_POS_KUCOIN  	= 32202;
-const short MSG_TYPE_LF_ORDER_KUCOIN   	    = 32204;
-const short MSG_TYPE_LF_RTN_ORDER_KUCOIN 	= 32205;
-const short MSG_TYPE_LF_RTN_TRADE_KUCOIN	= 32206;
-const short MSG_TYPE_LF_ORDER_ACTION_KUCOIN = 32207;
+const short MSG_TYPE_LF_MD_KUCOIN             = 32101;
+const short MSG_TYPE_LF_QRY_POS_KUCOIN           = 32201;
+const short MSG_TYPE_LF_RSP_POS_KUCOIN           = 32202;
+const short MSG_TYPE_LF_ORDER_KUCOIN             = 32204;
+const short MSG_TYPE_LF_RTN_ORDER_KUCOIN         = 32205;
+const short MSG_TYPE_LF_RTN_TRADE_KUCOIN         = 32206;
+const short MSG_TYPE_LF_ORDER_ACTION_KUCOIN      = 32207;
 
 //BITFLYER, idx=33
-const short MSG_TYPE_LF_MD_BITFLYER               = 33101;
-const short MSG_TYPE_LF_QRY_POS_BITFLYER          = 33201;
-const short MSG_TYPE_LF_RSP_POS_BITFLYER          = 33202;
-const short MSG_TYPE_LF_ORDER_BITFLYER            = 33204;
-const short MSG_TYPE_LF_RTN_ORDER_BITFLYER        = 33205;
-const short MSG_TYPE_LF_RTN_TRADE_BITFLYER        = 33206;
-const short MSG_TYPE_LF_ORDER_ACTION_BITFLYER     = 33207;
+const short MSG_TYPE_LF_MD_BITFLYER             = 33101;
+const short MSG_TYPE_LF_QRY_POS_BITFLYER           = 33201;
+const short MSG_TYPE_LF_RSP_POS_BITFLYER           = 33202;
+const short MSG_TYPE_LF_ORDER_BITFLYER             = 33204;
+const short MSG_TYPE_LF_RTN_ORDER_BITFLYER         = 33205;
+const short MSG_TYPE_LF_RTN_TRADE_BITFLYER         = 33206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITFLYER      = 33207;
+
+//KRAKEN, idx=34
+const short MSG_TYPE_LF_MD_KRAKEN             = 34101;
+const short MSG_TYPE_LF_QRY_POS_KRAKEN           = 34201;
+const short MSG_TYPE_LF_RSP_POS_KRAKEN           = 34202;
+const short MSG_TYPE_LF_ORDER_KRAKEN             = 34204;
+const short MSG_TYPE_LF_RTN_ORDER_KRAKEN         = 34205;
+const short MSG_TYPE_LF_RTN_TRADE_KRAKEN         = 34206;
+const short MSG_TYPE_LF_ORDER_ACTION_KRAKEN      = 34207;
+
+//IB, idx=35
+const short MSG_TYPE_LF_MD_IB             = 35101;
+const short MSG_TYPE_LF_QRY_POS_IB           = 35201;
+const short MSG_TYPE_LF_RSP_POS_IB           = 35202;
+const short MSG_TYPE_LF_ORDER_IB             = 35204;
+const short MSG_TYPE_LF_RTN_ORDER_IB         = 35205;
+const short MSG_TYPE_LF_RTN_TRADE_IB         = 35206;
+const short MSG_TYPE_LF_ORDER_ACTION_IB      = 35207;
+
+//BITTREX, idx=36
+const short MSG_TYPE_LF_MD_BITTREX             = 36101;
+const short MSG_TYPE_LF_QRY_POS_BITTREX           = 36201;
+const short MSG_TYPE_LF_RSP_POS_BITTREX           = 36202;
+const short MSG_TYPE_LF_ORDER_BITTREX             = 36204;
+const short MSG_TYPE_LF_RTN_ORDER_BITTREX         = 36205;
+const short MSG_TYPE_LF_RTN_TRADE_BITTREX         = 36206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITTREX      = 36207;
+
 //POLONIEX, idx=37
-const short MSG_TYPE_LF_MD_POLONIEX        	= 37101;
-const short MSG_TYPE_LF_QRY_POS_POLONIEX   	= 37201;
-const short MSG_TYPE_LF_RSP_POS_POLONIEX   	= 37202;
-const short MSG_TYPE_LF_ORDER_POLONIEX     	= 37204;
-const short MSG_TYPE_LF_RTN_ORDER_POLONIEX 	= 37205;
-const short MSG_TYPE_LF_RTN_TRADE_POLONIEX 	= 37206;
-const short MSG_TYPE_LF_ORDER_ACTION_POLONIEX = 37207;
-
-
+const short MSG_TYPE_LF_MD_POLONIEX             = 37101;
+const short MSG_TYPE_LF_QRY_POS_POLONIEX           = 37201;
+const short MSG_TYPE_LF_RSP_POS_POLONIEX           = 37202;
+const short MSG_TYPE_LF_ORDER_POLONIEX             = 37204;
+const short MSG_TYPE_LF_RTN_ORDER_POLONIEX         = 37205;
+const short MSG_TYPE_LF_RTN_TRADE_POLONIEX         = 37206;
+const short MSG_TYPE_LF_ORDER_ACTION_POLONIEX      = 37207;
 
 //BITSTAMP, idx=38
-const short MSG_TYPE_LF_MD_BITSTAMP       	= 38101;
-const short MSG_TYPE_LF_QRY_POS_BITSTAMP  	= 38201;
-const short MSG_TYPE_LF_RSP_POS_BITSTAMP  	= 38202;
-const short MSG_TYPE_LF_ORDER_BITSTAMP  	= 38204;
-const short MSG_TYPE_LF_RTN_ORDER_BITSTAMP 	= 38205;
-const short MSG_TYPE_LF_RTN_TRADE_BITSTAMP	= 38206;
-const short MSG_TYPE_LF_ORDER_ACTION_BITSTAMP = 38207;
+const short MSG_TYPE_LF_MD_BITSTAMP             = 38101;
+const short MSG_TYPE_LF_QRY_POS_BITSTAMP           = 38201;
+const short MSG_TYPE_LF_RSP_POS_BITSTAMP           = 38202;
+const short MSG_TYPE_LF_ORDER_BITSTAMP             = 38204;
+const short MSG_TYPE_LF_RTN_ORDER_BITSTAMP         = 38205;
+const short MSG_TYPE_LF_RTN_TRADE_BITSTAMP         = 38206;
+const short MSG_TYPE_LF_ORDER_ACTION_BITSTAMP      = 38207;
+
+//DERIBIT, idx=39
+const short MSG_TYPE_LF_MD_DERIBIT             = 39101;
+const short MSG_TYPE_LF_QRY_POS_DERIBIT           = 39201;
+const short MSG_TYPE_LF_RSP_POS_DERIBIT           = 39202;
+const short MSG_TYPE_LF_ORDER_DERIBIT             = 39204;
+const short MSG_TYPE_LF_RTN_ORDER_DERIBIT         = 39205;
+const short MSG_TYPE_LF_RTN_TRADE_DERIBIT         = 39206;
+const short MSG_TYPE_LF_ORDER_ACTION_DERIBIT      = 39207;
+
+//EMX, idx=40
+const short MSG_TYPE_LF_MD_EMX             = 40101;
+const short MSG_TYPE_LF_QRY_POS_EMX           = 40201;
+const short MSG_TYPE_LF_RSP_POS_EMX           = 40202;
+const short MSG_TYPE_LF_ORDER_EMX             = 40204;
+const short MSG_TYPE_LF_RTN_ORDER_EMX         = 40205;
+const short MSG_TYPE_LF_RTN_TRADE_EMX         = 40206;
+const short MSG_TYPE_LF_ORDER_ACTION_EMX      = 40207;
 ///////////////////////////////////
 // LfActionFlagType: 报单操作标志
 ///////////////////////////////////

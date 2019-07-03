@@ -14,7 +14,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 '''
-
 class SOURCE:
     CTP = 1
     XTP = 15
@@ -29,14 +28,18 @@ class SOURCE:
     HUOBI = 26
     OCEANEXB = 27
     PROBIT = 28
-    UPBIT = 30
     BITHUMB = 29
+    UPBIT = 30
     DAYBIT = 31
-    BITTREX = 36
     KUCOIN = 32
+    BITFLYER = 33
+    KRAKEN = 34
+    IB = 35
+    BITTREX = 36
     POLONIEX = 37
     BITSTAMP = 38
-
+    DERIBIT = 39
+    EMX = 40
 
 class EXCHANGE:
     SSE = 'SSE' #上海证券交易所

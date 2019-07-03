@@ -936,6 +936,15 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITHUMB: LFRtnTradeField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITHUMB: LFOrderActionField,
 
+    lf.MsgTypes.MSG_TYPE_LF_MD_UPBIT: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_UPBIT: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_UPBIT: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_UPBIT: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_UPBIT: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_UPBIT: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_UPBIT: LFOrderActionField,
+
+
     lf.MsgTypes.MSG_TYPE_LF_MD_DAYBIT: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_DAYBIT: LFQryPositionField,
     lf.MsgTypes.MSG_TYPE_LF_RSP_POS_DAYBIT: LFRspPositionField,
@@ -943,6 +952,47 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_DAYBIT: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_DAYBIT: LFRtnTradeField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_DAYBIT: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_KUCOIN: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_KUCOIN: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_KUCOIN: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_KUCOIN: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_KUCOIN: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_KUCOIN: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_KUCOIN: LFOrderActionField,
+    
+    lf.MsgTypes.MSG_TYPE_LF_MD_BITFLYER: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITFLYER: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITFLYER: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BITFLYER: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITFLYER: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITFLYER: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITFLYER: LFOrderActionField,
+    
+    lf.MsgTypes.MSG_TYPE_LF_MD_KRAKEN: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_KRAKEN: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_KRAKEN: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_KRAKEN: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_KRAKEN: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_KRAKEN: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_KRAKEN: LFOrderActionField,
+    
+    lf.MsgTypes.MSG_TYPE_LF_MD_IB: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_IB: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_IB: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_IB: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_IB: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_IB: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_IB: LFOrderActionField,
+
+    
+    lf.MsgTypes.MSG_TYPE_LF_MD_BITTREX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITTREX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITTREX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_BITTREX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITTREX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITTREX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITTREX: LFOrderActionField,
 
     lf.MsgTypes.MSG_TYPE_LF_MD_POLONIEX: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_POLONIEX: LFQryPositionField,
@@ -952,21 +1002,29 @@ MsgType2LFStruct = {
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_POLONIEX: LFRtnTradeField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_POLONIEX: LFOrderActionField,
     
-    lf.MsgTypes.MSG_TYPE_LF_MD_KUCOIN: LFMarketDataField,
-    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_KUCOIN: LFQryPositionField,
-    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_KUCOIN: LFRspPositionField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_KUCOIN: LFInputOrderField,
-    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_KUCOIN: LFRtnOrderField,
-    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_KUCOIN: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_KUCOIN: LFOrderActionField,
-
     lf.MsgTypes.MSG_TYPE_LF_MD_BITSTAMP: LFMarketDataField,
     lf.MsgTypes.MSG_TYPE_LF_QRY_POS_BITSTAMP: LFQryPositionField,
     lf.MsgTypes.MSG_TYPE_LF_RSP_POS_BITSTAMP: LFRspPositionField,
     lf.MsgTypes.MSG_TYPE_LF_ORDER_BITSTAMP: LFInputOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_BITSTAMP: LFRtnOrderField,
     lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_BITSTAMP: LFRtnTradeField,
-    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITSTAMP: LFOrderActionField
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_BITSTAMP: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_DERIBIT: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_DERIBIT: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_DERIBIT: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_DERIBIT: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_DERIBIT: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_DERIBIT: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_DERIBIT: LFOrderActionField,
+
+    lf.MsgTypes.MSG_TYPE_LF_MD_EMX: LFMarketDataField,
+    lf.MsgTypes.MSG_TYPE_LF_QRY_POS_EMX: LFQryPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_RSP_POS_EMX: LFRspPositionField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_EMX: LFInputOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_ORDER_EMX: LFRtnOrderField,
+    lf.MsgTypes.MSG_TYPE_LF_RTN_TRADE_EMX: LFRtnTradeField,
+    lf.MsgTypes.MSG_TYPE_LF_ORDER_ACTION_EMX: LFOrderActionField
 }
 
 MsgType2LFStruct.update(SnifferMsgType2Struct)
