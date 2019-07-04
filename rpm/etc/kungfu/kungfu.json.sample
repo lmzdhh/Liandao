@@ -57,7 +57,6 @@
       "trade_count": 10,
       "whiteLists": {
         "strategy_coinpair(base_quote)": "exchange_coinpair",
-        "eth_btc": "ETH/BTC",
         "bch_btc": "BCH/BTC",
         "ltc_btc": "LTC/BTC",
         "bch_eth": "BCH/ETH",
@@ -467,14 +466,13 @@
               "APIKey": "your-api-key",
               "SecretKey": "your-secret-key",
               "passphrase": "your-passphrase",
-              "baseUrl": "https://api.bitmex.com",
+              "baseUrl": "api.bitmex.com",
               "whiteLists": {
                 "strategy_coinpair(base_quote)": "exchange_coinpair",
                 "eth_btc": "tETHBTC",
                 "bch_btc": "tBCHBTC",
                 "ltc_btc": "tLTCBTC",
                 "bch_eth": "tBCHETH",
-                "eth_btc": "tETHBTC",
                 "ltc_eth": "tLTCETH"
               },
               "positionWhiteLists":{
@@ -523,7 +521,6 @@
                 "bch_btc": "tBCHBTC",
                 "ltc_btc": "tLTCBTC",
                 "bch_eth": "tBCHETH",
-                "eth_btc": "tETHBTC",
                 "ltc_eth": "tLTCETH"
               },
               "positionWhiteLists":{
@@ -572,7 +569,6 @@
                 "bch_btc": "tBCHBTC",
                 "ltc_btc": "tLTCBTC",
                 "bch_eth": "tBCHETH",
-                "eth_btc": "tETHBTC",
                 "ltc_eth": "tLTCETH"
               },
               "positionWhiteLists":{
