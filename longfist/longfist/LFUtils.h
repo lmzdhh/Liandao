@@ -7,7 +7,7 @@
 #include "LFConstants.h"
 #include <string>
 #include <algorithm>
-
+#include <cctype>
 inline std::string getExchangeName(short exchange_id)
 {
 	switch(exchange_id)
@@ -46,12 +46,12 @@ inline int getExchangeId(std::string exchange_name)
 
 typedef std::pair<std::string, std::string> JournalPair;
 
-inline JournalPair getJournalPair(const std::string& journal_type)
+inline JournalPair getJournalPair(const std::string& journal_type,short source)
 {
 	std::string  strSource = get_str_from_source_index(source);
 	if(strSource != "unknown")
 	{
-		std::transform(strSource.begin(),strSource.end(),strSource.begin(),::toupper());
+		std::transform(strSource.begin(),strSource.end(),strSource.begin(),[](unsigned char c) -> unsigned char { return std::toupper(c); });
 		return {"/shared/kungfu/journal/"+journal_type+"/"+strSource+"/", journal_type+"_"+strSource};
 	}
 	else
@@ -63,7 +63,7 @@ inline JournalPair getJournalPair(const std::string& journal_type)
 
 inline JournalPair getMdJournalPair(short source)
 {
-	return getJournalPair("MD");
+	return getJournalPair("MD",source);
 	/* 
 	switch(source)
 	{
@@ -101,7 +101,7 @@ inline JournalPair getMdJournalPair(short source)
 
 inline JournalPair getMdRawJournalPair(short source)
 {
-	return getJournalPair("MD_RAW");
+	return getJournalPair("MD_RAW",source);
 	/* 
 	switch(source)
 	{
@@ -159,7 +159,7 @@ inline JournalPair getMdRawJournalPair(short source)
 
 inline JournalPair getTdJournalPair(short source)
 {
-	return getJournalPair("TD");
+	return getJournalPair("TD",source);
 	/* 
 	switch(source)
 	{
@@ -219,7 +219,7 @@ inline JournalPair getTdJournalPair(short source)
 
 inline JournalPair getTdSendJournalPair(short source)
 {
-	return getJournalPair("TD_SEND");
+	return getJournalPair("TD_SEND",source);
 	/*
 	switch(source)
 	{
@@ -279,7 +279,7 @@ inline JournalPair getTdSendJournalPair(short source)
 
 inline JournalPair getTdRawJournalPair(short source)
 {
-	return getJournalPair("TD_RAW");
+	return getJournalPair("TD_RAW",source);
 	/* 
 	switch(source)
 	{
@@ -339,7 +339,7 @@ inline JournalPair getTdRawJournalPair(short source)
 
 inline JournalPair getTdQJournalPair(short source)
 {
-	return getJournalPair("TD_Q");
+	return getJournalPair("TD_Q",source);
 	/* 
 	switch(source)
 	{

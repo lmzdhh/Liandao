@@ -14,10 +14,10 @@
 #include <assert.h>
 #include <cpr/cpr.h>
 #include <chrono>
-#include "/liandao/utils/rapidjson/include/document.h"  
-#include "/liandao/utils/rapidjson/include/filewritestream.h"  
-#include "/liandao/utils/rapidjson/include/prettywriter.h"  
-#include "/liandao/utils/rapidjson/include/stringbuffer.h"  
+#include "document.h"  
+#include "filewritestream.h"  
+#include "prettywriter.h"  
+#include "stringbuffer.h"  
 
 #include "../../utils/crypto/openssl_util.h"
 using cpr::Delete;
