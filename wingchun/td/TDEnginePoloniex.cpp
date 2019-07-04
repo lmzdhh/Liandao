@@ -663,7 +663,7 @@ cpr::Response TDEnginePoloniex::rest_withAuth(AccountUnitPoloniex& unit, string&
     //command="command=returnBalances&nonce=154264078495300";
 	string timestamp = to_string(get_timestamp());
     string body = command+timestamp;
-    string sign=hmac_sha512(secret.c_str(),body.c_str());
+    string sign=hmac_sha512(secret.c_str(),secret.length(),body.c_str(),body.length());
     cpr::Response response;
     if (!strcmp(method.c_str(), "GET"))
     {
