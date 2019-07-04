@@ -47,9 +47,9 @@ inline unsigned char* hmac_sha384_byte( const char *key, const char *data) {
     return HMAC(EVP_sha384(), key, strlen(key), (unsigned char*)(data), strlen(data), NULL, NULL);
 }
 
-inline std::string hmac_sha512( const char *key, const char *data) {
+inline std::string hmac_sha512( const char *key,size_t key_len, const char *data,size_t data_len) {
     unsigned char* digest;
-    digest = HMAC(EVP_sha512(), key, strlen(key), (unsigned char*)(data), strlen(data), NULL, NULL);
+    digest = HMAC(EVP_sha512(), key, key_len, (unsigned char*)(data), data_len, NULL, NULL);
     return b2a_hex((char *)digest, 64);
 }
 
@@ -231,6 +231,38 @@ std::string base64_url_decode(std::string const& encoded_string) {
 	return ret;
 }
 
+std::string url_encode(char *str) 
+{
+	char *encstr, buf[2+1];
+	unsigned char c;
+	int i, j;
+
+	if(str == NULL) return NULL;
+	if((encstr = (char *)malloc((strlen(str) * 3) + 1)) == NULL) 
+			return NULL;
+
+	for(i = j = 0; str[i]; i++) 
+	{
+		c = (unsigned char)str[i];
+		if((c >= '0') && (c <= '9')) encstr[j++] = c;
+		else if((c >= 'A') && (c <= 'Z')) encstr[j++] = c;
+		else if((c >= 'a') && (c <= 'z')) encstr[j++] = c;
+		else if((c == '@') || (c == '.') || (c == '=') || (c == '\\')
+				|| (c == '-') || (c == '_') || (c == ':') || (c == '&') ) 
+			encstr[j++] = c;
+		else 
+		{
+			sprintf(buf, "%02X", c);
+			encstr[j++] = '%';
+			encstr[j++] = buf[0];
+			encstr[j++] = buf[1];
+		}
+	}
+	encstr[j] = '\0';
+    std::string retStr(encstr);
+    free(encstr);
+	return retStr;
+}
 
 //base64_url from https://gist.github.com/darelf/0f96e1d313e1d0da5051e1a6eff8d329
 const char base64_url_alphabet[] = {
