@@ -40,42 +40,48 @@ enum exchange_source_index : short
     SOURCE_DERIBIT = 39,
     SOURCE_EMX = 40
 };
-std::map<exchange_source_index,char*> g_mapSources={
-    {SOURCE_CTP,"ctp"},
-	{SOURCE_XTP,"xtp"},
-	{SOURCE_BINANCE,"binance"},
-	{SOURCE_INDODAX,"indodax"},
-    {SOURCE_OKEX,"okex"},
-	{SOURCE_COINMEX,"coinmex"},
-	{SOURCE_MOCK,"mock"},
-	{SOURCE_BITMAX,"bitmax"},
-	{SOURCE_BITHUMB,"bithumb"},
-    {SOURCE_BITFINEX,"bitfinex"},
-    {SOURCE_BITMEX,"bitmex"},
-    {SOURCE_HITBTC,"hitbtc"},
-    {SOURCE_OCEANEX,"oceanex"},
-    {SOURCE_HUOBI,"huobi"},
-    {SOURCE_OCEANEXB,"oceanexb"},
-    {SOURCE_PROBIT,"probit"},
-    {SOURCE_BITHUMB,"bithumb"},
-    {SOURCE_UPBIT,"upbit"},
-    {SOURCE_DAYBIT,"daybit"},
-    {SOURCE_KUCOIN,"kucoin"},
-    {SOURCE_BITFLYER,"bitflyer"},
-    {SOURCE_KRAKEN,"kraken"},
-    {SOURCE_IB,"ib"},
-    {SOURCE_BITTREX,"bittrex"},
-    {SOURCE_POLONIEX,"poloniex"},
-    {SOURCE_BITSTAMP,"bitstamp"},
-    {SOURCE_DERIBIT,"deribit"},
-    {SOURCE_EMX,"emx"}
-}
-inline const char* get_str_from_source_index(exchange_source_index source)
+
+inline std::map<short,std::string> get_map_sources()
 {
-    auto it = g_mapSources.find(source);
-    if(it != g_mapSources.end())
+    std::map<short,std::string> mapSources = {
+        {SOURCE_CTP,"ctp"},
+        {SOURCE_XTP,"xtp"},
+        {SOURCE_BINANCE,"binance"},
+        {SOURCE_INDODAX,"indodax"},
+        {SOURCE_OKEX,"okex"},
+        {SOURCE_COINMEX,"coinmex"},
+        {SOURCE_MOCK,"mock"},
+        {SOURCE_BITMAX,"bitmax"},
+        {SOURCE_BITHUMB,"bithumb"},
+        {SOURCE_BITFINEX,"bitfinex"},
+        {SOURCE_BITMEX,"bitmex"},
+        {SOURCE_HITBTC,"hitbtc"},
+        {SOURCE_OCEANEX,"oceanex"},
+        {SOURCE_HUOBI,"huobi"},
+        {SOURCE_OCEANEXB,"oceanexb"},
+        {SOURCE_PROBIT,"probit"},
+        {SOURCE_BITHUMB,"bithumb"},
+        {SOURCE_UPBIT,"upbit"},
+        {SOURCE_DAYBIT,"daybit"},
+        {SOURCE_KUCOIN,"kucoin"},
+        {SOURCE_BITFLYER,"bitflyer"},
+        {SOURCE_KRAKEN,"kraken"},
+        {SOURCE_IB,"ib"},
+        {SOURCE_BITTREX,"bittrex"},
+        {SOURCE_POLONIEX,"poloniex"},
+        {SOURCE_BITSTAMP,"bitstamp"},
+        {SOURCE_DERIBIT,"deribit"},
+        {SOURCE_EMX,"emx"}
+    };
+    return mapSources;
+}
+inline const char* get_str_from_source_index(short source)
+{
+    std::map<short,std::string> mapSources = get_map_sources();
+    auto it = mapSources.find(source);
+    if(it != mapSources.end())
     {
-        return it->second;
+        return it->second.c_str();
     }
     else
     {
@@ -148,11 +154,12 @@ inline const char* get_str_from_source_index(exchange_source_index source)
 
 inline exchange_source_index get_source_index_from_str(const std::string& exch_str)
 {
-    for(auto& exch:g_mapSources)
+    std::map<short,std::string> mapSources = get_map_sources();
+    for(auto& exch:mapSources)
     {
         if(exch_str == exch.second)
         {
-            return exch.first;
+            return (exchange_source_index)exch.first;
         }
     }
     return SOURCE_UNKNOWN;
@@ -319,6 +326,7 @@ const short MSG_TYPE_LF_L2_ORDER      = 104;
 const short MSG_TYPE_LF_L2_TRADE      = 105;
 const short MSG_TYPE_LF_PRICE_BOOK_20 = 106;
 const short MSG_TYPE_LF_BAR_MD        = 110;
+const short MSG_TYPE_LF_FUNDING       = 111;
 const short MSG_TYPE_LF_QRY_POS       = 201;
 const short MSG_TYPE_LF_RSP_POS       = 202;
 const short MSG_TYPE_LF_ORDER         = 204;
@@ -327,6 +335,7 @@ const short MSG_TYPE_LF_RTN_TRADE     = 206;
 const short MSG_TYPE_LF_ORDER_ACTION  = 207;
 const short MSG_TYPE_LF_QRY_ACCOUNT   = 208;
 const short MSG_TYPE_LF_RSP_ACCOUNT   = 209;
+const short MSG_TYPE_LF_WITHDRAW      = 210;
 
 // MsgTypes that from original data structures...
 // ctp, idx=1
@@ -433,6 +442,23 @@ const short MSG_TYPE_LF_RTN_ORDER_OCEANEX = 25205;
 const short MSG_TYPE_LF_RTN_TRADE_OCEANEX = 25206;
 const short MSG_TYPE_LF_ORDER_ACTION_OCEANEX = 25207;
 
+//HUOBI, idx=26
+const short MSG_TYPE_LF_MD_HUOBI        = 26101;
+const short MSG_TYPE_LF_QRY_POS_HUOBI   = 26201;
+const short MSG_TYPE_LF_RSP_POS_HUOBI   = 26202;
+const short MSG_TYPE_LF_ORDER_HUOBI     = 26204;
+const short MSG_TYPE_LF_RTN_ORDER_HUOBI = 26205;
+const short MSG_TYPE_LF_RTN_TRADE_HUOBI = 26206;
+const short MSG_TYPE_LF_ORDER_ACTION_HUOBI = 26207;
+
+//OCEANEXB, idx=27
+//const short MSG_TYPE_LF_MD_OCEANEXB        = 27101;
+const short MSG_TYPE_LF_QRY_POS_OCEANEXB   = 27201;
+const short MSG_TYPE_LF_RSP_POS_OCEANEXB   = 27202;
+const short MSG_TYPE_LF_ORDER_OCEANEXB     = 27204;
+const short MSG_TYPE_LF_RTN_ORDER_OCEANEXB = 27205;
+const short MSG_TYPE_LF_RTN_TRADE_OCEANEXB = 27206;
+const short MSG_TYPE_LF_ORDER_ACTION_OCEANEXB = 27207;
 //PROBIT, idx=28
 const short MSG_TYPE_LF_MD_PROBIT        	= 28101;
 const short MSG_TYPE_LF_QRY_POS_PROBIT   	= 28201;
@@ -513,6 +539,7 @@ const short MSG_TYPE_LF_ORDER_BITTREX             = 36204;
 const short MSG_TYPE_LF_RTN_ORDER_BITTREX         = 36205;
 const short MSG_TYPE_LF_RTN_TRADE_BITTREX         = 36206;
 const short MSG_TYPE_LF_ORDER_ACTION_BITTREX      = 36207;
+const short MSG_TYPE_LF_WITHDRAW_BITTREX          = 36210;
 
 //POLONIEX, idx=37
 const short MSG_TYPE_LF_MD_POLONIEX             = 37101;
